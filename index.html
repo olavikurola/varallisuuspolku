@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Varallisuuspolku — visuaalinen varallisuussuunnittelu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">◈</div>
+      <div>
+        <div class="brand-name">Varallisuuspolku</div>
+        <div class="brand-tag">Suunnittele koko elinkaaresi sijoittaminen yhdellä näkymällä</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-note" id="allocSummaryTop"></div>
+      <button class="btn" id="shareBtn">Jaa linkki</button>
+      <button class="btn ghost" id="resetBtn">Nollaa</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel">
+      <section class="card">
+        <h2>Perustiedot</h2>
+        <div class="row2">
+          <label class="field">
+            <span class="field-label">Ikä nyt</span>
+            <span class="input"><input id="ageNow" type="number" min="18" max="80" step="1" value="30" /><em>v</em></span>
+          </label>
+          <label class="field">
+            <span class="field-label">Suunnitelma päättyy</span>
+            <span class="input"><input id="ageEnd" type="number" min="40" max="105" step="1" value="90" /><em>v</em></span>
+          </label>
+        </div>
+        <label class="field">
+          <span class="field-label">Nykyinen varallisuus (kertasijoitus)</span>
+          <span class="input"><input id="startCapital" type="number" min="0" step="1000" value="20000" /><em>€</em></span>
+        </label>
+        <label class="field">
+          <span class="field-label">Kuukausisijoitus</span>
+          <span class="input"><input id="monthly" type="number" min="0" step="50" value="1000" /><em>€/kk</em></span>
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>Allokaatio</h2>
+        <div class="slider-field">
+          <div class="slider-head"><span>Osakkeet</span><b id="stocksVal">70&nbsp;%</b></div>
+          <input id="allocStocks" type="range" min="0" max="100" step="5" value="70" />
+        </div>
+        <div class="slider-field">
+          <div class="slider-head"><span>Korot</span><b id="bondsVal">20&nbsp;%</b></div>
+          <input id="allocBonds" type="range" min="0" max="100" step="5" value="20" />
+        </div>
+        <div class="alloc-cash">Käteinen <b id="cashVal">10&nbsp;%</b></div>
+        <div class="alloc-summary" id="allocSummary"></div>
+        <label class="toggle">
+          <input id="glide" type="checkbox" />
+          <span class="switch"></span>
+          <span>Ikäsidonnainen allokaatio <small>riski pienenee eläkettä lähestyttäessä</small></span>
+        </label>
+        <label class="toggle">
+          <input id="real" type="checkbox" />
+          <span class="switch"></span>
+          <span>Inflaatiokorjattu <small>2&nbsp;%/v — luvut nykyrahassa</small></span>
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>Varallisuusjakauma</h2>
+        <div class="dist-wrap">
+          <svg id="distChart" viewBox="0 0 140 140"></svg>
+          <div class="dist-list" id="distList"></div>
+        </div>
+        <p class="hint" id="distHint">Jakauma seuraa graafin kohdistinta — oletuksena eläkeikä.</p>
+      </section>
+
+      <section class="card">
+        <h2>Elämäntapahtumat</h2>
+        <p class="hint">Raahaa tapahtuma graafille haluamaasi ikäkohtaan. Napauta merkkiä muokataksesi summaa.</p>
+        <div class="palette" id="palette"></div>
+      </section>
+
+      <section class="card">
+        <h2>Aikajanalla</h2>
+        <div class="event-list" id="eventList"></div>
+      </section>
+
+      <p class="disclaimer">Laskelma on suuntaa antava havainnollistus, ei sijoitussuositus. Tuotto-oletukset: osakkeet 7&nbsp;%, korot 3&nbsp;%, käteinen 1,5&nbsp;% vuodessa. Lainat lasketaan annuiteettilainoina: käsiraha maksetaan sijoituksista, työuralla maksuerät vähentävät kuukausisäästöä ja eläkkeellä ne maksetaan sijoituksista. Onnistumistodennäköisyys perustuu 300 satunnaiseen markkinapolkuun. Omaisuuserät (esim. asunto) lasketaan nettovarallisuuteen omalla arvonmuutosoletuksellaan, mutta eläkenostot tehdään vain sijoituksista. Suunnitelma tallentuu selaimeesi automaattisesti.</p>
+    </aside>
+
+    <section class="chart-col">
+      <div class="stats" id="stats"></div>
+      <div class="chart-wrap" id="chartWrap">
+        <svg id="chart"></svg>
+        <div class="tooltip" id="tooltip" hidden></div>
+        <div class="popover" id="popover" hidden></div>
+        <div class="drop-hint" id="dropHint" hidden><span>Pudota tapahtuma aikajanalle</span></div>
+      </div>
+      <div class="legend">
+        <span class="lg"><i class="sw sw-line"></i>Sijoitusvarallisuus</span>
+        <span class="lg"><i class="sw sw-band"></i>Vaihteluväli</span>
+        <span class="lg"><i class="sw sw-dash"></i>Sijoitettu pääoma</span>
+        <span class="lg"><i class="sw sw-marker">🏠</i>Elämäntapahtuma</span>
+      </div>
+      <div class="balance-panel" id="balancePanel" hidden>
+        <div class="balance-head">
+          <span class="balance-title">Tase</span>
+          <span class="lg"><i class="sw sw-inv"></i>Sijoitukset</span>
+          <span class="lg"><i class="sw sw-asset"></i>Omaisuus</span>
+          <span class="lg"><i class="sw sw-debtbar"></i>Velka</span>
+          <span class="lg"><i class="sw sw-net"></i>Netto</span>
+          <button class="collapse-btn" id="balanceToggle" title="Pienennä / suurenna">▾</button>
+        </div>
+        <div class="balance-body" id="balanceWrap"><svg id="balanceChart"></svg></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
