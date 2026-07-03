@@ -118,6 +118,11 @@ body {
   flex-direction: column;
   padding: 18px 22px 12px;
   gap: 14px;
+  /* Matalilla ruuduilla (esim. 1366×768) sisältö ei mahdu — rullataan
+     sarakkeen sisällä sen sijaan että tase leikkautuisi pois näkyvistä */
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #2a3550 transparent;
 }
 
 /* ---------- Cards & fields ---------- */
