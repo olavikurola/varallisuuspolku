@@ -4,9 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Varallisuuspolku — visuaalinen varallisuussuunnittelu</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <meta name="description" content="Suunnittele koko elinkaaresi sijoittaminen yhdellä näkymällä: elämäntapahtumat, lainat, eläketavoitteet ja Monte Carlo -todennäköisyys. Ilmainen, ei rekisteröitymistä — kaikki data pysyy omassa selaimessasi." />
+  <meta name="theme-color" content="#0a0e1a" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="fi_FI" />
+  <meta property="og:site_name" content="Varallisuuspolku" />
+  <meta property="og:title" content="Varallisuuspolku — visuaalinen varallisuussuunnittelu" />
+  <meta property="og:description" content="Suunnittele koko elinkaaresi sijoittaminen yhdellä näkymällä. Ilmainen, ei rekisteröitymistä — data pysyy selaimessasi." />
+  <meta property="og:image" content="og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="fonts.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -20,8 +28,10 @@
     </div>
     <div class="topbar-right">
       <div class="topbar-note" id="allocSummaryTop"></div>
+      <button class="btn" id="summaryBtn">Yhteenveto</button>
       <button class="btn" id="shareBtn">Jaa linkki</button>
       <button class="btn ghost" id="resetBtn">Nollaa</button>
+      <button class="btn ghost" id="infoBtn" title="Tietoa palvelusta">Tietoa</button>
     </div>
   </header>
 
@@ -123,6 +133,56 @@
       </div>
     </section>
   </main>
+
+  <div class="summary" id="infoModal" hidden>
+    <div class="sum-bar">
+      <button class="btn ghost" id="infoClose">Sulje</button>
+    </div>
+    <div class="sum-sheet info-sheet">
+      <div class="sum-head">
+        <div><h1>Tietoa Varallisuuspolusta</h1>
+        <div class="sum-sub">Ilmainen visuaalinen varallisuussuunnittelutyökalu</div></div>
+      </div>
+
+      <h2>Mikä tämä on</h2>
+      <p>Varallisuuspolku auttaa hahmottamaan koko elinkaaren sijoittamisen yhdellä näkymällä:
+      kuukausisäästön, elämän suuret hankinnat lainoineen, omaisuuden kertymisen ja eläkeajan nostot.
+      Tavoitetiloilla voit ratkaista kestävän noston, aikaisimman eläkeiän tai tarvittavan kuukausisäästön.
+      Yhteenvedon voi tulostaa tai antaa vaikka varainhoitajalle keskustelun pohjaksi.</p>
+
+      <h2>Tietosuoja</h2>
+      <p><b>Kaikki data pysyy omassa selaimessasi.</b> Laskenta tapahtuu kokonaan selaimessa eikä
+      suunnitelmaasi lähetetä millekään palvelimelle. Suunnitelma tallentuu selaimen omaan muistiin
+      (localStorage) vain tällä laitteella. Palvelu ei käytä evästeitä, analytiikkaa eikä ulkopuolisia
+      verkkopalveluita — myös fontit tarjoillaan sivuston omalta palvelimelta.</p>
+      <p>Huomaa: <b>Jaa linkki</b> pakkaa koko suunnitelmasi verkko-osoitteeseen. Linkin saaja näkee
+      suunnitelman sisällön, joten jaa se vain henkilöille, joille haluat sen näyttää.</p>
+
+      <h2>Laskentaoletukset</h2>
+      <p>Tuotto-oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa. Inflaatiokorjaus 2 %/v
+      (valinnainen). Lainat lasketaan annuiteettilainoina. Epävarmuushaarukka kasvaa ajan neliöjuuressa,
+      ja onnistumistodennäköisyys perustuu 300 satunnaiseen markkinapolkuun. Verot ja lakisääteinen
+      työeläke eivät ole mukana laskelmassa.</p>
+
+      <h2>Tärkeä huomautus</h2>
+      <p>Laskelma on suuntaa antava havainnollistus, ei sijoitusneuvontaa eikä sijoitussuositus.
+      Historiallinen tuotto ei ole tae tulevasta. Tee sijoituspäätökset omalla harkinnallasi tai
+      ammattilaisen kanssa.</p>
+
+      <h2>Palaute</h2>
+      <p>Palvelu on avointa lähdekoodia. Kehitysehdotukset ja bugi-ilmoitukset:
+      <a id="repoLink" href="#" target="_blank" rel="noopener">GitHub</a>.</p>
+    </div>
+  </div>
+
+  <div class="summary" id="summary" hidden>
+    <div class="sum-bar">
+      <button class="btn" id="sumPrint">Tulosta / PDF</button>
+      <button class="btn" id="sumShare">Kopioi jakolinkki</button>
+      <button class="btn ghost" id="sumClose">Sulje</button>
+    </div>
+    <div class="sum-sheet" id="sumSheet"></div>
+  </div>
 
   <script src="app.js" defer></script>
 </body>
