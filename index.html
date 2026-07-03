@@ -37,7 +37,7 @@
 
   <main class="layout">
     <aside class="panel">
-      <section class="card">
+      <section class="card" data-card="basics">
         <h2>Perustiedot</h2>
         <div class="row2">
           <label class="field">
@@ -49,17 +49,19 @@
             <span class="input"><input id="ageEnd" type="number" min="40" max="105" step="1" value="90" /><em>v</em></span>
           </label>
         </div>
-        <label class="field">
-          <span class="field-label">Nykyinen varallisuus (kertasijoitus)</span>
-          <span class="input"><input id="startCapital" type="number" min="0" step="1000" value="20000" /><em>€</em></span>
-        </label>
-        <label class="field">
-          <span class="field-label">Kuukausisijoitus</span>
-          <span class="input"><input id="monthly" type="number" min="0" step="50" value="1000" /><em>€/kk</em></span>
-        </label>
+        <div class="row2">
+          <label class="field">
+            <span class="field-label">Varallisuus nyt</span>
+            <span class="input"><input id="startCapital" type="number" min="0" step="1000" value="20000" /><em>€</em></span>
+          </label>
+          <label class="field">
+            <span class="field-label">Kuukausisijoitus</span>
+            <span class="input"><input id="monthly" type="number" min="0" step="50" value="1000" /><em>€/kk</em></span>
+          </label>
+        </div>
       </section>
 
-      <section class="card">
+      <section class="card" data-card="alloc">
         <h2>Allokaatio</h2>
         <div class="slider-field">
           <div class="slider-head"><span>Osakkeet</span><b id="stocksVal">70&nbsp;%</b></div>
@@ -83,7 +85,7 @@
         </label>
       </section>
 
-      <section class="card">
+      <section class="card" data-card="dist">
         <h2>Varallisuusjakauma</h2>
         <div class="dist-wrap">
           <svg id="distChart" viewBox="0 0 140 140"></svg>
@@ -92,18 +94,18 @@
         <p class="hint" id="distHint">Jakauma seuraa graafin kohdistinta — oletuksena eläkeikä.</p>
       </section>
 
-      <section class="card">
+      <section class="card" data-card="events">
         <h2>Elämäntapahtumat</h2>
         <p class="hint">Raahaa tapahtuma graafille haluamaasi ikäkohtaan. Napauta merkkiä muokataksesi summaa.</p>
         <div class="palette" id="palette"></div>
       </section>
 
-      <section class="card">
+      <section class="card" data-card="timeline">
         <h2>Aikajanalla</h2>
         <div class="event-list" id="eventList"></div>
       </section>
 
-      <p class="disclaimer">Laskelma on suuntaa antava havainnollistus, ei sijoitussuositus. Tuotto-oletukset: osakkeet 7&nbsp;%, korot 3&nbsp;%, käteinen 1,5&nbsp;% vuodessa. Lainat lasketaan annuiteettilainoina: käsiraha maksetaan sijoituksista, työuralla maksuerät vähentävät kuukausisäästöä ja eläkkeellä ne maksetaan sijoituksista. Onnistumistodennäköisyys perustuu 300 satunnaiseen markkinapolkuun. Omaisuuserät (esim. asunto) lasketaan nettovarallisuuteen omalla arvonmuutosoletuksellaan, mutta eläkenostot tehdään vain sijoituksista. Suunnitelma tallentuu selaimeesi automaattisesti.</p>
+      <p class="disclaimer">Laskelma on suuntaa antava havainnollistus, ei sijoitusneuvontaa. Suunnitelma tallentuu selaimeesi automaattisesti. Oletukset ja tietosuoja: <a href="#" id="disclaimerInfo">Tietoa palvelusta</a>.</p>
     </aside>
 
     <section class="chart-col">

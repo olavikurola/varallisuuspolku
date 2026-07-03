@@ -144,6 +144,24 @@ body {
   color: var(--text-dim);
 }
 
+/* Paneelin kortit taittuvat otsikosta klikkaamalla */
+.panel .card[data-card] h2 {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+.panel .card[data-card] h2::after {
+  content: '▾';
+  font-size: 10px;
+  color: var(--text-faint);
+}
+.panel .card[data-card] h2:hover { color: var(--text); }
+.panel .card.collapsed h2 { margin-bottom: 0; }
+.panel .card.collapsed h2::after { content: '▸'; }
+.panel .card.collapsed > *:not(h2) { display: none; }
+
 .field { display: block; margin-bottom: 12px; }
 .field:last-child { margin-bottom: 0; }
 .field-label { display: block; font-size: 12.5px; color: var(--text-dim); margin-bottom: 5px; }
@@ -286,12 +304,12 @@ input[type="range"]::-moz-range-thumb {
 .palette {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 6px;
 }
 
 .chip {
-  display: flex; align-items: center; gap: 8px;
-  padding: 9px 10px;
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 9px;
   background: var(--card-2);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -304,7 +322,8 @@ input[type="range"]::-moz-range-thumb {
 }
 .chip:hover { border-color: var(--accent); background: #1b2542; transform: translateY(-1px); }
 .chip:active { cursor: grabbing; }
-.chip .ic { font-size: 17px; }
+.chip .ic { font-size: 15px; }
+.chip span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .drag-ghost {
   position: fixed;
@@ -348,6 +367,8 @@ input[type="range"]::-moz-range-thumb {
 .event-empty { font-size: 12.5px; color: var(--text-faint); padding: 4px 2px; }
 
 .disclaimer { font-size: 11px; color: var(--text-faint); line-height: 1.5; margin: 4px 4px 0; }
+.disclaimer a { color: var(--text-dim); }
+.disclaimer a:hover { color: var(--accent); }
 
 /* ---------- Stats ---------- */
 .stats {

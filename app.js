@@ -801,6 +801,7 @@ function buildPalette() {
   for (const [type, def] of Object.entries(EVENT_TYPES)) {
     const chip = document.createElement('div');
     chip.className = 'chip';
+    chip.title = def.label;
     chip.innerHTML = `<span class="ic">${def.icon}</span><span>${def.label}</span>`;
     chip.addEventListener('pointerdown', (e) => startPaletteDrag(e, type));
     pal.appendChild(chip);
@@ -1397,6 +1398,7 @@ function bindActions() {
   $('sumShare').addEventListener('click', (e) => copyShareUrl(e.target));
   $('infoBtn').addEventListener('click', () => { $('infoModal').hidden = false; });
   $('infoClose').addEventListener('click', () => { $('infoModal').hidden = true; });
+  $('disclaimerInfo').addEventListener('click', (e) => { e.preventDefault(); $('infoModal').hidden = false; });
   // Tase-paneelin supistus
   const balanceToggle = $('balanceToggle');
   let balCollapsed = false;
@@ -1631,6 +1633,26 @@ function closeSummary() {
   document.body.classList.remove('summary-open');
 }
 
+/* ===================== Paneelin taittuvat kortit ===================== */
+
+const PANEL_KEY = 'vp-panel-collapsed';
+
+function bindPanelCards() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(PANEL_KEY)) || {}; } catch (e) {}
+  for (const card of document.querySelectorAll('.panel .card[data-card]')) {
+    const key = card.dataset.card;
+    const defCollapsed = key === 'dist'; // jakauma oletuksena kiinni — passiivisin osio
+    if (saved[key] != null ? saved[key] : defCollapsed) card.classList.add('collapsed');
+    card.querySelector('h2').addEventListener('click', () => {
+      const c = card.classList.toggle('collapsed');
+      saved[key] = c;
+      try { localStorage.setItem(PANEL_KEY, JSON.stringify(saved)); } catch (e) {}
+      if (!c && key === 'dist') renderDist();
+    });
+  }
+}
+
 /* ===================== Käynnistys ===================== */
 
 function renderAll() {
@@ -1647,6 +1669,7 @@ loadState();
 syncInputs();
 bindInputs();
 bindActions();
+bindPanelCards();
 renderAll();
 
 new ResizeObserver(() => { renderChart(); }).observe(wrap);
