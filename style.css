@@ -166,7 +166,8 @@ body {
 .field:last-child { margin-bottom: 0; }
 .field-label { display: block; font-size: 12.5px; color: var(--text-dim); margin-bottom: 5px; }
 
-.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* minmax(0,…): kentät saavat kutistua inputin min-content-leveyden alle */
+.row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
 
 .input {
   display: flex;
@@ -303,13 +304,15 @@ input[type="range"]::-moz-range-thumb {
 
 .palette {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 6px;
 }
 
 .chip {
   display: flex; align-items: center; gap: 7px;
   padding: 6px 9px;
+  min-width: 0;
+  overflow: hidden;
   background: var(--card-2);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -322,7 +325,7 @@ input[type="range"]::-moz-range-thumb {
 }
 .chip:hover { border-color: var(--accent); background: #1b2542; transform: translateY(-1px); }
 .chip:active { cursor: grabbing; }
-.chip .ic { font-size: 15px; }
+.chip .ic { font-size: 15px; flex: 0 0 auto; }
 .chip span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .drag-ghost {
@@ -361,7 +364,9 @@ input[type="range"]::-moz-range-thumb {
 .event-row .am.neg { color: var(--danger); }
 .event-row .rm {
   border: none; background: none; color: var(--text-faint);
-  font-size: 14px; cursor: pointer; padding: 2px 4px; border-radius: 6px;
+  font-size: 14px; cursor: pointer; border-radius: 6px;
+  /* riittävä kosketusalue ilman että rivi kasvaa */
+  padding: 8px 9px; margin: -6px -5px;
 }
 .event-row .rm:hover { color: var(--danger); background: rgba(248, 113, 113, 0.1); }
 .event-empty { font-size: 12.5px; color: var(--text-faint); padding: 4px 2px; }
@@ -411,7 +416,8 @@ input[type="range"]::-moz-range-thumb {
 .grid-line { stroke: rgba(148, 168, 220, 0.07); }
 .grid-line-x { stroke: rgba(148, 168, 220, 0.045); }
 
-.marker { cursor: grab; }
+/* touch-action: raahaus toimii myös sormella — ilman tätä selain kaappaa eleen scrolliksi */
+.marker { cursor: grab; touch-action: none; }
 .marker:active { cursor: grabbing; }
 .marker circle.bg { transition: stroke 0.15s; }
 .marker:hover circle.bg { stroke: var(--accent); }
@@ -586,7 +592,8 @@ input[type="range"]::-moz-range-thumb {
 .balance-head {
   display: flex;
   align-items: center;
-  gap: 18px;
+  flex-wrap: wrap;
+  gap: 6px 18px;
   padding: 8px 14px;
   font-size: 12px;
   color: var(--text-dim);
@@ -605,7 +612,8 @@ input[type="range"]::-moz-range-thumb {
   color: var(--text-dim);
   font-size: 14px;
   cursor: pointer;
-  padding: 2px 8px;
+  padding: 8px 12px;
+  margin: -6px -4px;
   border-radius: 7px;
 }
 .collapse-btn:hover { color: var(--text); background: rgba(148, 168, 220, 0.1); }
@@ -641,7 +649,7 @@ input[type="range"]::-moz-range-thumb {
   backdrop-filter: blur(6px);
   padding: 24px 16px 48px;
 }
-.sum-bar { max-width: 860px; margin: 0 auto 12px; display: flex; gap: 10px; justify-content: flex-end; }
+.sum-bar { max-width: 860px; margin: 0 auto 12px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
 .sum-sheet {
   max-width: 860px;
   margin: 0 auto;
@@ -766,8 +774,10 @@ input[type="range"]::-moz-range-thumb {
 @media (max-width: 980px) {
   body { overflow: auto; }
   .layout { flex-direction: column; }
-  .panel { flex: none; border-right: none; order: 2; }
-  .chart-col { order: 1; }
+  .panel { flex: none; border-right: none; order: 2; overflow-y: visible; }
+  /* flex/overflow takaisin: sarakeasettelussa overflow-y:auto (matalien
+     työpöytäruutujen fiksi) romahduttaisi sarakkeen 0-korkuiseksi */
+  .chart-col { order: 1; flex: none; overflow-y: visible; }
   .chart-wrap { min-height: 320px; }
   .stats { grid-template-columns: 1fr 1fr; }
   .topbar { flex-wrap: wrap; }
@@ -783,4 +793,9 @@ input[type="range"]::-moz-range-thumb {
   .brand-tag { display: none; }
   .topbar-right { width: 100%; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
   .btn { padding: 7px 12px; }
+}
+
+/* iOS zoomaa automaattisesti alle 16 px:n lomakekenttiin — estetään kosketuslaitteilla */
+@media (pointer: coarse) {
+  .input input { font-size: 16px; }
 }

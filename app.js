@@ -811,6 +811,8 @@ function buildPalette() {
 function startPaletteDrag(e, type) {
   e.preventDefault();
   const def = EVENT_TYPES[type];
+  const startX = e.clientX, startY = e.clientY;
+  let moved = false;
   const ghost = document.createElement('div');
   ghost.className = 'drag-ghost';
   ghost.innerHTML = `<span class="ic">${def.icon}</span><span>${def.label}</span>`;
@@ -824,6 +826,7 @@ function startPaletteDrag(e, type) {
   };
 
   const onMove = (e2) => {
+    if (Math.abs(e2.clientX - startX) + Math.abs(e2.clientY - startY) > 6) moved = true;
     ghost.style.left = e2.clientX + 'px';
     ghost.style.top = e2.clientY + 'px';
     wrap.classList.toggle('drop-target', overPlot(e2));
@@ -841,6 +844,16 @@ function startPaletteDrag(e, type) {
       const r = svg.getBoundingClientRect();
       const age = clamp(Math.round(invX(e2.clientX - r.left)), state.ageNow, state.ageEnd);
       addEvent(type, age);
+    } else if (!moved) {
+      // Napautus lisää oletusikään — mobiilissa paletti ja graafi eivät
+      // mahdu ruudulle yhtä aikaa, joten raahaus ei ole ainoa tapa
+      const existing = def.unique && state.events.find((ev) => ev.type === type);
+      if (existing) {
+        openPopover(existing.id);
+      } else {
+        const defAge = type === 'retirement' ? 65 : state.ageNow + 5;
+        addEvent(type, clamp(defAge, state.ageNow, state.ageEnd));
+      }
     }
   };
   document.addEventListener('pointermove', onMove);
@@ -1054,6 +1067,13 @@ function openPopover(id) {
 
   updateSolvedFields();
   positionPopover();
+
+  // Mobiilissa tapahtumalista on graafin alapuolella — popover avautuu
+  // graafin sisään, joten rullataan se tarvittaessa näkyviin
+  const pr = popover.getBoundingClientRect();
+  if (pr.top < 0 || pr.bottom > window.innerHeight) {
+    popover.scrollIntoView({ block: 'nearest' });
+  }
 }
 
 // Ratkaistut arvot avoimen popoverin lukittuihin kenttiin ja tulosriville
