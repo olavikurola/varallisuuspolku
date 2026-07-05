@@ -1274,8 +1274,8 @@ function bindInputs() {
       renderAll();
     });
   };
-  num('ageNow', 'ageNow', 18, 80);
-  num('ageEnd', 'ageEnd', 40, 105);
+  num('ageNow', 'ageNow', 0, 80);
+  num('ageEnd', 'ageEnd', 2, 105);
   num('startCapital', 'startCapital', 0, 1e9);
   num('monthly', 'monthly', 0, 1e6);
 
