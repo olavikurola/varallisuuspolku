@@ -37,6 +37,7 @@
     <div class="topbar-right">
       <div class="topbar-note" id="allocSummaryTop"></div>
       <button class="btn" id="summaryBtn">Yhteenveto</button>
+      <button class="btn ghost" id="compareBtn" title="Tallenna nykyinen suunnitelma vertailukohdaksi ja katso muutosten vaikutus">Vertaile</button>
       <button class="btn" id="shareBtn">Jaa linkki</button>
       <button class="btn ghost" id="resetBtn">Nollaa</button>
       <button class="btn ghost" id="infoBtn" title="Tietoa palvelusta">Tietoa</button>
@@ -67,6 +68,10 @@
             <span class="input"><input id="monthly" type="number" min="0" step="50" value="1000" /><em>€/kk</em></span>
           </label>
         </div>
+        <label class="field field-sub">
+          <span class="field-label">Säästön vuosikasvu <small>palkkakehitys — kk-sijoitus kasvaa vuosittain</small></span>
+          <span class="input"><input id="savingsGrowth" type="number" min="0" max="15" step="0.5" value="1.5" /><em>%/v</em></span>
+        </label>
       </section>
 
       <section class="card" data-card="alloc">
@@ -90,6 +95,11 @@
           <input id="real" type="checkbox" />
           <span class="switch"></span>
           <span>Inflaatiokorjattu <small>2&nbsp;%/v — luvut nykyrahassa</small></span>
+        </label>
+        <label class="toggle">
+          <input id="tax" type="checkbox" />
+          <span class="switch"></span>
+          <span>Myyntivoittovero <small>30/34&nbsp;% eläkeajan nostojen voitto-osuudesta</small></span>
         </label>
       </section>
 
@@ -118,6 +128,12 @@
 
     <section class="chart-col">
       <div class="stats" id="stats"></div>
+      <div class="compare-bar" id="compareBar" hidden>
+        <span class="cmp-title">Vertailu</span>
+        <div class="cmp-deltas" id="cmpDeltas"></div>
+        <button class="btn ghost" id="cmpUpdate" title="Aseta nykyinen suunnitelma uudeksi vertailukohdaksi">Päivitä</button>
+        <button class="btn ghost" id="cmpClear" title="Poista vertailu">Poista</button>
+      </div>
       <div class="chart-wrap" id="chartWrap">
         <svg id="chart"></svg>
         <div class="tooltip" id="tooltip" hidden></div>
@@ -129,6 +145,7 @@
         <span class="lg"><i class="sw sw-band"></i>Vaihteluväli</span>
         <span class="lg"><i class="sw sw-dash"></i>Sijoitettu pääoma</span>
         <span class="lg"><i class="sw sw-marker">🏠</i>Elämäntapahtuma</span>
+        <span class="lg" id="legendCompare" hidden><i class="sw sw-ghost"></i>Vertailukohta</span>
       </div>
       <div class="balance-panel" id="balancePanel" hidden>
         <div class="balance-head">
@@ -156,9 +173,11 @@
 
       <h2>Mikä tämä on</h2>
       <p>Varallisuuspolku auttaa hahmottamaan koko elinkaaren sijoittamisen yhdellä näkymällä:
-      kuukausisäästön, elämän suuret hankinnat lainoineen, omaisuuden kertymisen ja eläkeajan nostot.
-      Tavoitetiloilla voit ratkaista kestävän noston, aikaisimman eläkeiän tai tarvittavan kuukausisäästön.
-      Yhteenvedon voi tulostaa tai antaa vaikka varainhoitajalle keskustelun pohjaksi.</p>
+      kuukausisäästön ja sen kasvun, elämän suuret hankinnat lainoineen, omaisuuden kertymisen sekä
+      eläkeajan tulot — lakisääteinen työeläke, sijoitusten nostot ja niiden myyntivoittovero.
+      Tavoitetiloilla voit ratkaista kestävän kuukausitulon, aikaisimman eläkeiän tai tarvittavan
+      kuukausisäästön. Voit myös tallentaa suunnitelman vertailukohdaksi ja nähdä muutosten vaikutuksen
+      haamukäyränä. Yhteenvedon voi tulostaa tai antaa vaikka varainhoitajalle keskustelun pohjaksi.</p>
 
       <h2>Tietosuoja</h2>
       <p><b>Kaikki data pysyy omassa selaimessasi.</b> Laskenta tapahtuu kokonaan selaimessa eikä
@@ -170,9 +189,15 @@
 
       <h2>Laskentaoletukset</h2>
       <p>Tuotto-oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa. Inflaatiokorjaus 2 %/v
-      (valinnainen). Lainat lasketaan annuiteettilainoina. Epävarmuushaarukka kasvaa ajan neliöjuuressa,
-      ja onnistumistodennäköisyys perustuu 300 satunnaiseen markkinapolkuun. Verot ja lakisääteinen
-      työeläke eivät ole mukana laskelmassa.</p>
+      (valinnainen). Kuukausisäästö voi kasvaa vuosittain (palkkakehitys). Lainat lasketaan
+      annuiteettilainoina. Epävarmuushaarukka kasvaa ajan neliöjuuressa, ja onnistumistodennäköisyys
+      perustuu 300 satunnaiseen markkinapolkuun.</p>
+      <p><b>Eläkeaika ja verot:</b> voit antaa lakisääteisen työeläkkeen arvion kuukausitulona — se
+      pienentää sijoituksista tarvittavaa nostoa ja voi alkaa eri iässä kuin eläkkeelle jäänti. Eläkeajan
+      nostoista voidaan huomioida Suomen myyntivoittovero (30 % vuotuisiin 30 000 €:n voittoihin asti,
+      34 % ylimenevältä osalta); veroa peritään vain noston voitto-osuudesta eli arvon ja jäljellä olevan
+      hankintahinnan erotuksesta. Työeläkkeen arvio ja veromalli ovat suuntaa antavia yksinkertaistuksia,
+      eivät virallisia laskelmia — esimerkiksi hankintameno-olettamaa ei sovelleta.</p>
 
       <h2>Tärkeä huomautus</h2>
       <p>Laskelma on suuntaa antava havainnollistus, ei sijoitusneuvontaa eikä sijoitussuositus.

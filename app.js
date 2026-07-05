@@ -10,6 +10,11 @@ const ASSETS = {
 const INFLATION = 0.02;
 const BAND_Z = 0.5; // skenaariohaarukan leveys: ±z·σ·√t
 
+// Suomalainen pääomatulovero (myyntivoittovero): 30 % vuotuisista voitoista
+// 30 000 €:oon asti, 34 % ylimenevältä osalta. Nostoista verotetaan vain
+// voitto-osuus (arvon ja jäljellä olevan hankintahinnan erotus).
+const TAX_LOW = 0.30, TAX_HIGH = 0.34, TAX_BRACKET = 30000;
+
 // loan: oletusrahoitus lainalla { share: käsirahan osuus, rate: %/v, years: laina-aika }
 const CONSUMER_LOAN = { share: 0.3, rate: 8.0, years: 5 };
 const EVENT_TYPES = {
@@ -23,7 +28,7 @@ const EVENT_TYPES = {
   cottage:     { icon: '🏡', label: 'Mökki / vene',        amount: -120000, loan: { share: 0.25, rate: 4.0, years: 15 }, defaultFin: 'loan', asset: { appr: 2.0 } },
   inheritance: { icon: '💎', label: 'Perintö / lahja',     amount: 60000 },
   bonus:       { icon: '💰', label: 'Bonus / myyntivoitto', amount: 20000 },
-  retirement:  { icon: '🌴', label: 'Eläkkeelle jäänti',   withdrawal: 1800, unique: true },
+  retirement:  { icon: '🌴', label: 'Eläkkeelle jäänti',   withdrawal: 2400, pension: 1500, pensionAge: 65, unique: true },
 };
 
 // Annuiteettilainan kuukausierä
@@ -49,14 +54,16 @@ const state = {
   ageEnd: 90,
   startCapital: 20000,
   monthly: 1000,
+  savingsGrowth: 1.5, // säästön vuosikasvu % (palkkakehitys)
   allocStocks: 70,
   allocBonds: 20,
   glide: false,
   real: false,
+  tax: true,          // myyntivoittovero nostoissa (oletuksena päällä uusille)
   events: [
     { id: idSeq++, type: 'home', age: 35, amount: -220000, financing: 'loan', down: 33000, rate: 3.5, years: 25, isAsset: true, appr: 2.0 },
     { id: idSeq++, type: 'car',  age: 45, amount: -25000,  financing: 'loan', down: 5000,  rate: 4.5, years: 6,  isAsset: true, appr: -10.0 },
-    { id: idSeq++, type: 'retirement', age: 65, withdrawal: 1800 },
+    { id: idSeq++, type: 'retirement', age: 65, withdrawal: 2400, pension: 1500, pensionAge: 65 },
   ],
 };
 
@@ -107,17 +114,17 @@ function mulberry32(seed) {
 
 /* ===================== Allokointimoottori ===================== */
 
-function baseAlloc() {
-  const s = state.allocStocks / 100;
-  const b = Math.min(state.allocBonds / 100, 1 - s);
+function baseAlloc(st = state) {
+  const s = st.allocStocks / 100;
+  const b = Math.min(st.allocBonds / 100, 1 - s);
   return { s, b, c: Math.max(0, 1 - s - b) };
 }
 
 // Allokaatio tietyssä iässä: glidepath siirtää osakepainoa korkoihin
 // 15 viimeisen työvuoden aikana (pohjakerroin 0.35).
-function allocationAt(age, retireAge) {
-  let { s, b, c } = baseAlloc();
-  if (state.glide && retireAge != null) {
+function allocationAt(age, retireAge, st = state) {
+  let { s, b, c } = baseAlloc(st);
+  if (st.glide && retireAge != null) {
     const f = clamp((retireAge - age) / 15, 0.35, 1);
     const ns = s * f;
     b += s - ns;
@@ -136,19 +143,31 @@ function portfolioStats(alloc) {
 // Kuukausitason simulointi: korkoa korolle, kuukausisijoitukset,
 // kertaluonteiset tapahtumat ja eläkeajan nostot.
 
-function simulate() {
-  const a0 = state.ageNow;
-  const a1 = Math.max(state.ageEnd, a0 + 2);
+function simulate(st = state) {
+  const a0 = st.ageNow;
+  const a1 = Math.max(st.ageEnd, a0 + 2);
   const months = Math.round((a1 - a0) * 12);
 
-  const retire = state.events.find((e) => e.type === 'retirement') || null;
+  const retire = st.events.find((e) => e.type === 'retirement') || null;
   let retireAge = retire ? retire.age : null;
+  // Lakisääteinen työeläke: kuukausitulo, joka pienentää sijoituksista
+  // tarvittavaa nostoa. Voi alkaa eri iässä kuin eläkkeelle jäänti
+  // (esim. varhaiseläkkeellä sijoitukset kattavat välivuodet).
+  const pension = retire && retire.pension > 0 ? Math.max(0, retire.pension) : 0;
+  const pensionAge = pension > 0 && retire.pensionAge != null
+    ? clamp(retire.pensionAge, a0, a1)
+    : (retireAge != null ? retireAge : a1);
+  const taxOn = !!st.tax;
+  // Säästön vuosikasvu (palkkakehitys): kuukausisijoitus kasvaa vuosittain
+  const g = (st.savingsGrowth || 0) / 100;
+  const growth = new Float64Array(months + 1);
+  for (let m = 1; m <= months; m++) growth[m] = Math.pow(1 + g, (m - 1) / 12);
 
   // Kertavaikutukset, lainanhoitoerät ja velkasaldo kuukausittain
   const lump = new Map();
   const payments = new Float64Array(months + 1);
   const debt = new Float64Array(months + 1);
-  for (const e of state.events) {
+  for (const e of st.events) {
     if (e.type === 'retirement') continue;
     const m0 = Math.round((e.age - a0) * 12);
     if (m0 < 0 || m0 > months) continue;
@@ -176,7 +195,7 @@ function simulate() {
       lump.set(m0, (lump.get(m0) || 0) + e.amount);
     }
   }
-  const out = { a0, a1, months, retireAge, payments, debt };
+  const out = { a0, a1, months, retireAge, payments, debt, pension, pensionAge };
 
   // Omaisuuserät: ostettu kohde kirjautuu varallisuudeksi ja kehittyy omalla arvonmuutoksellaan
   const assets = new Float64Array(months + 1);
@@ -186,7 +205,7 @@ function simulate() {
     other: new Float64Array(months + 1),
   };
   let hasAssets = false;
-  for (const e of state.events) {
+  for (const e of st.events) {
     if (e.type === 'retirement' || e.amount >= 0 || !e.isAsset) continue;
     const m0 = Math.round((e.age - a0) * 12);
     if (m0 < 0 || m0 > months) continue;
@@ -194,7 +213,7 @@ function simulate() {
     const cat = e.type === 'home' || e.type === 'cottage' ? assetCats.realEstate
       : e.type === 'car' ? assetCats.vehicles
       : assetCats.other;
-    const yearly = (1 + (e.appr || 0) / 100) / (state.real ? 1 + INFLATION : 1);
+    const yearly = (1 + (e.appr || 0) / 100) / (st.real ? 1 + INFLATION : 1);
     const apprM = Math.pow(Math.max(0.01, yearly), 1 / 12);
     let v = -e.amount;
     for (let m = m0; m <= months; m++) {
@@ -213,38 +232,66 @@ function simulate() {
     const muM = new Float64Array(months + 1);
     const sigA = new Float64Array(months + 1);
     for (let m = 1; m <= months; m++) {
-      const { mu, sigma } = portfolioStats(allocationAt(a0 + m / 12, retAge));
-      muM[m] = Math.pow(1 + mu - (state.real ? INFLATION : 0), 1 / 12) - 1;
+      const { mu, sigma } = portfolioStats(allocationAt(a0 + m / 12, retAge, st));
+      muM[m] = Math.pow(1 + mu - (st.real ? INFLATION : 0), 1 / 12) - 1;
       sigA[m] = sigma;
     }
     return { muM, sigA };
   }
 
-  // Odotettu kehityspolku annetulla eläkeiällä, nostolla ja kuukausisäästöllä.
-  // clamp0=false sallii negatiivisen varallisuuden (ratkaisimia varten).
-  function runPath(withdrawal, retAge, muM, clamp0, monthlySave) {
-    let w = state.startCapital;
-    const arr = [w];
+  // Kehityspolku annetulla eläkeiällä, kuukausitulon tarpeella ja säästöllä.
+  // Työeläke pienentää nostoa; nostoista peritään myyntivoittovero (voitto-osuus).
+  // clamp0=false sallii negatiivisen varallisuuden (ratkaisimia varten),
+  // shockFn(m) antaa Monte Carlon satunnaisheiton (muuten deterministinen).
+  function runPath(withdrawal, retAge, muM, { clamp0 = false, monthlySave = st.monthly, shockFn = null, collect = false } = {}) {
+    let w = st.startCapital;
+    let basis = st.startCapital; // salkun hankintahinta myyntivoittoveroa varten
+    let ytdGain = 0;             // kuluvana vuonna realisoidut voitot (30/34 % raja)
+    let taxPaid = 0;
+    const arr = collect ? [w] : null;
     let depletion = null;
+    // Myynti salkusta: pienentää hankintahintaa suhteessa ja palauttaa realisoidun voiton
+    const sell = (gross) => {
+      if (w <= 0) { w -= gross; return 0; }
+      const s = Math.min(gross, w);
+      const gain = Math.max(0, (w - basis) / w) * s;
+      basis -= basis * (s / w);
+      w -= gross;
+      return gain;
+    };
     for (let m = 1; m <= months; m++) {
       const age = a0 + m / 12;
-      w *= 1 + muM[m];
+      if (m % 12 === 1) ytdGain = 0;
+      w *= 1 + muM[m] + (shockFn ? shockFn(m) : 0); // tuotto ei muuta hankintahintaa
       if (retAge == null || age <= retAge) {
         // Työuralla lainanhoito vähentää kuukausisäästöä (loput maksetaan palkasta)
-        w += Math.max(0, monthlySave - payments[m]);
+        const contrib = Math.max(0, monthlySave * growth[m] - payments[m]);
+        w += contrib; basis += contrib;
       } else {
-        // Eläkkeellä nostot ja lainanhoito maksetaan sijoituksista
-        w -= withdrawal + payments[m];
+        // Eläkkeellä: kuukausitulon tarve + lainanhoito, josta työeläke kattaa osan
+        const pen = age >= pensionAge ? pension : 0;
+        const need = withdrawal + payments[m] - pen;
+        if (need <= 0) {
+          w -= need; basis -= need; // ylijäämä (eläke > tarve) takaisin salkkuun
+        } else if (taxOn) {
+          const rate = ytdGain >= TAX_BRACKET ? TAX_HIGH : TAX_LOW;
+          const gainRatio = w > 0 ? Math.max(0, (w - basis) / w) : 0;
+          const gross = need / Math.max(0.35, 1 - gainRatio * rate); // brutto → netto = need veron jälkeen
+          const gain = sell(gross);
+          taxPaid += gain * rate;
+          ytdGain += gain;
+        } else {
+          sell(need);
+        }
       }
-      if (lump.has(m)) w += lump.get(m);
-
-      if (clamp0 && w < 0) {
-        if (depletion == null) depletion = age;
-        w = 0;
+      if (lump.has(m)) {
+        const L = lump.get(m);
+        if (L >= 0) { w += L; basis += L; } else sell(-L); // menon rahoitus verotta (kertaerä)
       }
-      arr.push(w);
+      if (clamp0 && w < 0) { if (depletion == null) depletion = age; w = 0; }
+      if (arr) arr.push(w);
     }
-    return { arr, depletion, endW: arr[months] };
+    return { arr, depletion, endW: w, taxPaid };
   }
 
   // Tavoitetila: yksi suure ratkaistaan, muut on lukittu
@@ -257,13 +304,13 @@ function simulate() {
   out.goalUnreachable = false;
 
   if (retire && goal === 'withdrawal') {
-    // Kestävä nosto: varallisuus 0 € suunnitelman lopussa
+    // Kestävä kuukausitulo: sijoitusvarallisuus 0 € suunnitelman lopussa
     const { muM } = buildMu(retireAge);
     let lo = 0, hi = 1000;
-    while (runPath(hi, retireAge, muM, false, state.monthly).endW > 0 && hi < 1e7) hi *= 2;
+    while (runPath(hi, retireAge, muM, { monthlySave: st.monthly }).endW > 0 && hi < 1e7) hi *= 2;
     for (let i = 0; i < 40; i++) {
       const mid = (lo + hi) / 2;
-      if (runPath(mid, retireAge, muM, false, state.monthly).endW > 0) lo = mid;
+      if (runPath(mid, retireAge, muM, { monthlySave: st.monthly }).endW > 0) lo = mid;
       else hi = mid;
     }
     withdrawal = Math.max(0, Math.round((lo + hi) / 2));
@@ -276,7 +323,7 @@ function simulate() {
     const rMax = months - 12;
     const feasible = (r) => {
       const ra = a0 + r / 12;
-      return runPath(withdrawal, ra, buildMu(ra).muM, false, state.monthly).endW >= 0;
+      return runPath(withdrawal, ra, buildMu(ra).muM, { monthlySave: st.monthly }).endW >= 0;
     };
     if (!feasible(rMax)) {
       out.goalUnreachable = true;
@@ -295,11 +342,11 @@ function simulate() {
   } else if (retire && goal === 'saving') {
     // Tarvittava kuukausisäästö annetulla eläkeiällä ja nostolla
     const { muM } = buildMu(retireAge);
-    const endW = (ms) => runPath(withdrawal, retireAge, muM, false, ms).endW;
+    const endW = (ms) => runPath(withdrawal, retireAge, muM, { monthlySave: ms }).endW;
     if (endW(0) >= 0) {
       out.requiredMonthly = 0;
     } else {
-      let hi = Math.max(100, state.monthly);
+      let hi = Math.max(100, st.monthly);
       while (endW(hi) < 0 && hi < 1e6) hi *= 2;
       if (endW(hi) < 0) {
         out.goalUnreachable = true;
@@ -318,10 +365,11 @@ function simulate() {
   out.withdrawal = withdrawal;
 
   const { muM, sigA } = buildMu(retireAge);
-  const final = runPath(withdrawal, retireAge, muM, true, state.monthly);
+  const final = runPath(withdrawal, retireAge, muM, { clamp0: true, monthlySave: st.monthly, collect: true });
   const exp = final.arr;
   const depletionAge = final.depletion;
   out.exp = exp;
+  out.taxPaid = final.taxPaid;
 
   // Nettovarallisuus = sijoitukset + omaisuuserät − velat
   const net = new Array(months + 1);
@@ -352,31 +400,19 @@ function simulate() {
     spare = r * Math.sin(th);
     return r * Math.cos(th);
   };
+  const shockFn = (m) => (sigA[m] / SQRT12) * gauss();
   let okCount = 0;
   for (let i = 0; i < N_MC; i++) {
-    let w = state.startCapital;
-    let alive = true;
-    for (let m = 1; m <= months; m++) {
-      const age = a0 + m / 12;
-      w *= 1 + muM[m] + (sigA[m] / SQRT12) * gauss();
-      if (retireAge == null || age <= retireAge) {
-        w += Math.max(0, state.monthly - payments[m]);
-      } else {
-        w -= withdrawal + payments[m];
-      }
-      if (lump.has(m)) w += lump.get(m);
-      if (w < 0) { alive = false; break; }
-    }
-    if (alive) okCount++;
+    if (runPath(withdrawal, retireAge, muM, { clamp0: true, monthlySave: st.monthly, shockFn }).depletion == null) okCount++;
   }
   out.successProb = okCount / N_MC;
 
   // Sijoitettu pääoma kumulatiivisesti (alkusijoitus + kk-sijoitukset työuralla)
-  const invested = [state.startCapital];
-  let cum = state.startCapital;
+  const invested = [st.startCapital];
+  let cum = st.startCapital;
   for (let m = 1; m <= months; m++) {
     const age = a0 + m / 12;
-    if (retireAge == null || age <= retireAge) cum += Math.max(0, state.monthly - payments[m]);
+    if (retireAge == null || age <= retireAge) cum += Math.max(0, st.monthly * growth[m] - payments[m]);
     invested.push(cum);
   }
   out.invested = invested;
@@ -406,6 +442,9 @@ let plot = { l: 64, r: 26, t: 20, b: 48, w: 0, h: 0, W: 0, H: 0 };
 let openPopoverId = null;
 let draggingId = null;
 let hoverLine = null, hoverDot = null, balHoverLine = null;
+// Skenaariovertailu: tallennettu suunnitelma haamukäyräksi (irrallinen syväkopio)
+let baseline = null;
+let ghostSim = null;
 
 function el(name, attrs, parent) {
   const n = document.createElementNS(SVG_NS, name);
@@ -431,6 +470,8 @@ function niceStep(range, target) {
 
 function renderChart() {
   sim = simulate();
+  ghostSim = computeGhost();
+  renderCompare();
   const W = wrap.clientWidth, H = wrap.clientHeight;
   if (W < 50 || H < 50) return;
   plot.W = W; plot.H = H;
@@ -438,7 +479,7 @@ function renderChart() {
   plot.h = H - plot.t - plot.b;
 
   const { a0, a1, months } = sim;
-  const yMax = Math.max(10000, Math.max(...sim.opt, ...sim.invested)) * 1.08;
+  const yMax = Math.max(10000, Math.max(...sim.opt, ...sim.invested, ...(ghostSim ? ghostSim.exp : []))) * 1.08;
 
   scaleX = (age) => plot.l + ((age - a0) / (a1 - a0)) * plot.w;
   scaleY = (v) => plot.t + plot.h - (v / yMax) * plot.h;
@@ -492,6 +533,17 @@ function renderChart() {
   for (let i = 1; i <= months; i++) band += ` L ${pt(sim.opt, i)}`;
   for (let i = months; i >= 0; i--) band += ` L ${pt(sim.pess, i)}`;
   el('path', { d: band + ' Z', fill: 'rgba(45,212,191,0.10)', stroke: 'none' }, svg);
+
+  /* vertailukohdan haamukäyrä (piirretään pääkäyrän alle, ikään sidottuna) */
+  if (ghostSim) {
+    let gp = '';
+    for (let i = 0; i <= ghostSim.months; i++) {
+      const ga = ghostSim.a0 + i / 12;
+      if (ga < a0 || ga > a1) continue;
+      gp += `${gp ? ' L' : 'M'} ${scaleX(ga).toFixed(1)},${scaleY(ghostSim.exp[i]).toFixed(1)}`;
+    }
+    if (gp) el('path', { d: gp, fill: 'none', stroke: '#9aa7c4', 'stroke-width': 2, 'stroke-dasharray': '2 4', opacity: 0.7, 'stroke-linejoin': 'round' }, svg);
+  }
 
   /* odotetun kehityksen alue + viiva */
   let line = `M ${pt(sim.exp, 0)}`;
@@ -556,7 +608,8 @@ function renderChart() {
     if (ev.type === 'retirement') {
       const g = retGoal(ev);
       const wd = g === 'withdrawal' && sim.solvedWithdrawal != null ? sim.solvedWithdrawal : ev.withdrawal;
-      tdesc = '−' + fmtEur(wd) + '/kk' + (g === 'withdrawal' ? ' (varat loppuun)' : g === 'age' ? ' (aikaisin eläkeikä)' : '');
+      const penTxt = ev.pension > 0 ? ` · työeläke ${fmtEur(ev.pension)}/kk` : '';
+      tdesc = fmtEur(wd) + '/kk tuloa' + penTxt + (g === 'withdrawal' ? ' (kestävä)' : g === 'age' ? ' (aikaisin eläkeikä)' : '');
     } else if (ev.amount < 0 && ev.financing === 'loan') {
       const pmt = loanPayment(Math.max(0, -ev.amount - (ev.down || 0)), ev.rate || 0, ev.years || 10);
       tdesc = `${fmtEur(ev.amount)} · lainalla ${fmtEur(pmt)}/kk`;
@@ -874,6 +927,8 @@ function addEvent(type, age) {
     ev = { id: idSeq++, type, age };
     if (def.withdrawal != null) {
       ev.withdrawal = def.withdrawal;
+      ev.pension = def.pension != null ? def.pension : 0;
+      ev.pensionAge = def.pensionAge != null ? def.pensionAge : 65;
     } else {
       ev.amount = def.amount;
       ev.financing = def.defaultFin || 'cash';
@@ -902,23 +957,32 @@ function openPopover(id) {
     const wdVal = wdSolved && sim && sim.solvedWithdrawal != null ? sim.solvedWithdrawal : ev.withdrawal;
     const ageVal = ageSolved ? Math.round(ev.age * 10) / 10 : Math.round(ev.age);
     const goalBtns = [
-      ['manual', 'Kokeilen itse'], ['withdrawal', 'Kestävä nosto'],
+      ['manual', 'Kokeilen itse'], ['withdrawal', 'Kestävä tulo'],
       ['age', 'Eläkeikä'], ['saving', 'Tarvittava säästö'],
     ].map(([k, lbl]) => `<button type="button" data-goal="${k}" class="${g === k ? 'on' : ''}">${lbl}</button>`).join('');
     const goalNotes = {
-      manual: 'Säädä ikää ja nostoa vapaasti ja katso riittävätkö varat.',
-      withdrawal: 'Ikä lukittu — nosto mitoitetaan niin, että varallisuus on 0&nbsp;€ suunnitelman lopussa.',
-      age: 'Nosto lukittu — lasketaan aikaisin eläkeikä, jolla varat riittävät suunnitelman loppuun.',
-      saving: 'Ikä ja nosto lukittu — lasketaan kuukausisäästö, jolla varat riittävät suunnitelman loppuun.',
+      manual: 'Säädä ikää ja kuukausituloa vapaasti ja katso riittävätkö varat.',
+      withdrawal: 'Ikä lukittu — kuukausitulo mitoitetaan niin, että sijoitukset ovat 0&nbsp;€ suunnitelman lopussa.',
+      age: 'Kuukausitulo lukittu — lasketaan aikaisin eläkeikä, jolla varat riittävät suunnitelman loppuun.',
+      saving: 'Ikä ja kuukausitulo lukittu — lasketaan kuukausisäästö, jolla varat riittävät suunnitelman loppuun.',
     };
+    const penVal = ev.pension != null ? ev.pension : 0;
+    const penAgeVal = ev.pensionAge != null ? Math.round(ev.pensionAge) : 65;
     fields =
-      `<p class="note">Kuukausisijoitukset päättyvät ja nostot alkavat tästä iästä.</p>` +
+      `<p class="note">Kuukausisijoitukset päättyvät ja eläkeaika alkaa tästä iästä.</p>` +
       `<div class="field"><span class="field-label">Tavoite</span><div class="seg seg-goal" id="pv-goals">${goalBtns}</div></div>` +
       `<p class="note">${goalNotes[g]}</p>` +
       `<label class="field"><span class="field-label">${ageSolved ? 'Aikaisin eläkeikä (laskettu)' : 'Eläkkeelle jäänti-ikä'}</span>` +
       `<span class="input"><input id="pv-age" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${ageVal}" ${ageSolved ? 'disabled' : ''} /><em>v</em></span></label>` +
-      `<label class="field"><span class="field-label">${wdSolved ? 'Kestävä nosto (laskettu)' : 'Nosto sijoituksista'}</span>` +
+      `<label class="field"><span class="field-label">${wdSolved ? 'Kestävä kuukausitulo (laskettu)' : 'Kuukausitulon tarve'} <small>koko kulutus eläkkeellä</small></span>` +
       `<span class="input"><input id="pv-wd" type="number" min="0" step="100" value="${wdVal}" ${wdSolved ? 'disabled' : ''} /><em>€/kk</em></span></label>` +
+      `<div class="row2">` +
+      `<label class="field"><span class="field-label">Työeläke (arvio)</span>` +
+      `<span class="input"><input id="pv-pen" type="number" min="0" step="100" value="${penVal}" /><em>€/kk</em></span></label>` +
+      `<label class="field"><span class="field-label">Eläke alkaa</span>` +
+      `<span class="input"><input id="pv-penage" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${penAgeVal}" /><em>v</em></span></label>` +
+      `</div>` +
+      `<p class="note pen-note" id="pv-pen-note"></p>` +
       (g === 'saving' || g === 'age' ? `<p class="note req-note" id="pv-req"></p>` : '');
   } else {
     fields =
@@ -999,8 +1063,34 @@ function openPopover(id) {
   const wd = $('pv-wd');
   if (wd) wd.addEventListener('input', (e) => {
     const v = parseFloat(e.target.value);
-    if (!isNaN(v)) { ev.withdrawal = Math.max(0, v); renderAllKeepPopover(); }
+    if (!isNaN(v)) { ev.withdrawal = Math.max(0, v); updatePenNote(); renderAllKeepPopover(); }
   });
+  const pen = $('pv-pen');
+  if (pen) pen.addEventListener('input', (e) => {
+    const v = parseFloat(e.target.value);
+    if (!isNaN(v)) { ev.pension = Math.max(0, v); updatePenNote(); renderAllKeepPopover(); }
+  });
+  const penAge = $('pv-penage');
+  if (penAge) penAge.addEventListener('input', (e) => {
+    const v = parseFloat(e.target.value);
+    if (!isNaN(v)) { ev.pensionAge = clamp(v, state.ageNow, state.ageEnd); updatePenNote(); renderAllKeepPopover(); }
+  });
+  // Työeläkkeen erittely: paljonko tulosta katetaan eläkkeellä, paljonko sijoituksista
+  const updatePenNote = () => {
+    const note = $('pv-pen-note');
+    if (!note) return;
+    const p = Math.max(0, ev.pension || 0);
+    const wdEff = retGoal(ev) === 'withdrawal' && sim && sim.solvedWithdrawal != null ? sim.solvedWithdrawal : (ev.withdrawal || 0);
+    if (p <= 0) {
+      note.innerHTML = 'Ei työeläkettä — koko kuukausitulo nostetaan sijoituksista.';
+      return;
+    }
+    const draw = Math.max(0, wdEff - p);
+    const paStr = Math.round(ev.pensionAge != null ? ev.pensionAge : 65);
+    note.innerHTML = `Työeläke kattaa <b>${fmtEur(p)}/kk</b> (alk. ${paStr} v). ` +
+      (draw > 0 ? `Sijoituksista noin <b>${fmtEur(draw)}/kk</b>${state.tax ? ' + vero' : ''}.` : 'Sijoituksia ei tarvitse nostaa.');
+  };
+  updatePenNote();
   const goalsBox = $('pv-goals');
   if (goalsBox) for (const b of goalsBox.querySelectorAll('button')) {
     b.addEventListener('click', () => {
@@ -1164,12 +1254,12 @@ function renderStats() {
     k: 'Sijoitettu yhteensä',
     v: fmtEur(s.deposits),
     cls: '',
-    s: `${fmtEur(state.monthly)}/kk + alkupääoma`,
+    s: `${fmtEur(state.monthly)}/kk${state.savingsGrowth > 0 ? ` (+${state.savingsGrowth.toLocaleString('fi-FI')} %/v)` : ''} + alkupääoma`,
   });
   if (s.goal === 'age') {
     cards.push(s.solvedRetireAge != null
-      ? { k: 'Aikaisin eläkeikä', v: fmtAge(s.solvedRetireAge), cls: 'accent', s: `nostolla ${fmtEur(s.withdrawal)}/kk` }
-      : { k: 'Aikaisin eläkeikä', v: 'Ei toteudu', cls: 'bad', s: 'nosto ei onnistu edes suunnitelman lopussa' });
+      ? { k: 'Aikaisin eläkeikä', v: fmtAge(s.solvedRetireAge), cls: 'accent', s: `kuukausitulolla ${fmtEur(s.withdrawal)}/kk` }
+      : { k: 'Aikaisin eläkeikä', v: 'Ei toteudu', cls: 'bad', s: 'tulotarve ei onnistu edes suunnitelman lopussa' });
   }
   if (s.goal === 'saving') {
     cards.push(s.requiredMonthly != null
@@ -1177,11 +1267,16 @@ function renderStats() {
       : { k: 'Tarvittava säästö', v: 'Ei toteudu', cls: 'bad', s: 'nosto on liian suuri tällä eläkeiällä' });
   }
   if (s.solvedWithdrawal != null && (s.depletionAge == null || s.depletionAge >= s.a1 - 1)) {
-    cards.push({ k: 'Kestävä nosto', v: `${fmtEur(s.solvedWithdrawal)}/kk`, cls: 'accent', s: `varat käytetty loppuun ${Math.round(s.a1)} v mennessä` });
+    cards.push({ k: 'Kestävä kuukausitulo', v: `${fmtEur(s.solvedWithdrawal)}/kk`, cls: 'accent',
+      s: s.pension > 0 ? `sis. työeläke ${fmtEur(s.pension)}/kk` : `varat loppuun ${Math.round(s.a1)} v mennessä` });
   } else if (s.depletionAge != null) {
     cards.push({ k: 'Riittävyys', v: `Ehtyy ~${Math.round(s.depletionAge)} v`, cls: 'bad', s: 'kokeile siirtää tapahtumia tai lisätä säästöä' });
   } else {
     cards.push({ k: 'Riittävyys', v: 'Varat riittävät ✓', cls: 'ok', s: `suunnitelman loppuun (${Math.round(s.a1)} v)` });
+  }
+
+  if (s.taxPaid > 0.5) {
+    cards.push({ k: 'Myyntivoittovero', v: fmtEur(s.taxPaid), cls: '', s: 'arvio eläkeajan nostoista yhteensä' });
   }
 
   if (s.successProb != null) {
@@ -1197,6 +1292,78 @@ function renderStats() {
   $('stats').innerHTML = cards.map((c) =>
     `<div class="stat"><div class="k">${c.k}</div><div class="v ${c.cls}">${c.v}</div><div class="s">${c.s}</div></div>`
   ).join('');
+}
+
+/* ===================== Skenaariovertailu ===================== */
+// Tallennettu suunnitelma piirtyy haamukäyräksi ja tunnusluvut näyttävät eron
+// nykyiseen. Vertailukohta on paikallinen — sitä ei jaeta jakolinkissä.
+
+const BASELINE_KEY = 'vp-baseline-v1';
+
+function computeGhost() {
+  if (!baseline || !Array.isArray(baseline.events)) return null;
+  try {
+    return simulate(JSON.parse(JSON.stringify(baseline)));
+  } catch (e) {
+    baseline = null;
+    try { localStorage.removeItem(BASELINE_KEY); } catch (_) {}
+    return null;
+  }
+}
+
+function setBaseline() {
+  baseline = JSON.parse(JSON.stringify(serialize()));
+  try { localStorage.setItem(BASELINE_KEY, JSON.stringify(baseline)); } catch (e) {}
+  renderChart();
+}
+
+function clearBaseline() {
+  baseline = null;
+  ghostSim = null;
+  try { localStorage.removeItem(BASELINE_KEY); } catch (e) {}
+  renderChart();
+}
+
+function loadBaseline() {
+  try {
+    const raw = localStorage.getItem(BASELINE_KEY);
+    if (!raw) return;
+    const o = JSON.parse(raw);
+    if (o && typeof o === 'object' && Array.isArray(o.events)) baseline = o;
+  } catch (e) { /* viallinen vertailukohta — ohitetaan */ }
+}
+
+function renderCompare() {
+  const bar = $('compareBar');
+  const legend = $('legendCompare');
+  const active = !!(baseline && ghostSim && sim);
+  bar.hidden = !active;
+  if (legend) legend.hidden = !active;
+  if (!active) return;
+
+  const chips = [];
+  // higher-is-better -metriikoille up = vihreä, down = punainen
+  const add = (label, cur, base, eps, fmt) => {
+    if (cur == null || base == null) return;
+    const d = cur - base;
+    const dir = Math.abs(d) < eps ? 'flat' : d > 0 ? 'up' : 'down';
+    const val = dir === 'flat' ? '±0' : (d > 0 ? '+' : '−') + fmt(Math.abs(d));
+    chips.push(`<span class="cmp-chip"><span class="ck">${label}</span><span class="cv ${dir}">${val}</span></span>`);
+  };
+  add('Eläkevarallisuus', sim.wAtRet, ghostSim.wAtRet, 500, fmtCompact);
+  // Vertaa samaa suuretta molemmilta: netto vs. netto tai sijoitukset vs. sijoitukset
+  const useNet = sim.hasNet;
+  const curEnd = useNet ? sim.net[sim.months] : sim.wEnd;
+  const baseEnd = useNet ? ghostSim.net[ghostSim.months] : ghostSim.wEnd;
+  add(useNet ? 'Nettovarallisuus lopussa' : 'Loppuvarallisuus', curEnd, baseEnd, 500, fmtCompact);
+  if (sim.solvedWithdrawal != null && ghostSim.solvedWithdrawal != null)
+    add('Kestävä tulo', sim.solvedWithdrawal, ghostSim.solvedWithdrawal, 20, (x) => `${Math.round(x).toLocaleString('fi-FI')} €/kk`);
+  add('Onnistuminen', sim.successProb != null ? Math.round(sim.successProb * 100) : null,
+    ghostSim.successProb != null ? Math.round(ghostSim.successProb * 100) : null, 0.5, (x) => `${Math.round(x)} %-yks`);
+
+  $('cmpDeltas').innerHTML = chips.length
+    ? chips.join('')
+    : '<span class="cmp-chip"><span class="ck">Ei muutosta vertailukohtaan</span></span>';
 }
 
 /* ===================== Tapahtumalista ===================== */
@@ -1278,6 +1445,7 @@ function bindInputs() {
   num('ageEnd', 'ageEnd', 2, 105);
   num('startCapital', 'startCapital', 0, 1e9);
   num('monthly', 'monthly', 0, 1e6);
+  num('savingsGrowth', 'savingsGrowth', 0, 15);
 
   $('allocStocks').addEventListener('input', (e) => {
     state.allocStocks = +e.target.value;
@@ -1292,6 +1460,7 @@ function bindInputs() {
   });
   $('glide').addEventListener('change', (e) => { state.glide = e.target.checked; renderAll(); });
   $('real').addEventListener('change', (e) => { state.real = e.target.checked; renderAll(); });
+  $('tax').addEventListener('change', (e) => { state.tax = e.target.checked; renderAll(); });
 }
 
 /* ===================== Tallennus ja jakaminen ===================== */
@@ -1302,8 +1471,9 @@ function serialize() {
   return {
     ageNow: state.ageNow, ageEnd: state.ageEnd,
     startCapital: state.startCapital, monthly: state.monthly,
+    savingsGrowth: state.savingsGrowth,
     allocStocks: state.allocStocks, allocBonds: state.allocBonds,
-    glide: state.glide, real: state.real,
+    glide: state.glide, real: state.real, tax: state.tax,
     events: state.events,
   };
 }
@@ -1315,6 +1485,11 @@ function applySaved(data) {
   }
   state.glide = !!data.glide;
   state.real = !!data.real;
+  // Uudet kentät: vanhat tallennukset/linkit eivät saa muuttua — jos kenttä
+  // puuttuu, käytetään neutraalia arvoa (kasvu 0 %, ei veroa), ei uutta oletusta.
+  state.savingsGrowth = typeof data.savingsGrowth === 'number' && isFinite(data.savingsGrowth)
+    ? clamp(data.savingsGrowth, 0, 15) : 0;
+  state.tax = !!data.tax;
   if (state.ageEnd <= state.ageNow + 1) state.ageEnd = state.ageNow + 2;
   if (Array.isArray(data.events)) {
     const numOk = (v) => typeof v === 'number' && isFinite(v);
@@ -1337,6 +1512,9 @@ function applySaved(data) {
       // simulaattoriin NaN:eina — paikataan oletuksilla
       if (e.type === 'retirement') {
         e.withdrawal = numOk(e.withdrawal) ? Math.max(0, e.withdrawal) : EVENT_TYPES.retirement.withdrawal;
+        // Työeläke: puuttuva = 0 (vanhat linkit ennallaan), ei uutta oletusta
+        e.pension = numOk(e.pension) ? Math.max(0, e.pension) : 0;
+        e.pensionAge = numOk(e.pensionAge) ? clamp(e.pensionAge, 0, 120) : 65;
       } else {
         if (!numOk(e.amount)) e.amount = EVENT_TYPES[e.type].amount || 0;
         if (e.financing !== 'loan') delete e.financing;
@@ -1388,10 +1566,12 @@ function syncInputs() {
   $('ageEnd').value = state.ageEnd;
   $('startCapital').value = state.startCapital;
   $('monthly').value = state.monthly;
+  $('savingsGrowth').value = state.savingsGrowth;
   $('allocStocks').value = state.allocStocks;
   $('allocBonds').value = state.allocBonds;
   $('glide').checked = state.glide;
   $('real').checked = state.real;
+  $('tax').checked = state.tax;
 }
 
 const makeShareUrl = () =>
@@ -1419,6 +1599,16 @@ function bindActions() {
   $('infoBtn').addEventListener('click', () => { $('infoModal').hidden = false; });
   $('infoClose').addEventListener('click', () => { $('infoModal').hidden = true; });
   $('disclaimerInfo').addEventListener('click', (e) => { e.preventDefault(); $('infoModal').hidden = false; });
+
+  // Skenaariovertailu: tallenna nykyinen suunnitelma haamukäyräksi
+  const compareBtn = $('compareBtn');
+  compareBtn.addEventListener('click', () => {
+    setBaseline();
+    compareBtn.textContent = 'Tallennettu ✓';
+    setTimeout(() => { compareBtn.textContent = 'Vertaile'; }, 1500);
+  });
+  $('cmpUpdate').addEventListener('click', () => setBaseline());
+  $('cmpClear').addEventListener('click', () => clearBaseline());
   // Tase-paneelin supistus
   const balanceToggle = $('balanceToggle');
   let balCollapsed = false;
@@ -1436,7 +1626,7 @@ function bindActions() {
   let resetArmed = null;
   resetBtn.addEventListener('click', () => {
     if (resetArmed) {
-      try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+      try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(BASELINE_KEY); } catch (e) {}
       location.hash = '';
       location.reload();
       return;
@@ -1519,7 +1709,8 @@ function summaryPoints(s) {
   } else if (s.goal === 'saving' && s.requiredMonthly != null) {
     pts.push({ html: `Säästän <b>${fmtEur(state.monthly)}/kk</b> — tavoitteeni laskennallinen minimi on ${fmtEur(s.requiredMonthly)}/kk.` });
   } else {
-    pts.push({ html: `Sijoitan <b>${fmtEur(state.monthly)}/kk</b>${s.retireAge != null ? ' eläkkeelle jäämiseen asti' : ' koko suunnitelman ajan'} (alkupääoma ${fmtEur(state.startCapital)}).` });
+    const grow = state.savingsGrowth > 0 ? `, kasvatan säästöä ${state.savingsGrowth.toLocaleString('fi-FI')} %/v` : '';
+    pts.push({ html: `Sijoitan <b>${fmtEur(state.monthly)}/kk</b>${s.retireAge != null ? ' eläkkeelle jäämiseen asti' : ' koko suunnitelman ajan'}${grow} (alkupääoma ${fmtEur(state.startCapital)}).` });
   }
 
   const a = baseAlloc();
@@ -1545,9 +1736,16 @@ function summaryPoints(s) {
   if (s.retireAge != null) {
     const wd = `<b>${fmtEur(s.withdrawal)}/kk</b>`;
     const ageStr = `<b>${s.goal === 'age' && s.solvedRetireAge != null ? fmtAge(s.solvedRetireAge) : Math.round(s.retireAge) + ' v'}</b> (${yearOf(s.retireAge)})`;
-    if (s.goal === 'withdrawal') pts.push({ html: `Jään eläkkeelle iässä ${ageStr} ja käytän varat tasaisesti loppuun — kestävä nosto ${wd}.` });
-    else if (s.goal === 'age') pts.push({ html: `Jään eläkkeelle heti kun nostoni ${wd} on kestävä — laskennallisesti iässä ${ageStr}.` });
-    else pts.push({ html: `Jään eläkkeelle iässä ${ageStr} ja nostan sijoituksistani ${wd}.` });
+    if (s.goal === 'withdrawal') pts.push({ html: `Jään eläkkeelle iässä ${ageStr} ja käytän sijoitusvarat tasaisesti loppuun — kestävä kuukausitulo ${wd}.` });
+    else if (s.goal === 'age') pts.push({ html: `Jään eläkkeelle heti kun kuukausituloni ${wd} on kestävä — laskennallisesti iässä ${ageStr}.` });
+    else pts.push({ html: `Jään eläkkeelle iässä ${ageStr}, tavoitteena ${wd} kuukausitulo.` });
+    if (s.pension > 0) {
+      const draw = Math.max(0, s.withdrawal - s.pension);
+      pts.push({ html: `Lakisääteinen työeläkkeeni on <b>${fmtEur(s.pension)}/kk</b> (alk. ${Math.round(s.pensionAge)} v) — sijoituksista nostan noin <b>${fmtEur(draw)}/kk</b>${state.tax ? ' (+ myyntivoittovero)' : ''}.` });
+    }
+    if (state.tax && s.taxPaid > 0.5) {
+      pts.push({ html: `Varaudun eläkeaikana yhteensä noin <b>${fmtEur(s.taxPaid)}</b> myyntivoittoveroon (30/34&nbsp;% nostojen voitto-osuudesta).` });
+    }
   }
   return pts;
 }
@@ -1587,12 +1785,12 @@ function renderSummary() {
 
   const tiles = [
     { k: 'Nykyinen varallisuus', v: fmtEur(state.startCapital) },
-    { k: 'Kuukausisäästö', v: `${fmtEur(state.monthly)}/kk` },
+    { k: 'Kuukausisäästö', v: `${fmtEur(state.monthly)}/kk`, s: state.savingsGrowth > 0 ? `kasvu ${state.savingsGrowth.toLocaleString('fi-FI')} %/v` : '' },
     { k: s.goal === 'age' ? 'Aikaisin eläkeikä' : 'Eläkeikä',
       v: s.retireAge != null ? (s.goal === 'age' && s.solvedRetireAge != null ? fmtAge(s.solvedRetireAge) : `${Math.round(s.retireAge)} v`) : '—',
       s: s.retireAge != null ? yearOf(s.retireAge) : 'ei eläketapahtumaa' },
-    { k: 'Nosto eläkkeellä', v: retire ? `${fmtEur(s.withdrawal)}/kk` : '—',
-      s: s.goal === 'withdrawal' ? 'kestävä nosto — varat loppuun' : '' },
+    { k: 'Kuukausitulo eläkkeellä', v: retire ? `${fmtEur(s.withdrawal)}/kk` : '—',
+      s: retire ? (s.pension > 0 ? `sis. työeläke ${fmtEur(s.pension)}/kk` : (s.goal === 'withdrawal' ? 'kestävä tulo — varat loppuun' : 'sijoituksista')) : '' },
     { k: 'Varallisuus eläkkeellä', v: s.wAtRet != null ? fmtEur(s.wAtRet) : '—', cls: 'accent' },
     { k: 'Onnistumistodennäköisyys', v: p != null ? `${p} %` : '—', cls: p >= 80 ? 'ok' : p >= 55 ? '' : 'bad', s: '300 markkinapolkua' },
   ];
@@ -1602,7 +1800,8 @@ function renderSummary() {
     let sum, fin = '', note = '';
     if (e.type === 'retirement') {
       sum = `−${fmtEur(s.goal === 'withdrawal' && s.solvedWithdrawal != null ? s.solvedWithdrawal : e.withdrawal)}/kk`;
-      fin = { manual: 'nostot sijoituksista', withdrawal: 'kestävä nosto — varat loppuun', age: 'aikaisin mahdollinen ikä', saving: 'säästötavoite' }[retGoal(e)];
+      fin = { manual: 'kuukausitulon tarve', withdrawal: 'kestävä tulo — varat loppuun', age: 'aikaisin mahdollinen ikä', saving: 'säästötavoite' }[retGoal(e)];
+      if (e.pension > 0) note = `työeläke ${fmtEur(e.pension)}/kk alk. ${Math.round(e.pensionAge != null ? e.pensionAge : 65)} v`;
     } else if (e.amount < 0 && e.financing === 'loan') {
       const price = -e.amount;
       const down = clamp(e.down || 0, 0, price);
@@ -1637,7 +1836,7 @@ function renderSummary() {
     `<table class="sum-table"><thead><tr><th>Tapahtuma</th><th>Ajankohta</th><th>Summa</th><th>Rahoitus</th><th>Huom.</th></tr></thead><tbody>${evRows}</tbody></table>` +
     `<h2>Keskusteltavaa esim. varainhoitajan kanssa</h2>` +
     `<ul class="sum-points">${summaryTalks(s).map(li).join('')}</ul>` +
-    `<p class="sum-assump">Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa${state.real ? `; inflaatio ${pctFmt(INFLATION)}/v, luvut nykyrahassa` : ''}${state.glide ? '; ikäsidonnainen allokaatio' : ''}. ` +
+    `<p class="sum-assump">Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa${state.savingsGrowth > 0 ? `; säästön kasvu ${state.savingsGrowth.toLocaleString('fi-FI')} %/v` : ''}${state.real ? `; inflaatio ${pctFmt(INFLATION)}/v, luvut nykyrahassa` : ''}${state.glide ? '; ikäsidonnainen allokaatio' : ''}${s.pension > 0 ? '; lakisääteinen työeläke huomioitu eläketulona' : ''}${state.tax ? '; myyntivoittovero 30/34 % nostojen voitto-osuudesta' : ''}. ` +
     `Lainat annuiteettilainoina. Onnistumistodennäköisyys perustuu 300 satunnaiseen markkinapolkuun. Laadittu Varallisuuspolku-työkalulla.</p>` +
     `<p class="sum-disclaimer">Tämä yhteenveto kuvaa laatijansa omia tavoitteita, valintoja ja oletuksia. Se ei ole sijoitusneuvontaa eikä sijoitussuositus — sen voi antaa esimerkiksi varainhoitajalle keskustelun pohjaksi.</p>`;
 }
@@ -1686,6 +1885,7 @@ function renderAll() {
 
 buildPalette();
 loadState();
+loadBaseline();
 syncInputs();
 bindInputs();
 bindActions();
