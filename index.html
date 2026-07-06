@@ -194,12 +194,24 @@
       asentaa aloitusnäytölle (PWA), jolloin se toimii myös ilman verkkoyhteyttä.</p>
 
       <h2>Tietosuoja</h2>
-      <p><b>Kaikki data pysyy omassa selaimessasi.</b> Laskenta tapahtuu kokonaan selaimessa eikä
-      suunnitelmaasi lähetetä millekään palvelimelle. Suunnitelma tallentuu selaimen omaan muistiin
+      <p><b>Sovellus ei lähetä mitään mihinkään ilman erillistä, tapauskohtaista lupaasi.</b>
+      Laskenta tapahtuu kokonaan selaimessa ja suunnitelma tallentuu selaimen omaan muistiin
       (localStorage) vain tällä laitteella. Palvelu ei käytä evästeitä, analytiikkaa eikä ulkopuolisia
-      verkkopalveluita — myös fontit tarjoillaan sivuston omalta palvelimelta.</p>
+      verkkopalveluita — myös fontit tarjoillaan sivuston omalta palvelimelta. Ainoa poikkeus on
+      vapaaehtoinen anonyymi vertailudata (alla), jonka sisällön näet kokonaisuudessaan ennen
+      jakamista.</p>
       <p>Huomaa: <b>Jaa linkki</b> pakkaa koko suunnitelmasi verkko-osoitteeseen. Linkin saaja näkee
       suunnitelman sisällön, joten jaa se vain henkilöille, joille haluat sen näyttää.</p>
+
+      <h2>Vertailu ja avoin data</h2>
+      <p>Yhteenvedossa voit halutessasi jakaa suunnitelmasi <b>anonyymisti</b> vertailudataan ja
+      nähdä, miten eri ikäiset suunnittelevat talouttaan ja etenevät vaurastumisen matkalla.
+      Jaetuissa tiedoissa ei ole tunnisteita — ei nimiä, ei antamiasi otsikoita, ei IP-osoitetta —
+      summat pyöristetään ja päiväys tallentuu kuukausitasolla, eikä jaettuja suunnitelmia voi
+      yhdistää toisiinsa tai keneenkään. Jakaumat julkaistaan avoimena datana vasta, kun ikäryhmässä
+      on vähintään 30 suunnitelmaa. Vastaanottava palvelinkoodi on avointa lähdekoodia samassa
+      GitHub-repossa (kansio <b>palvelin/</b>). Jakaminen ei velvoita mihinkään.
+      Jos valitsit &quot;Ei kiitos&quot;, voit <a href="#" id="donateReset">nollata valinnan</a>.</p>
 
       <h2>Laskentaoletukset</h2>
       <p>Tuotto-oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa. Inflaatiokorjaus 2 %/v
@@ -237,7 +249,46 @@
       <button class="btn" id="sumShare">Kopioi jakolinkki</button>
       <button class="btn ghost" id="sumClose">Sulje</button>
     </div>
+    <div id="donateSlot"></div>
     <div class="sum-sheet" id="sumSheet"></div>
+  </div>
+
+  <div class="summary" id="donateModal" hidden>
+    <div class="sum-bar">
+      <button class="btn ghost" id="donateCancel">Sulje</button>
+    </div>
+    <div class="sum-sheet donate-sheet">
+      <div class="sum-head">
+        <div><h1>Näin suunnitelmasi jaetaan — anonyymisti</h1>
+        <div class="sum-sub">Tarkista alta täsmälleen, mitä vertailudataan menee — ei mitään muuta.</div></div>
+      </div>
+      <div id="donatePreview"></div>
+      <details class="donate-raw"><summary>Näytä raakadata (JSON)</summary><pre id="donateJson"></pre></details>
+      <p class="donate-note">Jaetuissa tiedoissa ei ole tunnisteita: ei nimiä, ei nimeämiäsi otsikoita, ei
+      IP-osoitetta, ei evästeitä. Summat on pyöristetty ja päiväys on kuukausitasolla. Jakaminen ei
+      velvoita mihinkään — mutta koska tunnistetta ei ole, jaettua tietoa <b>ei voi jälkikäteen
+      poistaa</b>. Jakaumat julkaistaan avoimena datana vasta, kun ikäryhmässä on vähintään 30
+      suunnitelmaa. Palvelinkoodi on avointa lähdekoodia.</p>
+      <div class="donate-actions">
+        <button class="btn" id="donateSend">Jaa anonyymisti ja avaa vertailu</button>
+        <button class="btn ghost" id="donateNever">Ei kiitos — älä kysy uudestaan</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary" id="compareModal" hidden>
+    <div class="sum-bar">
+      <button class="btn ghost" id="compareClose">Sulje</button>
+    </div>
+    <div class="sum-sheet compare-sheet">
+      <div class="sum-head">
+        <div><h1>Miten muut suunnittelevat?</h1>
+        <div class="sum-sub" id="compareSub"></div></div>
+      </div>
+      <div id="compareBody"></div>
+      <p class="donate-note">Perustuu käyttäjien vapaaehtoisesti ja anonyymisti jakamiin suunnitelmiin.
+      Aggregaatit ovat avointa dataa: <a id="openDataLink" href="#" target="_blank" rel="noopener">stats.json</a>.</p>
+    </div>
   </div>
 
   <div class="summary" id="tableModal" hidden>

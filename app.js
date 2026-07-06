@@ -113,6 +113,80 @@ function mulberry32(seed) {
   };
 }
 
+/* ===================== Anonyymi datalahjoitus: paketti ===================== */
+// Lahjoituspaketti rakennetaan alusta tiukalla whitelistillä — tapahtumien
+// omat nimet tai muut henkilökohtaiset kentät eivät voi päätyä mukaan.
+// Summat pyöristetään kahteen merkitsevään numeroon.
+
+const DATA_API = 'https://varallisuuspolku-data.up.railway.app';
+
+function round2sig(v) {
+  if (!isFinite(v) || v === 0) return 0;
+  const mag = Math.pow(10, Math.floor(Math.log10(Math.abs(v))) - 1);
+  return Math.round(v / mag) * mag;
+}
+
+function buildDonationPayload(st, s) {
+  const events = [];
+  for (const e of [...st.events].sort((a, b) => a.age - b.age)) {
+    if (e.type === 'retirement') {
+      const ev = {
+        type: 'retirement', age: Math.round(e.age),
+        withdrawal: round2sig(e.withdrawal || 0),
+        pension: round2sig(e.pension || 0),
+      };
+      if (e.pensionAge != null) ev.pensionAge = Math.round(e.pensionAge);
+      if (e.goal) ev.goal = e.goal;
+      if (e.conf != null) ev.conf = e.conf;
+      events.push(ev);
+    } else {
+      const ev = { type: e.type, age: Math.round(e.age) };
+      if (e.amount) ev.amount = round2sig(e.amount);
+      if (e.financing === 'loan') {
+        ev.financing = 'loan';
+        if (e.down != null) ev.down = round2sig(e.down);
+        if (e.rate != null) ev.rate = Math.round(e.rate * 10) / 10;
+        if (e.years != null) ev.years = Math.round(e.years);
+      }
+      if (e.isAsset) {
+        ev.isAsset = true;
+        if (e.appr != null) ev.appr = Math.round(e.appr * 10) / 10;
+        if (e.sellAge != null) { ev.sellAge = Math.round(e.sellAge); ev.sellTaxFree = !!e.sellTaxFree; }
+      }
+      if (e.recMonthly) {
+        ev.recMonthly = round2sig(e.recMonthly);
+        ev.recYears = Math.round(clamp(e.recYears || 10, 1, 60));
+      }
+      events.push(ev);
+    }
+  }
+  const payload = {
+    v: 1,
+    ageNow: Math.round(st.ageNow), ageEnd: Math.round(st.ageEnd),
+    startCapital: round2sig(st.startCapital),
+    monthly: round2sig(st.monthly),
+    savingsGrowth: Math.round((st.savingsGrowth || 0) * 10) / 10,
+    alloc: { stocks: Math.round(st.allocStocks), bonds: Math.round(st.allocBonds) },
+    glide: !!st.glide, real: !!st.real, tax: !!st.tax,
+    events,
+  };
+  if (s) {
+    payload.derived = { wEnd: round2sig(Math.max(0, s.wEnd)) };
+    if (s.wAtRet != null) payload.derived.wAtRet = round2sig(Math.max(0, s.wAtRet));
+    if (s.successProb != null) payload.derived.successProb = Math.round(s.successProb * 100) / 100;
+    if (s.retireAge != null) payload.derived.retireAge = Math.round(s.retireAge * 10) / 10;
+    if (s.taxPaid > 0) payload.derived.taxPaid = round2sig(s.taxPaid);
+  }
+  return payload;
+}
+
+// djb2 — kevyt tiiviste "sama suunnitelma jo lahjoitettu" -muistiin
+function hashStr(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
 /* ===================== Allokointimoottori ===================== */
 
 function baseAlloc(st = state) {
@@ -1458,6 +1532,8 @@ document.addEventListener('keydown', (e) => {
   closeSummary();
   $('infoModal').hidden = true;
   $('tableModal').hidden = true;
+  $('donateModal').hidden = true;
+  $('compareModal').hidden = true;
   closeExamplesMenu();
 });
 
@@ -1679,6 +1755,207 @@ function downloadCsv() {
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
+/* ===================== Anonyymi datalahjoitus: UI ===================== */
+// Vapaaehtoinen, tapauskohtainen lupa: mitään ei lähetetä ilman että käyttäjä
+// näkee paketin sisällön ja painaa Lähetä. Vastineeksi aukeaa vertailunäkymä.
+
+const DONATE_KEY = 'vp-donate-v1';
+
+function donateState() {
+  try { return JSON.parse(localStorage.getItem(DONATE_KEY)) || {}; } catch (e) { return {}; }
+}
+function setDonateState(patch) {
+  const cur = donateState();
+  try { localStorage.setItem(DONATE_KEY, JSON.stringify(Object.assign(cur, patch))); } catch (e) {}
+}
+
+const AGE_GROUPS_UI = [
+  ['18-24', 18, 24], ['25-29', 25, 29], ['30-34', 30, 34], ['35-39', 35, 39],
+  ['40-44', 40, 44], ['45-49', 45, 49], ['50-54', 50, 54], ['55-59', 55, 59],
+  ['60-64', 60, 64], ['65+', 65, 120],
+];
+const ageGroupOf = (age) => (AGE_GROUPS_UI.find(([, lo, hi]) => age >= lo && age <= hi) || [null])[0];
+
+function renderDonateSlot() {
+  const slot = $('donateSlot');
+  const ds = donateState();
+  if (ds.declined) { slot.innerHTML = ''; return; }
+  const payload = buildDonationPayload(state, sim || simulate());
+  const h = hashStr(JSON.stringify(payload));
+  if (ds.donatedHash === h) {
+    slot.innerHTML =
+      `<div class="donate-card slim"><span>📊 Suunnitelmasi on mukana anonyymissä vertailudatassa.</span>` +
+      `<button class="btn" id="donateCompareBtn">Katso vertailu ikäryhmääsi</button></div>`;
+  } else if (ds.donatedHash) {
+    slot.innerHTML =
+      `<div class="donate-card slim"><span>📊 Suunnitelmasi on muuttunut — vertailutiedot voi halutessa päivittää.</span>` +
+      `<button class="btn ghost" id="donateOpenBtn">Päivitä</button>` +
+      `<button class="btn" id="donateCompareBtn">Katso vertailu</button></div>`;
+  } else {
+    slot.innerHTML =
+      `<div class="donate-card"><div class="dc-text"><b>📊 Haluatko nähdä, miten eri ikäiset suunnittelevat talouttaan ja etenevät vaurastumisen matkalla?</b>` +
+      `<span>Vertailu perustuu käyttäjien anonyymeihin suunnitelmiin. Näet ensin täsmälleen, mitä suunnitelmastasi jaetaan — data on anonyymiä eikä velvoita mihinkään.</span></div>` +
+      `<div class="dc-actions"><button class="btn" id="donateOpenBtn">Näytä, mitä jaetaan</button>` +
+      `<button class="btn ghost" id="donateNeverBtn">Ei kiitos</button></div></div>`;
+  }
+  const open = $('donateOpenBtn');
+  if (open) open.addEventListener('click', openDonateModal);
+  const never = $('donateNeverBtn');
+  if (never) never.addEventListener('click', () => { setDonateState({ declined: true }); renderDonateSlot(); toast('Selvä — ei kysytä uudestaan. Valinnan voi muuttaa Tietoa-sivulta.'); });
+  const cmp = $('donateCompareBtn');
+  if (cmp) cmp.addEventListener('click', openCompareModal);
+}
+
+let pendingPayload = null;
+
+function openDonateModal() {
+  pendingPayload = buildDonationPayload(state, sim || simulate());
+  const p = pendingPayload;
+  const row = (k, v) => `<div class="dp-row"><span>${k}</span><b>${v}</b></div>`;
+  let html = `<h2>Perustiedot</h2>` +
+    row('Ikä nyt / suunnitelman loppu', `${p.ageNow} v / ${p.ageEnd} v`) +
+    row('Varallisuus nyt', fmtEur(p.startCapital)) +
+    row('Kuukausisijoitus', `${fmtEur(p.monthly)}/kk` + (p.savingsGrowth ? ` (+${p.savingsGrowth.toLocaleString('fi-FI')} %/v)` : '')) +
+    row('Allokaatio', `${p.alloc.stocks} % osakkeet · ${p.alloc.bonds} % korot`) +
+    row('Kytkimet', [p.glide && 'ikäsidonnainen', p.real && 'inflaatiokorjattu', p.tax && 'myyntivoittovero'].filter(Boolean).join(' · ') || '—');
+  html += `<h2>Tapahtumat (vain tyyppi, ikä ja summat — ei nimiä)</h2>`;
+  for (const e of p.events) {
+    const def = EVENT_TYPES[e.type];
+    let desc;
+    if (e.type === 'retirement') {
+      desc = `tulotarve ${fmtEur(e.withdrawal)}/kk · työeläke ${fmtEur(e.pension)}/kk` +
+        (e.goal && e.goal !== 'manual' ? ` · tavoite: ${{ withdrawal: 'kestävä tulo', age: 'eläkeikä', saving: 'säästö' }[e.goal]}` : '') +
+        (e.conf ? ` · ${Math.round(e.conf * 100)} %` : '');
+    } else {
+      desc = [
+        e.amount ? fmtEur(e.amount) : null,
+        e.financing === 'loan' ? 'lainalla' : null,
+        e.recMonthly ? `${e.recMonthly > 0 ? '+' : ''}${fmtEur(e.recMonthly)}/kk ${e.recYears} v` : null,
+        e.sellAge != null ? `myynti ${e.sellAge} v` : null,
+      ].filter(Boolean).join(' · ') || '—';
+    }
+    html += row(`${def.icon} ${def.label} · ${e.age} v`, desc);
+  }
+  if (p.derived) {
+    html += `<h2>Laskennan tulokset</h2>` +
+      (p.derived.wAtRet != null ? row('Varallisuus eläkkeellä', fmtEur(p.derived.wAtRet)) : '') +
+      row('Sijoitukset lopussa', fmtEur(p.derived.wEnd)) +
+      (p.derived.successProb != null ? row('Onnistumistodennäköisyys', Math.round(p.derived.successProb * 100) + ' %') : '');
+  }
+  $('donatePreview').innerHTML = html;
+  $('donateJson').textContent = JSON.stringify(pendingPayload, null, 2);
+  $('donateModal').hidden = false;
+}
+
+async function sendDonation() {
+  if (!pendingPayload) return;
+  const btn = $('donateSend');
+  btn.disabled = true;
+  btn.textContent = 'Lähetetään…';
+  try {
+    const res = await fetch(DATA_API + '/donate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pendingPayload),
+    });
+    if (!res.ok) throw new Error('http ' + res.status);
+    setDonateState({ donatedHash: hashStr(JSON.stringify(pendingPayload)), declined: false });
+    $('donateModal').hidden = true;
+    renderDonateSlot();
+    toast('Kiitos! Suunnitelmasi on nyt anonyymisti mukana vertailudatassa.');
+    openCompareModal();
+  } catch (e) {
+    toast('Jakaminen ei onnistunut — palvelin ei ehkä ole tavoitettavissa. Yritä myöhemmin.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Jaa anonyymisti ja avaa vertailu';
+  }
+}
+
+/* --- Vertailunäkymä --- */
+
+// Jakaumapalkki: [P25..P75]-laatikko, P50-viiva ja ▲ = sinä
+function distBarSVG(q, user) {
+  const lo = Math.min(q.p25, user) * 0.92 - 1;
+  const hi = Math.max(q.p75, user) * 1.08 + 1;
+  const W = 190, H = 30, pad = 6;
+  const x = (v) => pad + ((v - lo) / (hi - lo)) * (W - 2 * pad);
+  return `<svg viewBox="0 0 ${W} ${H}" class="dist-bar">` +
+    `<line x1="${pad}" y1="19" x2="${W - pad}" y2="19" stroke="rgba(148,168,220,0.25)" stroke-width="1.5"/>` +
+    `<rect x="${x(q.p25).toFixed(1)}" y="13" width="${Math.max(2, x(q.p75) - x(q.p25)).toFixed(1)}" height="12" rx="3" fill="rgba(45,212,191,0.25)"/>` +
+    `<line x1="${x(q.p50).toFixed(1)}" y1="11" x2="${x(q.p50).toFixed(1)}" y2="27" stroke="#2dd4bf" stroke-width="2"/>` +
+    `<path d="M ${x(user).toFixed(1)} 10 l 5 -8 l -10 0 Z" fill="#fbbf24"/>` +
+    `</svg>`;
+}
+
+function positionTxt(q, user) {
+  if (user < q.p25) return 'alin neljännes';
+  if (user < q.p50) return 'alle mediaanin';
+  if (user <= q.p75) return 'yli mediaanin';
+  return 'ylin neljännes';
+}
+
+async function openCompareModal() {
+  const body = $('compareBody');
+  const sub = $('compareSub');
+  $('openDataLink').href = DATA_API + '/stats.json';
+  $('compareModal').hidden = false;
+  sub.textContent = '';
+  body.innerHTML = '<p class="donate-note">Haetaan avointa dataa…</p>';
+  let stats;
+  try {
+    stats = await (await fetch(DATA_API + '/stats.json')).json();
+  } catch (e) {
+    body.innerHTML = '<p class="donate-note">Avoimen datan palvelin ei ole juuri nyt tavoitettavissa. Yritä myöhemmin.</p>';
+    return;
+  }
+  const gname = ageGroupOf(state.ageNow);
+  const own = gname && stats.groups[gname];
+  const all = stats.groups.all;
+  const g = own && own.monthly ? own : (all && all.monthly ? all : null);
+  const gLabel = own && own.monthly ? `Ikäryhmäsi ${gname} v` : 'Kaikki käyttäjät';
+  sub.textContent = `Jaettuja suunnitelmia yhteensä ${stats.total}` + (own ? ` · ikäryhmässäsi ${own.n}` : '');
+
+  if (!g) {
+    body.innerHTML = `<p class="donate-note">Suunnitelmia on jaettu vasta ${stats.total}. Vertailu julkaistaan, kun ` +
+      `ryhmässä on vähintään ${stats.kAnon} suunnitelmaa — kutsu kaverisikin mukaan!</p>`;
+    return;
+  }
+
+  const s = sim || simulate();
+  const retire = state.events.find((e) => e.type === 'retirement');
+  const rows = [];
+  const add = (label, q, user, fmt) => {
+    if (!q || user == null) return;
+    rows.push(`<div class="cmp-row"><span class="cl">${label}</span>${distBarSVG(q, user)}` +
+      `<span class="cv">${fmt(user)}</span><span class="cp">${positionTxt(q, user)}</span>` +
+      `<span class="cm">mediaani ${fmt(q.p50)}</span></div>`);
+  };
+  add('Kuukausisäästö', g.monthly, state.monthly, (v) => `${fmtEur(v)}/kk`);
+  add('Varallisuus nyt', g.startCapital, state.startCapital, fmtCompact);
+  add('Osakepaino', g.stocks, state.allocStocks, (v) => Math.round(v) + ' %');
+  if (retire) {
+    add('Eläkeikätavoite', g.retireAge, Math.round(retire.age), (v) => Math.round(v) + ' v');
+    add('Kuukausitulo eläkkeellä', g.withdrawal, retire.withdrawal, (v) => `${fmtEur(v)}/kk`);
+    if (retire.pension > 0) add('Työeläkearvio', g.pension, retire.pension, (v) => `${fmtEur(v)}/kk`);
+  }
+  if (g.wAtRet && s.wAtRet != null) add('Varallisuus eläkkeellä', g.wAtRet, s.wAtRet, fmtCompact);
+
+  let evHtml = '';
+  if (g.events) {
+    const top = Object.entries(g.events)
+      .filter(([t, share]) => share > 0 && t !== 'retirement')
+      .sort((a, b) => b[1] - a[1]).slice(0, 6);
+    evHtml = `<h2>Yleisimmät suunnitelmien tapahtumat (${gLabel.toLowerCase()})</h2><div class="cmp-events">` +
+      top.map(([t, share]) => `<span class="cmp-chip">${EVENT_TYPES[t].icon} ${EVENT_TYPES[t].label} <b>${Math.round(share * 100)} %</b></span>`).join('') +
+      `</div>`;
+  }
+
+  body.innerHTML =
+    `<h2>${gLabel} (n = ${g === own ? own.n : all.n}) — ▲ = sinä, palkki = P25–P75, viiva = mediaani</h2>` +
+    `<div class="cmp-rows">${rows.join('')}</div>` + evHtml;
 }
 
 /* ===================== Tapahtumalista ===================== */
@@ -2100,6 +2377,24 @@ function bindActions() {
   $('tableClose').addEventListener('click', () => { $('tableModal').hidden = true; });
   $('tableCsv').addEventListener('click', downloadCsv);
 
+  // Anonyymi vertailudata
+  $('donateSend').addEventListener('click', sendDonation);
+  $('donateCancel').addEventListener('click', () => { $('donateModal').hidden = true; });
+  $('donateNever').addEventListener('click', () => {
+    setDonateState({ declined: true });
+    $('donateModal').hidden = true;
+    renderDonateSlot();
+    toast('Selvä — ei kysytä uudestaan. Valinnan voi muuttaa Tietoa-sivulta.');
+  });
+  $('compareClose').addEventListener('click', () => { $('compareModal').hidden = true; });
+  // Tietoa-sivun valinnan nollaus
+  const dr = $('donateReset');
+  if (dr) dr.addEventListener('click', (e) => {
+    e.preventDefault();
+    setDonateState({ declined: false });
+    toast('Valinta nollattu — kysymys näytetään taas yhteenvedossa.');
+  });
+
   // Skenaariovertailu: tallenna nykyinen suunnitelma haamukäyräksi
   const compareBtn = $('compareBtn');
   compareBtn.addEventListener('click', () => {
@@ -2359,6 +2654,7 @@ function renderSummary() {
 
 function openSummary() {
   renderSummary();
+  renderDonateSlot();
   $('summary').hidden = false;
   document.body.classList.add('summary-open');
 }

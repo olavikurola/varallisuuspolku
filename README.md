@@ -4,7 +4,9 @@ Visuaalinen varallisuussuunnittelutyökalu — suunnittele koko elinkaaresi sijo
 
 ![Teema](https://img.shields.io/badge/teema-tumma-0a0e1a) ![Riippuvuudet](https://img.shields.io/badge/riippuvuudet-ei%20yht%C3%A4%C3%A4n-2dd4bf) ![Lisenssi](https://img.shields.io/badge/lisenssi-MIT-8b7cf6)
 
-Kaikki laskenta ja data pysyy selaimessa — ei palvelinta, ei evästeitä, ei analytiikkaa.
+Kaikki laskenta ja data pysyy selaimessa — ei evästeitä, ei analytiikkaa. Mitään ei lähetetä
+mihinkään ilman erillistä lupaa; ainoa poikkeus on vapaaehtoinen anonyymi vertailudata, jonka
+sisällön näkee kokonaisuudessaan ennen jakamista.
 
 ## Ominaisuudet
 
@@ -29,6 +31,7 @@ Kaikki laskenta ja data pysyy selaimessa — ei palvelinta, ei evästeitä, ei a
 - **Kumoa** — Ctrl+Z peruu muutokset; tapahtumat voi myös monistaa
 - **Tallennus ja jakaminen** — suunnitelma tallentuu selaimeen automaattisesti, jaettava linkki kopioi koko suunnitelman URL:iin
 - **PWA / offline** — asennettava sovellus, joka toimii myös ilman verkkoyhteyttä
+- **Anonyymi vertailudata** — jaa halutessasi suunnitelmasi anonyymisti ja näe, miten eri ikäiset suunnittelevat talouttaan: jakaumat ikäryhmittäin (P25/mediaani/P75) ja tapahtumien yleisyys; aggregaatit avoimena datana ([palvelin/](palvelin/))
 - **Tulostettava yhteenveto** — tavoitedokumentti suunnitelman kulmakivistä ja keskustelunaiheista, minä-muodossa esim. varainhoitajalle annettavaksi; ei sijoitusneuvontaa
 
 ## Käynnistys

@@ -872,6 +872,75 @@ input[type="range"]::-moz-range-thumb {
 .table-sheet .sum-table th.num { text-align: right; }
 .table-sheet .sum-table tbody tr:hover td { background: rgba(45, 212, 191, 0.04); }
 
+/* ---------- Anonyymi vertailudata ---------- */
+#donateSlot { max-width: 860px; margin: 0 auto 12px; }
+.donate-card {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, rgba(45, 212, 191, 0.08), rgba(139, 124, 246, 0.08));
+  border: 1px solid rgba(45, 212, 191, 0.25);
+  border-radius: 14px;
+}
+.donate-card .dc-text { flex: 1 1 320px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.donate-card .dc-text b { font-size: 13.5px; }
+.donate-card .dc-text span { color: var(--text-dim); line-height: 1.5; }
+.donate-card .dc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.donate-card.slim { font-size: 13px; color: var(--text-dim); padding: 10px 16px; }
+.donate-card.slim span { flex: 1 1 auto; }
+
+.donate-sheet .dp-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 13px;
+}
+.donate-sheet .dp-row span { color: var(--text-dim); }
+.donate-sheet .dp-row b { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.donate-raw { margin-top: 14px; font-size: 12.5px; }
+.donate-raw summary { cursor: pointer; color: var(--text-dim); }
+.donate-raw summary:hover { color: var(--accent); }
+.donate-raw pre {
+  margin: 8px 0 0;
+  padding: 12px;
+  background: rgba(8, 12, 24, 0.7);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.donate-note { font-size: 12px; color: var(--text-faint); line-height: 1.6; margin: 14px 0 0; }
+.donate-note a { color: var(--accent); }
+.donate-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+/* Vertailunäkymä */
+.cmp-rows { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.cmp-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 190px auto auto auto;
+  gap: 4px 14px;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 13px;
+}
+.cmp-row .cl { color: var(--text-dim); }
+.cmp-row .dist-bar { width: 190px; height: 30px; }
+.cmp-row .cv { font-weight: 700; font-variant-numeric: tabular-nums; color: #fbbf24; }
+.cmp-row .cp { font-size: 11.5px; color: var(--text-dim); white-space: nowrap; }
+.cmp-row .cm { font-size: 11.5px; color: var(--text-faint); white-space: nowrap; }
+.cmp-events { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+@media (max-width: 700px) {
+  .cmp-row { grid-template-columns: 1fr auto; }
+  .cmp-row .cm { display: none; }
+}
+
 /* ---------- Tulostus: vain yhteenveto, vaalea paperiasu ---------- */
 @media print {
   @page { size: A4; margin: 12mm; }
@@ -879,7 +948,7 @@ input[type="range"]::-moz-range-thumb {
   body.summary-open .topbar,
   body.summary-open .layout { display: none !important; }
   .summary { position: static; background: #fff; backdrop-filter: none; padding: 0; overflow: visible; }
-  .sum-bar { display: none; }
+  .sum-bar, #donateSlot { display: none !important; }
   .sum-sheet {
     max-width: none;
     background: #fff;
