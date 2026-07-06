@@ -1579,18 +1579,21 @@ function renderStats() {
     cls: 'accent',
     s: s.retireAge != null ? `${Math.round(s.retireAge)} v iässä` : 'ei eläketapahtumaa',
   });
-  cards.push({
-    k: `Sijoitukset ${Math.round(s.a1)} v iässä`,
-    v: fmtEur(s.wEnd),
-    cls: '',
-    s: state.real ? 'nykyrahassa' : 'nimellisarvo',
-  });
+  // Loppuvarallisuus yhtenä korttina: netto kun taseessa on omaisuutta tai
+  // velkaa (sijoitukset alarivillä), muuten pelkät sijoitukset
   if (s.hasNet) {
     cards.push({
       k: `Netto ${Math.round(s.a1)} v iässä`,
       v: fmtEur(s.net[s.months]),
       cls: 'net',
-      s: 'sijoitukset + omaisuus − velat',
+      s: `sis. sijoitukset ${fmtCompact(s.wEnd)} · ${state.real ? 'nykyrahassa' : 'nimellisarvoin'}`,
+    });
+  } else {
+    cards.push({
+      k: `Sijoitukset ${Math.round(s.a1)} v iässä`,
+      v: fmtEur(s.wEnd),
+      cls: '',
+      s: state.real ? 'nykyrahassa' : 'nimellisarvoin',
     });
   }
   cards.push({
@@ -1600,6 +1603,8 @@ function renderStats() {
     s: `${fmtEur(state.monthly)}/kk${state.savingsGrowth > 0 ? ` (+${state.savingsGrowth.toLocaleString('fi-FI')} %/v)` : ''} + alkupääoma`,
   });
   const confTxt = s.conf ? `${Math.round(s.conf * 100)} % varmuudella` : null;
+  const p = s.successProb != null ? Math.round(s.successProb * 100) : null;
+  const pTxt = p != null ? `onnistumis-% ${p}` : null;
   if (s.goal === 'age') {
     cards.push(s.solvedRetireAge != null
       ? { k: 'Aikaisin eläkeikä', v: fmtAge(s.solvedRetireAge), cls: 'accent', s: `kuukausitulolla ${fmtEur(s.withdrawal)}/kk` + (confTxt ? ` · ${confTxt}` : '') }
@@ -1610,29 +1615,22 @@ function renderStats() {
       ? { k: 'Tarvittava säästö', v: `${fmtEur(s.requiredMonthly)}/kk`, cls: s.requiredMonthly > state.monthly ? 'accent' : 'ok', s: `nyt ${fmtEur(state.monthly)}/kk` + (confTxt ? ` · ${confTxt}` : '') }
       : { k: 'Tarvittava säästö', v: 'Ei toteudu', cls: 'bad', s: 'nosto on liian suuri tällä eläkeiällä' });
   }
+  // Riittävyys ja onnistumis-% samassa kortissa — kertovat samaa asiaa
   if (s.goal === 'withdrawal' && s.goalUnreachable) {
     cards.push({ k: 'Kestävä kuukausitulo', v: 'Ei toteudu', cls: 'bad', s: `edes 0 €/kk ei riitä ${confTxt || ''}`.trim() });
   } else if (s.solvedWithdrawal != null && (s.depletionAge == null || s.depletionAge >= s.a1 - 1)) {
     cards.push({ k: 'Kestävä kuukausitulo', v: `${fmtEur(s.solvedWithdrawal)}/kk`, cls: 'accent',
-      s: [s.pension > 0 ? `sis. työeläke ${fmtEur(s.pension)}/kk` : null, confTxt].filter(Boolean).join(' · ') || `varat loppuun ${Math.round(s.a1)} v mennessä` });
+      s: [s.pension > 0 ? `sis. työeläke ${fmtEur(s.pension)}/kk` : null, confTxt || pTxt].filter(Boolean).join(' · ') || `varat loppuun ${Math.round(s.a1)} v mennessä` });
   } else if (s.depletionAge != null) {
-    cards.push({ k: 'Riittävyys', v: `Ehtyy ~${Math.round(s.depletionAge)} v`, cls: 'bad', s: 'kokeile siirtää tapahtumia tai lisätä säästöä' });
+    cards.push({ k: 'Riittävyys', v: `Ehtyy ~${Math.round(s.depletionAge)} v`, cls: 'bad',
+      s: [pTxt, 'kokeile lisätä säästöä'].filter(Boolean).join(' · ') });
   } else {
-    cards.push({ k: 'Riittävyys', v: 'Varat riittävät ✓', cls: 'ok', s: `suunnitelman loppuun (${Math.round(s.a1)} v)` });
+    cards.push({ k: 'Riittävyys', v: 'Varat riittävät ✓', cls: 'ok',
+      s: [`${Math.round(s.a1)} v ikään asti`, pTxt].filter(Boolean).join(' · ') });
   }
 
   if (s.taxPaid > 0.5) {
-    cards.push({ k: 'Myyntivoittovero', v: fmtEur(s.taxPaid), cls: '', s: 'arvio nostoista ja myynneistä yhteensä' });
-  }
-
-  if (s.successProb != null) {
-    const p = Math.round(s.successProb * 100);
-    cards.push({
-      k: 'Onnistumistodennäköisyys',
-      v: `${p} %`,
-      cls: p >= 80 ? 'ok' : p >= 55 ? '' : 'bad',
-      s: 'osuus 300 satunnaisesta markkinapolusta',
-    });
+    cards.push({ k: 'Myyntivoittovero', v: fmtEur(s.taxPaid), cls: '', s: 'arvio nostoista ja myynneistä' });
   }
 
   $('stats').innerHTML = cards.map((c) =>
