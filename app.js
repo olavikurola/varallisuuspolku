@@ -1285,11 +1285,17 @@ function openPopover(id) {
   });
   $('pv-age').addEventListener('input', (e) => {
     const v = parseFloat(e.target.value);
-    if (!isNaN(v)) {
-      ev.age = clamp(v, state.ageNow, state.ageEnd);
-      if (ev.sellAge != null && ev.sellAge <= ev.age) ev.sellAge = ev.age + 1;
-      renderAllKeepPopover();
-    }
+    // Keskeneräinen syöte (esim. "6" matkalla lukuun 65) ei muuta tilaa
+    if (isNaN(v) || v < state.ageNow || v > state.ageEnd) return;
+    ev.age = v;
+    renderAllKeepPopover();
+  });
+  $('pv-age').addEventListener('change', (e) => {
+    const v = parseFloat(e.target.value);
+    if (!isNaN(v)) ev.age = clamp(v, state.ageNow, state.ageEnd);
+    if (ev.sellAge != null && ev.sellAge <= ev.age) ev.sellAge = ev.age + 1;
+    e.target.value = Math.round(ev.age * 10) / 10;
+    renderAllKeepPopover();
   });
   const am = $('pv-amount');
   if (am) am.addEventListener('input', (e) => {
@@ -1312,10 +1318,22 @@ function openPopover(id) {
     if (!isNaN(v)) { ev.pension = Math.max(0, v); updatePenNote(); renderAllKeepPopover(); }
   });
   const penAge = $('pv-penage');
-  if (penAge) penAge.addEventListener('input', (e) => {
-    const v = parseFloat(e.target.value);
-    if (!isNaN(v)) { ev.pensionAge = clamp(v, state.ageNow, state.ageEnd); updatePenNote(); renderAllKeepPopover(); }
-  });
+  if (penAge) {
+    penAge.addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value);
+      if (isNaN(v) || v < state.ageNow || v > state.ageEnd) return; // kirjoitus kesken
+      ev.pensionAge = v;
+      updatePenNote();
+      renderAllKeepPopover();
+    });
+    penAge.addEventListener('change', (e) => {
+      const v = parseFloat(e.target.value);
+      if (!isNaN(v)) ev.pensionAge = clamp(v, state.ageNow, state.ageEnd);
+      e.target.value = Math.round(ev.pensionAge);
+      updatePenNote();
+      renderAllKeepPopover();
+    });
+  }
   // Työeläkkeen erittely: paljonko tulosta katetaan eläkkeellä, paljonko sijoituksista
   const updatePenNote = () => {
     const note = $('pv-pen-note');
@@ -1429,10 +1447,22 @@ function openPopover(id) {
     openPopover(id);
   });
   const sellAgeI = $('pv-sellage');
-  if (sellAgeI) sellAgeI.addEventListener('input', (e) => {
-    const v = parseFloat(e.target.value);
-    if (!isNaN(v)) { ev.sellAge = clamp(v, ev.age + 1, state.ageEnd); renderAllKeepPopover(); updateSaleNote(); }
-  });
+  if (sellAgeI) {
+    sellAgeI.addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value);
+      if (isNaN(v) || v <= ev.age || v > state.ageEnd) return; // kirjoitus kesken
+      ev.sellAge = v;
+      renderAllKeepPopover();
+      updateSaleNote();
+    });
+    sellAgeI.addEventListener('change', (e) => {
+      const v = parseFloat(e.target.value);
+      if (!isNaN(v)) ev.sellAge = clamp(v, ev.age + 1, state.ageEnd);
+      e.target.value = Math.round(ev.sellAge);
+      renderAllKeepPopover();
+      updateSaleNote();
+    });
+  }
   const sellTf = $('pv-selltf');
   if (sellTf) sellTf.addEventListener('change', (e) => {
     ev.sellTaxFree = e.target.checked;
@@ -2024,20 +2054,34 @@ function updateAllocUI() {
 }
 
 function bindInputs() {
+  // Numerokentät: kirjoituksen aikana (input) tila päivittyy vain, jos arvo
+  // on jo sellaisenaan kelvollinen — keskeneräinen syöte (esim. "8" matkalla
+  // lukuun 85) ei muuta tilaa eikä ylikirjoita kenttää. Normalisointi ja
+  // riippuvuudet (ikärajat, tapahtumien siirto) ajetaan vasta blurissa/
+  // Enterissä (change), jolloin kirjoittaminen ei katkea kesken.
   const num = (id, key, lo, hi) => {
-    $(id).addEventListener('input', (e) => {
-      const v = parseFloat(e.target.value);
-      if (isNaN(v)) return;
-      state[key] = clamp(v, lo, hi);
+    const inp = $(id);
+    inp.addEventListener('input', () => {
+      const v = parseFloat(inp.value);
+      if (isNaN(v) || v < lo || v > hi) return;
+      if (key === 'ageEnd' && v <= state.ageNow + 1) return; // kirjoitus kesken
+      if (key === 'ageNow' && v >= state.ageEnd - 1) return;
+      state[key] = v;
+      renderAll();
+    });
+    inp.addEventListener('change', () => {
+      const v = parseFloat(inp.value);
+      state[key] = clamp(isNaN(v) ? state[key] : v, lo, hi);
       if (key === 'ageNow' || key === 'ageEnd') {
-        if (state.ageEnd <= state.ageNow + 1) {
-          state.ageEnd = state.ageNow + 2;
-          $('ageEnd').value = state.ageEnd;
-        }
+        if (state.ageEnd <= state.ageNow + 1) state.ageEnd = clamp(state.ageNow + 2, 2, 105);
         for (const ev of state.events) {
           ev.age = clamp(ev.age, state.ageNow, state.ageEnd);
           if (ev.sellAge != null) ev.sellAge = clamp(ev.sellAge, ev.age + 1, Math.max(state.ageEnd, ev.age + 1));
         }
+        $('ageNow').value = state.ageNow;
+        $('ageEnd').value = state.ageEnd;
+      } else {
+        inp.value = state[key];
       }
       renderAll();
     });
