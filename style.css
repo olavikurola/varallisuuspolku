@@ -533,6 +533,27 @@ input[type="range"]::-moz-range-thumb {
   cursor: pointer;
 }
 .popover .del:hover { background: rgba(248, 113, 113, 0.18); }
+.popover .actions { gap: 8px; }
+.popover .dup {
+  margin-right: auto;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-dim);
+  font: inherit; font-size: 12.5px; font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.popover .dup:hover { color: var(--accent); border-color: rgba(45, 212, 191, 0.4); }
+.popover .sale-note {
+  margin: 2px 0 10px;
+  padding: 8px 10px;
+  background: rgba(251, 191, 36, 0.06);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 8px;
+  line-height: 1.6;
+}
+.popover .sale-note b { color: #fbbf24; font-weight: 600; }
 .popover .note { font-size: 11.5px; color: var(--text-faint); margin: -4px 0 10px; }
 .popover .loan-note {
   margin: 2px 0 10px;
@@ -588,6 +609,7 @@ input[type="range"]::-moz-range-thumb {
 .tooltip .tt-row b.dbt { color: var(--danger); }
 .tooltip .tt-row b.net { color: #fbbf24; }
 .tooltip .tt-row b.ast { color: #60a5fa; }
+.tooltip .tt-row b.ok { color: var(--ok); }
 .tooltip .tt-net {
   margin-top: 6px;
   padding-top: 6px;
@@ -600,6 +622,16 @@ input[type="range"]::-moz-range-thumb {
   color: var(--accent);
   background: rgba(45, 212, 191, 0.1);
   border-color: rgba(45, 212, 191, 0.3);
+}
+.rec-badge {
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.1);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+.sale-badge {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.3);
 }
 
 .popover .toggle { font-size: 13px; margin-top: 2px; }
@@ -771,6 +803,74 @@ input[type="range"]::-moz-range-thumb {
 .sum-mark-dot { fill: var(--accent); }
 .sum-mark-ret { fill: var(--accent-2); }
 .sum-ev-ico { font-size: 12px; }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  z-index: 200;
+  background: #141c33;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---------- Pudotusvalikko (Esimerkit) ---------- */
+.menu {
+  position: fixed;
+  z-index: 120;
+  min-width: 250px;
+  background: #141c33;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  padding: 6px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65);
+}
+.menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 11px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.menu button:hover { background: rgba(45, 212, 191, 0.08); }
+.menu .mdesc { font-size: 11.5px; color: var(--text-faint); font-weight: 400; margin-top: 1px; }
+.menu .mnote {
+  font-size: 11px;
+  color: var(--text-faint);
+  padding: 7px 11px 5px;
+  border-top: 1px solid var(--border-soft);
+  margin-top: 4px;
+}
+
+/* ---------- Ehtymisvyöhykkeen teksti ---------- */
+.dry-label { font-size: 11px; fill: rgba(248, 113, 113, 0.85); font-family: inherit; }
+
+/* ---------- Vuositaulukko ---------- */
+.legend .btn-mini { padding: 4px 11px; font-size: 11.5px; margin-left: auto; }
+.table-scroll { overflow-x: auto; margin-top: 14px; scrollbar-width: thin; scrollbar-color: #2a3550 transparent; }
+.table-sheet .sum-table { min-width: 640px; }
+.table-sheet .sum-table td.num.dbt { color: var(--danger); }
+.table-sheet .sum-table td.num.net { color: #fbbf24; }
+.table-sheet .sum-table th.num { text-align: right; }
+.table-sheet .sum-table tbody tr:hover td { background: rgba(45, 212, 191, 0.04); }
 
 /* ---------- Tulostus: vain yhteenveto, vaalea paperiasu ---------- */
 @media print {

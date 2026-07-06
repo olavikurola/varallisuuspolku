@@ -14,6 +14,9 @@
   <meta property="og:image" content="https://olavikurola.github.io/varallisuuspolku/og.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <link rel="stylesheet" href="fonts.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -36,6 +39,7 @@
     </div>
     <div class="topbar-right">
       <div class="topbar-note" id="allocSummaryTop"></div>
+      <button class="btn ghost" id="examplesBtn" title="Lataa valmis esimerkkisuunnitelma pohjaksi">Esimerkit</button>
       <button class="btn" id="summaryBtn">Yhteenveto</button>
       <button class="btn ghost" id="compareBtn" title="Tallenna nykyinen suunnitelma vertailukohdaksi ja katso muutosten vaikutus">Vertaile</button>
       <button class="btn" id="shareBtn">Jaa linkki</button>
@@ -146,6 +150,7 @@
         <span class="lg"><i class="sw sw-dash"></i>Sijoitettu pääoma</span>
         <span class="lg"><i class="sw sw-marker">🏠</i>Elämäntapahtuma</span>
         <span class="lg" id="legendCompare" hidden><i class="sw sw-ghost"></i>Vertailukohta</span>
+        <button class="btn ghost btn-mini" id="tableBtn" title="Vuosikohtaiset luvut taulukkona ja CSV:nä">Vuositaulukko</button>
       </div>
       <div class="balance-panel" id="balancePanel" hidden>
         <div class="balance-head">
@@ -173,11 +178,20 @@
 
       <h2>Mikä tämä on</h2>
       <p>Varallisuuspolku auttaa hahmottamaan koko elinkaaren sijoittamisen yhdellä näkymällä:
-      kuukausisäästön ja sen kasvun, elämän suuret hankinnat lainoineen, omaisuuden kertymisen sekä
-      eläkeajan tulot — lakisääteinen työeläke, sijoitusten nostot ja niiden myyntivoittovero.
-      Tavoitetiloilla voit ratkaista kestävän kuukausitulon, aikaisimman eläkeiän tai tarvittavan
-      kuukausisäästön. Voit myös tallentaa suunnitelman vertailukohdaksi ja nähdä muutosten vaikutuksen
-      haamukäyränä. Yhteenvedon voi tulostaa tai antaa vaikka varainhoitajalle keskustelun pohjaksi.</p>
+      kuukausisäästön ja sen kasvun, elämän suuret hankinnat lainoineen, toistuvat erät (esim. lapsen
+      kulut), omaisuuden kertymisen ja myynnin sekä eläkeajan tulot — lakisääteinen työeläke,
+      sijoitusten nostot ja niiden myyntivoittovero. Tavoitetiloilla voit ratkaista kestävän
+      kuukausitulon, aikaisimman eläkeiän tai tarvittavan kuukausisäästön — halutessasi myös
+      varmuustasolla (75/85/95 % Monte Carlo -poluista onnistuu). Suunnitelman voi tallentaa
+      vertailukohdaksi ja nähdä muutosten vaikutuksen haamukäyränä, ja vuosikohtaiset luvut saa
+      taulukkona ja CSV-tiedostona. Yhteenvedon voi tulostaa tai antaa vaikka varainhoitajalle
+      keskustelun pohjaksi.</p>
+
+      <h2>Vinkit</h2>
+      <p><b>Esimerkit</b>-valikosta saat valmiin pohjan eri elämäntilanteisiin. <b>Ctrl+Z</b> kumoaa
+      viimeisimmän muutoksen. Tapahtuman voi <b>monistaa</b> muokkausikkunasta (esim. toinen lapsi).
+      <b>Jaa linkki</b> toimii myös varmuuskopiona — koko suunnitelma on linkissä. Sovelluksen voi
+      asentaa aloitusnäytölle (PWA), jolloin se toimii myös ilman verkkoyhteyttä.</p>
 
       <h2>Tietosuoja</h2>
       <p><b>Kaikki data pysyy omassa selaimessasi.</b> Laskenta tapahtuu kokonaan selaimessa eikä
@@ -196,8 +210,15 @@
       pienentää sijoituksista tarvittavaa nostoa ja voi alkaa eri iässä kuin eläkkeelle jäänti. Eläkeajan
       nostoista voidaan huomioida Suomen myyntivoittovero (30 % vuotuisiin 30 000 €:n voittoihin asti,
       34 % ylimenevältä osalta); veroa peritään vain noston voitto-osuudesta eli arvon ja jäljellä olevan
-      hankintahinnan erotuksesta. Työeläkkeen arvio ja veromalli ovat suuntaa antavia yksinkertaistuksia,
-      eivät virallisia laskelmia — esimerkiksi hankintameno-olettamaa ei sovelleta.</p>
+      hankintahinnan erotuksesta.</p>
+      <p><b>Omaisuuden myynti:</b> omaisuuserän (esim. asunto tai mökki) voi myydä valitussa iässä,
+      jolloin sen arvo siirtyy sijoituksiin, jäljellä oleva laina maksetaan pois ja voitosta peritään
+      myyntivoittovero. Verotettavaa voittoa rajaa hankintameno-olettama (40 % myyntihinnasta, kun
+      omistus on kestänyt vähintään 10 vuotta; muuten 20 %), ja oman asunnon myynnin voi merkitä
+      verovapaaksi. <b>Varmuustaso:</b> eläketavoitteen voi ratkaista myös niin, että vähintään 75, 85
+      tai 95 % satunnaisista markkinapoluista onnistuu — pelkän odotetun kehityksen sijaan.
+      Työeläkkeen arvio ja veromalli ovat suuntaa antavia yksinkertaistuksia, eivät virallisia
+      laskelmia.</p>
 
       <h2>Tärkeä huomautus</h2>
       <p>Laskelma on suuntaa antava havainnollistus, ei sijoitusneuvontaa eikä sijoitussuositus.
@@ -217,6 +238,20 @@
       <button class="btn ghost" id="sumClose">Sulje</button>
     </div>
     <div class="sum-sheet" id="sumSheet"></div>
+  </div>
+
+  <div class="summary" id="tableModal" hidden>
+    <div class="sum-bar">
+      <button class="btn" id="tableCsv">Lataa CSV</button>
+      <button class="btn ghost" id="tableClose">Sulje</button>
+    </div>
+    <div class="sum-sheet table-sheet">
+      <div class="sum-head">
+        <div><h1>Vuositaulukko</h1><div class="sum-sub" id="tableSub"></div></div>
+      </div>
+      <div class="table-scroll"><table class="sum-table" id="yearTable"></table></div>
+      <p class="sum-assump">Rahavirrat ovat vuosisummia odotetulla kehityspolulla; varallisuus on tilanne kunkin ikävuoden alussa. CSV avautuu suoraan taulukkolaskentaan.</p>
+    </div>
   </div>
 
   <script src="app.js" defer></script>

@@ -1,0 +1,16 @@
+{
+  "name": "Varallisuuspolku",
+  "short_name": "Varallisuuspolku",
+  "description": "Visuaalinen varallisuussuunnittelu — koko elinkaari yhdellä näkymällä. Kaikki data pysyy omassa selaimessasi.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0e1a",
+  "theme_color": "#0a0e1a",
+  "lang": "fi",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
