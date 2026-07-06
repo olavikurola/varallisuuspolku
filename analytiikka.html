@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vaurastumisen kartta — Varallisuuspolku-analytiikka</title>
+  <meta name="description" content="Avoin analytiikka siitä, miten eri ikäiset suunnittelevat talouttaan ja etenevät vaurastumisen matkalla — käyttäjien anonyymisti jakamista suunnitelmista." />
+  <meta name="theme-color" content="#0a0e1a" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="fi_FI" />
+  <meta property="og:site_name" content="Varallisuuspolku" />
+  <meta property="og:title" content="Vaurastumisen kartta — miten eri ikäiset suunnittelevat talouttaan" />
+  <meta property="og:description" content="Avoin, anonyymi data suomalaisten taloussuunnitelmista: varallisuus, säästäminen, elämän suuret hankinnat ja eläkehaaveet ikäryhmittäin." />
+  <meta property="og:image" content="https://olavikurola.github.io/varallisuuspolku/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="fonts.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="an-body">
+  <header class="topbar">
+    <a class="brand" href="./" style="text-decoration:none;color:inherit">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 29 C17 28 21 17 31 11 L31 32 L9 32 Z" fill="#fff" fill-opacity="0.18" />
+          <path d="M9 29 C17 28 21 17 31 11" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="9" cy="29" r="2" fill="#fff" fill-opacity="0.85" />
+          <circle cx="31" cy="11" r="3.3" fill="#fff" />
+          <circle cx="31" cy="11" r="1.5" fill="#8b7cf6" />
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">Vaurastumisen kartta</div>
+        <div class="brand-tag">Varallisuuspolun avoin analytiikka</div>
+      </div>
+    </a>
+    <div class="topbar-right">
+      <a class="btn" href="./">Avaa suunnittelutyökalu</a>
+    </div>
+  </header>
+
+  <main class="an-main">
+    <p class="an-intro">Miten eri ikäiset suunnittelevat talouttaan ja etenevät vaurastumisen matkalla?
+    Tämä sivu perustuu Varallisuuspolun käyttäjien <b>vapaaehtoisesti ja anonyymisti jakamiin
+    suunnitelmiin</b>. Jakaumat julkaistaan vasta, kun ikäryhmässä on vähintään 30 suunnitelmaa.
+    <span id="anUpdated"></span></p>
+    <div id="youBanner"></div>
+    <div class="an-tiles" id="anTiles"></div>
+
+    <section class="an-card">
+      <h2>Missä muut ovat sinun iässäsi? <small>varallisuus nyt, ikäryhmittäin</small></h2>
+      <div class="an-chart" id="heroChart"></div>
+    </section>
+
+    <section class="an-card">
+      <h2>Elämän kartta <small>minkä ikäisenä elämän suuret tapahtumat suunnitellaan</small></h2>
+      <div id="ridgeline"></div>
+    </section>
+
+    <div class="an-grid2">
+      <section class="an-card">
+        <h2>Kuukausisäästö iän mukaan <small>P25–P75 ja mediaani</small></h2>
+        <div class="an-chart sm" id="savingsChart"></div>
+      </section>
+      <section class="an-card">
+        <h2>Osakepaino iän mukaan <small>katkoviiva = 110 − ikä</small></h2>
+        <div class="an-chart sm" id="stocksChart"></div>
+      </section>
+    </div>
+
+    <section class="an-card">
+      <h2>Eläkehaaveet</h2>
+      <div class="an-grid2">
+        <div><h3>Eläkeikätavoite <small>varjostus = lakisääteinen 65–68 v</small></h3><div class="an-chart sm" id="retireHist"></div></div>
+        <div><h3>Kuinka suuri osa kuukausitulosta katetaan työeläkkeellä?</h3><div id="penCoverage"></div></div>
+      </div>
+      <div class="an-grid2" style="margin-top:18px">
+        <div><h3>Eläketavoitteen tyyppi</h3><div class="an-donut" id="goalDonut"></div></div>
+        <div><h3>Varmuustason käyttö <small>Monte Carlo -tavoite</small></h3><div class="an-donut" id="confDonut"></div></div>
+      </div>
+    </section>
+
+    <div class="an-grid2">
+      <section class="an-card">
+        <h2>Asuntolaina suunnitelmissa</h2>
+        <div id="homeLoan"></div>
+      </section>
+      <section class="an-card">
+        <h2>Realismi <small>oletusten käyttö ja onnistumis-%</small></h2>
+        <div id="realism"></div>
+      </section>
+    </div>
+
+    <section class="an-card an-method">
+      <h2>Avoin data ja menetelmä</h2>
+      <div id="methodChips" class="an-chips"></div>
+      <div class="an-grid2" style="margin-top:14px">
+        <div><h3>Jaettuja suunnitelmia kuukausittain</h3><div class="an-chart xs" id="timeline"></div></div>
+        <div class="an-note">
+          <p><b>Mitä tämä data on:</b> Varallisuuspolun käyttäjien vapaaehtoisesti jakamia
+          <b>suunnitelmia</b> — ei toteutunutta varallisuutta. Otos on itsevalikoitunut
+          (työkalun käyttäjät), ja luvut ovat poikkileikkaus, eivät seurantaa.</p>
+          <p><b>Yksityisyys:</b> ei tunnisteita, summat pyöristetty, jakaumat julki vasta
+          ≥ 30 suunnitelman ryhmistä. Raakadataa ei julkaista — vain aggregaatit:
+          <a id="anStatsLink" href="#" target="_blank" rel="noopener">stats.json</a> ·
+          <a href="https://github.com/olavikurola/varallisuuspolku/tree/main/palvelin" target="_blank" rel="noopener">palvelinkoodi</a></p>
+        </div>
+      </div>
+    </section>
+
+    <p class="disclaimer" style="margin:8px 4px 40px">Suunnitelmadata on suuntaa antavaa eikä kuvaa toteutunutta
+    varallisuutta. Sivu ei ole sijoitusneuvontaa. <a href="./">Varallisuuspolku</a> — kaikki suunnittelu
+    tapahtuu omassa selaimessasi.</p>
+  </main>
+
+  <script src="analytiikka.js" defer></script>
+</body>
+</html>

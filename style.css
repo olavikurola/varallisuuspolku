@@ -941,6 +941,88 @@ input[type="range"]::-moz-range-thumb {
   .cmp-row .cm { display: none; }
 }
 
+/* ---------- Analytiikkasivu (analytiikka.html) ---------- */
+.an-body { display: block; overflow: auto; height: auto; min-height: 100%; }
+.an-main { max-width: 1020px; margin: 0 auto; padding: 22px 18px 20px; }
+.an-intro { font-size: 14px; line-height: 1.65; color: var(--text-dim); margin: 4px 0 14px; }
+.an-intro b { color: var(--text); }
+.an-intro #anUpdated { color: var(--text-faint); font-size: 12.5px; }
+.an-you-banner {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 13px; color: var(--text);
+  background: rgba(251, 191, 36, 0.07);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+.an-you-banner .dot { width: 10px; height: 10px; border-radius: 50%; background: #fbbf24; flex: 0 0 auto; }
+.an-you-banner.faint { background: none; border-color: var(--border-soft); color: var(--text-dim); }
+.an-you-banner a { color: var(--accent); }
+.an-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.an-card {
+  background: linear-gradient(180deg, var(--card), var(--bg-2));
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px 22px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.an-card h2 { margin: 0 0 14px; font-size: 15px; letter-spacing: 0.2px; }
+.an-card h2 small, .an-card h3 small { color: var(--text-faint); font-weight: 400; font-size: 12px; margin-left: 6px; }
+.an-card h3 { margin: 0 0 10px; font-size: 13px; color: var(--text-dim); font-weight: 600; }
+.an-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.an-grid2 > .an-card { margin-bottom: 0; }
+.an-chart svg { display: block; width: 100%; height: auto; }
+.an-donut svg { display: block; width: 100%; max-width: 320px; height: auto; }
+.an-tick { font-size: 11px; fill: var(--text-faint); font-family: inherit; }
+.an-tick-strong { font-size: 11px; fill: var(--text-dim); font-family: inherit; font-weight: 600; }
+.an-row-label { font-size: 12.5px; fill: var(--text); font-family: inherit; font-weight: 600; }
+.an-you { font-size: 11px; fill: #fbbf24; font-weight: 700; font-family: inherit; }
+.an-empty {
+  display: grid; place-items: center;
+  min-height: 120px;
+  font-size: 13px; color: var(--text-faint);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  text-align: center;
+  line-height: 1.6;
+}
+.an-note { font-size: 12px; color: var(--text-faint); line-height: 1.6; margin: 0; }
+.an-note a { color: var(--accent); }
+.an-cov { display: flex; flex-direction: column; gap: 7px; }
+.an-cov-row { display: grid; grid-template-columns: 48px 1fr auto; gap: 10px; align-items: center; font-size: 12px; }
+.an-cov-row .cg { color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.an-cov-row .cbar { height: 13px; background: rgba(45, 212, 191, 0.25); border-radius: 7px; overflow: hidden; }
+.an-cov-row .cbar i { display: block; height: 100%; background: rgba(139, 124, 246, 0.85); border-radius: 7px 0 0 7px; }
+.an-cov-row .cpct { color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.an-cov-row.mine .cg { color: #fbbf24; font-weight: 700; }
+.an-hl-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border-soft); font-size: 13px; }
+.an-hl-row .k { flex: 1 1 140px; color: var(--text-dim); }
+.an-hl-row b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.an-hl-row .rng { font-size: 11.5px; color: var(--text-faint); }
+.an-hl-row .you { font-size: 11.5px; color: #fbbf24; font-weight: 600; }
+.an-share { display: grid; grid-template-columns: 1fr 120px 44px; gap: 10px; align-items: center; font-size: 12.5px; padding: 6px 0; }
+.an-share .k { color: var(--text-dim); }
+.an-share .sbar { height: 11px; background: rgba(148, 168, 220, 0.12); border-radius: 6px; overflow: hidden; }
+.an-share .sbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 6px; }
+.an-share b { font-variant-numeric: tabular-nums; text-align: right; }
+.an-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.an-chip {
+  font-size: 11.5px; color: var(--text-faint);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-variant-numeric: tabular-nums;
+}
+.an-chip.ok { color: var(--ok); border-color: rgba(52, 211, 153, 0.35); background: rgba(52, 211, 153, 0.06); }
+.topbar-right a.btn { text-decoration: none; }
+@media (max-width: 760px) {
+  .an-grid2 { grid-template-columns: 1fr; }
+  .an-main { padding: 16px 12px; }
+}
+
 /* ---------- Tulostus: vain yhteenveto, vaalea paperiasu ---------- */
 @media print {
   @page { size: A4; margin: 12mm; }

@@ -151,6 +151,25 @@ function quartiles(arr) {
   return { p25: q(0.25), p50: q(0.5), p75: q(0.75) };
 }
 
+// Histogrammi kiintein reunoin; ali-/ylivuoto ensimmäiseen/viimeiseen lokeroon
+function hist(values, edges) {
+  const counts = new Array(edges.length - 1).fill(0);
+  for (const v of values) {
+    let i = edges.findIndex((e, k) => k < edges.length - 1 && v < edges[k + 1]);
+    if (i === -1) i = counts.length - 1;
+    if (i < 0) i = 0;
+    counts[i]++;
+  }
+  return { edges, counts };
+}
+
+const share = (list, pred) => list.length ? Math.round(list.filter(pred).length / list.length * 100) / 100 : 0;
+
+const MONTHLY_EDGES = [0, 100, 200, 300, 400, 500, 750, 1000, 1250, 1500, 2000, 2500, 3000, 4000, 5000, 7500, 10000];
+const STOCKS_EDGES = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+const RETIRE_EDGES = [40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 80];
+const EVENT_AGE_EDGES = [18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 54, 57, 60, 63, 66, 69, 72, 75, 81];
+
 let statsCache = { at: 0, json: null };
 
 function computeStats() {
@@ -185,20 +204,79 @@ function computeStats() {
         g.retireAge = quartiles(ret.map((e) => e.age));
         g.withdrawal = quartiles(ret.map((e) => e.withdrawal));
         g.pension = quartiles(ret.map((e) => e.pension).filter((p) => p > 0));
+        // Työeläkkeen kateosuus kuukausitulosta (0..1)
+        const cover = ret.filter((e) => e.withdrawal >= 100)
+          .map((e) => Math.min(1, e.pension / e.withdrawal));
+        if (cover.length >= K_ANON) g.penShare = quartiles(cover.map((v) => Math.round(v * 100) / 100));
+        g.goals = {};
+        for (const k of GOALS) g.goals[k] = share(ret, (e) => (e.goal || 'manual') === k);
+        g.confs = {
+          none: share(ret, (e) => e.conf == null),
+          c75: share(ret, (e) => e.conf === 0.75),
+          c85: share(ret, (e) => e.conf === 0.85),
+          c95: share(ret, (e) => e.conf === 0.95),
+        };
+        g.hist = g.hist || {};
+        g.hist.retireAge = hist(ret.map((e) => e.age), RETIRE_EDGES);
       }
       const withW = list.filter((r) => r.derived && r.derived.wAtRet != null);
       if (withW.length >= K_ANON) g.wAtRet = quartiles(withW.map((r) => r.derived.wAtRet));
+      const withP = list.filter((r) => r.derived && r.derived.successProb != null);
+      if (withP.length >= K_ANON) g.successProb = quartiles(withP.map((r) => r.derived.successProb));
+      g.shares = {
+        glide: share(list, (r) => r.glide),
+        real: share(list, (r) => r.real),
+        tax: share(list, (r) => r.tax),
+      };
+      g.hist = g.hist || {};
+      g.hist.monthly = hist(list.map((r) => r.monthly), MONTHLY_EDGES);
+      g.hist.stocks = hist(list.map((r) => r.alloc.stocks), STOCKS_EDGES);
       // tapahtumatyyppien yleisyys suunnitelmissa
       g.events = {};
       for (const t of EVENT_TYPES) {
-        const share = list.filter((r) => r.events.some((e) => e.type === t)).length / list.length;
-        g.events[t] = Math.round(share * 100) / 100;
+        g.events[t] = share(list, (r) => r.events.some((e) => e.type === t));
       }
     }
     groups[name] = g;
   }
 
-  const json = JSON.stringify({ updated: new Date().toISOString(), kAnon: K_ANON, total: rows.length, groups });
+  // Elämän kartta: tapahtumatyyppien suunnitellut iät kaikista suunnitelmista
+  const all = buckets.get('all');
+  const eventAges = {};
+  for (const t of EVENT_TYPES) {
+    const ages = [];
+    for (const r of all) for (const e of r.events) if (e.type === t) ages.push(e.age);
+    if (ages.length >= K_ANON) {
+      eventAges[t] = Object.assign(hist(ages, EVENT_AGE_EDGES), { n: ages.length, p50: quartiles(ages).p50 });
+    }
+  }
+
+  // Asuntolainan tunnusluvut (kaikista asunnon ostoista lainalla)
+  let homeLoan = null;
+  const homes = [];
+  for (const r of all) for (const e of r.events) {
+    if (e.type === 'home' && e.financing === 'loan' && e.amount < 0) homes.push(e);
+  }
+  if (homes.length >= K_ANON) {
+    homeLoan = {
+      n: homes.length,
+      price: quartiles(homes.map((e) => -e.amount)),
+      downShare: quartiles(homes.filter((e) => e.down != null).map((e) => Math.round(Math.min(1, e.down / -e.amount) * 100) / 100)),
+      years: quartiles(homes.filter((e) => e.years != null).map((e) => e.years)),
+      rate: quartiles(homes.filter((e) => e.rate != null).map((e) => e.rate)),
+    };
+  }
+
+  // Kertymä kuukausittain (vain lukumäärä — ei attribuutteja)
+  const byMonth = new Map();
+  for (const r of rows) if (r.date) byMonth.set(r.date, (byMonth.get(r.date) || 0) + 1);
+  const timeline = [...byMonth.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1)
+    .slice(-24).map(([m, n]) => ({ m, n }));
+
+  const json = JSON.stringify({
+    updated: new Date().toISOString(), v: 2, kAnon: K_ANON, total: rows.length,
+    groups, eventAges, homeLoan, timeline,
+  });
   statsCache = { at: Date.now(), json };
   return json;
 }
