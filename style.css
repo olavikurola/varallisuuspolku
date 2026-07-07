@@ -232,6 +232,7 @@ input[type="number"]::-webkit-inner-spin-button { opacity: 0.4; }
 
 input[type="range"] {
   -webkit-appearance: none;
+  appearance: none;
   width: 100%;
   height: 6px;
   border-radius: 3px;
@@ -442,6 +443,7 @@ input[type="range"]::-moz-range-thumb {
 }
 .onboard .btn { padding: 5px 12px; font-size: 12px; white-space: nowrap; }
 .onboard .btn.ghost { margin-left: auto; }
+.onboard .ob-short { display: none; }
 
 /* ---------- Stats ---------- */
 .stats {
@@ -1201,17 +1203,29 @@ input[type="range"]::-moz-range-thumb {
   #summaryBtn { order: -1; }
   .btn { padding: 7px 12px; flex: 0 0 auto; }
 
-  /* Aloitusvinkki: otsikko + napit — askeltekstit ovat työpöytäohjeita */
-  .onboard { gap: 8px 10px; }
-  .onboard span { display: none; }
-  .onboard b { width: 100%; }
+  /* Aloitusvinkki yhdellä rivillä: lyhyt otsikko + napit */
+  .onboard { gap: 8px 10px; padding: 9px 12px; }
+  .onboard span, .onboard .ob-long { display: none; }
+  .onboard .ob-short { display: inline; }
 
-  /* "Varat riittävät ✓" mahtuu yhdelle riville */
-  .stat .v { font-size: 17px; }
-}
+  /* Tiiviimmät reunukset — sisältö saa tilan */
+  .chart-col { padding: 12px; gap: 10px; }
+  .panel { padding: 12px 12px 20px; }
 
-@media (max-width: 380px) {
+  /* Tunnusluvut: pyyhkäistävä nauha korttiseinän sijaan — graafi heti näkyviin */
+  .stats {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 8px;
+    margin: 0 -12px;
+    padding: 0 12px;
+  }
+  .stats::-webkit-scrollbar { display: none; }
+  .stat { flex: 0 0 auto; width: 168px; padding: 9px 12px; }
+  .stat .k { font-size: 9.5px; letter-spacing: 0.6px; }
   .stat .v { font-size: 16px; }
+  .stat .s { font-size: 10.5px; }
 }
 
 /* iOS zoomaa automaattisesti alle 16 px:n lomakekenttiin — estetään kosketuslaitteilla */
