@@ -2132,6 +2132,7 @@ const ONBOARD_KEY = 'vp-onboarded';
 function dismissOnboard() {
   const el = $('onboard');
   if (el && !el.hidden) el.hidden = true;
+  for (const b of document.querySelectorAll('.step-badge')) b.remove();
   try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (e) {}
 }
 
@@ -2141,6 +2142,11 @@ function initOnboard() {
   if (seen) return;
   $('onboard').hidden = false;
   $('onboardClose').addEventListener('click', dismissOnboard);
+  // Askelnumerot piirtävät polun näkymään: ① Perustiedot → ② Elämäntapahtumat → ③ Yhteenveto
+  const put = (el, n) => { if (el) el.insertAdjacentHTML('afterbegin', `<i class="step-badge">${n}</i>`); };
+  put(document.querySelector('.card[data-card="basics"] h2'), 1);
+  put(document.querySelector('.card[data-card="events"] h2'), 2);
+  put($('summaryBtn'), 3);
 }
 
 /* ===================== Toast ===================== */
