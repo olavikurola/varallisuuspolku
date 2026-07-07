@@ -2747,6 +2747,12 @@ bindPanelCards();
 renderAll();
 pushUndoNow(); // lähtötila kumoamishistorian pohjaksi
 
+// Suora linkki yhteenvetoon (esim. analytiikkasivun kehotteesta)
+if (location.hash === '#yhteenveto') {
+  history.replaceState(null, '', location.pathname);
+  openSummary();
+}
+
 new ResizeObserver(() => { renderChart(); }).observe(wrap);
 
 // Offline-tuki: service worker välimuistittaa sovelluksen (verkko ensin,

@@ -314,10 +314,42 @@ function renderTimeline(stats) {
   text(svg, W - r, t + 6, `yht. ${stats.total}`, 'an-tick-strong', 'end');
 }
 
+/* ---------- Portti: kartta aukeaa omalla suunnitelmalla ja jaolla ---------- */
+// Kaaviot renderöidään normaalisti mutta sumennettuna; lukituskortti kertoo,
+// miten näkymän saa auki. Aggregaatit ovat silti avointa dataa (stats.json) —
+// lukitus on käyttöliittymän kannustin, ei salaus.
+
+function hasShared() {
+  try { return !!(JSON.parse(localStorage.getItem('vp-donate-v1')) || {}).donatedHash; } catch (e) { return false; }
+}
+
+function renderGate(me) {
+  if (me && hasShared()) return false;
+  document.querySelector('.an-main').classList.add('an-locked');
+  const lock = document.createElement('div');
+  lock.className = 'an-lock';
+  lock.innerHTML = me
+    ? `<div class="an-lock-card"><div class="ic">🗺️</div><h2>Melkein valmista</h2>
+       <p>Sinulla on jo oma suunnitelma. Vaurastumisen kartta aukeaa, kun jaat sen
+       <b>anonyymisti</b> — näet ensin täsmälleen mitä jaetaan, eikä se velvoita mihinkään.</p>
+       <a class="btn" href="./#yhteenveto">Avaa yhteenveto ja jaa →</a>
+       <p class="small">Ei tunnisteita · summat pyöristetään · jakaumat julkaistaan vasta
+       ≥ 30 suunnitelman ryhmistä · aggregaatit ovat avointa dataa:
+       <a href="${DATA_API}/stats.json" target="_blank" rel="noopener">stats.json</a></p></div>`
+    : `<div class="an-lock-card"><div class="ic">🗺️</div><h2>Vaurastumisen kartta</h2>
+       <p>Tämä näkymä kertoo, miten eri ikäiset suunnittelevat talouttaan ja etenevät
+       vaurastumisen matkalla. Kartta aukeaa, kun sinullakin on <b>oma suunnitelma</b>.</p>
+       <a class="btn" href="./">Tee oma suunnitelma →</a>
+       <p class="small">Vie pari minuuttia — suunnitelmasi pysyy omassa selaimessasi.</p></div>`;
+  document.body.appendChild(lock);
+  return true;
+}
+
 /* ---------- Sivun kokoaminen ---------- */
 
 (async () => {
   const me = readMe();
+  renderGate(me);
   const banner = $('youBanner');
   if (me) {
     banner.innerHTML = `<div class="an-you-banner"><span class="dot"></span> Kaavioissa näkyy myös <b>sinun suunnitelmasi</b> (keltainen) — se luetaan vain tämän selaimen muistista, mitään ei lähetetä.</div>`;
