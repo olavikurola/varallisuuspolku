@@ -1188,8 +1188,30 @@ input[type="range"]::-moz-range-thumb {
 @media (max-width: 560px) {
   .topbar { padding: 10px 12px; gap: 10px; }
   .brand-tag { display: none; }
-  .topbar-right { width: 100%; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
-  .btn { padding: 7px 12px; }
+  /* Yksi pyyhkäistävä rivi rumien rivitysten sijaan — Yhteenveto ensin */
+  .topbar-right {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 8px;
+  }
+  .topbar-right::-webkit-scrollbar { display: none; }
+  #summaryBtn { order: -1; }
+  .btn { padding: 7px 12px; flex: 0 0 auto; }
+
+  /* Aloitusvinkki: otsikko + napit — askeltekstit ovat työpöytäohjeita */
+  .onboard { gap: 8px 10px; }
+  .onboard span { display: none; }
+  .onboard b { width: 100%; }
+
+  /* "Varat riittävät ✓" mahtuu yhdelle riville */
+  .stat .v { font-size: 17px; }
+}
+
+@media (max-width: 380px) {
+  .stat .v { font-size: 16px; }
 }
 
 /* iOS zoomaa automaattisesti alle 16 px:n lomakekenttiin — estetään kosketuslaitteilla */
