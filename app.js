@@ -1042,8 +1042,22 @@ function buildPalette() {
     const chip = document.createElement('div');
     chip.className = 'chip';
     chip.title = def.label;
-    chip.innerHTML = `<span class="ic">${def.icon}</span><span>${def.label}</span>`;
+    chip.tabIndex = 0;
+    chip.setAttribute('role', 'button');
+    chip.innerHTML = `<span class="ic" aria-hidden="true">${def.icon}</span><span>${def.label}</span>`;
     chip.addEventListener('pointerdown', (e) => startPaletteDrag(e, type));
+    // Näppäimistöllä: Enter/välilyönti lisää tapahtuman kuten napautus
+    chip.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      const existing = def.unique && state.events.find((ev) => ev.type === type);
+      if (existing) {
+        openPopover(existing.id);
+      } else {
+        const defAge = type === 'retirement' ? 65 : state.ageNow + 5;
+        addEvent(type, clamp(defAge, state.ageNow, state.ageEnd));
+      }
+    });
     pal.appendChild(chip);
   }
 }
@@ -1251,7 +1265,7 @@ function openPopover(id) {
     `<span class="input"><input id="pv-name" type="text" maxlength="${NAME_MAX}" placeholder="${escapeHtml(def.label)}" /></span></label>`;
 
   popover.innerHTML =
-    `<h3><span>${def.icon}</span><span id="pv-title">${escapeHtml(evLabel(ev))}</span><button class="close" id="pv-close">✕</button></h3>` +
+    `<h3><span aria-hidden="true">${def.icon}</span><span id="pv-title">${escapeHtml(evLabel(ev))}</span><button class="close" id="pv-close" aria-label="Sulje">✕</button></h3>` +
     nameField +
     fields +
     `<div class="actions">` +
@@ -2038,6 +2052,8 @@ function renderEventList() {
       `<span class="ag">${Math.round(ev.age)} v</span>` +
       `<span class="am ${amount >= 0 ? 'pos' : 'neg'}">${amStr}</span>` +
       `<button class="rm" title="Poista">✕</button>`;
+    row.tabIndex = 0;
+    row.setAttribute('role', 'button');
     row.addEventListener('click', (e) => {
       if (e.target.classList.contains('rm')) {
         state.events = state.events.filter((x) => x.id !== ev.id);
@@ -2046,6 +2062,9 @@ function renderEventList() {
       } else {
         openPopover(ev.id);
       }
+    });
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPopover(ev.id); }
     });
     box.appendChild(row);
   }
@@ -2143,7 +2162,7 @@ function initOnboard() {
   $('onboard').hidden = false;
   $('onboardClose').addEventListener('click', dismissOnboard);
   // Askelnumerot piirtävät polun näkymään: ① Perustiedot → ② Elämäntapahtumat → ③ Yhteenveto
-  const put = (el, n) => { if (el) el.insertAdjacentHTML('afterbegin', `<i class="step-badge">${n}</i>`); };
+  const put = (el, n) => { if (el) el.insertAdjacentHTML('afterbegin', `<i class="step-badge" aria-hidden="true">${n}</i>`); };
   put(document.querySelector('.card[data-card="basics"] h2'), 1);
   put(document.querySelector('.card[data-card="events"] h2'), 2);
   put($('summaryBtn'), 3);

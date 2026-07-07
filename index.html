@@ -132,9 +132,9 @@
     <section class="chart-col">
       <div class="onboard" id="onboard" hidden>
         <b>Näin pääset alkuun:</b>
-        <span><i>1</i> Syötä perustiedot</span>
-        <span><i>2</i> Raahaa tapahtumat graafille</span>
-        <span><i>3</i> Avaa Yhteenveto</span>
+        <span><i aria-hidden="true">1</i> Syötä perustiedot</span>
+        <span><i aria-hidden="true">2</i> Raahaa tapahtumat graafille</span>
+        <span><i aria-hidden="true">3</i> Avaa Yhteenveto</span>
         <button class="btn examples-trigger" id="onboardExamples">Kokeile esimerkkiä</button>
         <button class="btn ghost" id="onboardClose">Selvä ✓</button>
       </div>
@@ -146,7 +146,7 @@
         <button class="btn ghost" id="cmpClear" title="Poista vertailu">Poista</button>
       </div>
       <div class="chart-wrap" id="chartWrap">
-        <svg id="chart"></svg>
+        <svg id="chart" role="img" aria-label="Varallisuuden odotettu kehitys iän mukaan elämäntapahtumineen"></svg>
         <div class="tooltip" id="tooltip" hidden></div>
         <div class="popover" id="popover" hidden></div>
         <div class="drop-hint" id="dropHint" hidden><span>Pudota tapahtuma aikajanalle</span></div>
@@ -166,9 +166,9 @@
           <span class="lg"><i class="sw sw-asset"></i>Omaisuus</span>
           <span class="lg"><i class="sw sw-debtbar"></i>Velka</span>
           <span class="lg"><i class="sw sw-net"></i>Netto</span>
-          <button class="collapse-btn" id="balanceToggle" title="Pienennä / suurenna">▾</button>
+          <button class="collapse-btn" id="balanceToggle" title="Pienennä / suurenna" aria-label="Pienennä tai suurenna tasepaneeli">▾</button>
         </div>
-        <div class="balance-body" id="balanceWrap"><svg id="balanceChart"></svg></div>
+        <div class="balance-body" id="balanceWrap"><svg id="balanceChart" role="img" aria-label="Tase vuosittain: sijoitukset, omaisuus, velka ja nettovarallisuus"></svg></div>
       </div>
     </section>
   </main>
