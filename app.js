@@ -1678,23 +1678,38 @@ function loadBaseline() {
   } catch (e) { /* viallinen vertailukohta — ohitetaan */ }
 }
 
+function updateCompareBtn() {
+  const b = $('compareBtn');
+  if (!b) return;
+  b.textContent = baseline ? 'Vertailu ✓' : 'Vertaile';
+  b.title = baseline
+    ? 'Vertailukohta tallennettu — paina uudelleen poistaaksesi'
+    : 'Tallenna nykyinen suunnitelma vertailukohdaksi ja katso muutosten vaikutus';
+  b.classList.toggle('on-state', !!baseline);
+}
+
 function renderCompare() {
   const bar = $('compareBar');
   const legend = $('legendCompare');
+  updateCompareBtn();
   const active = !!(baseline && ghostSim && sim);
-  bar.hidden = !active;
-  if (legend) legend.hidden = !active;
-  if (!active) return;
 
   const chips = [];
+  let anyDelta = false;
   // higher-is-better -metriikoille up = vihreä, down = punainen
   const add = (label, cur, base, eps, fmt) => {
     if (cur == null || base == null) return;
     const d = cur - base;
     const dir = Math.abs(d) < eps ? 'flat' : d > 0 ? 'up' : 'down';
+    if (dir !== 'flat') anyDelta = true;
     const val = dir === 'flat' ? '±0' : (d > 0 ? '+' : '−') + fmt(Math.abs(d));
     chips.push(`<span class="cmp-chip"><span class="ck">${label}</span><span class="cv ${dir}">${val}</span></span>`);
   };
+  if (!active) {
+    bar.hidden = true;
+    if (legend) legend.hidden = true;
+    return;
+  }
   add('Eläkevarallisuus', sim.wAtRet, ghostSim.wAtRet, 500, fmtCompact);
   // Vertaa samaa suuretta molemmilta: netto vs. netto tai sijoitukset vs. sijoitukset
   const useNet = sim.hasNet;
@@ -1706,9 +1721,10 @@ function renderCompare() {
   add('Onnistuminen', sim.successProb != null ? Math.round(sim.successProb * 100) : null,
     ghostSim.successProb != null ? Math.round(ghostSim.successProb * 100) : null, 0.5, (x) => `${Math.round(x)} %-yks`);
 
-  $('cmpDeltas').innerHTML = chips.length
-    ? chips.join('')
-    : '<span class="cmp-chip"><span class="ck">Ei muutosta vertailukohtaan</span></span>';
+  // Palkki näkyy vain kun on jotain kerrottavaa — ±0-rivi olisi pelkkää kohinaa
+  bar.hidden = !anyDelta;
+  if (legend) legend.hidden = !anyDelta;
+  if (anyDelta) $('cmpDeltas').innerHTML = chips.join('');
 }
 
 /* ===================== Vuositaulukko ja CSV ===================== */
@@ -2422,8 +2438,6 @@ async function copyShareUrl(btn) {
 }
 
 function bindActions() {
-  const shareBtn = $('shareBtn');
-  shareBtn.addEventListener('click', () => copyShareUrl(shareBtn));
   $('summaryBtn').addEventListener('click', openSummary);
   $('sumClose').addEventListener('click', closeSummary);
   $('sumPrint').addEventListener('click', () => window.print());
@@ -2460,12 +2474,15 @@ function bindActions() {
     toast('Valinta nollattu — kysymys näytetään taas yhteenvedossa.');
   });
 
-  // Skenaariovertailu: tallenna nykyinen suunnitelma haamukäyräksi
-  const compareBtn = $('compareBtn');
-  compareBtn.addEventListener('click', () => {
-    setBaseline();
-    compareBtn.textContent = 'Tallennettu ✓';
-    setTimeout(() => { compareBtn.textContent = 'Vertaile'; }, 1500);
+  // Skenaariovertailu: nappi toimii kytkimenä (tallenna / poista vertailukohta)
+  $('compareBtn').addEventListener('click', () => {
+    if (baseline) {
+      clearBaseline();
+      toast('Vertailu poistettu');
+    } else {
+      setBaseline();
+      toast('Vertailukohta tallennettu — erot ilmestyvät, kun muutat suunnitelmaa');
+    }
   });
   $('cmpUpdate').addEventListener('click', () => setBaseline());
   $('cmpClear').addEventListener('click', () => clearBaseline());
