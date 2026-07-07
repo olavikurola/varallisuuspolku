@@ -1826,7 +1826,7 @@ function renderDonateSlot() {
     slot.innerHTML =
       `<div class="donate-card"><div class="dc-text"><b>📊 Haluatko nähdä, miten eri ikäiset suunnittelevat talouttaan ja etenevät vaurastumisen matkalla?</b>` +
       `<span>Vertailu perustuu käyttäjien anonyymeihin suunnitelmiin. Näet ensin täsmälleen, mitä suunnitelmastasi jaetaan — data on anonyymiä eikä velvoita mihinkään.</span></div>` +
-      `<div class="dc-actions"><button class="btn" id="donateOpenBtn">Näytä, mitä jaetaan</button>` +
+      `<div class="dc-actions"><button class="btn" id="donateOpenBtn">Kyllä, näytä</button>` +
       `<button class="btn ghost" id="donateNeverBtn">Ei kiitos</button></div></div>`;
   }
   const open = $('donateOpenBtn');
@@ -2257,6 +2257,7 @@ function openExamplesMenu(anchor) {
     b.innerHTML = `<div>${ex.name}</div><div class="mdesc">${ex.desc}</div>`;
     b.addEventListener('click', () => {
       closeExamplesMenu();
+      dismissOnboard();
       pushUndoNow(); // nykyinen suunnitelma talteen ennen korvaamista
       applySaved(JSON.parse(JSON.stringify(ex.data)));
       syncInputs();
@@ -2278,7 +2279,7 @@ function openExamplesMenu(anchor) {
 }
 
 document.addEventListener('pointerdown', (e) => {
-  if (examplesMenuEl && !examplesMenuEl.contains(e.target) && e.target.id !== 'examplesBtn') closeExamplesMenu();
+  if (examplesMenuEl && !examplesMenuEl.contains(e.target) && !(e.target.closest && e.target.closest('.examples-trigger'))) closeExamplesMenu();
 });
 
 /* ===================== Tallennus ja jakaminen ===================== */
@@ -2431,9 +2432,10 @@ function bindActions() {
   $('infoClose').addEventListener('click', () => { $('infoModal').hidden = true; });
   $('disclaimerInfo').addEventListener('click', (e) => { e.preventDefault(); $('infoModal').hidden = false; });
 
-  // Esimerkkisuunnitelmat
-  const examplesBtn = $('examplesBtn');
-  examplesBtn.addEventListener('click', () => openExamplesMenu(examplesBtn));
+  // Esimerkkisuunnitelmat: avautuu aloitusvinkistä ja tapahtumakortin linkistä
+  for (const trigger of document.querySelectorAll('.examples-trigger')) {
+    trigger.addEventListener('click', (e) => { e.preventDefault(); openExamplesMenu(trigger); });
+  }
 
   // Vuositaulukko
   $('tableBtn').addEventListener('click', () => { renderYearTable(); $('tableModal').hidden = false; });

@@ -39,7 +39,6 @@
     </div>
     <div class="topbar-right">
       <div class="topbar-note" id="allocSummaryTop"></div>
-      <button class="btn ghost" id="examplesBtn" title="Lataa valmis esimerkkisuunnitelma pohjaksi">Esimerkit</button>
       <button class="btn ghost" id="compareBtn" title="Tallenna nykyinen suunnitelma vertailukohdaksi ja katso muutosten vaikutus">Vertaile</button>
       <a class="btn ghost" href="analytiikka.html" title="Vaurastumisen kartta — miten eri ikäiset suunnittelevat talouttaan">Analytiikka</a>
       <button class="btn ghost" id="resetBtn">Nollaa</button>
@@ -119,7 +118,7 @@
 
       <section class="card" data-card="events">
         <h2>Elämäntapahtumat</h2>
-        <p class="hint">Raahaa tapahtuma graafille — tai napauta, niin se lisätään ja pääset muokkaamaan ikää ja summaa.</p>
+        <p class="hint">Raahaa tapahtuma graafille — tai napauta, niin se lisätään ja pääset muokkaamaan ikää ja summaa. Valmiit pohjat: <a href="#" class="examples-trigger" id="examplesLink">Esimerkit</a>.</p>
         <div class="palette" id="palette"></div>
       </section>
 
@@ -137,6 +136,7 @@
         <span><i>1</i> Syötä ikäsi, varallisuutesi ja kuukausisäästösi</span>
         <span><i>2</i> Raahaa elämäsi suuret tapahtumat graafille</span>
         <span><i>3</i> Avaa Yhteenveto — riittävätkö varat?</span>
+        <button class="btn examples-trigger" id="onboardExamples">Kokeile esimerkkiä</button>
         <button class="btn ghost" id="onboardClose">Selvä ✓</button>
       </div>
       <div class="stats" id="stats"></div>
@@ -192,7 +192,7 @@
       keskustelun pohjaksi.</p>
 
       <h2>Vinkit</h2>
-      <p><b>Esimerkit</b>-valikosta saat valmiin pohjan eri elämäntilanteisiin. <b>Vertaile</b>
+      <p><b>Esimerkit</b> (Elämäntapahtumat-kortissa) antaa valmiin pohjan eri elämäntilanteisiin. <b>Vertaile</b>
       tallentaa nykyisen suunnitelman haamukäyräksi, jota vasten näet muutosten vaikutuksen.
       <b>Vuositaulukko</b> (graafin alla) näyttää luvut vuosi vuodelta ja vie ne CSV:nä.
       <b>Ctrl+Z</b> kumoaa viimeisimmän muutoksen, ja tapahtuman voi <b>monistaa</b>
