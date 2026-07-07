@@ -407,8 +407,8 @@ input[type="range"]::-moz-range-thumb {
   background: rgba(45, 212, 191, 0.18);
   color: var(--accent);
 }
-.onboard a { color: var(--accent); font-weight: 600; white-space: nowrap; }
-.onboard .btn { margin-left: auto; padding: 5px 12px; font-size: 12px; }
+.onboard .btn { padding: 5px 12px; font-size: 12px; white-space: nowrap; }
+.onboard .btn.ghost { margin-left: auto; }
 
 /* ---------- Stats ---------- */
 .stats {

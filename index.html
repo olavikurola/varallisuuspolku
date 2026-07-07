@@ -77,6 +77,17 @@
         </label>
       </section>
 
+      <section class="card" data-card="events">
+        <h2>Elämäntapahtumat</h2>
+        <p class="hint">Raahaa tapahtuma graafille — tai napauta, niin se lisätään ja pääset muokkaamaan ikää ja summaa. Valmiit pohjat: <a href="#" class="examples-trigger" id="examplesLink">Esimerkit</a>.</p>
+        <div class="palette" id="palette"></div>
+      </section>
+
+      <section class="card" data-card="timeline">
+        <h2>Aikajanalla</h2>
+        <div class="event-list" id="eventList"></div>
+      </section>
+
       <section class="card" data-card="alloc">
         <h2>Allokaatio</h2>
         <div class="slider-field">
@@ -115,17 +126,6 @@
         <p class="hint" id="distHint">Jakauma seuraa graafin kohdistinta — oletuksena eläkeikä.</p>
       </section>
 
-      <section class="card" data-card="events">
-        <h2>Elämäntapahtumat</h2>
-        <p class="hint">Raahaa tapahtuma graafille — tai napauta, niin se lisätään ja pääset muokkaamaan ikää ja summaa. Valmiit pohjat: <a href="#" class="examples-trigger" id="examplesLink">Esimerkit</a>.</p>
-        <div class="palette" id="palette"></div>
-      </section>
-
-      <section class="card" data-card="timeline">
-        <h2>Aikajanalla</h2>
-        <div class="event-list" id="eventList"></div>
-      </section>
-
       <p class="disclaimer">Laskelma on suuntaa antava havainnollistus, ei sijoitusneuvontaa. Suunnitelma tallentuu selaimeesi automaattisesti. Oletukset ja tietosuoja: <a href="#" id="disclaimerInfo">Tietoa palvelusta</a>.</p>
     </aside>
 
@@ -135,7 +135,7 @@
         <span><i>1</i> Syötä perustiedot</span>
         <span><i>2</i> Raahaa tapahtumat graafille</span>
         <span><i>3</i> Avaa Yhteenveto</span>
-        <a href="#" class="examples-trigger" id="onboardExamples">tai kokeile esimerkkiä</a>
+        <button class="btn examples-trigger" id="onboardExamples">Kokeile esimerkkiä</button>
         <button class="btn ghost" id="onboardClose">Selvä ✓</button>
       </div>
       <div class="stats" id="stats"></div>
