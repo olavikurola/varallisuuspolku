@@ -1134,6 +1134,7 @@ function addEvent(type, age) {
 function openPopover(id) {
   const ev = state.events.find((e) => e.id === id);
   if (!ev) return;
+  dismissOnboard(); // käyttäjä on jo vauhdissa — vinkki pois
   openPopoverId = id;
   const def = EVENT_TYPES[ev.type];
 
@@ -1157,7 +1158,7 @@ function openPopover(id) {
     const penVal = ev.pension != null ? ev.pension : 0;
     const penAgeVal = ev.pensionAge != null ? Math.round(ev.pensionAge) : 65;
     fields =
-      `<p class="note">Kuukausisijoitukset päättyvät ja eläkeaika alkaa tästä iästä.</p>` +
+      `<p class="note">Kuukausisäästäminen päättyy ja eläkeaika alkaa tästä iästä.</p>` +
       `<div class="field"><span class="field-label">Tavoite</span><div class="seg seg-goal" id="pv-goals">${goalBtns}</div></div>` +
       `<p class="note">${goalNotes[g]}</p>` +
       `<label class="field"><span class="field-label">${ageSolved ? 'Aikaisin eläkeikä (laskettu)' : 'Eläkkeelle jäänti-ikä'}</span>` +
@@ -1184,7 +1185,7 @@ function openPopover(id) {
     fields =
       `<label class="field"><span class="field-label">Ikä</span>` +
       `<span class="input"><input id="pv-age" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${Math.round(ev.age)}" /><em>v</em></span></label>` +
-      `<label class="field"><span class="field-label">Vaikutus varallisuuteen (− kulu, + tulo)</span>` +
+      `<label class="field"><span class="field-label">Summa (− kulu, + tulo)</span>` +
       `<span class="input"><input id="pv-amount" type="number" step="1000" value="${ev.amount}" /><em>€</em></span></label>`;
 
     // Toistuva kuukausierä: esim. lapsen kulut, harrastus tai vuokratulo
@@ -1517,11 +1518,11 @@ function updateSolvedFields() {
   if (sim.goal === 'saving') {
     req.innerHTML = sim.requiredMonthly != null
       ? `Tavoitteeseen tarvitaan <b>${fmtEur(sim.requiredMonthly)}/kk</b> · nyt säästät ${fmtEur(state.monthly)}/kk`
-      : 'Tavoite ei toteudu — nosto on liian suuri millään realistisella säästöllä.';
+      : 'Tavoite ei toteudu — tulotavoite on liian suuri millään realistisella säästöllä.';
   } else if (sim.goal === 'age') {
     req.innerHTML = sim.solvedRetireAge != null
-      ? `Aikaisin eläkeikä <b>${fmtAge(sim.solvedRetireAge)}</b> nostolla ${fmtEur(sim.withdrawal)}/kk`
-      : 'Tavoite ei toteudu — nosto ei onnistu edes suunnitelman lopussa.';
+      ? `Aikaisin eläkeikä <b>${fmtAge(sim.solvedRetireAge)}</b> kuukausitulolla ${fmtEur(sim.withdrawal)}/kk`
+      : 'Tavoite ei toteudu — tulotavoite ei onnistu edes suunnitelman lopussa.';
   }
 }
 
@@ -1613,7 +1614,7 @@ function renderStats() {
   if (s.goal === 'saving') {
     cards.push(s.requiredMonthly != null
       ? { k: 'Tarvittava säästö', v: `${fmtEur(s.requiredMonthly)}/kk`, cls: s.requiredMonthly > state.monthly ? 'accent' : 'ok', s: `nyt ${fmtEur(state.monthly)}/kk` + (confTxt ? ` · ${confTxt}` : '') }
-      : { k: 'Tarvittava säästö', v: 'Ei toteudu', cls: 'bad', s: 'nosto on liian suuri tällä eläkeiällä' });
+      : { k: 'Tarvittava säästö', v: 'Ei toteudu', cls: 'bad', s: 'tulotavoite on liian suuri tälle eläkeiälle' });
   }
   // Riittävyys ja onnistumis-% samassa kortissa — kertovat samaa asiaa
   if (s.goal === 'withdrawal' && s.goalUnreachable) {
@@ -1845,7 +1846,7 @@ function openDonateModal() {
   let html = `<h2>Perustiedot</h2>` +
     row('Ikä nyt / suunnitelman loppu', `${p.ageNow} v / ${p.ageEnd} v`) +
     row('Varallisuus nyt', fmtEur(p.startCapital)) +
-    row('Kuukausisijoitus', `${fmtEur(p.monthly)}/kk` + (p.savingsGrowth ? ` (+${p.savingsGrowth.toLocaleString('fi-FI')} %/v)` : '')) +
+    row('Kuukausisäästö', `${fmtEur(p.monthly)}/kk` + (p.savingsGrowth ? ` (+${p.savingsGrowth.toLocaleString('fi-FI')} %/v)` : '')) +
     row('Allokaatio', `${p.alloc.stocks} % osakkeet · ${p.alloc.bonds} % korot`) +
     row('Kytkimet', [p.glide && 'ikäsidonnainen', p.real && 'inflaatiokorjattu', p.tax && 'myyntivoittovero'].filter(Boolean).join(' · ') || '—');
   html += `<h2>Tapahtumat (vain tyyppi, ikä ja summat — ei nimiä)</h2>`;
@@ -2042,7 +2043,7 @@ function updateAllocUI() {
   $('stocksVal').textContent = Math.round(a.s * 100) + ' %';
   $('bondsVal').textContent = Math.round(a.b * 100) + ' %';
   $('cashVal').textContent = Math.round(a.c * 100) + ' %';
-  const txt = `Tuotto-odotus <b>${pctFmt(mu)}/v</b> · volatiliteetti ${pctFmt(sigma)}`;
+  const txt = `Tuotto-odotus <b>${pctFmt(mu)}/v</b> · heilunta ±${pctFmt(sigma)}`;
   $('allocSummary').innerHTML = txt;
   $('allocSummaryTop').innerHTML = `Salkun tuotto-odotus <b>${pctFmt(mu)}/v</b>`;
   for (const id of ['allocStocks', 'allocBonds']) {
@@ -2104,6 +2105,26 @@ function bindInputs() {
   $('glide').addEventListener('change', (e) => { state.glide = e.target.checked; renderAll(); });
   $('real').addEventListener('change', (e) => { state.real = e.target.checked; renderAll(); });
   $('tax').addEventListener('change', (e) => { state.tax = e.target.checked; renderAll(); });
+}
+
+/* ===================== Aloitusvinkki ===================== */
+// Näytetään vain ensikäynnillä; poistuu kuittauksesta tai heti kun käyttäjä
+// alkaa oikeasti käyttää sovellusta (avaa tapahtuman tai lataa esimerkin).
+
+const ONBOARD_KEY = 'vp-onboarded';
+
+function dismissOnboard() {
+  const el = $('onboard');
+  if (el && !el.hidden) el.hidden = true;
+  try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (e) {}
+}
+
+function initOnboard() {
+  let seen = false;
+  try { seen = localStorage.getItem(ONBOARD_KEY) === '1'; } catch (e) {}
+  if (seen) return;
+  $('onboard').hidden = false;
+  $('onboardClose').addEventListener('click', dismissOnboard);
 }
 
 /* ===================== Toast ===================== */
@@ -2604,10 +2625,10 @@ function summaryTalks(s) {
   if (s.goalUnreachable) {
     const confNote = s.conf ? ` ${Math.round(s.conf * 100)} % varmuustavoitteella` : '';
     talks.push({ warn: true, html: s.goal === 'age'
-      ? `Eläkeikätavoitteeni ei toteudu nykyisillä oletuksilla${confNote} — nosto ei onnistu edes suunnitelman lopussa.`
+      ? `Eläkeikätavoitteeni ei toteudu nykyisillä oletuksilla${confNote} — tulotavoite ei onnistu edes suunnitelman lopussa.`
       : s.goal === 'withdrawal'
         ? `Kestävää kuukausituloa ei löydy${confNote} — suunnitelma kaipaa lisää säästöä tai myöhemmän eläkeiän.`
-        : `Säästötavoitteeni ei toteudu nykyisillä oletuksilla${confNote} — nosto on liian suuri.` });
+        : `Säästötavoitteeni ei toteudu nykyisillä oletuksilla${confNote} — tulotavoite on liian suuri.` });
   }
   if (s.requiredMonthly != null && s.requiredMonthly > state.monthly) {
     talks.push({ warn: true, html: `Säästökykyni ja tavoitteeni välillä on <b>${fmtEur(s.requiredMonthly - state.monthly)}/kk</b> ero — miten se katetaan?` });
@@ -2744,6 +2765,7 @@ syncInputs();
 bindInputs();
 bindActions();
 bindPanelCards();
+initOnboard();
 renderAll();
 pushUndoNow(); // lähtötila kumoamishistorian pohjaksi
 

@@ -40,12 +40,12 @@
     <div class="topbar-right">
       <div class="topbar-note" id="allocSummaryTop"></div>
       <button class="btn ghost" id="examplesBtn" title="Lataa valmis esimerkkisuunnitelma pohjaksi">Esimerkit</button>
-      <button class="btn" id="summaryBtn">Yhteenveto</button>
       <button class="btn ghost" id="compareBtn" title="Tallenna nykyinen suunnitelma vertailukohdaksi ja katso muutosten vaikutus">Vertaile</button>
       <a class="btn ghost" href="analytiikka.html" title="Vaurastumisen kartta — miten eri ikäiset suunnittelevat talouttaan">Analytiikka</a>
-      <button class="btn" id="shareBtn">Jaa linkki</button>
       <button class="btn ghost" id="resetBtn">Nollaa</button>
       <button class="btn ghost" id="infoBtn" title="Tietoa palvelusta">Tietoa</button>
+      <button class="btn" id="summaryBtn">Yhteenveto</button>
+      <button class="btn" id="shareBtn">Jaa linkki</button>
     </div>
   </header>
 
@@ -69,12 +69,12 @@
             <span class="input"><input id="startCapital" type="number" min="0" step="1000" value="20000" /><em>€</em></span>
           </label>
           <label class="field">
-            <span class="field-label">Kuukausisijoitus</span>
+            <span class="field-label">Kuukausisäästö</span>
             <span class="input"><input id="monthly" type="number" min="0" step="50" value="1000" /><em>€/kk</em></span>
           </label>
         </div>
         <label class="field field-sub">
-          <span class="field-label">Säästön vuosikasvu <small>palkkakehitys — kk-sijoitus kasvaa vuosittain</small></span>
+          <span class="field-label">Säästön vuosikasvu <small>palkka nousee → säästö kasvaa vuosittain</small></span>
           <span class="input"><input id="savingsGrowth" type="number" min="0" max="15" step="0.5" value="1.5" /><em>%/v</em></span>
         </label>
       </section>
@@ -104,7 +104,7 @@
         <label class="toggle">
           <input id="tax" type="checkbox" />
           <span class="switch"></span>
-          <span>Myyntivoittovero <small>30/34&nbsp;% eläkeajan nostojen voitto-osuudesta</small></span>
+          <span>Myyntivoittovero <small>verot mukana eläkeajan nostoissa (30/34&nbsp;%)</small></span>
         </label>
       </section>
 
@@ -132,6 +132,13 @@
     </aside>
 
     <section class="chart-col">
+      <div class="onboard" id="onboard" hidden>
+        <b>Näin pääset alkuun:</b>
+        <span><i>1</i> Syötä ikäsi, varallisuutesi ja kuukausisäästösi</span>
+        <span><i>2</i> Raahaa elämäsi suuret tapahtumat graafille</span>
+        <span><i>3</i> Avaa Yhteenveto — riittävätkö varat?</span>
+        <button class="btn ghost" id="onboardClose">Selvä ✓</button>
+      </div>
       <div class="stats" id="stats"></div>
       <div class="compare-bar" id="compareBar" hidden>
         <span class="cmp-title">Vertailu</span>
@@ -178,21 +185,20 @@
       </div>
 
       <h2>Mikä tämä on</h2>
-      <p>Varallisuuspolku auttaa hahmottamaan koko elinkaaren sijoittamisen yhdellä näkymällä:
-      kuukausisäästön ja sen kasvun, elämän suuret hankinnat lainoineen, toistuvat erät (esim. lapsen
-      kulut), omaisuuden kertymisen ja myynnin sekä eläkeajan tulot — lakisääteinen työeläke,
-      sijoitusten nostot ja niiden myyntivoittovero. Tavoitetiloilla voit ratkaista kestävän
-      kuukausitulon, aikaisimman eläkeiän tai tarvittavan kuukausisäästön — halutessasi myös
-      varmuustasolla (75/85/95 % Monte Carlo -poluista onnistuu). Suunnitelman voi tallentaa
-      vertailukohdaksi ja nähdä muutosten vaikutuksen haamukäyränä, ja vuosikohtaiset luvut saa
-      taulukkona ja CSV-tiedostona. Yhteenvedon voi tulostaa tai antaa vaikka varainhoitajalle
+      <p>Varallisuuspolku näyttää koko elinkaaresi talouden yhdellä näkymällä: säästämisen, elämän
+      suuret hankinnat lainoineen sekä eläkeajan tulot työeläkkeineen ja veroineen. Tavoitetilat
+      ratkaisevat puolestasi kestävän kuukausitulon, aikaisimman eläkeiän tai tarvittavan säästön —
+      halutessasi 75–95 %:n varmuudella. Yhteenvedon voi tulostaa tai antaa vaikka varainhoitajalle
       keskustelun pohjaksi.</p>
 
       <h2>Vinkit</h2>
-      <p><b>Esimerkit</b>-valikosta saat valmiin pohjan eri elämäntilanteisiin. <b>Ctrl+Z</b> kumoaa
-      viimeisimmän muutoksen. Tapahtuman voi <b>monistaa</b> muokkausikkunasta (esim. toinen lapsi).
-      <b>Jaa linkki</b> toimii myös varmuuskopiona — koko suunnitelma on linkissä. Sovelluksen voi
-      asentaa aloitusnäytölle (PWA), jolloin se toimii myös ilman verkkoyhteyttä.</p>
+      <p><b>Esimerkit</b>-valikosta saat valmiin pohjan eri elämäntilanteisiin. <b>Vertaile</b>
+      tallentaa nykyisen suunnitelman haamukäyräksi, jota vasten näet muutosten vaikutuksen.
+      <b>Vuositaulukko</b> (graafin alla) näyttää luvut vuosi vuodelta ja vie ne CSV:nä.
+      <b>Ctrl+Z</b> kumoaa viimeisimmän muutoksen, ja tapahtuman voi <b>monistaa</b>
+      muokkausikkunasta (esim. toinen lapsi). <b>Jaa linkki</b> toimii myös varmuuskopiona —
+      koko suunnitelma on linkissä. Sovelluksen voi asentaa aloitusnäytölle (PWA), jolloin se
+      toimii myös ilman verkkoyhteyttä.</p>
 
       <h2>Tietosuoja</h2>
       <p><b>Sovellus ei lähetä mitään mihinkään ilman erillistä, tapauskohtaista lupaasi.</b>
