@@ -132,10 +132,11 @@
     <section class="chart-col">
       <div class="onboard" id="onboard" hidden>
         <b class="ob-long">Näin pääset alkuun:</b>
-        <b class="ob-short">Aloita:</b>
-        <span><i aria-hidden="true">1</i> Syötä perustiedot</span>
-        <span><i aria-hidden="true">2</i> Raahaa tapahtumat graafille</span>
-        <span><i aria-hidden="true">3</i> Avaa Yhteenveto</span>
+        <div class="ob-steps">
+          <span data-step="basics" role="button" tabindex="0"><i aria-hidden="true">1</i><em class="stl">Syötä perustiedot</em><em class="sts">Perustiedot</em></span>
+          <span data-step="events" role="button" tabindex="0"><i aria-hidden="true">2</i><em class="stl">Raahaa tapahtumat graafille</em><em class="sts">Tapahtumat</em></span>
+          <span data-step="summary" role="button" tabindex="0"><i aria-hidden="true">3</i><em class="stl">Avaa Yhteenveto</em><em class="sts">Yhteenveto</em></span>
+        </div>
         <button class="btn examples-trigger" id="onboardExamples">Kokeile esimerkkiä</button>
         <button class="btn ghost" id="onboardClose">Selvä ✓</button>
       </div>

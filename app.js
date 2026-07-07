@@ -2166,6 +2166,23 @@ function initOnboard() {
   put(document.querySelector('.card[data-card="basics"] h2'), 1);
   put(document.querySelector('.card[data-card="events"] h2'), 2);
   put($('summaryBtn'), 3);
+  // Askel on oikopolku kohteeseensa — tärkeä etenkin mobiilissa, jossa
+  // kortit ovat graafin alapuolella
+  for (const s of document.querySelectorAll('.onboard .ob-steps span')) {
+    const go = () => {
+      const t = s.dataset.step;
+      if (t === 'summary') { openSummary(); return; }
+      const card = document.querySelector(`.card[data-card="${t}"]`);
+      if (card) {
+        card.classList.remove('collapsed');
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+    s.addEventListener('click', go);
+    s.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
+    });
+  }
 }
 
 /* ===================== Toast ===================== */
