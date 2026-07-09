@@ -140,6 +140,8 @@ const { chromium } = require('playwright');
   await page.waitForTimeout(150);
   const sel1 = await page.evaluate(() => drawState.sel && drawState.sel.kind);
   ok(sel1 === 'event', 'Tab valitsee ensimmäisen kohteen ikäjärjestyksessä', sel1);
+  ok((await page.locator('.age-line').count()) === 1, 'valitulla kohteella pystykatkoviiva');
+  ok((await page.locator('.age-tick').count()) === 1, 'ikä näkyy korostettuna x-akselilla');
   const homeAge0 = await page.evaluate(() => state.events.find((e) => e.type === 'home').age);
   await page.keyboard.press('ArrowRight');
   await page.waitForTimeout(500);

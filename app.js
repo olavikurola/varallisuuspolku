@@ -1411,11 +1411,9 @@ function chipShowAt(html, px, py, warn) {
   c.innerHTML = html;
   c.hidden = false;
   c.classList.toggle('warn', !!warn);
-  // Transform-siirto, ei layoutia. Ylälaidassa käännetään osoittimen alle.
-  const flip = py < plot.t + 84;
-  c.style.transform = flip
-    ? `translate(${Math.round(px)}px, ${Math.round(py + 20)}px) translateX(-50%)`
-    : `translate(${Math.round(px)}px, ${Math.round(py - 16)}px) translate(-50%, -100%)`;
+  // Telakoitu graafin yläreunaan: ei peitä käyrää eikä hyppelehdi osoittimen
+  // mukana — kohteen sijainnin näyttävät korostus, pystyviiva ja ikä akselilla
+  c.style.transform = `translate(${Math.round(plot.l + plot.w / 2)}px, ${Math.round(plot.t + 8)}px) translateX(-50%)`;
 }
 
 function chipHide() { $('dchip').hidden = true; }
@@ -1720,6 +1718,7 @@ function drawLayers() {
   if (sel && sel.kind === 'retline' && retA != null) {
     el('line', { x1: scaleX(retA), y1: plot.t, x2: scaleX(retA), y2: plot.t + plot.h, class: 'sel-line' }, svg);
   }
+  drawAgeIndicator();
 
   // Loppupisteen kahva
   const ex = scaleX(a1), ey = scaleY(sim.exp[months]);
@@ -1750,6 +1749,25 @@ function drawLayers() {
   drawGoalMarkers(true); // tavoitepisteet: osuma viivan yläpuolella
   const endHit = el('circle', { cx: ex, cy: ey, r: 20, class: 'hit', fill: 'transparent', 'pointer-events': 'all' }, svg);
   endHit.addEventListener('pointerdown', (e) => drawPointerDown(e, 'end', null));
+}
+
+// Valitun kohteen sijainti aikajanalla: pystykatkoviiva + korostettu ikä
+// x-akselilla — elää raahauksen mukana, chippi saa pysyä yläreunassa
+function drawAgeIndicator() {
+  const s = drawState.sel;
+  if (!s || !sim) return;
+  let age = null;
+  if (s.kind === 'event' || s.kind === 'goal') {
+    const ev = state.events.find((x) => x.id === s.id);
+    if (ev) age = ev.age;
+  } else if (s.kind === 'retline') age = sim.retireAge;
+  else if (s.kind === 'end') age = sim.a1;
+  if (age == null) return;
+  const x = scaleX(clamp(age, sim.a0, sim.a1));
+  // eläkeviivalla ja tavoitepisteellä on jo oma viivansa — muille piirretään
+  if (s.kind === 'event') el('line', { x1: x, y1: plot.t, x2: x, y2: plot.t + plot.h, class: 'age-line' }, svg);
+  const t = el('text', { x, y: plot.t + plot.h + 20, 'text-anchor': 'middle', class: 'age-tick' }, svg);
+  t.textContent = Number.isInteger(age) ? age + ' v' : fmtAge(age);
 }
 
 /* Näppäinmalli: Tab kiertää, nuolet säätävät, Enter muokkaa, Delete poistaa */
@@ -1962,8 +1980,9 @@ function drawGoalMarkers(interactive) {
     const y = Math.max(plot.t - 2, scaleY(ev.amount));
     const m = clamp(Math.round((ev.age - a0) * 12), 0, months);
     const selG = drawState.sel && drawState.sel.kind === 'goal' && drawState.sel.id === ev.id;
+    // Pystykatkoviiva kuten eläkeiässä — piste on virstanpylväs aikajanalla
+    el('line', { x1: x, y1: plot.t, x2: x, y2: plot.t + plot.h, class: 'goal-line' + (selG ? ' on' : '') }, svg);
     if (selG) {
-      el('line', { x1: x, y1: y, x2: x, y2: scaleY(sim.exp[m]), class: 'goal-gap' }, svg);
       let reach = null;
       for (let i = 0; i <= months; i++) if (sim.exp[i] >= ev.amount) { reach = i; break; }
       if (reach != null) el('line', { x1: x, y1: y, x2: scaleX(a0 + reach / 12), y2: y, class: 'goal-gap' }, svg);

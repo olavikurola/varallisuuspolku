@@ -46,6 +46,7 @@ const { chromium } = require('playwright');
     return simulate(st).wEnd;
   });
   ok(Math.abs(wEndWith - wEndBase) < 1, 'piste on mittari — ei kassavirtavaikutusta');
+  ok((await page.locator('.goal-line').count()) === 1, 'tavoitepisteellä pystykatkoviiva (myös normaalitilassa)');
 
   // 2) Piirtopöytä: tähtäin näkyy, valinta näyttää vajeet + persentiilin + toiminnot
   await page.keyboard.press('f');
