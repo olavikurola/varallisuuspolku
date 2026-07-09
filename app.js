@@ -456,6 +456,7 @@ function renderChart(reuse = false) {
 
   renderBalance();
   if (openPopoverId != null) positionPopover();
+  if (fsOn) updateHud();
 }
 
 /* ===================== Jaettu kohdistin ===================== */
@@ -1223,6 +1224,11 @@ document.addEventListener('pointerdown', (e) => {
 });
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
+  if (fsOn) {
+    // Piirtopöydässä Esc purkaa yhden kerroksen kerrallaan
+    if (!drawEsc()) exitFs();
+    return;
+  }
   closePopover();
   closeSummary();
   $('infoModal').hidden = true;
@@ -1232,6 +1238,106 @@ document.addEventListener('keydown', (e) => {
   closeExamplesMenu();
   closeMoreMenu();
 });
+
+/* ===================== Piirtopöytä: kokoruudun piirtotila ===================== */
+// CSS-valtaus, ei Fullscreen API:a (iOS Safari ei tue puhelimessa).
+// Sisään: ⛶-nappi graafin kulmassa tai F. Ulos: Esc, ✕ tai selaimen back —
+// history.pushState pitää back-eleen hallussa. Tila ei katoa kumpaankaan
+// suuntaan: sama state, sama undo-pino, haamu jää voimaan poistuttaessa.
+
+function announce(msg) {
+  const el = $('ariaLive');
+  if (el) { el.textContent = ''; el.textContent = msg; }
+}
+
+// Kerroksittainen Esc piirtotilassa — palauttaa true jos kerros purettiin.
+// V2 laajentaa: raahaus → valinta → popover → vasta sitten ulos.
+function drawEsc() {
+  if (openPopoverId != null) { closePopover(); return true; }
+  return false;
+}
+
+function enterFs() {
+  if (fsOn) return;
+  fsOn = true;
+  document.body.classList.add('fs');
+  try { history.pushState({ fs: 1 }, ''); } catch (e) { /* esim. sandbox */ }
+  // Haamu vertailukohdaksi automaattisesti, jotta HUD-deltat elävät heti
+  if (!baseline) setBaseline();
+  closePopover();
+  $('hud').hidden = false;
+  wrap.setAttribute('role', 'application');
+  wrap.setAttribute('aria-label', 'Piirtopöytä: valitse käyrän osa, tapahtuma tai viiva ja säädä raahaamalla tai nuolinäppäimillä');
+  wrap.tabIndex = 0;
+  renderChart();
+  updateHud();
+  try { wrap.focus({ preventScroll: true }); } catch (e) {}
+  announce('Piirtopöytä avattu');
+}
+
+function exitFs(fromPop = false) {
+  if (!fsOn) return;
+  fsOn = false;
+  document.body.classList.remove('fs');
+  $('hud').hidden = true;
+  wrap.removeAttribute('role');
+  wrap.removeAttribute('aria-label');
+  wrap.removeAttribute('tabindex');
+  // Oma poistuminen kuluttaa pushStaten pois; back-ele tulee popstatesta,
+  // jolloin historia on jo kelattu
+  if (!fromPop && history.state && history.state.fs) { try { history.back(); } catch (e) {} }
+  renderChart();
+  announce('Piirtopöytä suljettu');
+}
+
+window.addEventListener('popstate', () => { if (fsOn) exitFs(true); });
+
+// HUD: syy on sormessa (chippi), seuraus näkyy täällä. Kolme lukua + deltat
+// haamukäyrää vasten. Onnistumis-% himmennetään raahauksen ajaksi (stale) ja
+// tarkentuu workerista irrotuksen jälkeen.
+updateHud = function () {
+  if (!fsOn || !sim) return;
+  const box = $('hudMetrics');
+  const g = ghostSim;
+  // Delta samalla polkumäärällä molemmin puolin — muuten vertailu on vino
+  const ghostP = g ? (ghostMc && sim.mcPaths === ghostMc.paths ? ghostMc.successProb : g.successProb) : null;
+  const curP = sim.successProb;
+  const items = [];
+  const metric = (k, v, d, eps, fmt, cls) => {
+    let dh = '';
+    if (d != null && Math.abs(d) >= eps) {
+      const up = d > 0;
+      dh = `<div class="d ${up ? 'up' : 'down'}">${up ? '▲ +' : '▼ −'}${fmt(Math.abs(d))}</div>`;
+    }
+    items.push(`<div class="hud-m${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div>${dh}</div>`);
+  };
+  metric('Onnistuminen',
+    curP != null ? Math.round(curP * 100) + ' %' : '–',
+    curP != null && ghostP != null ? Math.round(curP * 100) - Math.round(ghostP * 100) : null,
+    1, (x) => `${x} %-yks`, sim.successStale ? ' stale' : '');
+  metric('Eläkeiässä',
+    sim.wAtRet != null ? fmtCompact(sim.wAtRet) : '–',
+    sim.wAtRet != null && g && g.wAtRet != null ? sim.wAtRet - g.wAtRet : null,
+    500, fmtCompact, '');
+  metric('Kestävä tulo',
+    sim.sustainableWd != null ? `${Math.round(sim.sustainableWd).toLocaleString('fi-FI')} €/kk` : '–',
+    sim.sustainableWd != null && g && g.sustainableWd != null ? sim.sustainableWd - g.sustainableWd : null,
+    20, (x) => `${Math.round(x).toLocaleString('fi-FI')} €/kk`, '');
+  box.innerHTML = items.join('');
+};
+
+function bindDraw() {
+  $('fsOpen').addEventListener('click', enterFs);
+  $('fsClose').addEventListener('click', () => exitFs());
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'f' && e.key !== 'F') return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    e.preventDefault();
+    if (fsOn) exitFs(); else enterFs();
+  });
+}
 
 /* ===================== Tunnusluvut ===================== */
 
@@ -2515,6 +2621,7 @@ loadBaseline();
 syncInputs();
 bindInputs();
 bindActions();
+bindDraw();
 bindPanelCards();
 initOnboard();
 renderAll();

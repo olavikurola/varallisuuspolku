@@ -1257,3 +1257,88 @@ input[type="range"]::-moz-range-thumb {
 @media (pointer: coarse) {
   .input input { font-size: 16px; }
 }
+
+/* ---------- Piirtopöytä: kokoruudun piirtotila ---------- */
+
+.fs-open {
+  position: absolute;
+  top: 10px; right: 10px;
+  z-index: 6;
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--text-dim);
+  background: rgba(13, 18, 34, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.fs-open:hover { color: var(--accent); border-color: rgba(45, 212, 191, 0.4); }
+
+body.fs { overflow: hidden; }
+body.fs .topbar, body.fs .panel, body.fs .stats, body.fs .compare-bar,
+body.fs .legend, body.fs .balance-panel, body.fs .onboard { display: none !important; }
+body.fs .layout { display: block; min-height: 0; }
+body.fs .chart-col {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; flex-direction: column;
+  /* 100dvh: iOS-osoitepalkki ei jätä kuollutta kaistaa (100vh varalla) */
+  height: 100vh; height: 100dvh;
+  padding: calc(8px + env(safe-area-inset-top, 0px))
+           calc(10px + env(safe-area-inset-right, 0px))
+           calc(10px + env(safe-area-inset-bottom, 0px))
+           calc(10px + env(safe-area-inset-left, 0px));
+  gap: 8px;
+  overflow: hidden;
+  background: var(--bg);
+}
+/* Raahaus kuuluu graafille — selain ei saa kaapata elettä scrolliksi */
+body.fs .chart-wrap { min-height: 0; touch-action: none; }
+body.fs .fs-open { display: none; }
+
+/* HUD: kolme tunnuslukua + deltat haamua vasten */
+.hud { display: flex; align-items: stretch; gap: 10px; flex: 0 0 auto; }
+.hud-metrics {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.hud-metrics::-webkit-scrollbar { display: none; }
+.hud-m {
+  flex: 1 1 0;
+  min-width: 128px;
+  background: linear-gradient(180deg, var(--card), var(--bg-2));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 7px 13px;
+  white-space: nowrap;
+}
+.hud-m .k { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-dim); }
+.hud-m .v { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
+.hud-m .d { font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.hud-m .d.up { color: var(--ok); }
+.hud-m .d.down { color: var(--danger); }
+/* Raahauksen aikana stokastiset luvut ovat vanhentuneita — himmennys kertoo sen */
+.hud-m.stale .v { opacity: 0.45; }
+.hud-actions { display: flex; align-items: flex-start; gap: 8px; flex: 0 0 auto; }
+
+/* Ruudunlukijan live-alue — visuaalisesti piilossa */
+.sr-live {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Mobiili: HUD yhtenä kompaktina pyyhkäistävänä rivinä — ei rivityksiä */
+@media (max-width: 560px) {
+  .hud-m { flex: 0 0 auto; min-width: 104px; padding: 5px 10px; }
+  .hud-m .v { font-size: 15px; }
+  .hud-m .d { font-size: 10.5px; }
+}

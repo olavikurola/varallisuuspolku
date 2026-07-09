@@ -136,6 +136,12 @@
         <button class="btn examples-trigger" id="onboardExamples">Kokeile esimerkkiä</button>
         <button class="btn ghost" id="onboardClose" aria-label="Sulje vinkki"><span class="oc-long">Selvä ✓</span><span class="oc-short" aria-hidden="true">✕</span></button>
       </div>
+      <div class="hud" id="hud" hidden>
+        <div class="hud-metrics" id="hudMetrics"></div>
+        <div class="hud-actions">
+          <button class="btn ghost btn-mini" id="fsClose" title="Sulje piirtopöytä (Esc)" aria-label="Sulje piirtopöytä">✕</button>
+        </div>
+      </div>
       <div class="stats" id="stats"></div>
       <div class="compare-bar" id="compareBar" hidden>
         <span class="cmp-title">Vertailu</span>
@@ -145,10 +151,14 @@
       </div>
       <div class="chart-wrap" id="chartWrap">
         <svg id="chart" role="img" aria-label="Varallisuuden odotettu kehitys iän mukaan elämäntapahtumineen"></svg>
+        <button class="fs-open" id="fsOpen" title="Piirrä polkuasi — piirtopöytä (F)" aria-label="Avaa piirtopöytä">⛶</button>
         <div class="tooltip" id="tooltip" hidden></div>
         <div class="popover" id="popover" hidden></div>
+        <div class="chip" id="chip" hidden></div>
         <div class="drop-hint" id="dropHint" hidden><span>Pudota tapahtuma aikajanalle</span></div>
+        <div class="draw-hint" id="drawHint" hidden><span>Napauta käyrää, tapahtumaa tai viivaa — ja raahaa</span></div>
       </div>
+      <div class="sr-live" id="ariaLive" aria-live="polite"></div>
       <div class="legend">
         <span class="lg"><i class="sw sw-line"></i>Sijoitusvarallisuus</span>
         <span class="lg"><i class="sw sw-band"></i>Vaihteluväli</span>
