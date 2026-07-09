@@ -18,6 +18,9 @@ const EVENT_TYPES = {
   cottage:     { icon: '🏡', label: 'Mökki / vene',        amount: -120000, loan: { share: 0.25, rate: 4.0, years: 15 }, defaultFin: 'loan', asset: { appr: 2.0 } },
   inheritance: { icon: '💎', label: 'Perintö / lahja',     amount: 60000 },
   bonus:       { icon: '💰', label: 'Bonus / myyntivoitto', amount: 20000 },
+  // Tavoitepiste on mittari, ei kassavirta (metric): simulaattori ohittaa sen,
+  // graafi näyttää vajeet ja MC-ylitysosuuden, Ratkaise hakee säästön
+  goal:        { icon: '🎯', label: 'Tavoite',             amount: 100000, metric: true },
   retirement:  { icon: '🌴', label: 'Eläkkeelle jäänti',   withdrawal: 2400, pension: 1500, pensionAge: 65, unique: true },
 };
 
@@ -422,10 +425,12 @@ function renderChart(reuse = false) {
   /* piirtotilan valinta- ja osumakerrokset (markereiden alle) */
   if (fsOn) drawLayers();
 
-  /* tapahtumamerkit — päällekkäisyys pinotaan ylöspäin */
+  /* tapahtumamerkit — päällekkäisyys pinotaan ylöspäin
+     (tavoitepisteet piirretään omina tähtäiminään arvokoordinaatteihinsa) */
   const sorted = [...state.events].sort((x, y) => x.age - y.age);
   let lastX = -1e9, level = 0;
   for (const ev of sorted) {
+    if (ev.type === 'goal') continue;
     const def = EVENT_TYPES[ev.type];
     const age = clamp(ev.age, a0, a1);
     const m = clamp(Math.round((age - a0) * 12), 0, months);
@@ -438,8 +443,10 @@ function renderChart(reuse = false) {
     const selMark = drawState.sel && ((drawState.sel.kind === 'event' && drawState.sel.id === ev.id)
       || (drawState.sel.kind === 'retline' && ev.type === 'retirement'));
     const g = el('g', { class: 'marker' + (selMark ? ' sel' : ''), 'data-id': ev.id }, svg);
-    el('line', { x1: x, y1: y + 17, x2: x, y2: cy, stroke: 'rgba(148,168,220,0.35)', 'stroke-width': 1.2 }, g);
-    el('circle', { cx: x, cy: cy, r: 3.5, fill: ev.type === 'retirement' ? '#8b7cf6' : '#2dd4bf' }, g);
+    // Yhdysviiva ja jalkapiste eivät ole tartuntapintaa — merkkiin tartutaan
+    // ikonista (jalka peittäisi muuten esim. käyrällä istuvan tavoitepisteen)
+    el('line', { x1: x, y1: y + 17, x2: x, y2: cy, stroke: 'rgba(148,168,220,0.35)', 'stroke-width': 1.2, 'pointer-events': 'none' }, g);
+    el('circle', { cx: x, cy: cy, r: 3.5, fill: ev.type === 'retirement' ? '#8b7cf6' : '#2dd4bf', 'pointer-events': 'none' }, g);
     el('circle', {
       class: 'bg', cx: x, cy: y, r: 17,
       fill: '#141c33',
@@ -474,6 +481,9 @@ function renderChart(reuse = false) {
       else startMarkerDrag(e, ev);
     });
   }
+
+  /* tavoitepisteet normaalitilassa (piirtotilassa drawLayers hoitaa osumineen) */
+  if (!fsOn) drawGoalMarkers(false);
 
   renderBalance();
   if (openPopoverId != null) positionPopover();
@@ -729,7 +739,9 @@ function buildPalette() {
       if (existing) {
         openPopover(existing.id);
       } else {
-        const defAge = type === 'retirement' ? 65 : state.ageNow + 5;
+        const defAge = type === 'retirement' ? 65
+          : type === 'goal' && sim && sim.retireAge != null ? Math.round(sim.retireAge)
+          : state.ageNow + 5;
         addEvent(type, clamp(defAge, state.ageNow, state.ageEnd));
       }
     });
@@ -780,7 +792,9 @@ function startPaletteDrag(e, type) {
       if (existing) {
         openPopover(existing.id);
       } else {
-        const defAge = type === 'retirement' ? 65 : state.ageNow + 5;
+        const defAge = type === 'retirement' ? 65
+          : type === 'goal' && sim && sim.retireAge != null ? Math.round(sim.retireAge)
+          : state.ageNow + 5;
         addEvent(type, clamp(defAge, state.ageNow, state.ageEnd));
       }
     }
@@ -805,6 +819,11 @@ function addEvent(type, age) {
       ev.withdrawal = def.withdrawal;
       ev.pension = def.pension != null ? def.pension : 0;
       ev.pensionAge = def.pensionAge != null ? def.pensionAge : 65;
+    } else if (def.metric) {
+      // Tavoite: ei menneisyyteen; oletussumma = käyrän lähin pyöreä summa
+      ev.age = clamp(Math.round(age), state.ageNow + 1, state.ageEnd);
+      const m = sim ? clamp(Math.round((ev.age - sim.a0) * 12), 0, sim.months) : null;
+      ev.amount = Math.max(5000, snapTo(m != null ? sim.exp[m] : def.amount, 5000));
     } else {
       ev.amount = def.amount;
       ev.financing = def.defaultFin || 'cash';
@@ -816,6 +835,7 @@ function addEvent(type, age) {
   }
   renderAll();
   openPopover(ev.id);
+  return ev;
 }
 
 /* ===================== Popover ===================== */
@@ -870,6 +890,14 @@ function openPopover(id) {
       `</div>` +
       `<p class="note pen-note" id="pv-pen-note"></p>` +
       (g === 'saving' || g === 'age' ? `<p class="note req-note" id="pv-req"></p>` : '');
+  } else if (def.metric) {
+    // Tavoitepiste: mittari, ei kassavirtaa — vain ikä ja tavoitesumma
+    fields =
+      `<p class="note">Tavoitepiste on mittari — se ei siirrä rahaa. Piirtopöydän Ratkaise hakee kuukausisäästön, jolla polku osuu pisteeseen.</p>` +
+      `<label class="field"><span class="field-label">Ikä</span>` +
+      `<span class="input"><input id="pv-age" type="number" min="${state.ageNow + 1}" max="${state.ageEnd}" step="1" value="${Math.round(ev.age)}" /><em>v</em></span></label>` +
+      `<label class="field"><span class="field-label">Tavoitesumma</span>` +
+      `<span class="input"><input id="pv-amount" type="number" min="0" step="5000" value="${ev.amount}" /><em>€</em></span></label>`;
   } else {
     fields =
       `<label class="field"><span class="field-label">Ikä</span>` +
@@ -1431,7 +1459,7 @@ function selInfo() {
     const ev = state.events.find((x) => x.id === s.id);
     if (!ev) return null;
     const p = at(clamp(Math.round((ev.age - a0) * 12), 0, months));
-    if (s.kind === 'goal') return goalSelInfo(ev, p);
+    if (s.kind === 'goal') return goalSelInfo(ev);
     return { ...p,
       aria: `${evLabel(ev)}, ikä ${Math.round(ev.age)} vuotta${ev.amount != null ? `, summa ${fmtNum(ev.amount)} euroa` : ''}`,
       html: `<div class="dchip-row"><b>${escapeHtml(evLabel(ev))}</b> ${Math.round(ev.age)} v${ev.amount != null ? ` · ${fmtCompact(ev.amount)}` : ''}</div>`
@@ -1701,7 +1729,10 @@ function drawLayers() {
   if (retA != null && mRet < months - 6) grip(mRet + Math.round((months - mRet) / 2));
 
   // Osumakerrokset: näkymätön leveä stroke — prioriteetti maalausjärjestyksellä
-  // (alin ensin): segmentit < tavoitepisteet < eläkeikäviiva < tapahtumamerkit
+  // (alin ensin): segmentit < eläkeikäviiva < tavoitepisteet < tapahtumamerkit.
+  // Poikkeama suunnitelman 5.1-järjestykseen (viiva > pisteet): oletuspaikka
+  // on eläkeiässä eli viivan päällä — pieni tähtäin voittaa leveän viivan
+  // omalla kiekollaan, muuten pistettä ei saisi koskaan kiinni.
   const hit = (dd, kind, id) => {
     const p = el('path', { d: dd, class: 'hit', fill: 'none', stroke: 'transparent', 'stroke-width': 38, 'pointer-events': 'stroke' }, svg);
     p.addEventListener('pointerdown', (e) => drawPointerDown(e, kind, id));
@@ -1709,8 +1740,8 @@ function drawLayers() {
   };
   hit(pathOf(0, mRet), 'acc', null);
   if (retA != null && mRet < months) hit(pathOf(mRet, months), 'wd', null);
-  drawGoalMarkers(mRet); // V3: tavoitepisteet
   if (retA != null) hit(`M ${scaleX(retA).toFixed(1)} ${plot.t} L ${scaleX(retA).toFixed(1)} ${plot.t + plot.h}`, 'retline', null);
+  drawGoalMarkers(true); // tavoitepisteet: osuma viivan yläpuolella
   const endHit = el('circle', { cx: ex, cy: ey, r: 20, class: 'hit', fill: 'transparent', 'pointer-events': 'all' }, svg);
   endHit.addEventListener('pointerdown', (e) => drawPointerDown(e, 'end', null));
 }
@@ -1864,15 +1895,174 @@ function drawDismissHint() {
   if (fsOn) renderChart(true);
 }
 
-// V3 täydentää nämä: tavoitepisteiden piirto, chippi ja raahaus
-function drawGoalMarkers() {}
-function goalSelInfo() { return null; }
-function dragGoal() { return null; }
-function wireChipActions() {}
+/* --- Tavoitepisteet: mittari ensin, ratkaisu vasta pyynnöstä --- */
+
+// Tähtäinmerkit pisteen omiin koordinaatteihin (ikä, summa). Valitulle
+// pisteelle piirretään vajeviivat: pysty käyrään, vaaka saavutusikään.
+function drawGoalMarkers(interactive) {
+  const goals = state.events.filter((e) => e.type === 'goal');
+  if (!goals.length || !sim) return;
+  const { a0, a1, months } = sim;
+  for (const ev of goals) {
+    const x = scaleX(clamp(ev.age, a0, a1));
+    const y = Math.max(plot.t - 2, scaleY(ev.amount));
+    const m = clamp(Math.round((ev.age - a0) * 12), 0, months);
+    const selG = drawState.sel && drawState.sel.kind === 'goal' && drawState.sel.id === ev.id;
+    if (selG) {
+      el('line', { x1: x, y1: y, x2: x, y2: scaleY(sim.exp[m]), class: 'goal-gap' }, svg);
+      let reach = null;
+      for (let i = 0; i <= months; i++) if (sim.exp[i] >= ev.amount) { reach = i; break; }
+      if (reach != null) el('line', { x1: x, y1: y, x2: scaleX(a0 + reach / 12), y2: y, class: 'goal-gap' }, svg);
+    }
+    const g = el('g', { class: 'goal-marker' + (selG ? ' sel' : ''), 'data-id': ev.id }, svg);
+    el('circle', { cx: x, cy: y, r: selG ? 11 : 9, class: 'goal-ring' }, g);
+    el('circle', { cx: x, cy: y, r: 5.5, class: 'goal-ring2' }, g);
+    el('circle', { cx: x, cy: y, r: 2, class: 'goal-dot' }, g);
+    const title = el('title', {}, g);
+    title.textContent = `${evLabel(ev)} · ${fmtEur(ev.amount)} · ${Math.round(ev.age)} v`;
+    if (interactive) {
+      const hitC = el('circle', { cx: x, cy: y, r: 19, fill: 'transparent', class: 'hit', 'pointer-events': 'all' }, g);
+      hitC.addEventListener('pointerdown', (e) => drawPointerDown(e, 'goal', ev.id));
+    } else {
+      g.style.cursor = 'pointer';
+      g.addEventListener('click', () => openPopover(ev.id));
+    }
+  }
+}
+
+// Pisteen kolme lukemaa + toiminnot: pystyvaje, vaakavaje, MC-ylitysosuus
+function goalSelInfo(ev) {
+  const { a0, months } = sim;
+  const m = clamp(Math.round((ev.age - a0) * 12), 0, months);
+  const x = scaleX(clamp(ev.age, a0, sim.a1));
+  const y = Math.max(plot.t - 2, scaleY(ev.amount));
+  const gap = ev.amount - sim.exp[m];
+  let reach = null;
+  for (let i = 0; i <= months; i++) if (sim.exp[i] >= ev.amount) { reach = a0 + i / 12; break; }
+  const gs = state.events.filter((e) => e.type === 'goal');
+  const share = sim.goalShares ? sim.goalShares[gs.findIndex((g) => g.id === ev.id)] : null;
+  const html =
+    `<div class="dchip-row"><b>${escapeHtml(evLabel(ev))}</b> ${fmtCompact(ev.amount)} · ${Math.round(ev.age)} v</div>` +
+    `<div class="dchip-row">${gap > 500
+      ? `iässä ${Math.round(ev.age)} puuttuu <b>${fmtCompact(gap)}</b>`
+      : `tavoite ylittyy <b>${fmtCompact(Math.max(0, -gap))}</b>:lla`}</div>` +
+    `<div class="dchip-row">${reach != null
+      ? `saavutat summan iässä <b>${fmtAge(reach)}</b>`
+      : 'odotuspolku ei saavuta summaa suunnitelmassa'}</div>` +
+    (share != null ? `<div class="dchip-row"><b>${Math.round(share * 100)} %</b> poluista ylittää tämän${sim.successStale ? ' (päivittyy…)' : ''}</div>` : '') +
+    '<div class="dchip-actions"><button data-act="solve">Ratkaise</button>' +
+    '<button data-act="edit">Muokkaa</button><button data-act="del" class="danger">Poista</button></div>';
+  return { x, y,
+    aria: `${evLabel(ev)}: tavoite ${fmtNum(ev.amount)} euroa iässä ${Math.round(ev.age)}` +
+      (share != null ? `, ${Math.round(share * 100)} prosenttia poluista ylittää` : ''),
+    html };
+}
+
+// Raahaus: vaaka = tavoiteikä (vuosisnap, ei menneisyyteen), pysty = summa (5 000 €)
+function dragGoal(d, age, val, noSnap) {
+  const ev = d.ev;
+  if (!ev) return null;
+  let a = noSnap ? Math.round(age * 12) / 12 : Math.round(age);
+  let constraint = null;
+  if (a < state.ageNow + 1) { a = state.ageNow + 1; constraint = 'Tavoite ei voi olla menneisyydessä'; }
+  if (a > state.ageEnd) { a = state.ageEnd; constraint = 'Suunnitelma päättyy tähän ikään'; }
+  ev.age = a;
+  ev.amount = clamp(Math.max(0, noSnap ? Math.round(val) : snapTo(val, 5000)), 0, 1e9);
+  return { html: chipWrap(
+    chipRow('Tavoiteikä', d.startAge, a, 'v') + chipRow('Tavoitesumma', d.startAmount, ev.amount, '€'),
+    constraint), constraint };
+}
+
+function wireChipActions() {
+  const c = $('dchip');
+  const act = (name, fn) => {
+    const b = c.querySelector(`[data-act="${name}"]`);
+    if (b) b.addEventListener('click', fn);
+  };
+  act('solve', goalSolve);
+  act('edit', () => { if (drawState.sel) openPopover(drawState.sel.id); });
+  act('del', () => {
+    const s = drawState.sel;
+    if (!s) return;
+    const ev = state.events.find((x) => x.id === s.id);
+    state.events = state.events.filter((x) => x.id !== s.id);
+    drawState.sel = null;
+    chipHide();
+    renderAll();
+    if (ev) { toast(`${evLabel(ev)} poistettu — Ctrl+Z palauttaa`); announce(`${evLabel(ev)} poistettu`); }
+  });
+}
+
+/* Ratkaise: säätää VAIN kuukausisäästöä (ei koskaan tuottoa). Useammasta
+   pisteestä tiukin sitoo — suurin vaadittu säästö; muut jäävät mittareiksi. */
+
+let goalSolvePendingConf = null;
+
+function goalSolve() {
+  const goals = state.events.filter((e) => e.type === 'goal');
+  if (!goals.length) return;
+  const points = goals.map((g) => ({ age: g.age, value: g.amount }));
+  const retire = retireEv();
+  const conf = retire && retire.conf >= 0.5 && retire.conf < 1 ? retire.conf : null;
+  if (conf && mcWorker) {
+    // Varmuustasomoodi: MC per bisektioiteraatio — workerissa, progress näkyviin
+    goalSolvePendingConf = conf;
+    const info = selInfo();
+    if (info) chipShowAt(`<div class="dchip-row"><b>Ratkaistaan…</b> ${Math.round(conf * 100)} % varmuudella</div>`
+      + '<div class="dchip-note">0 %</div>', info.x, info.y, false);
+    announce('Ratkaistaan varmuustasolla — tämä kestää hetken');
+    mcWorker.postMessage({ task: 'solveGoals', seq: ++mcSeq, st: serialize(), points, conf, paths: MC_FULL });
+    return;
+  }
+  // Oletusmoodi: bisektio niin, että odotuspolku kulkee pisteen kautta
+  applyGoalSolution(solveGoalsMonthly(state, points, lastFullSim || sim), null, goals);
+}
+
+function applyGoalSolution(r, conf, goals) {
+  if (!r) {
+    toast('Tavoite ei ratkea kuukausisäästöllä — nostovaiheen piste voi olla liian korkealla.');
+    updateSelChip();
+    return;
+  }
+  pushUndoNow();
+  // Pyöristys ylöspäin snap-askeleeseen — tavoite pysyy täytettynä
+  state.monthly = clamp(Math.ceil(r.monthly / 10) * 10, 0, 1e6);
+  $('monthly').value = state.monthly;
+  renderAll();
+  updateSelChip();
+  const binding = goals && r.bindingIndex >= 0 ? goals[r.bindingIndex] : null;
+  const msg = `Kuukausisäästö ${fmtNum(state.monthly)} €/kk` +
+    (conf ? ` (${Math.round(conf * 100)} % varmuus)` : '') +
+    (binding && goals.length > 1 ? ` — tiukin: ${evLabel(binding)} ${fmtCompact(binding.amount)} · ${Math.round(binding.age)} v` : '');
+  toast(msg);
+  announce(msg);
+}
+
+onSolveGoalsMsg = function (d) {
+  if (d.progress != null) {
+    const note = $('dchip').querySelector('.dchip-note');
+    if (note && !$('dchip').hidden) note.textContent = Math.round(d.progress * 100) + ' %';
+    return;
+  }
+  const conf = goalSolvePendingConf;
+  goalSolvePendingConf = null;
+  if (!d.ok) { toast('Ratkaisu epäonnistui — yritä uudelleen.'); updateSelChip(); return; }
+  applyGoalSolution(d.result, conf, state.events.filter((e) => e.type === 'goal'));
+};
 
 function bindDraw() {
   $('fsOpen').addEventListener('click', enterFs);
   $('fsClose').addEventListener('click', () => exitFs());
+  // Tavoitepisteen lisäys piirtopöydältä (paletti on piilossa fs-tilassa):
+  // piste asettuu oletukseen — eläkeikä, käyrän lähin pyöreä summa
+  $('hudGoalBtn').addEventListener('click', () => {
+    const defAge = sim && sim.retireAge != null ? Math.round(sim.retireAge) : state.ageNow + 10;
+    const ev = addEvent('goal', clamp(defAge, state.ageNow + 1, state.ageEnd));
+    if (fsOn && ev) {
+      closePopover();
+      drawSelect('goal', ev.id);
+    }
+  });
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'f' && e.key !== 'F') return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -2348,6 +2538,7 @@ function renderEventList() {
     if (ev.isAsset && ev.sellAge != null) loanBadge += `<span class="loan-badge sale-badge">myynti ${Math.round(ev.sellAge)} v</span>`;
     const goalBadge = { withdrawal: '→ 0 €', age: 'aikaisin', saving: 'tavoite' }[g];
     if (goalBadge) loanBadge = `<span class="loan-badge zero-badge">${goalBadge}</span>`;
+    if (ev.type === 'goal') loanBadge = '<span class="loan-badge goal-badge">🎯 tavoite</span>';
     row.innerHTML =
       `<span class="ic">${def.icon}</span><span class="nm" title="${escapeHtml(evLabel(ev))}">${escapeHtml(evLabel(ev))}</span>` +
       loanBadge +
@@ -2979,6 +3170,10 @@ function summaryPoints(s) {
     if (e.type === 'retirement') continue;
     const age = `<b>${Math.round(e.age)} v</b> (${yearOf(e.age)})`;
     const nm = escapeHtml(evLabel(e));
+    if (e.type === 'goal') {
+      pts.push({ html: `Tavoitteeni: <b>${fmtEur(e.amount)}</b> varallisuutta iässä ${age}.` });
+      continue;
+    }
     if (e.amount < 0 && e.financing === 'loan') {
       const price = -e.amount;
       const down = clamp(e.down || 0, 0, price);
@@ -3074,6 +3269,10 @@ function renderSummary() {
       sum = `−${fmtEur(s.goal === 'withdrawal' && s.solvedWithdrawal != null ? s.solvedWithdrawal : e.withdrawal)}/kk`;
       fin = { manual: 'kuukausitulon tarve', withdrawal: 'kestävä tulo — varat loppuun', age: 'aikaisin mahdollinen ikä', saving: 'säästötavoite' }[retGoal(e)];
       if (e.pension > 0) note = `työeläke ${fmtEur(e.pension)}/kk alk. ${Math.round(e.pensionAge != null ? e.pensionAge : 65)} v`;
+    } else if (e.type === 'goal') {
+      sum = fmtEur(e.amount);
+      fin = 'tavoitepiste';
+      note = 'mittari — ei kassavirtaa';
     } else if (e.amount < 0 && e.financing === 'loan') {
       const price = -e.amount;
       const down = clamp(e.down || 0, 0, price);

@@ -19,8 +19,9 @@ self.onmessage = (e) => {
         retireAge: d.retireAge,
         goals: d.goals || null,
       });
+      // kind kaiutetaan takaisin: 'cur' päivittää simin, 'ghost' vain haamun
       self.postMessage({
-        seq: d.seq, task: 'mc', ok: true,
+        seq: d.seq, task: 'mc', kind: d.kind, ok: true,
         successProb: r.successProb, p10: r.p10, p90: r.p90,
         goalShares: r.goalShares, months: r.months, paths: r.paths,
       }, [r.p10.buffer, r.p90.buffer]);

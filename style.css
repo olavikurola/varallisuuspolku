@@ -1428,3 +1428,12 @@ body.fs .fs-open { display: none; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ---------- Tavoitepisteet ---------- */
+.goal-ring { fill: none; stroke: #fbbf24; stroke-width: 2; opacity: 0.9; }
+.goal-ring2 { fill: none; stroke: #fbbf24; stroke-width: 1.2; opacity: 0.55; }
+.goal-dot { fill: #fbbf24; }
+.goal-marker.sel .goal-ring, .goal-marker.sel .goal-ring2 { stroke: var(--accent); }
+.goal-marker.sel .goal-dot { fill: var(--accent); }
+.goal-gap { stroke: rgba(251, 191, 36, 0.55); stroke-width: 1.5; stroke-dasharray: 4 4; pointer-events: none; }
+.loan-badge.goal-badge { color: #fbbf24; border-color: rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.08); }

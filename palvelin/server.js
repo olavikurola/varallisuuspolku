@@ -37,7 +37,7 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 /* ---------- Validointi: tiukka whitelist ---------- */
 
 const EVENT_TYPES = ['study', 'home', 'car', 'wedding', 'child', 'renovation',
-  'travel', 'recurring', 'cottage', 'inheritance', 'bonus', 'retirement'];
+  'travel', 'recurring', 'cottage', 'inheritance', 'bonus', 'goal', 'retirement'];
 const GOALS = ['manual', 'withdrawal', 'age', 'saving'];
 
 const num = (v, lo, hi) => typeof v === 'number' && isFinite(v) && v >= lo && v <= hi;
