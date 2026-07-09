@@ -183,8 +183,11 @@ function initMcWorker() {
       }
       return;
     }
-    // Vanhentunut vastaus (tila ehti muuttua) hylätään
+    // Vanhentunut vastaus (tila ehti muuttua) hylätään. Kesken raahauksen
+    // tulos hylätään myös — muuten viuhkan päivitys skaalaisi koordinaatiston
+    // uusiksi sormen alla; tuore pyyntö lähtee joka tapauksessa irrotuksessa.
     if (d.seq !== mcSeq || !sim || d.months !== sim.months) return;
+    if (dragLight || drawState.drag) return;
     sim.successProb = d.successProb;
     sim.successStale = false;
     sim.opt = d.p90;
@@ -235,7 +238,7 @@ const balSvg = $('balanceChart');
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 let sim = null;
-let scaleX = null, scaleY = null, invX = null;
+let scaleX = null, scaleY = null, invX = null, invY = null;
 let plot = { l: 64, r: 26, t: 20, b: 48, w: 0, h: 0, W: 0, H: 0 };
 let openPopoverId = null;
 let draggingId = null;
@@ -302,6 +305,7 @@ function renderChart(reuse = false) {
   scaleX = (age) => plot.l + ((age - a0) / (a1 - a0)) * plot.w;
   scaleY = (v) => plot.t + plot.h - (v / yMax) * plot.h;
   invX = (px) => a0 + ((px - plot.l) / plot.w) * (a1 - a0);
+  invY = (py) => ((plot.t + plot.h - py) / plot.h) * yMax;
 
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.innerHTML = '';
@@ -398,15 +402,25 @@ function renderChart(reuse = false) {
   /* hover-taso tooltipille (markereiden alle) */
   const overlay = el('rect', { x: plot.l, y: plot.t, width: plot.w, height: plot.h, fill: 'transparent' }, svg);
   overlay.addEventListener('pointermove', (e) => {
-    if (draggingId != null) return;
+    if (draggingId != null || drawState.drag) return;
     const rect = svg.getBoundingClientRect();
     const px = clamp(e.clientX - rect.left, plot.l, plot.l + plot.w);
     updateCrosshair(px, e.clientY - wrap.getBoundingClientRect().top);
   });
   overlay.addEventListener('pointerleave', hideCrosshair);
+  // Napautus tyhjään piirtotilassa: valinta pois + ikäkursori napautuskohtaan
+  overlay.addEventListener('pointerdown', (e) => {
+    if (!fsOn) return;
+    if (drawState.sel) drawDeselect(true);
+    const rect = svg.getBoundingClientRect();
+    updateCrosshair(clamp(e.clientX - rect.left, plot.l, plot.l + plot.w), e.clientY - wrap.getBoundingClientRect().top);
+  });
 
   hoverLine = el('line', { x1: 0, y1: plot.t, x2: 0, y2: plot.t + plot.h, stroke: 'rgba(232,237,248,0.25)', 'stroke-width': 1, opacity: 0, 'pointer-events': 'none' }, svg);
   hoverDot = el('circle', { r: 4.5, fill: '#2dd4bf', stroke: '#0a0e1a', 'stroke-width': 2, opacity: 0, 'pointer-events': 'none' }, svg);
+
+  /* piirtotilan valinta- ja osumakerrokset (markereiden alle) */
+  if (fsOn) drawLayers();
 
   /* tapahtumamerkit — päällekkäisyys pinotaan ylöspäin */
   const sorted = [...state.events].sort((x, y) => x.age - y.age);
@@ -421,14 +435,16 @@ function renderChart(reuse = false) {
     lastX = x;
     const y = Math.max(plot.t + 22, cy - 34 - level * 42);
 
-    const g = el('g', { class: 'marker', 'data-id': ev.id }, svg);
+    const selMark = drawState.sel && ((drawState.sel.kind === 'event' && drawState.sel.id === ev.id)
+      || (drawState.sel.kind === 'retline' && ev.type === 'retirement'));
+    const g = el('g', { class: 'marker' + (selMark ? ' sel' : ''), 'data-id': ev.id }, svg);
     el('line', { x1: x, y1: y + 17, x2: x, y2: cy, stroke: 'rgba(148,168,220,0.35)', 'stroke-width': 1.2 }, g);
     el('circle', { cx: x, cy: cy, r: 3.5, fill: ev.type === 'retirement' ? '#8b7cf6' : '#2dd4bf' }, g);
     el('circle', {
       class: 'bg', cx: x, cy: y, r: 17,
       fill: '#141c33',
-      stroke: ev.id === openPopoverId ? '#2dd4bf' : (ev.type === 'retirement' ? 'rgba(139,124,246,0.7)' : 'rgba(148,168,220,0.35)'),
-      'stroke-width': 1.5,
+      stroke: selMark || ev.id === openPopoverId ? '#2dd4bf' : (ev.type === 'retirement' ? 'rgba(139,124,246,0.7)' : 'rgba(148,168,220,0.35)'),
+      'stroke-width': selMark ? 2.5 : 1.5,
     }, g);
     const ico = el('text', { x, y: y + 5.5, 'text-anchor': 'middle', 'font-size': 15 }, g);
     ico.textContent = def.icon;
@@ -451,12 +467,20 @@ function renderChart(reuse = false) {
     }
     title.textContent = `${evLabel(ev)} · ${Math.round(ev.age)} v · ${tdesc}`;
 
-    g.addEventListener('pointerdown', (e) => startMarkerDrag(e, ev));
+    g.addEventListener('pointerdown', (e) => {
+      // Piirtotilassa valintamalli: napautus valitsee, veto valitusta säätää.
+      // Eläkemerkki karttuu eläkeikäviivan valinnaksi (sama parametri).
+      if (fsOn) drawPointerDown(e, ev.type === 'retirement' ? 'retline' : 'event', ev.type === 'retirement' ? null : ev.id);
+      else startMarkerDrag(e, ev);
+    });
   }
 
   renderBalance();
   if (openPopoverId != null) positionPopover();
-  if (fsOn) updateHud();
+  if (fsOn) {
+    updateHud();
+    if (drawState.sel && !drawState.drag) updateSelChip();
+  }
 }
 
 /* ===================== Jaettu kohdistin ===================== */
@@ -1250,10 +1274,12 @@ function announce(msg) {
   if (el) { el.textContent = ''; el.textContent = msg; }
 }
 
-// Kerroksittainen Esc piirtotilassa — palauttaa true jos kerros purettiin.
-// V2 laajentaa: raahaus → valinta → popover → vasta sitten ulos.
+// Kerroksittainen Esc piirtotilassa — palauttaa true jos kerros purettiin:
+// raahaus → dialogi → valinta → (false = kutsuja poistuu piirtotilasta)
 function drawEsc() {
+  if (drawState.drag) { drawCancelDrag(); return true; }
   if (openPopoverId != null) { closePopover(); return true; }
+  if (drawState.sel) { drawDeselect(); return true; }
   return false;
 }
 
@@ -1271,12 +1297,16 @@ function enterFs() {
   wrap.tabIndex = 0;
   renderChart();
   updateHud();
+  drawShowHint();
   try { wrap.focus({ preventScroll: true }); } catch (e) {}
   announce('Piirtopöytä avattu');
 }
 
 function exitFs(fromPop = false) {
   if (!fsOn) return;
+  if (drawState.drag) drawCancelDrag();
+  drawDeselect(true);
+  drawDismissHint();
   fsOn = false;
   document.body.classList.remove('fs');
   $('hud').hidden = true;
@@ -1325,6 +1355,520 @@ updateHud = function () {
     20, (x) => `${Math.round(x).toLocaleString('fi-FI')} €/kk`, '');
   box.innerHTML = items.join('');
 };
+
+/* --- Valinta ja suora manipulaatio --- */
+// Tilakone: idle → selected → dragging → selected. Napautus valitsee
+// (korostus + chippi), raahaus valitusta objektista säätää parametria
+// käänteisratkaisijalla. Raahaus valitsemattomalla graafilla = scrub.
+
+const drawState = { sel: null, drag: null };
+const DRAW_HINT_KEY = 'vp-draw-onboarded';
+let drawHintShown = false;
+let nudgeTimer = null;
+let delArm = null;
+let lastTapT = 0, lastTapKey = '';
+
+const retireEv = () => state.events.find((e) => e.type === 'retirement') || null;
+const fmtNum = (v) => Math.round(v).toLocaleString('fi-FI');
+
+/* Chippi: syy sormessa — muuttuva parametri, vanha → uusi, delta */
+
+function chipShowAt(html, px, py, warn) {
+  const c = $('dchip');
+  c.innerHTML = html;
+  c.hidden = false;
+  c.classList.toggle('warn', !!warn);
+  // Transform-siirto, ei layoutia. Ylälaidassa käännetään osoittimen alle.
+  const flip = py < plot.t + 84;
+  c.style.transform = flip
+    ? `translate(${Math.round(px)}px, ${Math.round(py + 20)}px) translateX(-50%)`
+    : `translate(${Math.round(px)}px, ${Math.round(py - 16)}px) translate(-50%, -100%)`;
+}
+
+function chipHide() { $('dchip').hidden = true; }
+
+function chipRow(label, from, to, unit) {
+  const d = to - from;
+  const dTxt = Math.abs(d) < 0.5 ? '±0' : `${d > 0 ? '+' : '−'}${fmtNum(Math.abs(d))}`;
+  return `<div class="dchip-row"><b>${label}</b> ${fmtNum(from)} → ${fmtNum(to)} ${unit} <em class="${d >= 0 ? 'up' : 'down'}">${dTxt}</em></div>`;
+}
+
+const chipWrap = (rows, constraint, note) => rows
+  + (note ? `<div class="dchip-note">${note}</div>` : '')
+  + (constraint ? `<div class="dchip-constraint">⚠ ${constraint}</div>` : '');
+
+// Valitun objektin ankkuri, chipin sisältö ja ruudunlukijakuvaus
+function selInfo() {
+  const s = drawState.sel;
+  if (!s || !sim) return null;
+  const { a0, months } = sim;
+  const retA = sim.retireAge;
+  const mRet = retA != null ? clamp(Math.round((retA - a0) * 12), 0, months) : months;
+  const at = (m) => ({ x: scaleX(a0 + m / 12), y: scaleY(sim.exp[clamp(m, 0, months)]) });
+  const hint = '<div class="dchip-note">Raahaa — tai nuolet, Enter muokkaa</div>';
+  if (s.kind === 'acc') {
+    return { ...at(Math.max(6, Math.round(mRet / 2))),
+      aria: `Kuukausisäästö ${fmtNum(state.monthly)} euroa kuukaudessa`,
+      html: `<div class="dchip-row"><b>Kuukausisäästö</b> ${fmtNum(state.monthly)} €/kk</div>${hint}` };
+  }
+  if (s.kind === 'wd') {
+    return { ...at(mRet + Math.round((months - mRet) / 2)),
+      aria: `Kuukausitulo eläkkeellä ${fmtNum(sim.withdrawal)} euroa kuukaudessa`,
+      html: `<div class="dchip-row"><b>Kuukausitulo</b> ${fmtNum(sim.withdrawal)} €/kk</div>${hint}` };
+  }
+  if (s.kind === 'end') {
+    return { ...at(months),
+      aria: `Pääomaa jäljellä suunnitelman lopussa ${fmtNum(sim.wEnd)} euroa`,
+      html: `<div class="dchip-row"><b>Pääomaa jäljellä</b> ${fmtCompact(sim.wEnd)}</div>`
+        + '<div class="dchip-note">Raahaa pystysuunnassa — kuukausitulo joustaa</div>' };
+  }
+  if (s.kind === 'retline' && retA != null) {
+    return { x: scaleX(retA), y: plot.t + 64,
+      aria: `Eläkeikä ${Math.round(retA)} vuotta`,
+      html: `<div class="dchip-row"><b>Eläkeikä</b> ${Math.round(retA)} v</div>${hint}` };
+  }
+  if (s.kind === 'event' || s.kind === 'goal') {
+    const ev = state.events.find((x) => x.id === s.id);
+    if (!ev) return null;
+    const p = at(clamp(Math.round((ev.age - a0) * 12), 0, months));
+    if (s.kind === 'goal') return goalSelInfo(ev, p);
+    return { ...p,
+      aria: `${evLabel(ev)}, ikä ${Math.round(ev.age)} vuotta${ev.amount != null ? `, summa ${fmtNum(ev.amount)} euroa` : ''}`,
+      html: `<div class="dchip-row"><b>${escapeHtml(evLabel(ev))}</b> ${Math.round(ev.age)} v${ev.amount != null ? ` · ${fmtCompact(ev.amount)}` : ''}</div>`
+        + '<div class="dchip-note">←→ ikä · ↑↓ summa · Enter muokkaa · Delete poistaa</div>' };
+  }
+  return null;
+}
+
+function updateSelChip() {
+  if (!fsOn || !drawState.sel || drawState.drag) { if (!drawState.drag) chipHide(); return; }
+  const info = selInfo();
+  if (!info) { chipHide(); return; }
+  chipShowAt(info.html, info.x, info.y, false);
+  wireChipActions();
+}
+
+/* Tilakoneen siirtymät */
+
+function drawSelect(kind, id, silent) {
+  drawState.sel = { kind, id: id == null ? null : id };
+  delArm = null;
+  renderChart(true); // korostus — sim ei muuttunut
+  updateSelChip();
+  if (!silent) {
+    const info = selInfo();
+    announce(info ? 'Valittu: ' + info.aria : 'Valittu');
+  }
+}
+
+function drawDeselect(silent) {
+  if (!drawState.sel) return;
+  drawState.sel = null;
+  delArm = null;
+  chipHide();
+  renderChart(true);
+  if (!silent) announce('Valinta poistettu');
+}
+
+function drawPointerDown(e, kind, id) {
+  if (!fsOn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  drawDismissHint();
+  if (openPopoverId != null) closePopover();
+  const s = drawState.sel;
+  const same = s && s.kind === kind && s.id === (id == null ? null : id);
+  if (!same) { drawSelect(kind, id); return; } // valinta ensin, raahaus sitten
+  drawStartDrag(e, kind, id);
+}
+
+function drawStartDrag(e, kind, id) {
+  pushUndoNow(); // raahausta edeltävä tila → Ctrl+Z kumoaa koko vedon kerralla
+  const rect = svg.getBoundingClientRect();
+  const ev = kind === 'event' || kind === 'goal' ? state.events.find((x) => x.id === id) : retireEv();
+  const needSolver = kind === 'acc' || kind === 'wd' || kind === 'end';
+  drawState.drag = {
+    kind, id: id == null ? null : id, ev,
+    // Esikäsittely kerran — per frame vain runPath-bisektio
+    solver: needSolver ? makeDragSolver(state, lastFullSim || sim) : null,
+    cancelSnap: JSON.stringify(serialize()),
+    startX: e.clientX, startY: e.clientY,
+    startPy: clamp(e.clientY - rect.top, plot.t, plot.t + plot.h),
+    startMonthly: state.monthly,
+    startWd: ev && ev.type === 'retirement' && retGoal(ev) === 'withdrawal' && sim.solvedWithdrawal != null
+      ? sim.solvedWithdrawal : (ev && ev.withdrawal != null ? ev.withdrawal : 0),
+    startAge: ev ? ev.age : null,
+    startAmount: ev ? ev.amount : null,
+    moved: false, lastConstraint: null,
+  };
+  dragLight = true;
+  tooltip.hidden = true;
+  hideCrosshair();
+  document.addEventListener('pointermove', drawDragMove);
+  document.addEventListener('pointerup', drawDragUp);
+}
+
+// Käsin säätö ohittaa tavoitetilan — tehollinen ratkaistu arvo lähtöpisteeksi
+function dragGoalManual(d) {
+  const ev = d.ev;
+  if (!ev || ev.type !== 'retirement') return;
+  if ((d.kind === 'wd' || d.kind === 'end') && retGoal(ev) === 'withdrawal') {
+    ev.withdrawal = d.startWd;
+    ev.goal = 'manual';
+  }
+  if (d.kind === 'retline' && retGoal(ev) === 'age') ev.goal = 'manual';
+}
+
+function drawDragMove(e2) {
+  const d = drawState.drag;
+  if (!d) return;
+  if (!d.moved && Math.abs(e2.clientX - d.startX) + Math.abs(e2.clientY - d.startY) < 4) return;
+  if (!d.moved) { d.moved = true; dragGoalManual(d); }
+  const rect = svg.getBoundingClientRect();
+  const px = clamp(e2.clientX - rect.left, plot.l, plot.l + plot.w);
+  const py = clamp(e2.clientY - rect.top, plot.t, plot.t + plot.h);
+  // Shift ohittaa snapin työpöydällä; kosketuksella snap aina
+  const noSnap = e2.shiftKey && e2.pointerType !== 'touch';
+  let chip = null;
+  if (d.kind === 'acc') chip = dragAcc(d, invX(px), invY(py), noSnap);
+  else if (d.kind === 'wd') chip = dragWd(d, invX(px), invY(py), noSnap);
+  else if (d.kind === 'end') chip = dragEnd(d, invY(py), noSnap);
+  else if (d.kind === 'retline') chip = dragRetline(d, invX(px), noSnap);
+  else if (d.kind === 'event') chip = dragEvent(d, invX(px), py, noSnap);
+  else if (d.kind === 'goal') chip = dragGoal(d, invX(px), invY(py), noSnap);
+  if (chip) {
+    chipShowAt(chip.html, px, py, !!chip.constraint);
+    // Raja vastustaa: värinä kun osutaan rajaan (Android; iOS ei tue vibratea)
+    if (chip.constraint && chip.constraint !== d.lastConstraint && navigator.vibrate) navigator.vibrate(10);
+    d.lastConstraint = chip.constraint || null;
+  }
+  scheduleRender(); // rAF-throttlattu kevyt frame — ei MC:tä pointermovessa
+}
+
+/* Raahauskielioppi: kohde → parametri (suunnitelman 5.2-taulukko) */
+
+// Kertymäsegmentti: käyrä on naru — tartuntapiste seuraa osoitinta,
+// bisektio hakee kuukausisäästön, jolla odotuspolku kulkee pisteen kautta
+function dragAcc(d, age, val, noSnap) {
+  const s = d.solver;
+  const hiAge = sim.retireAge != null ? sim.retireAge : sim.a1;
+  const a = clamp(age, sim.a0 + 1 / 12, hiAge);
+  let solved = solveParam((ms) => s.wealthAtMonthly(ms, a), Math.max(0, val), 0, 1e6, true);
+  solved = noSnap ? Math.round(solved) : snapTo(solved, 10);
+  let constraint = null;
+  if (solved <= 0) { solved = 0; constraint = 'Säästö ei voi olla negatiivinen'; }
+  else if (solved >= 1e6) { solved = 1e6; constraint = 'Yläraja vastassa'; }
+  if (state.monthly !== solved) { state.monthly = solved; $('monthly').value = solved; }
+  return { html: chipWrap(chipRow('Kuukausisäästö', d.startMonthly, solved, '€/kk'), constraint), constraint };
+}
+
+// Nostosegmentti: bisektio kuukausituloon
+function dragWd(d, age, val, noSnap) {
+  if (!d.ev) return null;
+  const lo = (sim.retireAge != null ? sim.retireAge : sim.a0) + 1 / 12;
+  const a = clamp(age, lo, sim.a1);
+  let solved = solveParam((x) => d.solver.wealthAtWd(x, a), Math.max(0, val), 0, 1e7, false);
+  solved = noSnap ? Math.round(solved) : snapTo(solved, 10);
+  let constraint = null;
+  if (solved <= 0) { solved = 0; constraint = 'Kuukausitulo ei voi olla negatiivinen'; }
+  d.ev.withdrawal = solved;
+  return { html: chipWrap(chipRow('Kuukausitulo', d.startWd, solved, '€/kk'), constraint), constraint };
+}
+
+// Loppupiste: jäljelle jäävä pääoma — bisektio kuukausituloon taaksepäin
+function dragEnd(d, val, noSnap) {
+  if (!d.ev) return null;
+  let solved = solveParam((x) => d.solver.wealthAtWd(x, sim.a1), Math.max(0, val), 0, 1e7, false);
+  solved = noSnap ? Math.round(solved) : snapTo(solved, 10);
+  let constraint = null;
+  if (solved <= 0) { solved = 0; constraint = 'Kuukausitulo ei voi olla negatiivinen'; }
+  d.ev.withdrawal = solved;
+  return { html: chipWrap(chipRow('Kuukausitulo', d.startWd, solved, '€/kk'), constraint,
+    `pääomaa jäljellä ~${fmtCompact(Math.max(0, val))}`), constraint };
+}
+
+// Eläkeikäviiva: suora ikäsäätö
+function dragRetline(d, age, noSnap) {
+  if (!d.ev) return null;
+  let a = noSnap ? Math.round(age * 12) / 12 : Math.round(age);
+  let constraint = null;
+  const lo = state.ageNow + 1;
+  if (a < lo) { a = lo; constraint = 'Eläkeikä ei voi olla alle nykyikä + 1 v'; }
+  if (a > state.ageEnd) { a = state.ageEnd; constraint = 'Suunnitelma päättyy tähän ikään'; }
+  d.ev.age = a;
+  return { html: chipWrap(chipRow('Eläkeikä', d.startAge, a, 'v'), constraint), constraint };
+}
+
+// Elämäntapahtuma: vaaka = ikä, pysty = summa (käyrän skaalalla)
+function dragEvent(d, age, py, noSnap) {
+  const ev = d.ev;
+  if (!ev) return null;
+  let a = noSnap ? Math.round(age * 12) / 12 : Math.round(age);
+  let constraint = null;
+  if (a < state.ageNow) { a = state.ageNow; constraint = 'Menneisyyteen ei pääse'; }
+  if (a > state.ageEnd) { a = state.ageEnd; constraint = 'Suunnitelma päättyy tähän ikään'; }
+  ev.age = a;
+  if (ev.sellAge != null && ev.sellAge <= ev.age) ev.sellAge = ev.age + 1;
+  let rows = chipRow('Ikä', d.startAge, a, 'v');
+  if (ev.amount != null) {
+    const dv = invY(py) - invY(d.startPy);
+    let amt = d.startAmount + dv;
+    amt = clamp(noSnap ? Math.round(amt) : snapTo(amt, 1000), -1e9, 1e9);
+    if (ev.financing === 'loan') ev.down = clamp(ev.down || 0, 0, Math.max(0, -amt));
+    ev.amount = amt;
+    rows = chipRow(escapeHtml(evLabel(ev)) + ' · ikä', d.startAge, a, 'v') + chipRow('Summa', d.startAmount, amt, '€');
+  }
+  return { html: chipWrap(rows, constraint), constraint };
+}
+
+function drawDragUp() {
+  document.removeEventListener('pointermove', drawDragMove);
+  document.removeEventListener('pointerup', drawDragUp);
+  const d = drawState.drag;
+  drawState.drag = null;
+  dragLight = false;
+  if (!d) return;
+  if (d.moved) {
+    renderAll(); // täysi laskenta + tallennus + MC-tarkennuspyyntö (debounce)
+    updateSelChip();
+    announce(dragAnnounce(d));
+  } else {
+    // Napautus jo valitulla: kaksoisnapautus avaa muokkausdialogin
+    const key = d.kind + ':' + d.id;
+    const now = Date.now();
+    if (now - lastTapT < 400 && lastTapKey === key) drawEnter();
+    lastTapT = now; lastTapKey = key;
+    updateSelChip();
+  }
+}
+
+function dragAnnounce(d) {
+  const p = sim && sim.successProb != null && !sim.successStale
+    ? `, onnistumistodennäköisyys ${Math.round(sim.successProb * 100)} prosenttia` : '';
+  if (d.kind === 'acc') return `Kuukausisäästö ${fmtNum(state.monthly)} euroa kuukaudessa${p}`;
+  if (d.kind === 'wd' || d.kind === 'end') return `Kuukausitulo ${fmtNum(d.ev ? d.ev.withdrawal : 0)} euroa kuukaudessa${p}`;
+  if (d.kind === 'retline') return `Eläkeikä ${fmtNum(d.ev ? d.ev.age : 0)} vuotta${p}`;
+  if (d.ev) return `${evLabel(d.ev)}: ikä ${fmtNum(d.ev.age)} vuotta${d.ev.amount != null ? `, summa ${fmtNum(d.ev.amount)} euroa` : ''}${p}`;
+  return 'Muutos tehty' + p;
+}
+
+function drawCancelDrag() {
+  document.removeEventListener('pointermove', drawDragMove);
+  document.removeEventListener('pointerup', drawDragUp);
+  const d = drawState.drag;
+  drawState.drag = null;
+  dragLight = false;
+  if (d && d.moved) {
+    try { applySaved(JSON.parse(d.cancelSnap)); syncInputs(); } catch (err) {}
+  }
+  renderAll();
+  updateSelChip();
+  announce('Raahaus peruttu');
+}
+
+/* Valinta- ja osumakerrokset — renderChart kutsuu joka framella fs-tilassa */
+
+function drawLayers() {
+  const { a0, a1, months } = sim;
+  const retA = sim.retireAge;
+  const mRet = retA != null ? clamp(Math.round((retA - a0) * 12), 0, months) : months;
+  const pt = (i) => `${scaleX(a0 + i / 12).toFixed(1)},${scaleY(sim.exp[i]).toFixed(1)}`;
+  const pathOf = (from, to) => {
+    let dd = `M ${pt(from)}`;
+    for (let i = from + 1; i <= to; i++) dd += ` L ${pt(i)}`;
+    return dd;
+  };
+  const sel = drawState.sel;
+
+  // Valinnan korostus käyrälle
+  if (sel && sel.kind === 'acc') el('path', { d: pathOf(0, mRet), class: 'sel-stroke', fill: 'none' }, svg);
+  if (sel && sel.kind === 'wd' && mRet < months) el('path', { d: pathOf(mRet, months), class: 'sel-stroke sel-wd', fill: 'none' }, svg);
+  if (sel && sel.kind === 'retline' && retA != null) {
+    el('line', { x1: scaleX(retA), y1: plot.t, x2: scaleX(retA), y2: plot.t + plot.h, class: 'sel-line' }, svg);
+  }
+
+  // Loppupisteen kahva
+  const ex = scaleX(a1), ey = scaleY(sim.exp[months]);
+  el('circle', { cx: ex, cy: ey, r: sel && sel.kind === 'end' ? 7 : 4.5, class: 'end-handle' + (sel && sel.kind === 'end' ? ' on' : '') }, svg);
+
+  // Gripit: hillityt tartuntapisteet segmenttien keskellä; pulssi ensiavauksella
+  const grip = (m) => {
+    const g = el('g', { class: 'grip' + (drawHintShown ? ' pulse' : '') }, svg);
+    const gx = scaleX(a0 + m / 12), gy = scaleY(sim.exp[m]);
+    for (const dx of [-7, 0, 7]) el('circle', { cx: gx + dx, cy: gy, r: 2 }, g);
+  };
+  grip(Math.max(6, Math.round(mRet / 2)));
+  if (retA != null && mRet < months - 6) grip(mRet + Math.round((months - mRet) / 2));
+
+  // Osumakerrokset: näkymätön leveä stroke — prioriteetti maalausjärjestyksellä
+  // (alin ensin): segmentit < tavoitepisteet < eläkeikäviiva < tapahtumamerkit
+  const hit = (dd, kind, id) => {
+    const p = el('path', { d: dd, class: 'hit', fill: 'none', stroke: 'transparent', 'stroke-width': 38, 'pointer-events': 'stroke' }, svg);
+    p.addEventListener('pointerdown', (e) => drawPointerDown(e, kind, id));
+    return p;
+  };
+  hit(pathOf(0, mRet), 'acc', null);
+  if (retA != null && mRet < months) hit(pathOf(mRet, months), 'wd', null);
+  drawGoalMarkers(mRet); // V3: tavoitepisteet
+  if (retA != null) hit(`M ${scaleX(retA).toFixed(1)} ${plot.t} L ${scaleX(retA).toFixed(1)} ${plot.t + plot.h}`, 'retline', null);
+  const endHit = el('circle', { cx: ex, cy: ey, r: 20, class: 'hit', fill: 'transparent', 'pointer-events': 'all' }, svg);
+  endHit.addEventListener('pointerdown', (e) => drawPointerDown(e, 'end', null));
+}
+
+/* Näppäinmalli: Tab kiertää, nuolet säätävät, Enter muokkaa, Delete poistaa */
+
+function drawCycleList() {
+  const items = [{ kind: 'acc', id: null, age: (sim.a0 + (sim.retireAge != null ? sim.retireAge : sim.a1)) / 2 }];
+  for (const ev of state.events) {
+    if (ev.type === 'retirement') continue;
+    items.push({ kind: ev.type === 'goal' ? 'goal' : 'event', id: ev.id, age: ev.age });
+  }
+  if (sim.retireAge != null) {
+    items.push({ kind: 'retline', id: null, age: sim.retireAge });
+    items.push({ kind: 'wd', id: null, age: (sim.retireAge + sim.a1) / 2 });
+  }
+  items.push({ kind: 'end', id: null, age: sim.a1 });
+  return items.sort((a, b) => a.age - b.age);
+}
+
+function drawCycle(dir) {
+  const list = drawCycleList();
+  if (!list.length) return;
+  let i = drawState.sel ? list.findIndex((x) => x.kind === drawState.sel.kind && x.id === drawState.sel.id) : -1;
+  i = i < 0 ? (dir > 0 ? 0 : list.length - 1) : (i + dir + list.length) % list.length;
+  drawSelect(list[i].kind, list[i].id);
+}
+
+// Nuolisäädön debounce: kevyet framet painallusten aikana, täysi laskenta
+// + kuulutus kun sarja päättyy (sama periaate kuin raahauksessa)
+function nudgeCommit(text) {
+  dragLight = true;
+  scheduleRender();
+  clearTimeout(nudgeTimer);
+  nudgeTimer = setTimeout(() => {
+    dragLight = false;
+    renderAll();
+    updateSelChip();
+    const p = sim && sim.successProb != null ? `, onnistumistodennäköisyys ${Math.round(sim.successProb * 100)} prosenttia` : '';
+    if (text) announce(text + p);
+  }, 350);
+}
+
+function drawNudge(axis, dir, big) {
+  const s = drawState.sel;
+  if (!s) return;
+  const mult = big ? 10 : 1; // Shift = 10× askel
+  const ev = s.kind === 'event' || s.kind === 'goal' ? state.events.find((x) => x.id === s.id) : retireEv();
+  let text = null;
+  if (axis === 'x') {
+    if (s.kind !== 'event' && s.kind !== 'goal' && s.kind !== 'retline') return;
+    if (!ev) return;
+    if (s.kind === 'retline' && retGoal(ev) === 'age') ev.goal = 'manual';
+    const lo = s.kind === 'event' ? state.ageNow : state.ageNow + 1;
+    ev.age = clamp(Math.round(ev.age) + dir * mult, lo, state.ageEnd);
+    if (ev.sellAge != null && ev.sellAge <= ev.age) ev.sellAge = ev.age + 1;
+    text = `${s.kind === 'retline' ? 'Eläkeikä' : evLabel(ev)} ${Math.round(ev.age)} vuotta`;
+  } else if (s.kind === 'acc') {
+    state.monthly = clamp(snapTo(state.monthly + dir * 10 * mult, 10), 0, 1e6);
+    $('monthly').value = state.monthly;
+    text = `Kuukausisäästö ${fmtNum(state.monthly)} euroa kuukaudessa`;
+  } else if (s.kind === 'wd' || s.kind === 'end') {
+    if (!ev) return;
+    if (retGoal(ev) === 'withdrawal') {
+      if (sim.solvedWithdrawal != null) ev.withdrawal = sim.solvedWithdrawal;
+      ev.goal = 'manual';
+    }
+    ev.withdrawal = clamp(snapTo(ev.withdrawal + dir * 10 * mult, 10), 0, 1e7);
+    text = `Kuukausitulo ${fmtNum(ev.withdrawal)} euroa kuukaudessa`;
+  } else if (s.kind === 'goal' && ev) {
+    ev.amount = clamp(snapTo(ev.amount + dir * 5000 * mult, 5000), 0, 1e9);
+    text = `Tavoite ${fmtNum(ev.amount)} euroa`;
+  } else if (s.kind === 'event' && ev && ev.amount != null) {
+    ev.amount = clamp(snapTo(ev.amount + dir * 1000 * mult, 1000), -1e9, 1e9);
+    if (ev.financing === 'loan') ev.down = clamp(ev.down || 0, 0, Math.max(0, -ev.amount));
+    text = `${evLabel(ev)} summa ${fmtNum(ev.amount)} euroa`;
+  } else return;
+  nudgeCommit(text);
+}
+
+function drawEnter() {
+  const s = drawState.sel;
+  if (!s) return;
+  if (s.kind === 'event' || s.kind === 'goal') { openPopover(s.id); return; }
+  if (s.kind === 'retline' || s.kind === 'wd' || s.kind === 'end') {
+    const ev = retireEv();
+    if (ev) openPopover(ev.id);
+    return;
+  }
+  announce(`Kuukausisäästö ${fmtNum(state.monthly)} euroa kuukaudessa — säädä nuolinäppäimillä ylös ja alas`);
+}
+
+// Poisto vahvistetaan toisella Delete-painalluksella (3 s ikkuna)
+function drawDelete() {
+  const s = drawState.sel;
+  if (!s || (s.kind !== 'event' && s.kind !== 'goal')) return;
+  const ev = state.events.find((x) => x.id === s.id);
+  if (!ev) return;
+  if (delArm !== s.id) {
+    delArm = s.id;
+    const info = selInfo();
+    if (info) chipShowAt(`<div class="dchip-row"><b>Poistetaanko ${escapeHtml(evLabel(ev))}?</b></div>`
+      + '<div class="dchip-note">Paina Delete uudestaan vahvistaaksesi</div>', info.x, info.y, true);
+    announce(`Poistetaanko ${evLabel(ev)}? Paina Delete uudestaan vahvistaaksesi.`);
+    setTimeout(() => { if (delArm === s.id) { delArm = null; updateSelChip(); } }, 3000);
+    return;
+  }
+  delArm = null;
+  state.events = state.events.filter((x) => x.id !== s.id);
+  drawState.sel = null;
+  chipHide();
+  renderAll();
+  announce(`${evLabel(ev)} poistettu`);
+}
+
+function drawKeydown(e) {
+  if (!fsOn) return;
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  // Tab kiertää valittavat ikäjärjestyksessä — samalla focus pysyy piirtopöydällä
+  if (e.key === 'Tab') { e.preventDefault(); drawDismissHint(); drawCycle(e.shiftKey ? -1 : 1); return; }
+  if (!drawState.sel) return;
+  switch (e.key) {
+    case 'Enter': e.preventDefault(); drawEnter(); break;
+    case 'Delete': case 'Backspace': e.preventDefault(); drawDelete(); break;
+    case 'ArrowLeft': e.preventDefault(); drawNudge('x', -1, e.shiftKey); break;
+    case 'ArrowRight': e.preventDefault(); drawNudge('x', 1, e.shiftKey); break;
+    case 'ArrowUp': e.preventDefault(); drawNudge('y', 1, e.shiftKey); break;
+    case 'ArrowDown': e.preventDefault(); drawNudge('y', -1, e.shiftKey); break;
+  }
+}
+document.addEventListener('keydown', drawKeydown);
+
+/* Affordanssi: ensiavauksella pulssi tartuntakohdissa + yksi rivi ohjetta */
+
+function drawShowHint() {
+  let seen = false;
+  try { seen = localStorage.getItem(DRAW_HINT_KEY) === '1'; } catch (e) {}
+  if (seen) return;
+  drawHintShown = true;
+  try { localStorage.setItem(DRAW_HINT_KEY, '1'); } catch (e) {}
+  $('drawHint').hidden = false;
+  renderChart(true); // gripit pulssaamaan
+  setTimeout(drawDismissHint, 6000);
+}
+
+function drawDismissHint() {
+  $('drawHint').hidden = true;
+  if (!drawHintShown) return;
+  drawHintShown = false;
+  if (fsOn) renderChart(true);
+}
+
+// V3 täydentää nämä: tavoitepisteiden piirto, chippi ja raahaus
+function drawGoalMarkers() {}
+function goalSelInfo() { return null; }
+function dragGoal() { return null; }
+function wireChipActions() {}
 
 function bindDraw() {
   $('fsOpen').addEventListener('click', enterFs);
