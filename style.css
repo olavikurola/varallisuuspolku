@@ -1437,3 +1437,7 @@ body.fs .fs-open { display: none; }
 .goal-marker.sel .goal-dot { fill: var(--accent); }
 .goal-gap { stroke: rgba(251, 191, 36, 0.55); stroke-width: 1.5; stroke-dasharray: 4 4; pointer-events: none; }
 .loan-badge.goal-badge { color: #fbbf24; border-color: rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.08); }
+
+/* Piirtopöydän fokusrengas (wrap saa tabindexin fs-tilassa) */
+body.fs .chart-wrap:focus { outline: 2px solid rgba(45, 212, 191, 0.35); outline-offset: -2px; }
+body.fs .chart-wrap:focus:not(:focus-visible) { outline: none; }

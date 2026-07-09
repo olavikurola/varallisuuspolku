@@ -2992,6 +2992,10 @@ function saveState() {
   pushUndoDebounced();
 }
 
+// Ensivierailu ja jakolinkki avaavat piirtopöydän suoraan (lanseerausflow);
+// palaava käyttäjä saa normaalinäkymän kuten ennen
+let visitKind = 'returning'; // 'first' | 'shared' | 'returning'
+
 function loadState() {
   try {
     if (location.hash.startsWith('#s=')) {
@@ -2999,6 +3003,7 @@ function loadState() {
       if (applySaved(JSON.parse(json))) {
         history.replaceState(null, '', location.pathname);
         saveState();
+        visitKind = 'shared';
         return;
       }
     }
@@ -3006,6 +3011,7 @@ function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) applySaved(JSON.parse(raw));
+    else visitKind = 'first';
   } catch (e) { /* viallinen tallennus — ohitetaan */ }
 }
 
@@ -3375,6 +3381,11 @@ if (location.hash === '#yhteenveto') {
   history.replaceState(null, '', location.pathname);
   openSummary();
 }
+
+// Ensivierailu avaa piirtopöydän esimerkkisuunnitelmalla (pulssivihje ohjaa
+// tarttumaan), jakolinkki linkin suunnitelmalla — Esc paljastaa koko sivun.
+// SEO ei kärsi: piirtotila on CSS-kerros, sisältö pysyy DOMissa.
+if (visitKind !== 'returning' && $('summary').hidden) enterFs();
 
 new ResizeObserver(() => { renderChart(); }).observe(wrap);
 
