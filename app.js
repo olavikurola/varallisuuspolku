@@ -485,6 +485,9 @@ function renderChart(reuse = false) {
   /* tavoitepisteet normaalitilassa (piirtotilassa drawLayers hoitaa osumineen) */
   if (!fsOn) drawGoalMarkers(false);
 
+  /* aloitusopasteet päällimmäiseksi — väistyvät ensimmäisestä tartunnasta */
+  if (fsOn) drawGuides();
+
   renderBalance();
   if (openPopoverId != null) positionPopover();
   if (fsOn) {
@@ -1390,8 +1393,10 @@ updateHud = function () {
 // käänteisratkaisijalla. Raahaus valitsemattomalla graafilla = scrub.
 
 const drawState = { sel: null, drag: null };
-const DRAW_HINT_KEY = 'vp-draw-onboarded';
-let drawHintShown = false;
+// Opastus kuitataan opituksi vasta ensimmäisestä onnistuneesta vedosta —
+// siihen asti haamunuolet näytetään joka avauksella (kuten pelien tutoriaalit)
+const DRAW_TUTOR_KEY = 'vp-draw-tutored';
+let drawGuideOn = false;
 let nudgeTimer = null;
 let delArm = null;
 let lastTapT = 0, lastTapKey = '';
@@ -1657,6 +1662,7 @@ function drawDragUp() {
   dragLight = false;
   if (!d) return;
   if (d.moved) {
+    drawMarkTutored(); // ensimmäinen onnistunut veto kuittaa opastuksen
     renderAll(); // täysi laskenta + tallennus + MC-tarkennuspyyntö (debounce)
     updateSelChip();
     announce(dragAnnounce(d));
@@ -1719,9 +1725,9 @@ function drawLayers() {
   const ex = scaleX(a1), ey = scaleY(sim.exp[months]);
   el('circle', { cx: ex, cy: ey, r: sel && sel.kind === 'end' ? 7 : 4.5, class: 'end-handle' + (sel && sel.kind === 'end' ? ' on' : '') }, svg);
 
-  // Gripit: hillityt tartuntapisteet segmenttien keskellä; pulssi ensiavauksella
+  // Gripit: hillityt tartuntapisteet segmenttien keskellä; pulssi opastustilassa
   const grip = (m) => {
-    const g = el('g', { class: 'grip' + (drawHintShown ? ' pulse' : '') }, svg);
+    const g = el('g', { class: 'grip' + (drawGuideOn ? ' pulse' : '') }, svg);
     const gx = scaleX(a0 + m / 12), gy = scaleY(sim.exp[m]);
     for (const dx of [-7, 0, 7]) el('circle', { cx: gx + dx, cy: gy, r: 2 }, g);
   };
@@ -1773,6 +1779,7 @@ function drawCycle(dir) {
 // Nuolisäädön debounce: kevyet framet painallusten aikana, täysi laskenta
 // + kuulutus kun sarja päättyy (sama periaate kuin raahauksessa)
 function nudgeCommit(text) {
+  drawMarkTutored(); // näppäimistösäätökin lasketaan opituksi
   dragLight = true;
   scheduleRender();
   clearTimeout(nudgeTimer);
@@ -1875,24 +1882,71 @@ function drawKeydown(e) {
 }
 document.addEventListener('keydown', drawKeydown);
 
-/* Affordanssi: ensiavauksella pulssi tartuntakohdissa + yksi rivi ohjetta */
+/* Affordanssi: pelimäinen aloitusruutu — haamunuolet ja opasteet
+   tartuntakohdissa ennen ensimmäistäkään klikkausta. Väistyvät heti kun
+   käyttäjä tarttuu mihin tahansa, ja lakkaavat näkymästä pysyvästi vasta
+   kun ensimmäinen veto on viety maaliin (DRAW_TUTOR_KEY). */
 
 function drawShowHint() {
-  let seen = false;
-  try { seen = localStorage.getItem(DRAW_HINT_KEY) === '1'; } catch (e) {}
-  if (seen) return;
-  drawHintShown = true;
-  try { localStorage.setItem(DRAW_HINT_KEY, '1'); } catch (e) {}
+  let tutored = false;
+  try { tutored = localStorage.getItem(DRAW_TUTOR_KEY) === '1'; } catch (e) {}
+  if (tutored) return;
+  drawGuideOn = true;
   $('drawHint').hidden = false;
-  renderChart(true); // gripit pulssaamaan
-  setTimeout(drawDismissHint, 6000);
+  renderChart(true); // haamunuolet + gripit pulssaamaan
 }
 
 function drawDismissHint() {
   $('drawHint').hidden = true;
-  if (!drawHintShown) return;
-  drawHintShown = false;
+  if (!drawGuideOn) return;
+  drawGuideOn = false;
   if (fsOn) renderChart(true);
+}
+
+function drawMarkTutored() {
+  try { localStorage.setItem(DRAW_TUTOR_KEY, '1'); } catch (e) {}
+}
+
+// Haamunuolet: pystypari kertymäkäyrällä (säästö joustaa) ja vaakapari
+// eläkeikäviivalla. Piirretään markereiden päälle, ei nappaa osoitinta.
+function drawGuides() {
+  if (!drawGuideOn || drawState.sel || drawState.drag || !sim) return;
+  const { a0, months } = sim;
+  const retA = sim.retireAge;
+  const mRet = retA != null ? clamp(Math.round((retA - a0) * 12), 0, months) : months;
+  const mid = Math.max(6, Math.round(mRet / 2));
+  const gx = scaleX(a0 + mid / 12);
+  // Matalalla kulkeva käyrä: ankkuri pysyy piirtoalueella, nuolet eivät
+  // valu akselitekstien päälle
+  const gy = clamp(scaleY(sim.exp[mid]), plot.t + 80, plot.t + plot.h - 52);
+
+  const glyph = (parent, x, y, ch) => {
+    const t = el('text', { x, y, class: 'guide-arrow', 'text-anchor': 'middle' }, parent);
+    t.textContent = ch;
+  };
+  const label = (parent, x, y, txt) => {
+    const t = el('text', {
+      x: clamp(x, plot.l + 80, plot.l + plot.w - 80), y,
+      class: 'guide-label', 'text-anchor': 'middle',
+    }, parent);
+    t.textContent = txt;
+  };
+
+  const g1 = el('g', { class: 'guide' }, svg);
+  const g1a = el('g', { class: 'guide-bob-y' }, g1);
+  glyph(g1a, gx, gy - 22, '↑');
+  glyph(g1a, gx, gy + 40, '↓');
+  label(g1, gx, gy - 50, 'Tartu käyrään ja vedä — säästö joustaa');
+
+  if (retA != null) {
+    const rx = scaleX(retA);
+    const gy2 = plot.t + 96;
+    const g2 = el('g', { class: 'guide' }, svg);
+    const g2a = el('g', { class: 'guide-bob-x' }, g2);
+    glyph(g2a, rx - 26, gy2, '←');
+    glyph(g2a, rx + 26, gy2, '→');
+    label(g2, rx, gy2 - 28, 'Eläkeikä — vedä viivaa');
+  }
 }
 
 /* --- Tavoitepisteet: mittari ensin, ratkaisu vasta pyynnöstä --- */

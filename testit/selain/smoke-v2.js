@@ -35,8 +35,8 @@ const { chromium } = require('playwright');
     await page.waitForTimeout(300);
   }
 
-  // Piirtopöytä auki; ensiavauksen vihje näkyy (auto-avaus kulutti lipun — nollataan)
-  await page.evaluate(() => localStorage.removeItem('vp-draw-onboarded'));
+  // Piirtopöytä auki; opastus näkyy (ei vielä yhtään suoritettua vetoa)
+  await page.evaluate(() => localStorage.removeItem('vp-draw-tutored'));
   await page.keyboard.press('f');
   await page.waitForTimeout(500);
   ok(await page.evaluate(() => document.body.classList.contains('fs')), 'piirtopöytä auki (F)');

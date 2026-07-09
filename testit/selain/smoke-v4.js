@@ -21,6 +21,40 @@ const { chromium } = require('playwright');
   ok(await page.evaluate(() => !document.getElementById('drawHint').hidden), 'pulssivihje näkyy');
   ok(await page.evaluate(() => state.events.length >= 3), 'esimerkkisuunnitelma ladattu');
 
+  // Aloitusopasteet: haamunuolet näkyvät ennen ensimmäistäkään klikkausta,
+  // väistyvät tartunnasta ja kuittautuvat pysyvästi vasta suoritetusta vedosta
+  ok((await page.locator('.guide').count()) >= 2, 'haamunuolet näkyvät heti avattaessa');
+  const pC = await page.evaluate(() => {
+    const r = document.getElementById('chart').getBoundingClientRect();
+    const m = Math.round((47 - sim.a0) * 12);
+    return { x: r.left + scaleX(47), y: r.top + scaleY(sim.exp[m]) };
+  });
+  await page.mouse.click(pC.x, pC.y); // tartunta → opasteet pois
+  await page.waitForTimeout(250);
+  ok((await page.locator('.guide').count()) === 0, 'tartunta piilottaa opasteet');
+  ok(await page.evaluate(() => document.getElementById('drawHint').hidden), 'ohjerivi piiloutuu samalla');
+  // ilman suoritettua vetoa opastus palaa seuraavalla avauksella
+  await page.keyboard.press('Escape'); // valinta pois
+  await page.keyboard.press('Escape'); // ulos
+  await page.waitForTimeout(300);
+  await page.keyboard.press('f');
+  await page.waitForTimeout(400);
+  ok((await page.locator('.guide').count()) >= 2, 'opastus palaa, kunnes veto on suoritettu');
+  // suoritettu veto kuittaa tutoriaalin pysyvästi
+  await page.mouse.click(pC.x, pC.y);
+  await page.waitForTimeout(200);
+  await page.mouse.move(pC.x, pC.y);
+  await page.mouse.down();
+  await page.mouse.move(pC.x, pC.y - 50, { steps: 5 });
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+  await page.keyboard.press('Escape'); // valinta pois
+  await page.keyboard.press('Escape'); // ulos
+  await page.waitForTimeout(300);
+  await page.keyboard.press('f');
+  await page.waitForTimeout(400);
+  ok((await page.locator('.guide').count()) === 0, 'suoritettu veto kuittaa opastuksen pysyvästi');
+
   // Esc paljastaa koko sivun — SEO-sisältö on DOMissa koko ajan
   ok(await page.evaluate(() => !!document.querySelector('.panel .card[data-card="basics"]')), 'sivun sisältö DOMissa piirtotilassa (SEO)');
   await page.keyboard.press('Escape');
