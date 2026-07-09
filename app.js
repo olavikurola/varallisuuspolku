@@ -1,19 +1,8 @@
 'use strict';
 
 /* ===================== Vakiot ===================== */
-
-const ASSETS = {
-  stocks: { mu: 0.07,  sigma: 0.16 },
-  bonds:  { mu: 0.03,  sigma: 0.05 },
-  cash:   { mu: 0.015, sigma: 0.01 },
-};
-const INFLATION = 0.02;
-const BAND_Z = 0.5; // skenaariohaarukan leveys: ±z·σ·√t
-
-// Suomalainen pääomatulovero (myyntivoittovero): 30 % vuotuisista voitoista
-// 30 000 €:oon asti, 34 % ylimenevältä osalta. Nostoista verotetaan vain
-// voitto-osuus (arvon ja jäljellä olevan hankintahinnan erotus).
-const TAX_LOW = 0.30, TAX_HIGH = 0.34, TAX_BRACKET = 30000;
+// Laskentavakiot ja -ydin (simulate, ratkaisijat, MC): laskenta.js —
+// ladataan ennen tätä tiedostoa ja jaetaan mc-workerin kanssa.
 
 // loan: oletusrahoitus lainalla { share: käsirahan osuus, rate: %/v, years: laina-aika }
 const CONSUMER_LOAN = { share: 0.3, rate: 8.0, years: 5 };
@@ -31,14 +20,6 @@ const EVENT_TYPES = {
   bonus:       { icon: '💰', label: 'Bonus / myyntivoitto', amount: 20000 },
   retirement:  { icon: '🌴', label: 'Eläkkeelle jäänti',   withdrawal: 2400, pension: 1500, pensionAge: 65, unique: true },
 };
-
-// Annuiteettilainan kuukausierä
-function loanPayment(principal, annualRate, years) {
-  const n = Math.max(1, Math.round(years * 12));
-  const r = annualRate / 100 / 12;
-  if (r === 0) return principal / n;
-  return principal * r / (1 - Math.pow(1 + r, -n));
-}
 
 function initLoanFields(ev) {
   const def = EVENT_TYPES[ev.type].loan || CONSUMER_LOAN;
@@ -71,7 +52,6 @@ const state = {
 /* ===================== Apurit ===================== */
 
 const $ = (id) => document.getElementById(id);
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 const eurFmt = new Intl.NumberFormat('fi-FI', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
 const fmtEur = (v) => eurFmt.format(Math.round(v));
@@ -102,29 +82,12 @@ function fmtAge(a) {
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-// Siemennetty satunnaisgeneraattori — sama tulos joka renderöinnillä
-function mulberry32(seed) {
-  let a = seed >>> 0;
-  return function () {
-    a |= 0; a = (a + 0x6D2B79F5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 /* ===================== Anonyymi datalahjoitus: paketti ===================== */
 // Lahjoituspaketti rakennetaan alusta tiukalla whitelistillä — tapahtumien
 // omat nimet tai muut henkilökohtaiset kentät eivät voi päätyä mukaan.
 // Summat pyöristetään kahteen merkitsevään numeroon.
 
 const DATA_API = 'https://varallisuuspolku-data.up.railway.app';
-
-function round2sig(v) {
-  if (!isFinite(v) || v === 0) return 0;
-  const mag = Math.pow(10, Math.floor(Math.log10(Math.abs(v))) - 1);
-  return Math.round(v / mag) * mag;
-}
 
 function buildDonationPayload(st, s) {
   const events = [];
@@ -187,411 +150,78 @@ function hashStr(s) {
   return (h >>> 0).toString(36);
 }
 
-/* ===================== Allokointimoottori ===================== */
+/* ===================== Laskenta ja MC-tarkennus ===================== */
+// simulate(), runPath ja ratkaisijat: laskenta.js. Tässä worker-asiakas, joka
+// tarkentaa onnistumis-%:n, viuhkan ja tavoiteosuudet MC_FULL-polkumäärällä
+// irrotuksen jälkeen (periaate: deterministinen per frame, stokastinen
+// irrotettaessa). Ilman Workeria jäädään MC_LIVE-tarkkuuteen — kaikki toimii,
+// luvut ovat vain karkeampia.
 
-function baseAlloc(st = state) {
-  const s = st.allocStocks / 100;
-  const b = Math.min(st.allocBonds / 100, 1 - s);
-  return { s, b, c: Math.max(0, 1 - s - b) };
+let mcWorker = null, mcSeq = 0, mcTimer = null;
+let ghostMc = null; // haamun tarkennus samalla polkumäärällä — deltat reiluja
+
+// Tavoitepisteet MC:lle: osuus poluista, joilla varallisuus ylittää pisteen
+function simGoals() {
+  const gs = state.events.filter((e) => e.type === 'goal');
+  return gs.length ? gs.map((g) => ({ id: g.id, age: g.age, value: g.amount })) : null;
 }
 
-// Allokaatio tietyssä iässä: glidepath siirtää osakepainoa korkoihin
-// 15 viimeisen työvuoden aikana (pohjakerroin 0.35).
-function allocationAt(age, retireAge, st = state) {
-  let { s, b, c } = baseAlloc(st);
-  if (st.glide && retireAge != null) {
-    const f = clamp((retireAge - age) / 15, 0.35, 1);
-    const ns = s * f;
-    b += s - ns;
-    s = ns;
-  }
-  return { s, b, c };
+function initMcWorker() {
+  if (typeof Worker === 'undefined') return;
+  try {
+    mcWorker = new Worker('mc-worker.js');
+  } catch (e) { mcWorker = null; return; }
+  mcWorker.addEventListener('error', () => { mcWorker = null; });
+  mcWorker.addEventListener('message', (e) => {
+    const d = e.data;
+    if (d.task === 'solveGoals') { onSolveGoalsMsg(d); return; }
+    if (!d.ok || d.task !== 'mc') return;
+    if (d.kind === 'ghost') {
+      if (ghostSim && d.months === ghostSim.months) {
+        ghostMc = d;
+        updateHud();
+      }
+      return;
+    }
+    // Vanhentunut vastaus (tila ehti muuttua) hylätään
+    if (d.seq !== mcSeq || !sim || d.months !== sim.months) return;
+    sim.successProb = d.successProb;
+    sim.successStale = false;
+    sim.opt = d.p90;
+    sim.pess = d.p10;
+    sim.goalShares = d.goalShares;
+    sim.mcPaths = d.paths;
+    lastFullSim = sim;
+    renderChart(true);
+    renderStats();
+    updateHud();
+  });
 }
 
-function portfolioStats(alloc) {
-  const mu = alloc.s * ASSETS.stocks.mu + alloc.b * ASSETS.bonds.mu + alloc.c * ASSETS.cash.mu;
-  const sigma = alloc.s * ASSETS.stocks.sigma + alloc.b * ASSETS.bonds.sigma + alloc.c * ASSETS.cash.sigma;
-  return { mu, sigma };
+function requestMcRefresh() {
+  if (!mcWorker || !sim) return;
+  clearTimeout(mcTimer);
+  const snapshot = serialize();
+  const wd = sim.withdrawal, ra = sim.retireAge;
+  mcTimer = setTimeout(() => {
+    mcSeq++;
+    mcWorker.postMessage({
+      task: 'mc', kind: 'cur', seq: mcSeq, st: snapshot,
+      paths: MC_FULL, withdrawal: wd, retireAge: ra, goals: simGoals(),
+    });
+    if (baseline && ghostSim && !ghostMc) {
+      mcWorker.postMessage({
+        task: 'mc', kind: 'ghost', seq: mcSeq, st: JSON.parse(JSON.stringify(baseline)),
+        paths: MC_FULL, withdrawal: ghostSim.withdrawal, retireAge: ghostSim.retireAge,
+      });
+    }
+  }, 200);
 }
 
-/* ===================== Simulaattori ===================== */
-// Kuukausitason simulointi: korkoa korolle, kuukausisijoitukset,
-// kertaluonteiset tapahtumat ja eläkeajan nostot.
-
-function simulate(st = state) {
-  const a0 = st.ageNow;
-  const a1 = Math.max(st.ageEnd, a0 + 2);
-  const months = Math.round((a1 - a0) * 12);
-
-  const retire = st.events.find((e) => e.type === 'retirement') || null;
-  let retireAge = retire ? retire.age : null;
-  // Lakisääteinen työeläke: kuukausitulo, joka pienentää sijoituksista
-  // tarvittavaa nostoa. Voi alkaa eri iässä kuin eläkkeelle jäänti
-  // (esim. varhaiseläkkeellä sijoitukset kattavat välivuodet).
-  const pension = retire && retire.pension > 0 ? Math.max(0, retire.pension) : 0;
-  const pensionAge = pension > 0 && retire.pensionAge != null
-    ? clamp(retire.pensionAge, a0, a1)
-    : (retireAge != null ? retireAge : a1);
-  const taxOn = !!st.tax;
-  // Säästön vuosikasvu (palkkakehitys): kuukausisijoitus kasvaa vuosittain
-  const g = (st.savingsGrowth || 0) / 100;
-  const growth = new Float64Array(months + 1);
-  for (let m = 1; m <= months; m++) growth[m] = Math.pow(1 + g, (m - 1) / 12);
-
-  // Kertavaikutukset, lainanhoitoerät ja velkasaldo kuukausittain.
-  // Omaisuuserän myynti katkaisee lainan: jäljellä oleva saldo maksetaan
-  // myyntihinnasta (salePayoff), eikä eriä makseta myynnin jälkeen.
-  const lump = new Map();
-  const payments = new Float64Array(months + 1);
-  const debt = new Float64Array(months + 1);
-  const salePayoff = new Map();
-  const sellMonthOf = (e) => e.isAsset && e.sellAge != null && e.sellAge > e.age
-    ? Math.round((e.sellAge - a0) * 12) : null;
-  for (const e of st.events) {
-    if (e.type === 'retirement') continue;
-    const m0 = Math.round((e.age - a0) * 12);
-    if (m0 < 0 || m0 > months) continue;
-
-    if (e.amount < 0 && e.financing === 'loan') {
-      const price = -e.amount;
-      const down = clamp(e.down || 0, 0, price);
-      lump.set(m0, (lump.get(m0) || 0) - down);
-      const principal = price - down;
-      const rate = Math.max(0, e.rate || 0);
-      const years = Math.max(1, e.years || 10);
-      const n = Math.round(years * 12);
-      const pmt = loanPayment(principal, rate, years);
-      const rm = rate / 100 / 12;
-      const mSell = sellMonthOf(e);
-      let bal = principal;
-      debt[m0] += bal;
-      for (let k = 1; k <= n; k++) {
-        const m = m0 + k;
-        if (mSell != null && m >= mSell) { salePayoff.set(e.id, bal); break; }
-        if (m > months) break;
-        payments[m] += pmt;
-        bal = Math.max(0, bal * (1 + rm) - pmt);
-        debt[m] += bal;
-      }
-    } else {
-      lump.set(m0, (lump.get(m0) || 0) + e.amount);
-    }
-
-    // Toistuva kuukausivaikutus (esim. lapsen kulut, vuokratulo):
-    // meno kasvattaa kuukausieriä, tulo pienentää niitä / lisää säästöä
-    if (e.recMonthly && e.recYears > 0) {
-      const nRec = Math.round(Math.min(e.recYears, 90) * 12);
-      for (let k = 1; k <= nRec; k++) {
-        const m = m0 + k;
-        if (m > months) break;
-        payments[m] -= e.recMonthly;
-      }
-    }
-  }
-  const out = { a0, a1, months, retireAge, payments, debt, pension, pensionAge };
-
-  // Omaisuuserät: ostettu kohde kirjautuu varallisuudeksi ja kehittyy omalla arvonmuutoksellaan
-  const assets = new Float64Array(months + 1);
-  const assetCats = {
-    realEstate: new Float64Array(months + 1),
-    vehicles: new Float64Array(months + 1),
-    other: new Float64Array(months + 1),
-  };
-  let hasAssets = false;
-  const saleInfos = [];
-  for (const e of st.events) {
-    if (e.type === 'retirement' || e.amount >= 0 || !e.isAsset) continue;
-    const m0 = Math.round((e.age - a0) * 12);
-    if (m0 < 0 || m0 > months) continue;
-    hasAssets = true;
-    const cat = e.type === 'home' || e.type === 'cottage' ? assetCats.realEstate
-      : e.type === 'car' ? assetCats.vehicles
-      : assetCats.other;
-    const yearly = (1 + (e.appr || 0) / 100) / (st.real ? 1 + INFLATION : 1);
-    const apprM = Math.pow(Math.max(0.01, yearly), 1 / 12);
-    const mSell = sellMonthOf(e);
-    const mEnd = mSell != null ? Math.min(mSell - 1, months) : months;
-    let v = -e.amount;
-    for (let m = m0; m <= mEnd; m++) {
-      assets[m] += v;
-      cat[m] += v;
-      v *= apprM;
-    }
-    // Myynti: arvo sijoituksiin, laina pois, myyntivoittovero voitosta.
-    // Verotettavaa voittoa rajaa hankintameno-olettama (40 % ≥ 10 v
-    // omistuksesta, muuten 20 %) — oma asunto voi olla kokonaan verovapaa.
-    if (mSell != null && mSell <= months) {
-      const saleValue = v;
-      const payoff = salePayoff.get(e.id) || 0;
-      let saleTax = 0;
-      if (taxOn && !e.sellTaxFree) {
-        const gain = Math.max(0, saleValue - (-e.amount));
-        const heldY = (mSell - m0) / 12;
-        const taxable = Math.min(gain, (heldY >= 10 ? 0.6 : 0.8) * saleValue);
-        saleTax = taxable <= TAX_BRACKET
-          ? taxable * TAX_LOW
-          : TAX_BRACKET * TAX_LOW + (taxable - TAX_BRACKET) * TAX_HIGH;
-      }
-      lump.set(mSell, (lump.get(mSell) || 0) + saleValue - payoff - saleTax);
-      saleInfos.push({ id: e.id, age: a0 + mSell / 12, value: saleValue, payoff, tax: saleTax });
-    }
-  }
-  out.assets = assets;
-  out.assetCats = assetCats;
-  out.saleInfos = saleInfos;
-  out.hasNet = hasAssets || debt.some((d) => d > 0.5);
-
-  // Kuukausittaiset tuotto-oletukset annetulla eläkeiällä
-  // (glidepath voi muuttaa allokaatiota iän myötä)
-  function buildMu(retAge) {
-    const muM = new Float64Array(months + 1);
-    const sigA = new Float64Array(months + 1);
-    for (let m = 1; m <= months; m++) {
-      const { mu, sigma } = portfolioStats(allocationAt(a0 + m / 12, retAge, st));
-      muM[m] = Math.pow(1 + mu - (st.real ? INFLATION : 0), 1 / 12) - 1;
-      sigA[m] = sigma;
-    }
-    return { muM, sigA };
-  }
-
-  // Kehityspolku annetulla eläkeiällä, kuukausitulon tarpeella ja säästöllä.
-  // Työeläke pienentää nostoa; nostoista peritään myyntivoittovero (voitto-osuus).
-  // clamp0=false sallii negatiivisen varallisuuden (ratkaisimia varten),
-  // shockFn(m) antaa Monte Carlon satunnaisheiton (muuten deterministinen).
-  function runPath(withdrawal, retAge, muM, { clamp0 = false, monthlySave = st.monthly, shockFn = null, collect = false } = {}) {
-    let w = st.startCapital;
-    let basis = st.startCapital; // salkun hankintahinta myyntivoittoveroa varten
-    let ytdGain = 0;             // kuluvana vuonna realisoidut voitot (30/34 % raja)
-    let taxPaid = 0;
-    const arr = collect ? [w] : null;
-    // Rahavirrat vuositaulukkoa varten (vain collect-ajossa)
-    const fl = collect ? {
-      contrib: new Float64Array(months + 1), gross: new Float64Array(months + 1),
-      tax: new Float64Array(months + 1), pen: new Float64Array(months + 1),
-    } : null;
-    let depletion = null;
-    // Myynti salkusta: pienentää hankintahintaa suhteessa ja palauttaa realisoidun voiton
-    const sell = (gross) => {
-      if (w <= 0) { w -= gross; return 0; }
-      const s = Math.min(gross, w);
-      const gain = Math.max(0, (w - basis) / w) * s;
-      basis -= basis * (s / w);
-      w -= gross;
-      return gain;
-    };
-    for (let m = 1; m <= months; m++) {
-      const age = a0 + m / 12;
-      if (m % 12 === 1) ytdGain = 0;
-      w *= 1 + muM[m] + (shockFn ? shockFn(m) : 0); // tuotto ei muuta hankintahintaa
-      if (retAge == null || age <= retAge) {
-        // Työuralla lainanhoito vähentää kuukausisäästöä (loput maksetaan palkasta)
-        const contrib = Math.max(0, monthlySave * growth[m] - payments[m]);
-        w += contrib; basis += contrib;
-        if (fl) fl.contrib[m] = contrib;
-      } else {
-        // Eläkkeellä: kuukausitulon tarve + lainanhoito, josta työeläke kattaa osan
-        const pen = age >= pensionAge ? pension : 0;
-        const need = withdrawal + payments[m] - pen;
-        if (fl) fl.pen[m] = pen;
-        if (need <= 0) {
-          w -= need; basis -= need; // ylijäämä (eläke > tarve) takaisin salkkuun
-          if (fl) fl.contrib[m] = -need;
-        } else if (taxOn) {
-          const rate = ytdGain >= TAX_BRACKET ? TAX_HIGH : TAX_LOW;
-          const gainRatio = w > 0 ? Math.max(0, (w - basis) / w) : 0;
-          const gross = need / Math.max(0.35, 1 - gainRatio * rate); // brutto → netto = need veron jälkeen
-          const gain = sell(gross);
-          taxPaid += gain * rate;
-          ytdGain += gain;
-          if (fl) { fl.gross[m] = gross; fl.tax[m] = gross - need; }
-        } else {
-          sell(need);
-          if (fl) fl.gross[m] = need;
-        }
-      }
-      if (lump.has(m)) {
-        const L = lump.get(m);
-        if (L >= 0) { w += L; basis += L; } else sell(-L); // menon rahoitus verotta (kertaerä)
-      }
-      if (clamp0 && w < 0) { if (depletion == null) depletion = age; w = 0; }
-      if (arr) arr.push(w);
-    }
-    return { arr, depletion, endW: w, taxPaid, flows: fl };
-  }
-
-  // Monte Carlo: osuus satunnaisista markkinapoluista, joissa varat eivät ehdy.
-  // Jokainen polku käyttää omaa siemennettyä sokkijonoaan, joka ei riipu
-  // nostotasosta — siksi onnistumis-% on monotoninen ja bisektio toimii.
-  const N_MC = 300;
-  const SQRT12 = Math.sqrt(12);
-  function mcSuccess(wd, retAge, muM, sigA, monthlySave) {
-    let ok = 0;
-    for (let i = 0; i < N_MC; i++) {
-      const rand = mulberry32(1337 + i * 7919);
-      let spare = null;
-      const gauss = () => {
-        if (spare != null) { const v = spare; spare = null; return v; }
-        let u;
-        do { u = rand(); } while (u === 0);
-        const r = Math.sqrt(-2 * Math.log(u));
-        const th = 2 * Math.PI * rand();
-        spare = r * Math.sin(th);
-        return r * Math.cos(th);
-      };
-      const shockFn = (m) => (sigA[m] / SQRT12) * gauss();
-      if (runPath(wd, retAge, muM, { clamp0: true, monthlySave, shockFn }).depletion == null) ok++;
-    }
-    return ok / N_MC;
-  }
-
-  // Tavoitetila: yksi suure ratkaistaan, muut on lukittu.
-  // Varmuustaso (conf) vaihtaa kriteerin odotetusta polusta Monte Carloon:
-  // ratkaisu mitoitetaan niin, että vähintään conf-osuus poluista onnistuu.
-  const goal = retire ? retGoal(retire) : 'manual';
-  let withdrawal = retire ? retire.withdrawal : 0;
-  const conf = retire && goal !== 'manual' && retire.conf >= 0.5 && retire.conf < 1 ? retire.conf : null;
-  out.goal = retire ? goal : null;
-  out.conf = conf;
-  out.solvedWithdrawal = null;
-  out.solvedRetireAge = null;
-  out.requiredMonthly = null;
-  out.goalUnreachable = false;
-
-  if (retire && goal === 'withdrawal') {
-    // Kestävä kuukausitulo: sijoitusvarallisuus 0 € suunnitelman lopussa
-    // (tai varmuustasolla: suurin nosto jolla onnistumis-% ≥ tavoite)
-    const { muM, sigA } = buildMu(retireAge);
-    const okAt = conf
-      ? (x) => mcSuccess(x, retireAge, muM, sigA, st.monthly) >= conf
-      : (x) => runPath(x, retireAge, muM, { monthlySave: st.monthly }).endW > 0;
-    if (conf && !okAt(0)) {
-      out.goalUnreachable = true;
-      withdrawal = 0;
-      out.solvedWithdrawal = 0;
-    } else {
-      let lo = 0, hi = 1000;
-      while (okAt(hi) && hi < 1e7) hi *= 2;
-      for (let i = 0; i < (conf ? 18 : 40); i++) {
-        const mid = (lo + hi) / 2;
-        if (okAt(mid)) lo = mid;
-        else hi = mid;
-      }
-      withdrawal = Math.max(0, Math.round(conf ? lo : (lo + hi) / 2));
-      out.solvedWithdrawal = withdrawal;
-    }
-  } else if (retire && goal === 'age') {
-    // Aikaisin eläkeikä: myöhempi eläköityminen kasvattaa loppuvarallisuutta
-    // monotonisesti, joten aikaisin kelvollinen kuukausi löytyy binäärihaulla.
-    // Eläkkeen on kestettävä vähintään vuosi — muuten "ratkaisu" olisi
-    // eläköityminen suunnitelman viime hetkillä ilman yhtään nostoa.
-    const rMax = months - 12;
-    const feasible = (r) => {
-      const ra = a0 + r / 12;
-      const { muM, sigA } = buildMu(ra);
-      return conf
-        ? mcSuccess(withdrawal, ra, muM, sigA, st.monthly) >= conf
-        : runPath(withdrawal, ra, muM, { monthlySave: st.monthly }).endW >= 0;
-    };
-    if (!feasible(rMax)) {
-      out.goalUnreachable = true;
-    } else {
-      let lo = 0, hi = rMax;
-      if (feasible(0)) hi = 0;
-      while (lo < hi) {
-        const mid = (lo + hi) >> 1;
-        if (feasible(mid)) hi = mid;
-        else lo = mid + 1;
-      }
-      retireAge = a0 + hi / 12;
-      retire.age = retireAge; // merkki ja lista seuraavat ratkaisua
-      out.solvedRetireAge = retireAge;
-    }
-  } else if (retire && goal === 'saving') {
-    // Tarvittava kuukausisäästö annetulla eläkeiällä ja nostolla
-    const { muM, sigA } = buildMu(retireAge);
-    const okAt = conf
-      ? (ms) => mcSuccess(withdrawal, retireAge, muM, sigA, ms) >= conf
-      : (ms) => runPath(withdrawal, retireAge, muM, { monthlySave: ms }).endW >= 0;
-    if (okAt(0)) {
-      out.requiredMonthly = 0;
-    } else {
-      let hi = Math.max(100, st.monthly);
-      while (!okAt(hi) && hi < 1e6) hi *= 2;
-      if (!okAt(hi)) {
-        out.goalUnreachable = true;
-      } else {
-        let lo = 0;
-        for (let i = 0; i < (conf ? 18 : 40); i++) {
-          const mid = (lo + hi) / 2;
-          if (!okAt(mid)) lo = mid;
-          else hi = mid;
-        }
-        out.requiredMonthly = Math.round(hi);
-      }
-    }
-  }
-  out.retireAge = retireAge;
-  out.withdrawal = withdrawal;
-
-  const { muM, sigA } = buildMu(retireAge);
-  const final = runPath(withdrawal, retireAge, muM, { clamp0: true, monthlySave: st.monthly, collect: true });
-  const exp = final.arr;
-  const depletionAge = final.depletion;
-  out.exp = exp;
-  out.flows = final.flows;
-  out.taxPaid = final.taxPaid + saleInfos.reduce((a, x) => a + x.tax, 0);
-
-  // Ehtymisjaksot graafin varoitusvyöhykkeiksi: kuukaudet joina sijoitukset
-  // ovat nollissa (voi päättyä, jos esim. myöhempi myynti tai eläke elvyttää)
-  const dryZones = [];
-  if (depletionAge != null) {
-    let zs = null;
-    for (let m = 1; m <= months; m++) {
-      const dry = exp[m] < 0.5;
-      if (dry && zs == null) zs = m;
-      if (zs != null && (!dry || m === months)) {
-        const ze = dry ? m : m - 1;
-        if (ze - zs >= 2) dryZones.push({ from: a0 + zs / 12, to: a0 + ze / 12 });
-        zs = null;
-      }
-    }
-  }
-  out.dryZones = dryZones;
-
-  // Nettovarallisuus = sijoitukset + omaisuuserät − velat
-  const net = new Array(months + 1);
-  for (let m = 0; m <= months; m++) net[m] = exp[m] + assets[m] - debt[m];
-  out.net = net;
-
-  // Vaihteluväli: epävarmuus kasvaa ajan neliöjuuressa (±z·σ·√t)
-  const opt = [exp[0]], pess = [exp[0]];
-  for (let m = 1; m <= months; m++) {
-    const spread = BAND_Z * sigA[m] * Math.sqrt(m / 12);
-    opt.push(exp[m] * Math.exp(spread));
-    pess.push(exp[m] * Math.exp(-spread));
-  }
-  out.opt = opt;
-  out.pess = pess;
-
-  out.successProb = mcSuccess(withdrawal, retireAge, muM, sigA, st.monthly);
-
-  // Sijoitettu pääoma kumulatiivisesti (alkusijoitus + kk-sijoitukset työuralla)
-  const invested = [st.startCapital];
-  let cum = st.startCapital;
-  for (let m = 1; m <= months; m++) {
-    const age = a0 + m / 12;
-    if (retireAge == null || age <= retireAge) cum += Math.max(0, st.monthly * growth[m] - payments[m]);
-    invested.push(cum);
-  }
-  out.invested = invested;
-  out.deposits = cum;
-  out.depletionAge = depletionAge;
-
-  const retM = retireAge != null ? clamp(Math.round((retireAge - a0) * 12), 0, months) : null;
-  out.wAtRet = retM != null ? out.exp[retM] : null;
-  out.wEnd = out.exp[months];
-  return out;
-}
+// HUD (V1) ja tavoiteratkaisu (V3) — määritellään myöhemmissä osioissa;
+// stubit pitävät worker-käsittelijän eheänä.
+let updateHud = () => {};
+let onSolveGoalsMsg = () => {};
 
 /* ===================== Graafi ===================== */
 
@@ -613,6 +243,10 @@ let hoverLine = null, hoverDot = null, balHoverLine = null;
 // Skenaariovertailu: tallennettu suunnitelma haamukäyräksi (irrallinen syväkopio)
 let baseline = null;
 let ghostSim = null;
+let ghostDirty = true;  // haamu lasketaan vain kun vertailukohta vaihtuu
+let lastFullSim = null; // viimeisin täysi sim — kevyen raahausframen jäädytetyt arvot
+let dragLight = false;  // piirtotilan raahaus käynnissä → kevyt frame (ei MC:tä)
+let fsOn = false;       // kokoruudun piirtotila päällä
 
 function el(name, attrs, parent) {
   const n = document.createElementNS(SVG_NS, name);
@@ -636,9 +270,25 @@ function niceStep(range, target) {
   return pow * 10;
 }
 
-function renderChart() {
-  sim = simulate();
-  ghostSim = computeGhost();
+function simOpts() {
+  const o = { sustainable: fsOn, goals: simGoals() };
+  if (dragLight && lastFullSim) { o.light = true; o.frozen = lastFullSim; }
+  return o;
+}
+
+// Haamu ei muutu säädöissä — lasketaan vain kun vertailukohta vaihtuu
+function getGhost() {
+  if (ghostDirty) { ghostSim = computeGhost(); ghostDirty = false; ghostMc = null; }
+  return ghostSim;
+}
+
+function renderChart(reuse = false) {
+  if (!reuse) {
+    sim = simulate(state, simOpts());
+    if (!sim.successStale) lastFullSim = sim;
+    ghostSim = getGhost();
+    if (!dragLight) requestMcRefresh();
+  }
   renderCompare();
   const W = wrap.clientWidth, H = wrap.clientHeight;
   if (W < 50 || H < 50) return;
@@ -940,7 +590,7 @@ function renderDist() {
     : retireAge != null ? clamp(Math.round((retireAge - a0) * 12), 0, months) : months;
   const age = a0 + m / 12;
 
-  const alloc = allocationAt(age, retireAge);
+  const alloc = allocationAt(age, retireAge, state);
   const inv = sim.exp[m];
   const cats = sim.assetCats;
   const slices = [
@@ -1586,7 +1236,7 @@ document.addEventListener('keydown', (e) => {
 /* ===================== Tunnusluvut ===================== */
 
 function renderStats() {
-  const s = sim || simulate();
+  const s = sim || simulate(state);
   const cards = [];
 
   cards.push({
@@ -1663,7 +1313,7 @@ const BASELINE_KEY = 'vp-baseline-v1';
 function computeGhost() {
   if (!baseline || !Array.isArray(baseline.events)) return null;
   try {
-    return simulate(JSON.parse(JSON.stringify(baseline)));
+    return simulate(JSON.parse(JSON.stringify(baseline)), { sustainable: true });
   } catch (e) {
     baseline = null;
     try { localStorage.removeItem(BASELINE_KEY); } catch (_) {}
@@ -1673,6 +1323,7 @@ function computeGhost() {
 
 function setBaseline() {
   baseline = JSON.parse(JSON.stringify(serialize()));
+  ghostDirty = true;
   try { localStorage.setItem(BASELINE_KEY, JSON.stringify(baseline)); } catch (e) {}
   renderChart();
 }
@@ -1680,6 +1331,7 @@ function setBaseline() {
 function clearBaseline() {
   baseline = null;
   ghostSim = null;
+  ghostDirty = true;
   try { localStorage.removeItem(BASELINE_KEY); } catch (e) {}
   renderChart();
 }
@@ -1689,7 +1341,7 @@ function loadBaseline() {
     const raw = localStorage.getItem(BASELINE_KEY);
     if (!raw) return;
     const o = JSON.parse(raw);
-    if (o && typeof o === 'object' && Array.isArray(o.events)) baseline = o;
+    if (o && typeof o === 'object' && Array.isArray(o.events)) { baseline = o; ghostDirty = true; }
   } catch (e) { /* viallinen vertailukohta — ohitetaan */ }
 }
 
@@ -1776,7 +1428,7 @@ function yearRows(s) {
 }
 
 function buildCsv() {
-  const s = sim || simulate();
+  const s = sim || simulate(state);
   const hasNet = s.hasNet;
   const head = ['Ikä', 'Vuosi', 'Sijoitukset €', 'Säästöt €/v', 'Nostot (brutto) €/v', 'Vero €/v', 'Työeläke €/v']
     .concat(hasNet ? ['Omaisuus €', 'Velka €', 'Netto €'] : []);
@@ -1790,7 +1442,7 @@ function buildCsv() {
 }
 
 function renderYearTable() {
-  const s = sim || simulate();
+  const s = sim || simulate(state);
   const hasNet = s.hasNet;
   $('tableSub').textContent = `${state.real ? 'Nykyrahassa (inflaatiokorjattu)' : 'Nimellisarvoin'} · odotettu kehityspolku`;
   const th = ['Ikä', 'Vuosi', 'Sijoitukset', 'Säästöt/v', 'Nostot/v', 'Vero/v', 'Työeläke/v']
@@ -1841,7 +1493,7 @@ function renderDonateSlot() {
   const slot = $('donateSlot');
   const ds = donateState();
   if (ds.declined) { slot.innerHTML = ''; return; }
-  const payload = buildDonationPayload(state, sim || simulate());
+  const payload = buildDonationPayload(state, sim || simulate(state));
   const h = hashStr(JSON.stringify(payload));
   if (ds.donatedHash === h) {
     slot.innerHTML =
@@ -1870,7 +1522,7 @@ function renderDonateSlot() {
 let pendingPayload = null;
 
 function openDonateModal() {
-  pendingPayload = buildDonationPayload(state, sim || simulate());
+  pendingPayload = buildDonationPayload(state, sim || simulate(state));
   const p = pendingPayload;
   const row = (k, v) => `<div class="dp-row"><span>${k}</span><b>${v}</b></div>`;
   let html = `<h2>Perustiedot</h2>` +
@@ -1983,7 +1635,7 @@ async function openCompareModal() {
     return;
   }
 
-  const s = sim || simulate();
+  const s = sim || simulate(state);
   const retire = state.events.find((e) => e.type === 'retirement');
   const rows = [];
   const add = (label, q, user, fmt) => {
@@ -2073,7 +1725,7 @@ function renderEventList() {
 /* ===================== Syötteet ===================== */
 
 function updateAllocUI() {
-  const a = baseAlloc();
+  const a = baseAlloc(state);
   const { mu, sigma } = portfolioStats(a);
   $('stocksVal').textContent = Math.round(a.s * 100) + ' %';
   $('bondsVal').textContent = Math.round(a.b * 100) + ' %';
@@ -2669,7 +2321,7 @@ function summaryPoints(s) {
     pts.push({ html: `Sijoitan <b>${fmtEur(state.monthly)}/kk</b>${s.retireAge != null ? ' eläkkeelle jäämiseen asti' : ' koko suunnitelman ajan'}${grow} (alkupääoma ${fmtEur(state.startCapital)}).` });
   }
 
-  const a = baseAlloc();
+  const a = baseAlloc(state);
   const { mu } = portfolioStats(a);
   pts.push({ html: `Riskiprofiilini: <b>${Math.round(a.s * 100)} % osakkeita</b>, ${Math.round(a.b * 100)} % korkoja, ${Math.round(a.c * 100)} % käteistä — tuotto-oletus ${pctFmt(mu)}/v${state.glide ? '; riskiä vähennetään eläkettä lähestyttäessä' : ''}.` });
 
@@ -2747,7 +2399,7 @@ function summaryTalks(s) {
 }
 
 function renderSummary() {
-  const s = simulate();
+  const s = simulate(state, { goals: simGoals() });
   const yearNow = new Date().getFullYear();
   const yearOf = (age) => `~${yearNow + Math.round(age - state.ageNow)}`;
   const retire = state.events.find((e) => e.type === 'retirement') || null;
@@ -2762,7 +2414,7 @@ function renderSummary() {
     { k: 'Kuukausitulo eläkkeellä', v: retire ? `${fmtEur(s.withdrawal)}/kk` : '—',
       s: retire ? (s.pension > 0 ? `sis. työeläke ${fmtEur(s.pension)}/kk` : (s.goal === 'withdrawal' ? 'kestävä tulo — varat loppuun' : 'sijoituksista')) : '' },
     { k: 'Varallisuus eläkkeellä', v: s.wAtRet != null ? fmtEur(s.wAtRet) : '—', cls: 'accent' },
-    { k: 'Onnistumistodennäköisyys', v: p != null ? `${p} %` : '—', cls: p >= 80 ? 'ok' : p >= 55 ? '' : 'bad', s: '300 markkinapolkua' },
+    { k: 'Onnistumistodennäköisyys', v: p != null ? `${p} %` : '—', cls: p >= 80 ? 'ok' : p >= 55 ? '' : 'bad', s: `${(s.mcPaths || MC_LIVE).toLocaleString('fi-FI')} markkinapolkua` },
   ];
 
   const evRows = [...state.events].sort((x, y) => x.age - y.age).map((e) => {
@@ -2809,7 +2461,7 @@ function renderSummary() {
     `<h2>Keskusteltavaa esim. varainhoitajan kanssa</h2>` +
     `<ul class="sum-points">${summaryTalks(s).map(li).join('')}</ul>` +
     `<p class="sum-assump">Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa${state.savingsGrowth > 0 ? `; säästön kasvu ${state.savingsGrowth.toLocaleString('fi-FI')} %/v` : ''}${state.real ? `; inflaatio ${pctFmt(INFLATION)}/v, luvut nykyrahassa` : ''}${state.glide ? '; ikäsidonnainen allokaatio' : ''}${s.pension > 0 ? '; lakisääteinen työeläke huomioitu eläketulona' : ''}${state.tax ? '; myyntivoittovero 30/34 % nostojen voitto-osuudesta' : ''}${(s.saleInfos || []).some((x) => x.tax > 0.5) ? '; omaisuuden myynnissä hankintameno-olettama' : ''}. ` +
-    `Lainat annuiteettilainoina. Onnistumistodennäköisyys perustuu 300 satunnaiseen markkinapolkuun${s.conf ? `; tavoitteet mitoitettu ${Math.round(s.conf * 100)} % onnistumisvarmuudelle` : ''}. Laadittu Varallisuuspolku-työkalulla.</p>` +
+    `Lainat annuiteettilainoina. Onnistumistodennäköisyys perustuu ${(s.mcPaths || MC_LIVE).toLocaleString('fi-FI')} satunnaiseen markkinapolkuun${s.conf ? `; tavoitteet mitoitettu ${Math.round(s.conf * 100)} % onnistumisvarmuudelle` : ''}. Laadittu Varallisuuspolku-työkalulla.</p>` +
     `<p class="sum-disclaimer">Tämä yhteenveto kuvaa laatijansa omia tavoitteita, valintoja ja oletuksia. Se ei ole sijoitusneuvontaa eikä sijoitussuositus — sen voi antaa esimerkiksi varainhoitajalle keskustelun pohjaksi.</p>`;
 }
 
@@ -2857,6 +2509,7 @@ function renderAll() {
 }
 
 buildPalette();
+initMcWorker();
 loadState();
 loadBaseline();
 syncInputs();

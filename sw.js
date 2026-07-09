@@ -5,12 +5,14 @@
    välimuistista. Näin julkaisut päivittyvät heti kun verkko on käytössä,
    mutta sovellus toimii myös kokonaan ilman yhteyttä. */
 
-const CACHE = 'varallisuuspolku-v3';
+const CACHE = 'varallisuuspolku-v4';
 const CORE = [
   './',
   './index.html',
   './style.css',
   './app.js',
+  './laskenta.js',
+  './mc-worker.js',
   './analytiikka.html',
   './analytiikka.js',
   './fonts.css',
