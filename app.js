@@ -1580,6 +1580,7 @@ document.addEventListener('keydown', (e) => {
   $('donateModal').hidden = true;
   $('compareModal').hidden = true;
   closeExamplesMenu();
+  closeMoreMenu();
 });
 
 /* ===================== Tunnusluvut ===================== */
@@ -1693,13 +1694,12 @@ function loadBaseline() {
 }
 
 function updateCompareBtn() {
-  const b = $('compareBtn');
-  if (!b) return;
-  b.textContent = baseline ? 'Vertailu ✓' : 'Vertaile';
-  b.title = baseline
-    ? 'Vertailukohta tallennettu — paina uudelleen poistaaksesi'
-    : 'Tallenna nykyinen suunnitelma vertailukohdaksi ja katso muutosten vaikutus';
-  b.classList.toggle('on-state', !!baseline);
+  // Vertailun tila näkyy ⋯-valikon kohdassa, jos valikko on auki
+  const mi = $('mi-compare');
+  if (!mi) return;
+  mi.querySelector('div').textContent = baseline ? 'Vertailu päällä ✓' : 'Vertaile';
+  const d = mi.querySelector('.mdesc');
+  if (d) d.textContent = baseline ? 'Poista vertailukohta' : 'Tallenna nykyinen suunnitelma haamukäyräksi';
 }
 
 function renderCompare() {
@@ -2080,7 +2080,6 @@ function updateAllocUI() {
   $('cashVal').textContent = Math.round(a.c * 100) + ' %';
   const txt = `Tuotto-odotus <b>${pctFmt(mu)}/v</b> · heilunta ±${pctFmt(sigma)}`;
   $('allocSummary').innerHTML = txt;
-  $('allocSummaryTop').innerHTML = `Salkun tuotto-odotus <b>${pctFmt(mu)}/v</b>`;
   for (const id of ['allocStocks', 'allocBonds']) {
     const inp = $(id);
     inp.style.setProperty('--fill', inp.value + '%');
@@ -2338,7 +2337,73 @@ function openExamplesMenu(anchor) {
 
 document.addEventListener('pointerdown', (e) => {
   if (examplesMenuEl && !examplesMenuEl.contains(e.target) && !(e.target.closest && e.target.closest('.examples-trigger'))) closeExamplesMenu();
+  if (moreMenuEl && !moreMenuEl.contains(e.target) && e.target.id !== 'moreBtn') closeMoreMenu();
 });
+
+/* ===================== ⋯-valikko ===================== */
+// Harvoin tarvittavat toiminnot yhdessä paikassa — yläpalkkiin jää vain
+// päätoiminto. Valikko rakennetaan avattaessa, jotta tilat ovat tuoreet.
+
+let moreMenuEl = null;
+
+function closeMoreMenu() {
+  if (moreMenuEl) { moreMenuEl.remove(); moreMenuEl = null; }
+}
+
+function openMoreMenu(anchor) {
+  if (moreMenuEl) { closeMoreMenu(); return; }
+  closeExamplesMenu();
+  const menu = document.createElement('div');
+  menu.className = 'menu';
+
+  const add = (id, name, desc, fn, danger) => {
+    const b = document.createElement('button');
+    b.id = id;
+    if (danger) b.classList.add('danger');
+    b.innerHTML = `<div>${name}</div><div class="mdesc">${desc}</div>`;
+    if (fn) b.addEventListener('click', () => { closeMoreMenu(); fn(); });
+    menu.appendChild(b);
+    return b;
+  };
+
+  add('mi-compare',
+    baseline ? 'Vertailu päällä ✓' : 'Vertaile',
+    baseline ? 'Poista vertailukohta' : 'Tallenna nykyinen suunnitelma haamukäyräksi',
+    () => {
+      if (baseline) { clearBaseline(); toast('Vertailu poistettu'); }
+      else { setBaseline(); toast('Vertailukohta tallennettu — erot näkyvät, kun muutat suunnitelmaa'); }
+    });
+  add('mi-analytics', 'Vaurastumisen kartta', 'Miten eri ikäiset suunnittelevat — avoin analytiikka',
+    () => { location.href = 'analytiikka.html'; });
+  add('mi-info', 'Tietoa palvelusta', 'Oletukset, tietosuoja ja vinkit',
+    () => { $('infoModal').hidden = false; });
+
+  // Nollaus vaatii toisen klikkauksen — valikko pysyy auki vahvistusta varten
+  const reset = add('mi-reset', 'Nollaa suunnitelma', 'Aloita puhtaalta pöydältä', null, true);
+  reset.addEventListener('click', () => {
+    if (reset.dataset.armed) {
+      try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(BASELINE_KEY); } catch (e) {}
+      location.hash = '';
+      location.reload();
+      return;
+    }
+    reset.dataset.armed = '1';
+    reset.classList.add('armed-item');
+    reset.querySelector('div').textContent = 'Vahvista nollaus';
+    setTimeout(() => {
+      if (!reset.isConnected) return;
+      delete reset.dataset.armed;
+      reset.classList.remove('armed-item');
+      reset.querySelector('div').textContent = 'Nollaa suunnitelma';
+    }, 3000);
+  });
+
+  document.body.appendChild(menu);
+  const r = anchor.getBoundingClientRect();
+  menu.style.top = r.bottom + 8 + 'px';
+  menu.style.left = Math.max(8, Math.min(r.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 10)) + 'px';
+  moreMenuEl = menu;
+}
 
 /* ===================== Tallennus ja jakaminen ===================== */
 
@@ -2484,7 +2549,7 @@ function bindActions() {
   $('sumClose').addEventListener('click', closeSummary);
   $('sumPrint').addEventListener('click', () => window.print());
   $('sumShare').addEventListener('click', (e) => copyShareUrl(e.target));
-  $('infoBtn').addEventListener('click', () => { $('infoModal').hidden = false; });
+  $('moreBtn').addEventListener('click', () => openMoreMenu($('moreBtn')));
   $('infoClose').addEventListener('click', () => { $('infoModal').hidden = true; });
   $('disclaimerInfo').addEventListener('click', (e) => { e.preventDefault(); $('infoModal').hidden = false; });
 
@@ -2516,16 +2581,6 @@ function bindActions() {
     toast('Valinta nollattu — kysymys näytetään taas yhteenvedossa.');
   });
 
-  // Skenaariovertailu: nappi toimii kytkimenä (tallenna / poista vertailukohta)
-  $('compareBtn').addEventListener('click', () => {
-    if (baseline) {
-      clearBaseline();
-      toast('Vertailu poistettu');
-    } else {
-      setBaseline();
-      toast('Vertailukohta tallennettu — erot ilmestyvät, kun muutat suunnitelmaa');
-    }
-  });
   $('cmpUpdate').addEventListener('click', () => setBaseline());
   $('cmpClear').addEventListener('click', () => clearBaseline());
   // Tase-paneelin supistus
@@ -2540,24 +2595,6 @@ function bindActions() {
     if (!c) renderBalance();
   });
 
-  // Nollaus vaatii toisen klikkauksen vahvistukseksi
-  const resetBtn = $('resetBtn');
-  let resetArmed = null;
-  resetBtn.addEventListener('click', () => {
-    if (resetArmed) {
-      try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(BASELINE_KEY); } catch (e) {}
-      location.hash = '';
-      location.reload();
-      return;
-    }
-    resetBtn.textContent = 'Vahvista nollaus';
-    resetBtn.classList.add('armed');
-    resetArmed = setTimeout(() => {
-      resetArmed = null;
-      resetBtn.textContent = 'Nollaa';
-      resetBtn.classList.remove('armed');
-    }, 3000);
-  });
 }
 
 /* ===================== Yhteenveto ===================== */

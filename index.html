@@ -38,11 +38,7 @@
       </div>
     </div>
     <div class="topbar-right">
-      <div class="topbar-note" id="allocSummaryTop"></div>
-      <button class="btn ghost" id="compareBtn" title="Tallenna nykyinen suunnitelma vertailukohdaksi ja katso muutosten vaikutus">Vertaile</button>
-      <a class="btn ghost" href="analytiikka.html" title="Vaurastumisen kartta — miten eri ikäiset suunnittelevat talouttaan">Analytiikka</a>
-      <button class="btn ghost" id="resetBtn">Nollaa</button>
-      <button class="btn ghost" id="infoBtn" title="Tietoa palvelusta">Tietoa</button>
+      <button class="btn ghost more-btn" id="moreBtn" aria-label="Lisää toimintoja" title="Lisää toimintoja">⋯</button>
       <button class="btn" id="summaryBtn">Yhteenveto</button>
     </div>
   </header>
@@ -138,7 +134,7 @@
           <span data-step="summary" role="button" tabindex="0"><i aria-hidden="true">3</i><em class="stl">Avaa Yhteenveto</em><em class="sts">Yhteenveto</em></span>
         </div>
         <button class="btn examples-trigger" id="onboardExamples">Kokeile esimerkkiä</button>
-        <button class="btn ghost" id="onboardClose">Selvä ✓</button>
+        <button class="btn ghost" id="onboardClose" aria-label="Sulje vinkki"><span class="oc-long">Selvä ✓</span><span class="oc-short" aria-hidden="true">✕</span></button>
       </div>
       <div class="stats" id="stats"></div>
       <div class="compare-bar" id="compareBar" hidden>
@@ -194,7 +190,7 @@
 
       <h2>Vinkit</h2>
       <p><b>Esimerkit</b> (Elämäntapahtumat-kortissa) antaa valmiin pohjan eri elämäntilanteisiin. <b>Vertaile</b>
-      tallentaa nykyisen suunnitelman haamukäyräksi, jota vasten näet muutosten vaikutuksen.
+      (⋯-valikossa) tallentaa nykyisen suunnitelman haamukäyräksi, jota vasten näet muutosten vaikutuksen.
       <b>Vuositaulukko</b> (graafin alla) näyttää luvut vuosi vuodelta ja vie ne CSV:nä.
       <b>Ctrl+Z</b> kumoaa viimeisimmän muutoksen, ja tapahtuman voi <b>monistaa</b>
       muokkausikkunasta (esim. toinen lapsi). Yhteenvedon <b>Kopioi jakolinkki</b> jakaa
