@@ -45,6 +45,8 @@ const state = {
   glide: false,
   real: false,
   tax: true,          // myyntivoittovero nostoissa (oletuksena päällä uusille)
+  proOn: false,       // Pro-tila: ammattilaissäädöt (laskenta.js/proOf)
+  pro: null,
   events: [
     { id: idSeq++, type: 'home', age: 35, amount: -220000, financing: 'loan', down: 33000, rate: 3.5, years: 25, isAsset: true, appr: 2.0 },
     { id: idSeq++, type: 'car',  age: 45, amount: -25000,  financing: 'loan', down: 5000,  rate: 4.5, years: 6,  isAsset: true, appr: -10.0 },
@@ -197,10 +199,14 @@ function initMcWorker() {
     sim.pess = d.p10;
     sim.goalShares = d.goalShares;
     sim.mcPaths = d.paths;
+    sim.ruinCurve = d.ruin;
+    sim.pctLo = d.pctLo;
+    sim.pctHi = d.pctHi;
     lastFullSim = sim;
     renderChart(true);
     renderStats();
     updateHud();
+    if (state.proOn) scheduleProAna();
   });
 }
 
@@ -211,14 +217,16 @@ function requestMcRefresh() {
   const wd = sim.withdrawal, ra = sim.retireAge;
   mcTimer = setTimeout(() => {
     mcSeq++;
+    const pCur = proOf(state);
     mcWorker.postMessage({
       task: 'mc', kind: 'cur', seq: mcSeq, st: snapshot,
-      paths: MC_FULL, withdrawal: wd, retireAge: ra, goals: simGoals(),
+      paths: pCur ? pCur.mc.paths : MC_FULL, withdrawal: wd, retireAge: ra, goals: simGoals(),
     });
     if (baseline && ghostSim && !ghostMc) {
+      const pG = proOf(baseline);
       mcWorker.postMessage({
         task: 'mc', kind: 'ghost', seq: mcSeq, st: JSON.parse(JSON.stringify(baseline)),
-        paths: MC_FULL, withdrawal: ghostSim.withdrawal, retireAge: ghostSim.retireAge,
+        paths: pG ? pG.mc.paths : MC_FULL, withdrawal: ghostSim.withdrawal, retireAge: ghostSim.retireAge,
       });
     }
   }, 200);
@@ -395,6 +403,39 @@ function renderChart(reuse = false) {
   el('path', { d: inv, fill: 'none', stroke: '#8fa0c4', 'stroke-width': 1.6, 'stroke-dasharray': '5 5', opacity: 0.75 }, svg);
 
   el('path', { d: line, fill: 'none', stroke: 'url(#lineGrad)', 'stroke-width': 3, 'stroke-linejoin': 'round' }, svg);
+
+  /* stressiskenaariot (Pro): deterministiset polut viuhkan päälle */
+  if (sim.stress && sim.stress.length) {
+    const colors = { bear: '#f87171', stagf: '#fb923c', lost: '#facc15' };
+    sim.stress.forEach((sc, idx) => {
+      let d = '';
+      for (let i = 0; i <= months; i++) d += `${i ? ' L' : 'M'} ${scaleX(a0 + i / 12).toFixed(1)},${scaleY(sc.arr[i]).toFixed(1)}`;
+      el('path', { d, fill: 'none', stroke: colors[sc.key] || '#f87171', 'stroke-width': 1.4, 'stroke-dasharray': '6 4', opacity: 0.7, 'pointer-events': 'none' }, svg);
+      const t = el('text', { x: plot.l + plot.w - 6, y: clamp(scaleY(sc.arr[months]) - 6 - idx * 13, plot.t + 10, plot.t + plot.h - 4), 'text-anchor': 'end', class: 'stress-label', fill: colors[sc.key] || '#f87171' }, svg);
+      t.textContent = sc.name;
+    });
+  }
+
+  /* nimetyt skenaariohaamut (Pro) */
+  if (state.proOn && proScenarios.length) {
+    proScenarios.forEach((sc, i) => {
+      const gs = scenSim(i);
+      let gp = '';
+      for (let k = 0; k <= gs.months; k++) {
+        const ga = gs.a0 + k / 12;
+        if (ga < a0 || ga > a1) continue;
+        gp += `${gp ? ' L' : 'M'} ${scaleX(ga).toFixed(1)},${scaleY(gs.exp[k]).toFixed(1)}`;
+      }
+      if (gp) el('path', { d: gp, fill: 'none', stroke: SCEN_COLORS[i % 3], 'stroke-width': 1.6, 'stroke-dasharray': '5 4', opacity: 0.6, 'pointer-events': 'none' }, svg);
+    });
+  }
+
+  /* viuhkan persentiilit legendaan */
+  const lbt = $('legendBandTxt');
+  if (lbt) {
+    lbt.textContent = sim.pctLo != null && (sim.pctLo !== 10 || sim.pctHi !== 90)
+      ? `Vaihteluväli (P${sim.pctLo}–P${sim.pctHi})` : 'Vaihteluväli';
+  }
 
   /* eläkeviiva */
   if (sim.retireAge != null && sim.retireAge >= a0 && sim.retireAge <= a1) {
@@ -628,13 +669,26 @@ function renderDist() {
     : retireAge != null ? clamp(Math.round((retireAge - a0) * 12), 0, months) : months;
   const age = a0 + m / 12;
 
-  const alloc = allocationAt(age, retireAge, state);
   const inv = sim.exp[m];
   const cats = sim.assetCats;
+  let invSlices;
+  const proP = proOf(state);
+  if (proP) {
+    // Pro: viipale per omaisuusluokka (myös omat luokat)
+    const classes = classesOf(state);
+    const w = weightsAt(age, retireAge, state);
+    const proColors = ['#2dd4bf', '#8b7cf6', '#8fa0c4', '#f59e0b', '#22d3ee', '#a3e635'];
+    invSlices = classes.map((c, i) => ({ l: c.name, v: inv * w[i], c: proColors[i % proColors.length] }));
+  } else {
+    const alloc = allocationAt(age, retireAge, state);
+    invSlices = [
+      { l: 'Osakkeet', v: inv * alloc.s, c: '#2dd4bf' },
+      { l: 'Korot',    v: inv * alloc.b, c: '#8b7cf6' },
+      { l: 'Käteinen', v: inv * alloc.c, c: '#8fa0c4' },
+    ];
+  }
   const slices = [
-    { l: 'Osakkeet',     v: inv * alloc.s,       c: '#2dd4bf' },
-    { l: 'Korot',        v: inv * alloc.b,       c: '#8b7cf6' },
-    { l: 'Käteinen',     v: inv * alloc.c,       c: '#8fa0c4' },
+    ...invSlices,
     { l: 'Kiinteistöt',  v: cats.realEstate[m],  c: '#60a5fa' },
     { l: 'Ajoneuvot',    v: cats.vehicles[m],    c: '#fb923c' },
     { l: 'Muu omaisuus', v: cats.other[m],       c: '#f472b6' },
@@ -1290,6 +1344,7 @@ document.addEventListener('keydown', (e) => {
   $('tableModal').hidden = true;
   $('donateModal').hidden = true;
   $('compareModal').hidden = true;
+  $('proModal').hidden = true;
   closeExamplesMenu();
   closeMoreMenu();
 });
@@ -1601,6 +1656,11 @@ function dragAcc(d, age, val, noSnap) {
 // Nostosegmentti: bisektio kuukausituloon
 function dragWd(d, age, val, noSnap) {
   if (!d.ev) return null;
+  const pm = proOf(state);
+  if (pm && pm.wd.mode === 'pct') {
+    return { html: chipWrap('<div class="dchip-row"><b>%-strategia käytössä</b></div>', null,
+      'Tulo joustaa salkun mukana — säädä prosenttia Nostostrategia-kortista'), constraint: null };
+  }
   const lo = (sim.retireAge != null ? sim.retireAge : sim.a0) + 1 / 12;
   const a = clamp(age, lo, sim.a1);
   let solved = solveParam((x) => d.solver.wealthAtWd(x, a), Math.max(0, val), 0, 1e7, false);
@@ -1614,6 +1674,11 @@ function dragWd(d, age, val, noSnap) {
 // Loppupiste: jäljelle jäävä pääoma — bisektio kuukausituloon taaksepäin
 function dragEnd(d, val, noSnap) {
   if (!d.ev) return null;
+  const pm = proOf(state);
+  if (pm && pm.wd.mode === 'pct') {
+    return { html: chipWrap('<div class="dchip-row"><b>%-strategia käytössä</b></div>', null,
+      'Säädä prosenttia Nostostrategia-kortista'), constraint: null };
+  }
   let solved = solveParam((x) => d.solver.wealthAtWd(x, sim.a1), Math.max(0, val), 0, 1e7, false);
   solved = noSnap ? Math.round(solved) : snapTo(solved, 10);
   let constraint = null;
@@ -1844,6 +1909,8 @@ function drawNudge(axis, dir, big) {
     text = `Kuukausisäästö ${fmtNum(state.monthly)} euroa kuukaudessa`;
   } else if (s.kind === 'wd' || s.kind === 'end') {
     if (!ev) return;
+    const pmN = proOf(state);
+    if (pmN && pmN.wd.mode === 'pct') { announce('Prosenttistrategia käytössä — säädä prosenttia Nostostrategia-kortista'); return; }
     if (retGoal(ev) === 'withdrawal') {
       if (sim.solvedWithdrawal != null) ev.withdrawal = sim.solvedWithdrawal;
       ev.goal = 'manual';
@@ -2719,11 +2786,23 @@ function renderEventList() {
 
 function updateAllocUI() {
   const a = baseAlloc(state);
-  const { mu, sigma } = portfolioStats(a);
   $('stocksVal').textContent = Math.round(a.s * 100) + ' %';
   $('bondsVal').textContent = Math.round(a.b * 100) + ' %';
-  $('cashVal').textContent = Math.round(a.c * 100) + ' %';
-  const txt = `Tuotto-odotus <b>${pctFmt(mu)}/v</b> · heilunta ±${pctFmt(sigma)}`;
+  const pAl = proOf(state);
+  let mu, sigma, extra = '';
+  if (pAl) {
+    // Pro: omat luokat vähentävät käteisjäännöstä; μ/σ kovarianssilla ja TER:llä
+    const cs = proCustomSum();
+    $('cashVal').textContent = Math.max(0, Math.round(100 - a.s * 100 - a.b * 100 - cs)) + ' %';
+    const classes = classesOf(state);
+    const corrM = pAl.corr ? ensurePSD(corrMatrixOf(classes.length, pAl.corr)).M : null;
+    ({ mu, sigma } = portfolioStatsPro(weightsAt(state.ageNow, null, state), classes, corrM, pAl.ter));
+    if (cs > 0) extra = ` · omat luokat ${Math.round(cs)} %`;
+  } else {
+    $('cashVal').textContent = Math.round(a.c * 100) + ' %';
+    ({ mu, sigma } = portfolioStats(a));
+  }
+  const txt = `Tuotto-odotus <b>${pctFmt(mu)}/v</b> · heilunta ±${pctFmt(sigma)}${extra}`;
   $('allocSummary').innerHTML = txt;
   for (const id of ['allocStocks', 'allocBonds']) {
     const inp = $(id);
@@ -2771,13 +2850,16 @@ function bindInputs() {
   num('savingsGrowth', 'savingsGrowth', 0, 15);
 
   $('allocStocks').addEventListener('input', (e) => {
-    state.allocStocks = +e.target.value;
-    state.allocBonds = Math.min(state.allocBonds, 100 - state.allocStocks);
+    const cs = state.proOn ? proCustomSum() : 0; // omat luokat vievät osansa
+    state.allocStocks = Math.min(+e.target.value, 100 - cs);
+    e.target.value = state.allocStocks;
+    state.allocBonds = Math.min(state.allocBonds, 100 - state.allocStocks - cs);
     $('allocBonds').value = state.allocBonds;
     renderAll();
   });
   $('allocBonds').addEventListener('input', (e) => {
-    state.allocBonds = Math.min(+e.target.value, 100 - state.allocStocks);
+    const cs = state.proOn ? proCustomSum() : 0;
+    state.allocBonds = Math.min(+e.target.value, 100 - state.allocStocks - cs);
     e.target.value = state.allocBonds;
     renderAll();
   });
@@ -2806,6 +2888,8 @@ const TOUR_STEPS = [
     x: 'Viiva on odotettu kehitys ja vyöhyke markkinoiden vaihteluväli tuhansista satunnaisista poluista. Liikuta kohdistinta, niin näet luvut missä tahansa iässä.' },
   { t: 'Tunnusluvut', s: '#stats',
     x: 'Seuraukset yhdellä rivillä — tärkeimpänä onnistumistodennäköisyys: kuinka suuri osa markkinapoluista riittää suunnitelman loppuun asti.' },
+  { t: 'Pro-tila', s: '#proSwitch',
+    x: 'Kytkin avaa ammattilaissäädöt: omat tuotto-oletukset ja korrelaatiot, kulut, nostostrategiat ja syvemmät analyysit. Perusversio riittää pitkälle — Pro odottaa, kun tarvitset sitä.' },
   { t: 'Piirtopöytä', s: '#fsOpen',
     x: 'Tästä (tai F) aukeaa kokoruudun piirtotila: tartu käyrään, tapahtumaan tai eläkeikäviivaan ja vedä — kone laskee jokaisen vedon hinnan. 🎯 lisää varallisuustavoitteen.' },
   { t: 'Suunnitelmani', s: '#summaryBtn',
@@ -2913,6 +2997,506 @@ function bindTour() {
       else tourShow(tourStep + 1);
     }
   });
+}
+
+/* ===================== Pro-tila ===================== */
+// Pro on tila, ei tuote: vipu avaa ammattilaissäädöt samaan moottoriin.
+// Kaikki kulkee setPro-kytkimen ja esittelysivun läpi — mahdollinen
+// portti (kirjautuminen/osto) on myöhemmin pudotettavissa tähän saumaan.
+
+const PRO_SEEN_KEY = 'vp-pro-seen';
+const SCEN_COLORS = ['#f472b6', '#38bdf8', '#a3e635'];
+let proScenarios = []; // nimetyt skenaariohaamut: {name, data}
+const scenSimCache = new Map();
+let proAnaTimer = null;
+
+function proSeen() {
+  try { return localStorage.getItem(PRO_SEEN_KEY) === '1'; } catch (e) { return false; }
+}
+function markProSeen() {
+  try { localStorage.setItem(PRO_SEEN_KEY, '1'); } catch (e) {}
+}
+
+// Täydennä puuttuvat kentät oletuksilla — data-pp-polut osuvat aina
+function ensureProShape() {
+  const d = defaultPro();
+  if (!state.pro) { state.pro = d; return; }
+  const fill = (t, s) => {
+    for (const k in s) {
+      if (t[k] == null) t[k] = s[k];
+      else if (typeof s[k] === 'object' && !Array.isArray(s[k]) && typeof t[k] === 'object') fill(t[k], s[k]);
+    }
+  };
+  fill(state.pro, d);
+}
+
+function setPro(on) {
+  state.proOn = !!on;
+  if (on) ensureProShape();
+  applyProUI();
+  renderAll();
+  announce(on ? 'Pro-tila käytössä — uudet kortit paneelissa' : 'Pro-tila pois käytöstä');
+}
+
+function applyProUI() {
+  const on = !!state.proOn;
+  document.body.classList.toggle('pro', on);
+  const t = $('proToggle');
+  if (t) t.checked = on;
+  for (const c of document.querySelectorAll('.pro-card')) c.hidden = !on;
+  if (on) { ensureProShape(); renderProCards(); }
+}
+
+function openProModal() {
+  markProSeen();
+  $('proModal').hidden = false;
+}
+
+/* --- Asetuspolut ja apurit --- */
+
+function setProPath(path, v) {
+  ensureProShape();
+  const segs = path.split('.');
+  let o = state.pro;
+  for (let i = 0; i < segs.length - 1; i++) o = o[segs[i]];
+  o[segs[segs.length - 1]] = v;
+}
+
+const proCustomSum = () => (state.pro && Array.isArray(state.pro.assets)
+  ? state.pro.assets.reduce((s, a) => s + (a.weight || 0), 0) : 0);
+
+// Korrelaatioiden oletukset: osake–korko 0,2 · osake–käteinen 0 ·
+// korko–käteinen 0,2 · omat luokat 0,25 muita vastaan
+function initCorrTri(n, oldTri) {
+  const oldN = oldTri ? Math.round((1 + Math.sqrt(1 + 8 * oldTri.length)) / 2) : 0;
+  const oldM = oldTri ? corrMatrixOf(oldN, oldTri) : null;
+  const defFor = (i, j) => (i === 0 && j === 1 ? 0.2 : i === 0 && j === 2 ? 0 : i === 1 && j === 2 ? 0.2 : 0.25);
+  const tri = [];
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      tri.push(oldM && i < oldN && j < oldN ? oldM[i][j] : defFor(i, j));
+    }
+  }
+  return tri;
+}
+
+function updatePsdNote() {
+  const note = $('psdNote');
+  if (!note) return;
+  const p = proOf(state);
+  if (!p || !p.corr) { note.textContent = ''; return; }
+  const { shrunk } = ensurePSD(corrMatrixOf(classesOf(state).length, p.corr));
+  note.textContent = shrunk
+    ? '⚠ Matriisi ei ollut matemaattisesti kelvollinen — laskennassa käytetään lähintä kelvollista (kutistettu kohti riippumattomuutta).'
+    : '';
+}
+
+/* --- Korttien rakentaminen --- */
+
+const pin = (pp, val, min, max, step, extra = '') => `<input class="pin" type="number" value="${val}" min="${min}" max="${max}" step="${step}" data-pp="${pp}" ${extra} />`;
+
+function buildProMkt() {
+  const p = proOf(state) || defaultPro();
+  const classes = classesOf(state);
+  const custom = state.pro.assets || [];
+  const wC = Math.max(0, 100 - state.allocStocks - state.allocBonds - proCustomSum());
+  let h = '<div class="pgrid phead"><span>Luokka</span><span>Tuotto %</span><span>Heilunta %</span><span>Paino %</span><span></span></div>';
+  const baseW = [state.allocStocks + '', state.allocBonds + '', wC + ''];
+  ['stocks', 'bonds', 'cash'].forEach((k, i) => {
+    h += `<div class="pgrid"><span class="pl">${classes[i].name}</span>`
+      + pin(`mu.${k}`, p.mu[k], -10, 25, 0.1)
+      + pin(`sigma.${k}`, p.sigma[k], 0, 60, 0.5)
+      + `<span class="pw" title="${i === 2 ? 'jäännös' : 'Allokaatio-kortin liukurista'}">${baseW[i]}${i === 2 ? '·' : '↖'}</span><span></span></div>`;
+  });
+  custom.forEach((a, i) => {
+    h += `<div class="pgrid"><input class="pin pname" type="text" maxlength="24" value="${escapeHtml(a.name)}" data-ppt="assets.${i}.name" />`
+      + pin(`assets.${i}.mu`, a.mu, -10, 25, 0.1)
+      + pin(`assets.${i}.sigma`, a.sigma, 0, 60, 0.5)
+      + pin(`assets.${i}.weight`, a.weight, 0, 100, 1)
+      + `<button class="pdel" data-pact="class-del" data-i="${i}" title="Poista luokka">✕</button></div>`;
+  });
+  if (custom.length < 3) h += '<button class="btn ghost btn-mini" data-pact="class-add">＋ Oma omaisuusluokka</button>';
+
+  h += `<div class="prow"><label class="pinline">Inflaatio-oletus ${pin('infl', p.infl, 0, 10, 0.1)} %/v</label>`
+    + `<label class="pinline">Jakauma <select class="pin psel" data-pact="dist">`
+    + `<option value="normal"${p.mc.dist === 'normal' ? ' selected' : ''}>Normaali</option>`
+    + `<option value="t"${p.mc.dist === 't' ? ' selected' : ''}>Paksuhäntäinen (t)</option></select></label>`
+    + (p.mc.dist === 't' ? `<label class="pinline">Vapausasteet ${pin('mc.df', p.mc.df, 3, 30, 1)}</label>` : '')
+    + '</div>';
+
+  h += `<label class="toggle ptog"><input type="checkbox" ${state.pro.glide ? 'checked' : ''} data-pact="glide-on" /><span class="switch"></span>`
+    + '<span>Oma glidepath <small>korvaa Allokaatio-kortin ikäsidonnaisen kytkimen</small></span></label>';
+  if (state.pro.glide) {
+    const g = p.glide;
+    h += `<div class="prow"><label class="pinline">Alkaa ${pin('glide.from', g.from, 18, 100, 1)} v</label>`
+      + `<label class="pinline">Päättyy ${pin('glide.to', g.to, 19, 105, 1)} v</label>`
+      + `<label class="pinline">Osakepainosta jäljellä ${pin('glide.endF', g.endF, 0, 100, 5)} %</label></div>`;
+  }
+
+  h += `<label class="toggle ptog"><input type="checkbox" ${state.pro.corr ? 'checked' : ''} data-pact="corr-on" /><span class="switch"></span>`
+    + '<span>Hajautushyöty <small>korrelaatiomatriisi — perustila olettaa täyskorrelaation</small></span></label>';
+  if (state.pro.corr && p.corr) {
+    const n = classes.length;
+    let k = 0;
+    h += `<div class="cgrid" style="grid-template-columns: 46px repeat(${n}, 46px)"><span></span>`
+      + classes.map((c) => `<span class="ch">${escapeHtml(c.name.slice(0, 4))}</span>`).join('');
+    for (let i = 0; i < n; i++) {
+      h += `<span class="ch">${escapeHtml(classes[i].name.slice(0, 4))}</span>`;
+      for (let j = 0; j < n; j++) {
+        if (j < i) h += '<span class="cd">·</span>';
+        else if (j === i) h += '<span class="cd">1</span>';
+        else { h += `<input class="pin cin" type="number" step="0.05" min="-0.5" max="1" value="${p.corr[k]}" data-pp="corr.${k}" data-psd="1" />`; k++; }
+      }
+    }
+    h += '</div><p class="note" id="psdNote"></p>';
+  }
+  $('proMkt').innerHTML = h;
+  updatePsdNote();
+}
+
+function buildProTax() {
+  const p = proOf(state) || defaultPro();
+  $('proTax').innerHTML =
+    `<div class="prow"><label class="pinline">Juoksevat kulut (TER) ${pin('ter', p.ter, 0, 3, 0.05)} %/v</label></div>`
+    + `<div class="prow"><label class="pinline">Pääomatulovero ${pin('tax.low', p.tax.low, 0, 70, 1)} %</label>`
+    + `<label class="pinline">korotettu ${pin('tax.high', p.tax.high, 0, 70, 1)} %</label>`
+    + `<label class="pinline">rajalta ${pin('tax.bracket', p.tax.bracket, 0, 1000000, 1000)} €/v</label></div>`
+    + `<label class="toggle ptog"><input type="checkbox" ${p.tax.acq ? 'checked' : ''} data-pp="tax.acq" /><span class="switch"></span>`
+    + '<span>Hankintameno-olettama nostoihin <small>verotettavaa voittoa rajaa 40/20 %-olettama</small></span></label>';
+}
+
+function buildProWd() {
+  const p = proOf(state) || defaultPro();
+  const seg = [['fixed', 'Kiinteä'], ['pct', '% salkusta'], ['guard', 'Guardrails']]
+    .map(([k, l]) => `<button type="button" class="${p.wd.mode === k ? 'on' : ''}" data-pact="wd-mode" data-mode="${k}">${l}</button>`).join('');
+  let h = `<div class="field"><span class="field-label">Strategia</span><div class="seg seg-goal">${seg}</div></div>`;
+  if (p.wd.mode === 'pct') {
+    h += `<div class="prow"><label class="pinline">Nosto ${pin('wd.pct', p.wd.pct, 0.5, 20, 0.1)} % salkusta /v</label></div>`
+      + '<p class="note">Tulo joustaa markkinoiden mukana eikä salkku ehdy — eläketavoitteet ja Kestävä tulo toimivat tässä strategiassa mittareina, eivät ratkaisuina.</p>';
+  } else if (p.wd.mode === 'guard') {
+    h += `<div class="prow"><label class="pinline">Putki ±${pin('wd.band', p.wd.band, 5, 50, 1)} %</label>`
+      + `<label class="pinline">Säätöaskel ${pin('wd.adj', p.wd.adj, 1, 30, 1)} %</label></div>`
+      + '<p class="note">Kuukausituloa leikataan tai korotetaan kerran vuodessa, jos nostoprosentti karkaa aloitustason putkesta. Perustaso on eläketapahtuman kuukausitulo.</p>';
+  } else {
+    h += '<p class="note">Kiinteä kuukausitulo — perusversion käytös. Eläketavoitteet ja piirtopöydän vedot toimivat täysillään.</p>';
+  }
+  h += `<label class="toggle ptog"><input type="checkbox" ${state.pro.phases ? 'checked' : ''} data-pact="phases-on" /><span class="switch"></span>`
+    + '<span>Kulutuksen vaiheistus <small>go-go · slow-go · no-go</small></span></label>';
+  if (state.pro.phases) {
+    const labels = ['Aktiivivuodet', 'Rauhallisemmat', 'Loppuvuodet'];
+    (proOf(state).phases || []).forEach((r, i) => {
+      h += `<div class="prow"><span class="pl phl">${labels[i] || ''}</span>`
+        + (i < 2 ? `<label class="pinline">ikään ${pin(`phases.${i}.to`, r.to, 18, 200, 1)} v</label>` : '<span class="pinline">siitä eteenpäin</span>')
+        + `<label class="pinline">taso ${pin(`phases.${i}.mult`, r.mult, 10, 150, 5)} %</label></div>`;
+    });
+  }
+  $('proWd').innerHTML = h;
+}
+
+function buildProMc() {
+  const p = proOf(state) || defaultPro();
+  const pathsOpt = [300, 1000, 5000, 10000, 20000]
+    .map((n) => `<option value="${n}"${p.mc.paths === n ? ' selected' : ''}>${n.toLocaleString('fi-FI')}</option>`).join('');
+  const pctVal = `${p.mc.pctLo}-${p.mc.pctHi}`;
+  const pctsOpt = [['10-90', 'P10–P90'], ['5-95', 'P5–P95'], ['25-75', 'P25–P75']]
+    .map(([v, l]) => `<option value="${v}"${pctVal === v ? ' selected' : ''}>${l}</option>`).join('');
+  let h = `<div class="prow"><label class="pinline">Polkuja <select class="pin psel" data-pact="paths">${pathsOpt}</select></label>`
+    + `<label class="pinline">Viuhka <select class="pin psel" data-pact="pcts">${pctsOpt}</select></label></div>`
+    + `<div class="prow"><label class="pinline">Siemen ${pin('mc.seed', p.mc.seed, 1, 999999999, 1)}</label>`
+    + '<button class="btn ghost btn-mini" data-pact="seed-new">Uusi siemen</button></div>'
+    + '<p class="note">Sama siemen antaa aina samat markkinapolut — siksi viuhka ei väpätä säätöjen välillä. Uusi siemen näyttää toisen "maailmanhistorian".</p>'
+    + '<div class="field"><span class="field-label">Stressiskenaariot graafiin</span></div>';
+  for (const [key, def] of Object.entries(STRESS_DEFS)) {
+    h += `<label class="toggle ptog"><input type="checkbox" ${p.mc.stress.includes(key) ? 'checked' : ''} data-pact="stress" data-key="${key}" /><span class="switch"></span>`
+      + `<span>${def.name} <small>${def.months / 12} v · ${Math.round(def.annual * 100)} %/v eläkkeelle jäännistä</small></span></label>`;
+  }
+  $('proMc').innerHTML = h;
+}
+
+function buildProAna() {
+  let h = '<div class="field"><span class="field-label">Skenaariot <small>enintään 3 haamukäyrää nykyisen rinnalle</small></span></div>';
+  proScenarios.forEach((sc, i) => {
+    h += `<div class="scen-row"><span class="scen-dot" style="background:${SCEN_COLORS[i % 3]}"></span>`
+      + `<span class="scen-name">${escapeHtml(sc.name)}</span>`
+      + `<button class="pdel" data-pact="scen-del" data-i="${i}" title="Poista skenaario">✕</button></div>`;
+  });
+  if (proScenarios.length < 3) {
+    h += `<div class="scen-add"><input class="pin pname" id="scenName" type="text" maxlength="20" placeholder="esim. Varovainen" />`
+      + '<button class="btn ghost btn-mini" data-pact="scen-save">Tallenna nykyinen skenaarioksi</button></div>';
+  }
+  h += '<h3 class="ana-h">Ehtymiskäyrä <small>P(varat lopussa ikään mennessä)</small></h3><svg id="ruinSvg" viewBox="0 0 300 92"></svg>'
+    + '<h3 class="ana-h">Herkkyys <small>vaikutus loppuvarallisuuteen</small></h3><div id="tornadoBox"></div>'
+    + '<h3 class="ana-h">Kestävä tulo eläkei\'ittäin</h3><svg id="susSvg" viewBox="0 0 300 92"></svg>';
+  $('proAna').innerHTML = h;
+}
+
+function renderProCards() {
+  buildProMkt();
+  buildProTax();
+  buildProWd();
+  buildProMc();
+  buildProAna();
+  scheduleProAna();
+}
+
+/* --- Toiminnot (rakenteelliset muutokset rakentavat kortit uudelleen) --- */
+
+function proAction(act, el) {
+  ensureProShape();
+  const p = state.pro;
+  const rebuild = () => { renderProCards(); renderAll(); };
+  if (act === 'class-add') {
+    p.assets = p.assets || [];
+    if (p.assets.length < 3) p.assets.push({ name: 'Oma luokka', mu: 5, sigma: 10, weight: 5 });
+    if (p.corr) p.corr = initCorrTri(3 + p.assets.length, p.corr);
+    rebuild();
+  } else if (act === 'class-del') {
+    p.assets.splice(+el.dataset.i, 1);
+    if (p.corr) p.corr = initCorrTri(3 + p.assets.length, p.corr);
+    rebuild();
+  } else if (act === 'glide-on') {
+    const retire = state.events.find((e) => e.type === 'retirement');
+    const to = retire ? Math.round(retire.age) : 70;
+    p.glide = el.checked ? { from: Math.max(state.ageNow, to - 15), to, endF: 35 } : null;
+    rebuild();
+  } else if (act === 'corr-on') {
+    p.corr = el.checked ? initCorrTri(3 + (p.assets ? p.assets.length : 0), null) : null;
+    rebuild();
+  } else if (act === 'dist') {
+    p.mc.dist = el.value === 't' ? 't' : 'normal';
+    rebuild();
+  } else if (act === 'wd-mode') {
+    p.wd.mode = el.dataset.mode;
+    rebuild();
+  } else if (act === 'phases-on') {
+    p.phases = el.checked ? [{ to: 75, mult: 100 }, { to: 85, mult: 85 }, { to: 200, mult: 70 }] : null;
+    rebuild();
+  } else if (act === 'paths') {
+    p.mc.paths = +el.value;
+    renderAll();
+  } else if (act === 'pcts') {
+    const [lo, hi] = el.value.split('-').map(Number);
+    p.mc.pctLo = lo; p.mc.pctHi = hi;
+    renderAll();
+  } else if (act === 'seed-new') {
+    p.mc.seed = 1 + Math.floor(Math.random() * 1e6);
+    buildProMc();
+    renderAll();
+  } else if (act === 'stress') {
+    const key = el.dataset.key;
+    const set = new Set(p.mc.stress || []);
+    if (el.checked) set.add(key); else set.delete(key);
+    p.mc.stress = [...set];
+    renderAll();
+  } else if (act === 'scen-save') {
+    const name = ($('scenName') && $('scenName').value.trim()) || `Skenaario ${proScenarios.length + 1}`;
+    proScenarios.push({ name: name.slice(0, 20), data: JSON.parse(JSON.stringify(serialize())) });
+    saveScenarios();
+    buildProAna();
+    renderAll();
+    toast(`Skenaario "${name}" tallennettu haamukäyräksi`);
+  } else if (act === 'scen-del') {
+    proScenarios.splice(+el.dataset.i, 1);
+    scenSimCache.clear();
+    saveScenarios();
+    buildProAna();
+    renderAll();
+  }
+}
+
+function bindPro() {
+  $('proToggle').addEventListener('change', (e) => {
+    if (e.target.checked && !proSeen()) {
+      e.target.checked = false;
+      openProModal(); // ensimmäinen kytkentä esittelyn kautta
+      return;
+    }
+    setPro(e.target.checked);
+  });
+  $('proInfoLink').addEventListener('click', (e) => { e.preventDefault(); openProModal(); });
+  $('proEnable').addEventListener('click', () => { $('proModal').hidden = true; setPro(true); });
+  $('proCancel').addEventListener('click', () => { $('proModal').hidden = true; });
+
+  for (const id of ['proMkt', 'proTax', 'proWd', 'proMc', 'proAna']) {
+    const box = $(id);
+    // Numerokentät: arvo suoraan polkuun, ei kortin uudelleenrakennusta
+    box.addEventListener('input', (e) => {
+      const t = e.target;
+      if (t.dataset && t.dataset.ppt != null) { // tekstikenttä (luokan nimi)
+        setProPath(t.dataset.ppt, t.value.slice(0, 24));
+        saveState();
+        return;
+      }
+      if (!t.dataset || t.dataset.pp == null || t.type === 'checkbox' || t.tagName === 'SELECT') return;
+      let v = parseFloat(t.value);
+      if (isNaN(v)) return;
+      // omien luokkien painot eivät saa ylittää sataa yhdessä liukurien kanssa
+      if (/^assets\.\d+\.weight$/.test(t.dataset.pp)) {
+        const i = +t.dataset.pp.split('.')[1];
+        const others = (state.pro.assets || []).reduce((s, a, k) => s + (k === i ? 0 : a.weight || 0), 0);
+        v = clamp(v, 0, Math.max(0, 100 - state.allocStocks - state.allocBonds - others));
+        t.value = v;
+      }
+      setProPath(t.dataset.pp, v);
+      renderAll();
+      if (t.dataset.psd != null) updatePsdNote();
+    });
+    box.addEventListener('change', (e) => {
+      const t = e.target;
+      if (t.dataset && t.dataset.pact) { proAction(t.dataset.pact, t); return; }
+      if (t.dataset && t.dataset.pp != null && t.type === 'checkbox') {
+        setProPath(t.dataset.pp, t.checked);
+        renderAll();
+      }
+    });
+    box.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-pact]');
+      if (b) { e.preventDefault(); proAction(b.dataset.pact, b); }
+    });
+  }
+}
+
+/* --- Skenaariohaamut --- */
+
+const SCEN_KEY = 'vp-scenarios-v1';
+
+function loadScenarios() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SCEN_KEY));
+    if (Array.isArray(raw)) proScenarios = raw.filter((s) => s && s.data && Array.isArray(s.data.events)).slice(0, 3);
+  } catch (e) { /* ohitetaan */ }
+}
+function saveScenarios() {
+  try { localStorage.setItem(SCEN_KEY, JSON.stringify(proScenarios)); } catch (e) {}
+}
+function scenSim(i) {
+  const sc = proScenarios[i];
+  const j = JSON.stringify(sc.data);
+  const c = scenSimCache.get(i);
+  if (c && c.json === j) return c.sim;
+  const s = simulate(JSON.parse(j));
+  scenSimCache.set(i, { json: j, sim: s });
+  return s;
+}
+
+/* --- Analyysit --- */
+
+function scheduleProAna() {
+  clearTimeout(proAnaTimer);
+  proAnaTimer = setTimeout(renderProAna, 350);
+}
+
+function renderProAna() {
+  if (!state.proOn || !sim) return;
+  const card = document.querySelector('.card[data-card="proana"]');
+  if (!card || card.classList.contains('collapsed')) return;
+
+  // Ehtymiskäyrä
+  const ruinSvg = $('ruinSvg');
+  if (ruinSvg && sim.ruinCurve) {
+    const W = 300, H = 92, l = 30, b = 16, t = 6;
+    const { a0, a1, months } = sim;
+    const maxR = Math.max(0.05, sim.ruinCurve[months] * 1.15);
+    const xs = (m) => l + (m / months) * (W - l - 6);
+    const ys = (v) => t + (1 - v / maxR) * (H - t - b);
+    let d = `M ${xs(0)} ${ys(0)}`;
+    for (let m = 1; m <= months; m += 3) d += ` L ${xs(m).toFixed(1)} ${ys(sim.ruinCurve[m]).toFixed(1)}`;
+    ruinSvg.innerHTML =
+      `<line x1="${l}" y1="${ys(0)}" x2="${W - 6}" y2="${ys(0)}" class="ana-axis"/>`
+      + `<text x="${l - 4}" y="${ys(maxR / 1.15) + 3}" class="ana-tick" text-anchor="end">${Math.round(maxR / 1.15 * 100)} %</text>`
+      + `<text x="${l - 4}" y="${ys(0) + 3}" class="ana-tick" text-anchor="end">0</text>`
+      + `<text x="${xs(0)}" y="${H - 3}" class="ana-tick">${Math.round(a0)} v</text>`
+      + `<text x="${xs(months)}" y="${H - 3}" class="ana-tick" text-anchor="end">${Math.round(a1)} v</text>`
+      + `<path d="${d} L ${xs(months)} ${ys(0)} Z" fill="rgba(248,113,113,0.15)" stroke="none"/>`
+      + `<path d="${d}" fill="none" stroke="#f87171" stroke-width="1.6"/>`;
+  }
+
+  // Tornado (merkityksettömät ±0-rivit pois)
+  const box = $('tornadoBox');
+  if (box) {
+    const rows = tornado(state).filter((r) => Math.abs(r.delta) > 500);
+    const maxD = Math.max(1, ...rows.map((r) => Math.abs(r.delta)));
+    box.innerHTML = rows.map((r) => {
+      const pct = Math.round(Math.abs(r.delta) / maxD * 100);
+      const pos = r.delta >= 0;
+      return `<div class="tor-row"><span class="tor-l">${r.label}</span>`
+        + `<span class="tor-bar"><i class="${pos ? 'pos' : 'neg'}" style="width:${pct}%"></i></span>`
+        + `<span class="tor-v ${pos ? 'pos' : 'neg'}">${pos ? '+' : '−'}${fmtCompact(Math.abs(r.delta))}</span></div>`;
+    }).join('');
+  }
+
+  // Kestävä tulo eläkei'ittäin
+  const susSvg = $('susSvg');
+  if (susSvg) {
+    const pts = sustainableByAge(state, 2);
+    if (pts.length > 1) {
+      const W = 300, H = 92, l = 38, b = 16, t = 6;
+      const maxW = Math.max(...pts.map((p) => p.wd)) * 1.1 || 1;
+      const x0 = pts[0].age, x1 = pts[pts.length - 1].age;
+      const xs = (a) => l + ((a - x0) / (x1 - x0)) * (W - l - 6);
+      const ys = (v) => t + (1 - v / maxW) * (H - t - b);
+      let d = '';
+      pts.forEach((p, i) => { d += `${i ? ' L' : 'M'} ${xs(p.age).toFixed(1)} ${ys(p.wd).toFixed(1)}`; });
+      const retire = retireEv();
+      const cur = retire ? clamp(retire.age, x0, x1) : null;
+      susSvg.innerHTML =
+        `<line x1="${l}" y1="${ys(0)}" x2="${W - 6}" y2="${ys(0)}" class="ana-axis"/>`
+        + `<text x="${l - 4}" y="${ys(maxW / 1.1) + 3}" class="ana-tick" text-anchor="end">${fmtCompact(maxW / 1.1)}</text>`
+        + `<text x="${xs(x0)}" y="${H - 3}" class="ana-tick">${x0} v</text>`
+        + `<text x="${xs(x1)}" y="${H - 3}" class="ana-tick" text-anchor="end">${x1} v</text>`
+        + (cur != null ? `<line x1="${xs(cur)}" y1="${t}" x2="${xs(cur)}" y2="${H - b}" class="ana-cur"/>` : '')
+        + `<path d="${d}" fill="none" stroke="#2dd4bf" stroke-width="1.8"/>`;
+    }
+  }
+}
+
+// Pro-oletukset Suunnitelmani-dokumenttiin: jokainen poikkeama auki
+function proSummaryHtml(s) {
+  const p = proOf(state);
+  if (!p) return '';
+  const d = defaultPro();
+  const rows = [];
+  const dev = (label, val, defVal, unit = '') => {
+    if (String(val) !== String(defVal)) rows.push(`<tr><td>${label}</td><td class="num">${val}${unit}</td><td class="num">${defVal}${unit}</td></tr>`);
+  };
+  const names = { stocks: 'Osakkeet', bonds: 'Korot', cash: 'Käteinen' };
+  for (const k of ['stocks', 'bonds', 'cash']) {
+    dev(`${names[k]}: tuotto-odotus`, p.mu[k].toLocaleString('fi-FI'), d.mu[k].toLocaleString('fi-FI'), ' %/v');
+    dev(`${names[k]}: heilunta`, p.sigma[k].toLocaleString('fi-FI'), d.sigma[k].toLocaleString('fi-FI'), ' %');
+  }
+  p.assets.forEach((a) => {
+    rows.push(`<tr><td>Oma luokka: ${escapeHtml(a.name)}</td><td class="num">${a.mu} %/v · ±${a.sigma} % · paino ${a.weight} %</td><td class="num">—</td></tr>`);
+  });
+  dev('Inflaatio-oletus', p.infl.toLocaleString('fi-FI'), d.infl.toLocaleString('fi-FI'), ' %/v');
+  dev('Juoksevat kulut (TER)', p.ter.toLocaleString('fi-FI'), '0', ' %/v');
+  dev('Pääomatulovero', `${p.tax.low}/${p.tax.high}`, '30/34', ' %');
+  dev('Veroraja', p.tax.bracket.toLocaleString('fi-FI'), '30 000', ' €');
+  if (p.tax.acq) rows.push('<tr><td>Hankintameno-olettama nostoihin</td><td class="num">käytössä</td><td class="num">ei</td></tr>');
+  if (p.glide) rows.push(`<tr><td>Oma glidepath</td><td class="num">${p.glide.from}–${p.glide.to} v → ${p.glide.endF} %</td><td class="num">—</td></tr>`);
+  if (p.corr) {
+    const { shrunk } = ensurePSD(corrMatrixOf(classesOf(state).length, p.corr));
+    rows.push(`<tr><td>Korrelaatiomatriisi</td><td class="num">käytössä${shrunk ? ' (kutistettu)' : ''}</td><td class="num">täyskorrelaatio</td></tr>`);
+  }
+  if (p.wd.mode !== 'fixed') {
+    rows.push(`<tr><td>Nostostrategia</td><td class="num">${p.wd.mode === 'pct' ? p.wd.pct + ' % salkusta/v' : `guardrails ±${p.wd.band} % / ${p.wd.adj} %`}</td><td class="num">kiinteä</td></tr>`);
+  }
+  if (p.phases) rows.push(`<tr><td>Kulutuksen vaiheistus</td><td class="num">${p.phases.map((r) => `${r.mult} %${r.to < 150 ? ' → ' + r.to + ' v' : ''}`).join(' · ')}</td><td class="num">—</td></tr>`);
+  dev('MC-polkuja', p.mc.paths.toLocaleString('fi-FI'), '5 000');
+  if (p.mc.dist === 't') rows.push(`<tr><td>Tuottojakauma</td><td class="num">Studentin t (df ${p.mc.df})</td><td class="num">normaali</td></tr>`);
+  dev('MC-siemen', p.mc.seed, '1337');
+  dev('Viuhka', `P${p.mc.pctLo}–P${p.mc.pctHi}`, 'P10–P90');
+
+  let stressHtml = '';
+  if (s.stress && s.stress.length) {
+    stressHtml = '<p><b>Stressiskenaariot:</b> ' + s.stress.map((sc) =>
+      `${sc.name}: ${sc.depletion != null ? `varat ehtyvät ~${Math.round(sc.depletion)} v` : 'kestää suunnitelman loppuun'}`).join(' · ') + '.</p>';
+  }
+  return '<h2>Pro-oletukset</h2>'
+    + (rows.length
+      ? `<table class="sum-table"><thead><tr><th>Oletus</th><th>Arvo</th><th>Perusversio</th></tr></thead><tbody>${rows.join('')}</tbody></table>`
+      : '<p>Pro-tila käytössä ilman poikkeamia perusoletuksista.</p>')
+    + stressHtml
+    + '<p class="sum-disclaimer">Pro-oletukset ovat laatijan omia — eivät palvelun suosituksia.</p>';
 }
 
 /* ===================== Toast ===================== */
@@ -3108,7 +3692,7 @@ function openMoreMenu(anchor) {
     () => { location.href = 'analytiikka.html'; });
   add('mi-info', 'Tietoa palvelusta', 'Oletukset, tietosuoja ja vinkit',
     () => { $('infoModal').hidden = false; });
-  add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti kahdeksalla klikkauksella',
+  add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti yhdeksällä klikkauksella',
     () => startTour());
 
   // Nollaus vaatii toisen klikkauksen — valikko pysyy auki vahvistusta varten
@@ -3143,7 +3727,7 @@ function openMoreMenu(anchor) {
 const STORAGE_KEY = 'varallisuuspolku-v1';
 
 function serialize() {
-  return {
+  const o = {
     ageNow: state.ageNow, ageEnd: state.ageEnd,
     startCapital: state.startCapital, monthly: state.monthly,
     savingsGrowth: state.savingsGrowth,
@@ -3151,6 +3735,12 @@ function serialize() {
     glide: state.glide, real: state.real, tax: state.tax,
     events: state.events,
   };
+  // Pro-kentät vain kun niitä on — vanhat linkit ja tallennukset ennallaan
+  if (state.proOn || state.pro) {
+    o.proOn = !!state.proOn;
+    if (state.pro) o.pro = state.pro;
+  }
+  return o;
 }
 
 function applySaved(data) {
@@ -3160,6 +3750,9 @@ function applySaved(data) {
   }
   state.glide = !!data.glide;
   state.real = !!data.real;
+  // Pro: raakadata talteen — proOf normalisoi ja kiristää rajat käytössä
+  state.proOn = !!data.proOn;
+  state.pro = data.pro && typeof data.pro === 'object' ? data.pro : null;
   // Uudet kentät: vanhat tallennukset/linkit eivät saa muuttua — jos kenttä
   // puuttuu, käytetään neutraalia arvoa (kasvu 0 %, ei veroa), ei uutta oletusta.
   state.savingsGrowth = typeof data.savingsGrowth === 'number' && isFinite(data.savingsGrowth)
@@ -3266,6 +3859,7 @@ function syncInputs() {
   $('glide').checked = state.glide;
   $('real').checked = state.real;
   $('tax').checked = state.tax;
+  applyProUI(); // vipu, kortit ja body.pro seuraavat tilaa (myös undo/esimerkit)
 }
 
 const makeShareUrl = () =>
@@ -3555,6 +4149,7 @@ function renderSummary() {
     `<div class="table-scroll"><table class="sum-table"><thead><tr><th>Tapahtuma</th><th>Ajankohta</th><th>Summa</th><th>Rahoitus</th><th>Huom.</th></tr></thead><tbody>${evRows}</tbody></table></div>` +
     `<h2>Keskusteltavaa esim. varainhoitajan kanssa</h2>` +
     `<ul class="sum-points">${summaryTalks(s).map(li).join('')}</ul>` +
+    (state.proOn ? proSummaryHtml(s) : '') +
     `<p class="sum-assump">Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa${state.savingsGrowth > 0 ? `; säästön kasvu ${state.savingsGrowth.toLocaleString('fi-FI')} %/v` : ''}${state.real ? `; inflaatio ${pctFmt(INFLATION)}/v, luvut nykyrahassa` : ''}${state.glide ? '; ikäsidonnainen allokaatio' : ''}${s.pension > 0 ? '; lakisääteinen työeläke huomioitu eläketulona' : ''}${state.tax ? '; myyntivoittovero 30/34 % nostojen voitto-osuudesta' : ''}${(s.saleInfos || []).some((x) => x.tax > 0.5) ? '; omaisuuden myynnissä hankintameno-olettama' : ''}. ` +
     `Lainat annuiteettilainoina. Onnistumistodennäköisyys perustuu ${(s.mcPaths || MC_LIVE).toLocaleString('fi-FI')} satunnaiseen markkinapolkuun${s.conf ? `; tavoitteet mitoitettu ${Math.round(s.conf * 100)} % onnistumisvarmuudelle` : ''}. Laadittu Varallisuuspolku-työkalulla.</p>` +
     `<p class="sum-disclaimer">Tämä yhteenveto kuvaa laatijansa omia tavoitteita, valintoja ja oletuksia. Se ei ole sijoitusneuvontaa eikä sijoitussuositus — sen voi antaa esimerkiksi varainhoitajalle keskustelun pohjaksi.</p>`;
@@ -3600,6 +4195,7 @@ function renderAll() {
   renderStats();
   renderEventList();
   renderDist();
+  if (state.proOn) scheduleProAna();
   saveState();
 }
 
@@ -3613,6 +4209,8 @@ bindActions();
 bindDraw();
 bindPanelCards();
 bindTour();
+bindPro();
+loadScenarios();
 renderAll();
 pushUndoNow(); // lähtötila kumoamishistorian pohjaksi
 

@@ -1492,3 +1492,106 @@ body.fs .chart-wrap:focus:not(:focus-visible) { outline: none; }
 .fs-add-menu button { padding: 8px 10px; font-size: 12.5px; white-space: nowrap; }
 .fs-add-menu button .ic { margin-right: 7px; }
 .fs-add-menu button.wide { grid-column: 1 / -1; color: #fbbf24; }
+
+/* ---------- Pro-tila ---------- */
+
+.pro-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  background: linear-gradient(135deg, rgba(139, 124, 246, 0.10), rgba(45, 212, 191, 0.06));
+  border: 1px solid rgba(139, 124, 246, 0.3);
+  border-radius: 13px;
+  font-size: 13px;
+}
+.pro-switch small { color: var(--text-faint); }
+.pro-switch a { color: var(--accent-2); font-size: 12px; white-space: nowrap; text-decoration: none; }
+.pro-switch a:hover { text-decoration: underline; }
+body.pro .pro-switch { border-color: rgba(139, 124, 246, 0.55); }
+
+.pro-tag {
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--accent-2);
+  border: 1px solid rgba(139, 124, 246, 0.5);
+  border-radius: 5px;
+  padding: 1px 5px;
+  margin-left: 6px;
+  vertical-align: 2px;
+}
+
+/* Tiiviit asetusrivit */
+.pin {
+  width: 100%;
+  background: rgba(8, 12, 24, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 7px;
+}
+.pin:focus { outline: none; border-color: rgba(45, 212, 191, 0.5); }
+.pgrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 62px 62px 58px 22px;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 12.5px;
+}
+.pgrid.phead { color: var(--text-faint); font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
+.pgrid .pl, .pgrid .pname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pgrid .pw { color: var(--text-faint); font-size: 11.5px; text-align: right; }
+.pdel {
+  border: none;
+  background: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px;
+}
+.pdel:hover { color: var(--danger); }
+.prow { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin: 10px 0 6px; font-size: 12.5px; }
+.pinline { display: inline-flex; align-items: center; gap: 6px; color: var(--text-dim); }
+.pinline .pin { width: 74px; }
+.psel { width: auto; }
+.ptog { font-size: 13px; margin-top: 10px; }
+.phl { min-width: 104px; color: var(--text-dim); }
+
+/* Korrelaatiomatriisi */
+.cgrid { display: grid; gap: 4px; align-items: center; margin-top: 8px; overflow-x: auto; padding-bottom: 4px; }
+.cgrid .ch { font-size: 10px; color: var(--text-faint); text-align: center; overflow: hidden; }
+.cgrid .cd { text-align: center; color: var(--text-faint); font-size: 11px; }
+.cgrid .cin { width: 100%; padding: 3px 4px; font-size: 11.5px; text-align: center; }
+
+/* Analyysit */
+.ana-h { font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-dim); margin: 14px 0 6px; }
+.ana-h small { text-transform: none; letter-spacing: 0; color: var(--text-faint); font-weight: 400; }
+#ruinSvg, #susSvg { width: 100%; height: auto; display: block; }
+.ana-axis { stroke: rgba(148, 168, 220, 0.25); stroke-width: 1; }
+.ana-tick { font-size: 8.5px; fill: var(--text-faint); font-family: inherit; }
+.ana-cur { stroke: rgba(139, 124, 246, 0.6); stroke-width: 1; stroke-dasharray: 3 3; }
+.tor-row { display: grid; grid-template-columns: minmax(0, 1fr) 84px 64px; gap: 8px; align-items: center; font-size: 11.5px; color: var(--text-dim); margin-bottom: 4px; }
+.tor-row .tor-l { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tor-bar { background: rgba(8, 12, 24, 0.6); border-radius: 4px; height: 10px; overflow: hidden; }
+.tor-bar i { display: block; height: 100%; border-radius: 4px; }
+.tor-bar i.pos { background: rgba(52, 211, 153, 0.7); }
+.tor-bar i.neg { background: rgba(248, 113, 113, 0.7); }
+.tor-v { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.tor-v.pos { color: var(--ok); }
+.tor-v.neg { color: var(--danger); }
+
+/* Skenaariot */
+.scen-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; margin-bottom: 5px; }
+.scen-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.scen-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scen-add { display: flex; gap: 8px; margin-top: 6px; }
+.scen-add .pname { flex: 1; }
+
+.stress-label { font-size: 9.5px; font-weight: 600; font-family: inherit; paint-order: stroke; stroke: rgba(10, 14, 26, 0.9); stroke-width: 3px; }

@@ -7,6 +7,11 @@ Versio 1.0 (10.7.2026). Toteutus alkaa vasta Olavin hyväksynnän jälkeen, luvu
 Pro on **tila, ei tuote**: kytkin kojelaudalla avaa ammattilaistason säädöt saman laskentamoottorin
 päälle. Ei maksumuuria, ei tiliä, ei uusia verkkokutsuja — tietosuojalupaus ei muutu millään tavalla.
 
+*Olavin linjaus 10.7.2026: "kaikki selaimessa" on alkuvaiheen ratkaisu eikä dogmi — ja Pro-vipuun
+voidaan myöhemmin liittää kirjautuminen tai osto. Monetisointipäätökset (miten, kenelle) tehdään
+erikseen. Arkkitehtuuri tukee tätä: kaikki kulkee yhden `setPro`-kytkimen ja esittelysivun läpi,
+joten portti on pudotettavissa saumaan koskematta muuhun koodiin.*
+
 - **Perusversio** (nykyinen): päätökset nopeita, oletukset lukittuja. Kaikki nykyinen toiminnallisuus
   pysyy täsmälleen ennallaan; Pro-tilan pois kytkeminen palauttaa perusversion käytöksen.
 - **Pro**: oletukset avautuvat säädettäviksi ja analyysit syvenevät — se mitä sijoitusammattilainen

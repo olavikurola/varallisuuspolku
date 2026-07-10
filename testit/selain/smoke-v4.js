@@ -96,7 +96,7 @@ const { chromium } = require('playwright');
   await page.waitForTimeout(800);      // maybeStartTour-viive
   ok(await page.evaluate(() => !document.getElementById('tour').hidden), 'kierros käynnistyy ensivierailijalle');
   ok(await page.evaluate(() => document.getElementById('tourCard').textContent.includes('Tervetuloa')), 'aloituskortti näkyy');
-  for (let i = 0; i < 7; i++) { await page.click('#tourNext'); await page.waitForTimeout(180); }
+  for (let i = 0; i < 8; i++) { await page.click('#tourNext'); await page.waitForTimeout(180); }
   ok(await page.evaluate(() => document.getElementById('tourCard').textContent.includes('Valikko')), 'viimeinen askel: Valikko');
   await page.waitForTimeout(450); // valokeilan siirtymäanimaatio loppuun
   const spot = await page.evaluate(() => {

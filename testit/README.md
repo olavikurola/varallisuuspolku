@@ -23,6 +23,7 @@ node testit/selain/smoke-v2.js       # valintamalli, bisektioraahaus, näppäimi
 node testit/selain/smoke-v3.js       # tavoitepisteet, Ratkaise, jako-roundtrip
 node testit/selain/smoke-v4.js       # ensivierailu, jakolinkki→piirtopöytä, copy
 node testit/selain/smoke-mobile-perf.js  # 390 px -näkymät + raahauksen fps
+node testit/selain/smoke-pro.js      # Pro-tila: vipu, säädöt, analyysit, roundtrip
 ```
 
 Sudenkuopat: fi-FI käyttää NBSP-tuhaterottimia (normalisoi ennen vertailua),

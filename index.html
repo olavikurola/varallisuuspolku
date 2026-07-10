@@ -45,6 +45,15 @@
 
   <main class="layout">
     <aside class="panel">
+      <div class="pro-switch" id="proSwitch">
+        <label class="toggle">
+          <input id="proToggle" type="checkbox" />
+          <span class="switch"></span>
+          <span><b>Pro-tila</b> <small>ammattilaisen säädöt ja analyysit</small></span>
+        </label>
+        <a href="#" id="proInfoLink">Mitä Pro sisältää →</a>
+      </div>
+
       <section class="card" data-card="basics">
         <h2>Perustiedot</h2>
         <div class="row2">
@@ -113,6 +122,31 @@
         </label>
       </section>
 
+      <section class="card pro-card" data-card="promkt" hidden>
+        <h2>Markkinaoletukset <i class="pro-tag" aria-hidden="true">Pro</i></h2>
+        <div id="proMkt"></div>
+      </section>
+
+      <section class="card pro-card" data-card="protax" hidden>
+        <h2>Kulut ja verot <i class="pro-tag" aria-hidden="true">Pro</i></h2>
+        <div id="proTax"></div>
+      </section>
+
+      <section class="card pro-card" data-card="prowd" hidden>
+        <h2>Nostostrategia <i class="pro-tag" aria-hidden="true">Pro</i></h2>
+        <div id="proWd"></div>
+      </section>
+
+      <section class="card pro-card" data-card="promc" hidden>
+        <h2>MC-laboratorio <i class="pro-tag" aria-hidden="true">Pro</i></h2>
+        <div id="proMc"></div>
+      </section>
+
+      <section class="card pro-card" data-card="proana" hidden>
+        <h2>Analyysit <i class="pro-tag" aria-hidden="true">Pro</i></h2>
+        <div id="proAna"></div>
+      </section>
+
       <section class="card" data-card="dist">
         <h2>Varallisuusjakauma</h2>
         <div class="dist-wrap">
@@ -151,7 +185,7 @@
       <div class="sr-live" id="ariaLive" aria-live="polite"></div>
       <div class="legend">
         <span class="lg"><i class="sw sw-line"></i>Sijoitusvarallisuus</span>
-        <span class="lg"><i class="sw sw-band"></i>Vaihteluväli</span>
+        <span class="lg"><i class="sw sw-band"></i><span id="legendBandTxt">Vaihteluväli</span></span>
         <span class="lg"><i class="sw sw-dash"></i>Sijoitettu pääoma</span>
         <span class="lg"><i class="sw sw-marker">🏠</i>Elämäntapahtuma</span>
         <span class="lg" id="legendCompare" hidden><i class="sw sw-ghost"></i>Vertailukohta</span>
@@ -170,6 +204,56 @@
       </div>
     </section>
   </main>
+
+  <div class="summary" id="proModal" hidden>
+    <div class="sum-bar">
+      <button class="btn" id="proEnable">Ota Pro käyttöön</button>
+      <button class="btn ghost" id="proCancel">Palaa</button>
+    </div>
+    <div class="sum-sheet info-sheet">
+      <div class="sum-head">
+        <div><h1>Varallisuuspolku Pro</h1>
+        <div class="sum-sub">Ammattilaisen säädöt ja analyysit — sama moottori, oletukset auki</div></div>
+      </div>
+
+      <p>Perusversio vastaa kysymykseen <b>"riittävätkö rahani"</b>. Pro vastaa kysymykseen
+      <b>"kuinka herkkä suunnitelma on oletuksilleen ja millä ehdoilla se kestää"</b> — se avaa
+      lukitut oletukset säädettäviksi ja syventää analyysit. Kaikki laskenta pysyy edelleen
+      omassa selaimessasi, eikä mitään lähetetä mihinkään.</p>
+
+      <h2>📈 Markkinaoletukset ja allokaattori</h2>
+      <p>Omat tuotto-odotukset ja volatiliteetit jokaiselle omaisuusluokalle — ja enintään kolme
+      omaa luokkaa (esim. kiinteistörahasto, kulta). <b>Korrelaatiomatriisi</b> tuo aidon
+      hajautushyödyn laskentaan: perusversio olettaa täyskorrelaation, mikä on turvallisen
+      konservatiivista mutta karkeaa. Lisäksi oma glidepath, inflaatio-oletus ja halutessasi
+      paksuhäntäinen tuottojakauma (Studentin t).</p>
+
+      <h2>🧾 Kulut ja verot</h2>
+      <p>Juoksevat kulut (TER) syövät tuottoa realistisesti. Pääomatuloveron prosentit ja raja
+      ovat muokattavissa, ja hankintameno-olettaman voi ulottaa myös eläkeajan kuukausinostoihin.</p>
+
+      <h2>💶 Nostostrategiat ja kulutuksen vaiheistus</h2>
+      <p>Kiinteän kuukausitulon rinnalle <b>prosentti salkusta</b> ja <b>guardrails</b>
+      (nostotasoa korjataan, jos se karkaa putkesta). Eläkeajan kulutuksen voi vaiheistaa:
+      aktiivivuodet, rauhallisemmat vuodet ja loppuvuodet omilla tasoillaan.</p>
+
+      <h2>🎲 Monte Carlo -laboratorio</h2>
+      <p>Polkumäärä 300–20 000, viuhkan persentiilit valittavissa (P5–P95, P10–P90, P25–P75),
+      siemen vaihdettavissa — ja kolme stressiskenaariota piirtyvät suoraan graafiin:
+      karhumarkkina heti eläkkeellä, stagflaatio ja menetetty vuosikymmen.</p>
+
+      <h2>🔬 Analyysit</h2>
+      <p><b>Ehtymiskäyrä</b> näyttää todennäköisyyden, että varat ovat lopussa ikään mennessä.
+      <b>Tornado-herkkyys</b> kertoo, mihin oletukseen suunnitelma on herkin. <b>Kestävä tulo
+      eläkei'ittäin</b> piirtää, mitä jokainen lykkäysvuosi on arvossaan. Lisäksi enintään kolme
+      nimettyä skenaariota rinnakkaisina haamukäyrinä.</p>
+
+      <h2>Tärkeää</h2>
+      <p>Kaikki Pro-oletukset ovat <b>sinun omia oletuksiasi</b> — palvelu ei suosittele lukuja
+      eikä salkkuja, eikä laskelma ole sijoitusneuvontaa. Suunnitelmani-dokumenttiin tulostuu
+      Pro-tilassa oletusliite, jossa jokainen poikkeama perusoletuksista on auki kirjattu.</p>
+    </div>
+  </div>
 
   <div class="tour" id="tour" hidden aria-live="polite">
     <div class="tour-hole" id="tourHole"></div>
@@ -196,7 +280,9 @@
       <h2>Vinkit</h2>
       <p><b>Piirtopöytä</b> (graafin ⛶-nappi tai F) on nopein tapa suunnitella: tartu käyrään,
       tapahtumaan tai eläkeikäviivaan ja vedä — kone laskee vedon hinnan. <b>Esittelykierros</b>
-      (☰-valikossa) käy palvelun läpi kahdeksalla klikkauksella.
+      (☰-valikossa) käy palvelun läpi yhdeksällä klikkauksella. <b>Pro-tila</b> (paneelin
+      yläreunan kytkin) avaa ammattilaissäädöt: omat tuotto-oletukset, korrelaatiot,
+      nostostrategiat ja analyysit.
       <b>Esimerkit</b> (Elämäntapahtumat-kortissa) antaa valmiin pohjan eri elämäntilanteisiin. <b>Vertaile</b>
       (☰-valikossa) tallentaa nykyisen suunnitelman haamukäyräksi, jota vasten näet muutosten vaikutuksen.
       <b>Vuositaulukko</b> (graafin alla) näyttää luvut vuosi vuodelta ja vie ne CSV:nä.
