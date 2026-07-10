@@ -1308,6 +1308,7 @@ function announce(msg) {
 // Kerroksittainen Esc piirtotilassa — palauttaa true jos kerros purettiin:
 // raahaus → dialogi → valinta → (false = kutsuja poistuu piirtotilasta)
 function drawEsc() {
+  if (fsAddMenuEl) { closeFsAddMenu(); return true; }
   if (drawState.drag) { drawCancelDrag(); return true; }
   if (openPopoverId != null) { closePopover(); return true; }
   if (drawState.sel) { drawDeselect(); return true; }
@@ -1335,6 +1336,7 @@ function enterFs() {
 
 function exitFs(fromPop = false) {
   if (!fsOn) return;
+  closeFsAddMenu();
   if (drawState.drag) drawCancelDrag();
   drawDeselect(true);
   drawDismissHint();
@@ -1727,11 +1729,14 @@ function drawLayers() {
   const ex = scaleX(a1), ey = scaleY(sim.exp[months]);
   el('circle', { cx: ex, cy: ey, r: sel && sel.kind === 'end' ? 7 : 4.5, class: 'end-handle' + (sel && sel.kind === 'end' ? ' on' : '') }, svg);
 
-  // Hover-esikatselu: koko segmentti hehkuu osoittimen alla — pysyvä
-  // affordanssi (koko käyrä on tartuntapintaa, ei vain yksi piste)
+  // Hover-esikatselu: kaikki tartuttava syttyy osoittimen alla — yhtenäinen
+  // kieli (koko käyrä on tartuntapintaa, ei vain yksi piste; myös viiva)
   const hoverFor = (dd, wd) => el('path', { d: dd, class: 'hover-stroke' + (wd ? ' wd' : ''), fill: 'none' }, svg);
   const hovAcc = hoverFor(pathOf(0, mRet), false);
   const hovWd = retA != null && mRet < months ? hoverFor(pathOf(mRet, months), true) : null;
+  const hovRet = retA != null
+    ? el('line', { x1: scaleX(retA), y1: plot.t, x2: scaleX(retA), y2: plot.t + plot.h, class: 'hover-line' }, svg)
+    : null;
 
   // Osumakerrokset: näkymätön leveä stroke — prioriteetti maalausjärjestyksellä
   // (alin ensin): segmentit < eläkeikäviiva < tavoitepisteet < tapahtumamerkit.
@@ -1749,10 +1754,15 @@ function drawLayers() {
   };
   hit(pathOf(0, mRet), 'acc', null, hovAcc);
   if (retA != null && mRet < months) hit(pathOf(mRet, months), 'wd', null, hovWd);
-  if (retA != null) hit(`M ${scaleX(retA).toFixed(1)} ${plot.t} L ${scaleX(retA).toFixed(1)} ${plot.t + plot.h}`, 'retline', null);
+  if (retA != null) hit(`M ${scaleX(retA).toFixed(1)} ${plot.t} L ${scaleX(retA).toFixed(1)} ${plot.t + plot.h}`, 'retline', null, hovRet);
   drawGoalMarkers(true); // tavoitepisteet: osuma viivan yläpuolella
   const endHit = el('circle', { cx: ex, cy: ey, r: 20, class: 'hit', fill: 'transparent', 'pointer-events': 'all' }, svg);
   endHit.addEventListener('pointerdown', (e) => drawPointerDown(e, 'end', null));
+  const endHandle = svg.querySelector('circle.end-handle');
+  if (endHandle) {
+    endHit.addEventListener('pointerenter', () => { if (!drawState.drag) endHandle.classList.add('hov'); });
+    endHit.addEventListener('pointerleave', () => endHandle.classList.remove('hov'));
+  }
 }
 
 // Valitun kohteen sijainti aikajanalla: pystykatkoviiva + korostettu ikä
@@ -1969,6 +1979,31 @@ function drawGuides() {
       + ` M ${rx + 24} ${ry - 5} L ${rx + 31} ${ry} L ${rx + 24} ${ry + 5}`);
     label(g2, rx, ry - 18, 'Tartu viivaan ja vedä — eläkeikä siirtyy');
   }
+
+  // Kolmas arketyyppi: napautettavat kohteet. Kaikki valittavat (merkit,
+  // tavoitepisteet, loppupiste) välähtävät vuorotellen — "nämä ovat eläviä" —
+  // ja ensimmäinen merkki saa tekstiopasteen. Opasteet piirretään markereiden
+  // jälkeen, joten kohteiden paikat voi lukea suoraan DOMista.
+  const tapTargets = [
+    ...svg.querySelectorAll('g.marker circle.bg'),
+    ...svg.querySelectorAll('g.goal-marker .goal-ring'),
+    ...svg.querySelectorAll('circle.end-handle'),
+  ];
+  tapTargets.forEach((c, i) => {
+    const p = el('circle', {
+      cx: c.getAttribute('cx'), cy: c.getAttribute('cy'),
+      r: (parseFloat(c.getAttribute('r')) || 8) + 3,
+      class: 'tap-pulse',
+    }, svg);
+    p.style.animationDelay = (i * 0.45) + 's';
+  });
+  const firstMark = svg.querySelector('g.marker circle.bg');
+  if (firstMark) {
+    const fx = parseFloat(firstMark.getAttribute('cx'));
+    const fy = parseFloat(firstMark.getAttribute('cy'));
+    const g3 = el('g', { class: 'guide' }, svg);
+    label(g3, fx, fy - 34 > plot.t + 16 ? fy - 34 : fy + 40, 'Napauta ja vedä — tapahtuman ikä ja summa');
+  }
 }
 
 /* --- Tavoitepisteet: mittari ensin, ratkaisu vasta pyynnöstä --- */
@@ -2127,19 +2162,58 @@ onSolveGoalsMsg = function (d) {
   applyGoalSolution(d.result, conf, state.events.filter((e) => e.type === 'goal'));
 };
 
+/* ＋ Lisää -valikko: paletti on piilossa fs-tilassa — valikosta lisätään
+   tavoitepiste tai mikä tahansa elämäntapahtuma poistumatta piirtopöydältä.
+   Lisätty kohde valitaan heti, jotta sen voi raahata suoraan paikoilleen. */
+
+let fsAddMenuEl = null;
+
+function closeFsAddMenu() {
+  if (fsAddMenuEl) { fsAddMenuEl.remove(); fsAddMenuEl = null; }
+}
+
+function addFromFs(type) {
+  closeFsAddMenu();
+  const defAge = type === 'retirement' ? 65
+    : type === 'goal' && sim && sim.retireAge != null ? Math.round(sim.retireAge)
+    : state.ageNow + 5;
+  const ev = addEvent(type, clamp(defAge, type === 'goal' ? state.ageNow + 1 : state.ageNow, state.ageEnd));
+  if (fsOn && ev) {
+    closePopover();
+    drawSelect(ev.type === 'retirement' ? 'retline' : ev.type === 'goal' ? 'goal' : 'event',
+      ev.type === 'retirement' ? null : ev.id);
+    announce(`${evLabel(ev)} lisätty — raahaa paikoilleen`);
+  }
+}
+
+function openFsAddMenu(anchor) {
+  if (fsAddMenuEl) { closeFsAddMenu(); return; }
+  const menu = document.createElement('div');
+  menu.className = 'menu fs-add-menu';
+  const add = (icon, name, fn) => {
+    const b = document.createElement('button');
+    b.innerHTML = `<span class="ic" aria-hidden="true">${icon}</span>${name}`;
+    b.addEventListener('click', fn);
+    menu.appendChild(b);
+    return b;
+  };
+  add('🎯', 'Varallisuustavoite', () => addFromFs('goal')).classList.add('wide');
+  for (const [type, def] of Object.entries(EVENT_TYPES)) {
+    if (type === 'goal') continue;
+    if (def.unique && state.events.some((e) => e.type === type)) continue; // esim. eläke jo graafilla
+    add(def.icon, def.label, () => addFromFs(type));
+  }
+  document.body.appendChild(menu);
+  const r = anchor.getBoundingClientRect();
+  menu.style.top = r.bottom + 8 + 'px';
+  menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 10)) + 'px';
+  fsAddMenuEl = menu;
+}
+
 function bindDraw() {
   $('fsOpen').addEventListener('click', enterFs);
   $('fsClose').addEventListener('click', () => exitFs());
-  // Tavoitepisteen lisäys piirtopöydältä (paletti on piilossa fs-tilassa):
-  // piste asettuu oletukseen — eläkeikä, käyrän lähin pyöreä summa
-  $('hudGoalBtn').addEventListener('click', () => {
-    const defAge = sim && sim.retireAge != null ? Math.round(sim.retireAge) : state.ageNow + 10;
-    const ev = addEvent('goal', clamp(defAge, state.ageNow + 1, state.ageEnd));
-    if (fsOn && ev) {
-      closePopover();
-      drawSelect('goal', ev.id);
-    }
-  });
+  $('fsAddBtn').addEventListener('click', () => openFsAddMenu($('fsAddBtn')));
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'f' && e.key !== 'F') return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -2994,6 +3068,7 @@ function openExamplesMenu(anchor) {
 document.addEventListener('pointerdown', (e) => {
   if (examplesMenuEl && !examplesMenuEl.contains(e.target) && !(e.target.closest && e.target.closest('.examples-trigger'))) closeExamplesMenu();
   if (moreMenuEl && !moreMenuEl.contains(e.target) && e.target.id !== 'moreBtn') closeMoreMenu();
+  if (fsAddMenuEl && !fsAddMenuEl.contains(e.target) && e.target.id !== 'fsAddBtn') closeFsAddMenu();
 });
 
 /* ===================== ⋯-valikko ===================== */

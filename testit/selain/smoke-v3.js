@@ -156,6 +156,20 @@ const { chromium } = require('playwright');
   await page.waitForTimeout(300);
   ok(await page.evaluate(() => !state.events.some((e) => e.type === 'goal')), 'Poista-toiminto poistaa pisteen');
 
+  // 10) ＋ Lisää -valikko piirtopöydällä: tavoite ja tapahtumat ilman palettia
+  await page.click('#fsAddBtn');
+  await page.waitForTimeout(250);
+  ok(await page.evaluate(() => !!document.querySelector('.fs-add-menu')), '＋ Lisää avaa valikon');
+  const menuTxt = await page.evaluate(() => document.querySelector('.fs-add-menu').textContent);
+  ok(menuTxt.includes('Varallisuustavoite') && menuTxt.includes('Lapsi'), 'valikossa tavoite ja tapahtumat', menuTxt.slice(0, 60));
+  ok(!menuTxt.includes('Eläkkeelle'), 'jo graafilla oleva unique-tapahtuma ei listaudu');
+  await page.evaluate(() => { [...document.querySelectorAll('.fs-add-menu button')].find((b) => b.textContent.includes('Lapsi')).click(); });
+  await page.waitForTimeout(300);
+  ok(await page.evaluate(() => state.events.some((e) => e.type === 'child')), 'valikosta lisätty tapahtuma');
+  ok(await page.evaluate(() => drawState.sel && drawState.sel.kind === 'event'), 'lisätty kohde valittu raahausta varten');
+  ok(await page.evaluate(() => !document.querySelector('.fs-add-menu')), 'valikko sulkeutui lisäyksestä');
+  ok(await page.evaluate(() => document.getElementById('popover').hidden), 'muokkausdialogi ei ponnahda fs-lisäyksessä');
+
   ok(errors.length === 0, 'ei konsolivirheitä', errors.join(' | '));
 
   await browser.close();
