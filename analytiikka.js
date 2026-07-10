@@ -332,7 +332,7 @@ function renderGate(me) {
     ? `<div class="an-lock-card"><div class="ic">🗺️</div><h2>Melkein valmista</h2>
        <p>Sinulla on jo oma suunnitelma. Vaurastumisen kartta aukeaa, kun jaat sen
        <b>anonyymisti</b> — näet ensin täsmälleen mitä jaetaan, eikä se velvoita mihinkään.</p>
-       <a class="btn" href="./#yhteenveto">Avaa yhteenveto ja jaa →</a>
+       <a class="btn" href="./#yhteenveto">Avaa Suunnitelmani ja jaa →</a>
        <p class="small">Ei tunnisteita · summat pyöristetään · jakaumat julkaistaan vasta
        ≥ 30 suunnitelman ryhmistä · aggregaatit ovat avointa dataa:
        <a href="${DATA_API}/stats.json" target="_blank" rel="noopener">stats.json</a></p></div>`

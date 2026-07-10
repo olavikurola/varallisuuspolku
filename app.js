@@ -3150,7 +3150,7 @@ function bindActions() {
   if (dr) dr.addEventListener('click', (e) => {
     e.preventDefault();
     setDonateState({ declined: false });
-    toast('Valinta nollattu — kysymys näytetään taas yhteenvedossa.');
+    toast('Valinta nollattu — kysymys näytetään taas Suunnitelmani-sivulla.');
   });
 
   $('cmpUpdate').addEventListener('click', () => setBaseline());

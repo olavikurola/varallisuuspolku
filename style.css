@@ -97,12 +97,8 @@ body {
   border-color: rgba(248, 113, 113, 0.45);
   background: rgba(248, 113, 113, 0.08);
 }
-.btn.ghost.more-btn {
-  font-size: 18px;
-  font-weight: 700;
-  padding: 4px 13px 10px;
-  line-height: 1;
-}
+.btn.ghost.more-btn { gap: 8px; }
+.more-btn .mb-ic { font-size: 14px; line-height: 1; opacity: 0.85; }
 
 /* ---------- Layout ---------- */
 .layout {

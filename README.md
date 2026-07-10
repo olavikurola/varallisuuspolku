@@ -42,7 +42,7 @@ sisällön näkee kokonaisuudessaan ennen jakamista.
 - **PWA / offline** — asennettava sovellus, joka toimii myös ilman verkkoyhteyttä
 - **Anonyymi vertailudata** — jaa halutessasi suunnitelmasi anonyymisti ja näe, miten eri ikäiset suunnittelevat talouttaan: jakaumat ikäryhmittäin (P25/mediaani/P75) ja tapahtumien yleisyys; aggregaatit avoimena datana ([palvelin/](palvelin/))
 - **Vaurastumisen kartta** — avoin analytiikkasivu ([analytiikka.html](analytiikka.html)): varallisuusvyöhyke iän yli, elämäntapahtumien "elämän kartta", eläkehaaveet, riskinotto ja asuntolainatilastot — oma suunnitelma näkyy kaavioissa paikallisesti
-- **Tulostettava yhteenveto** — tavoitedokumentti suunnitelman kulmakivistä ja keskustelunaiheista, minä-muodossa esim. varainhoitajalle annettavaksi; ei sijoitusneuvontaa
+- **Suunnitelmani-dokumentti** — tulostettava tavoitedokumentti suunnitelman kulmakivistä ja keskustelunaiheista, minä-muodossa esim. varainhoitajalle annettavaksi; ei sijoitusneuvontaa
 
 ## Show HN -otsikkoluonnos
 
