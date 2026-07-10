@@ -165,21 +165,6 @@ body {
   margin-left: auto;
 }
 
-/* Aloituspolun askelnumerot — näkyvät vain kun aloitusvinkki on aktiivinen */
-.step-badge {
-  display: inline-grid;
-  place-items: center;
-  width: 17px;
-  height: 17px;
-  border-radius: 50%;
-  background: rgba(45, 212, 191, 0.18);
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 700;
-  font-style: normal;
-  letter-spacing: 0;
-  flex: 0 0 auto;
-}
 .panel .card[data-card] h2:hover { color: var(--text); }
 .panel .card.collapsed h2 { margin-bottom: 0; }
 .panel .card.collapsed h2::after { content: '▸'; }
@@ -412,42 +397,6 @@ input[type="range"]::-moz-range-thumb {
 .disclaimer { font-size: 11px; color: var(--text-faint); line-height: 1.5; margin: 4px 4px 0; }
 .disclaimer a { color: var(--text-dim); }
 .disclaimer a:hover { color: var(--accent); }
-
-/* ---------- Aloitusvinkki ---------- */
-.onboard {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 20px;
-  padding: 11px 16px;
-  background: linear-gradient(135deg, rgba(45, 212, 191, 0.09), rgba(139, 124, 246, 0.09));
-  border: 1px solid rgba(45, 212, 191, 0.28);
-  border-radius: 13px;
-  font-size: 13px;
-  flex: 0 0 auto;
-}
-.onboard b { font-size: 13px; }
-.onboard span { display: inline-flex; align-items: center; gap: 7px; color: var(--text-dim); }
-.onboard span i {
-  font-style: normal;
-  font-size: 11px;
-  font-weight: 700;
-  width: 18px; height: 18px;
-  display: grid; place-items: center;
-  border-radius: 50%;
-  background: rgba(45, 212, 191, 0.18);
-  color: var(--accent);
-}
-.onboard .btn { padding: 5px 12px; font-size: 12px; white-space: nowrap; }
-.onboard .btn.ghost { margin-left: auto; }
-/* Askeleet ovat klikattavia oikopolkuja kohteisiinsa */
-.onboard .ob-steps { display: contents; }
-.onboard em { font-style: normal; }
-.onboard .sts { display: none; }
-.onboard .ob-steps span { cursor: pointer; }
-.onboard .ob-steps span:hover { color: var(--text); }
-.onboard .ob-steps span:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
-.onboard .oc-short { display: none; }
 
 /* ---------- Stats ---------- */
 .stats {
@@ -1216,25 +1165,6 @@ input[type="range"]::-moz-range-thumb {
      Suunnitelmani (päätoiminto) sen jälkeen */
   .btn { padding: 7px 12px; flex: 0 0 auto; }
 
-  /* Aloitusvinkki: pelkkä klikattava numeropolku + huomaamaton ✕ yhdellä
-     rivillä — Kokeile esimerkkiä löytyy askeleen ② takaa (Esimerkit-linkki) */
-  .onboard { gap: 8px 10px; padding: 8px 10px 8px 12px; flex-wrap: nowrap; }
-  .onboard .ob-long, .onboard .stl, .onboard #onboardExamples { display: none; }
-  .onboard .sts { display: inline; }
-  .onboard .ob-steps {
-    display: flex;
-    flex: 1 1 auto;
-    min-width: 0;
-    gap: 12px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .onboard .ob-steps::-webkit-scrollbar { display: none; }
-  .onboard .ob-steps span { flex: 0 0 auto; }
-  .onboard .oc-long { display: none; }
-  .onboard .oc-short { display: inline; }
-  .onboard #onboardClose { padding: 3px 9px; font-size: 13px; }
-
   /* Tiiviimmät reunukset — sisältö saa tilan */
   .chart-col { padding: 12px; gap: 10px; }
   .panel { padding: 12px 12px 20px; }
@@ -1281,7 +1211,7 @@ input[type="range"]::-moz-range-thumb {
 
 body.fs { overflow: hidden; }
 body.fs .topbar, body.fs .panel, body.fs .stats, body.fs .compare-bar,
-body.fs .legend, body.fs .balance-panel, body.fs .onboard { display: none !important; }
+body.fs .legend, body.fs .balance-panel { display: none !important; }
 body.fs .layout { display: block; min-height: 0; }
 body.fs .chart-col {
   position: fixed; inset: 0; z-index: 60;
@@ -1501,3 +1431,33 @@ body.fs .chart-wrap:focus:not(:focus-visible) { outline: none; }
 @media print {
   .table-scroll { overflow: visible; }
 }
+
+/* ---------- Esittelykierros: spotlight + kortti ---------- */
+.tour { position: fixed; inset: 0; z-index: 200; }
+.tour-hole {
+  position: absolute;
+  border-radius: 14px;
+  /* valokeila: kaikki muu tummenee yhden laatikon varjolla */
+  box-shadow: 0 0 0 200vmax rgba(6, 9, 18, 0.74);
+  border: 1.5px solid rgba(45, 212, 191, 0.55);
+  transition: left 0.3s ease, top 0.3s ease, width 0.3s ease, height 0.3s ease;
+  pointer-events: none;
+}
+.tour-hole.none { border-color: transparent; }
+.tour-card {
+  position: absolute;
+  width: min(340px, calc(100vw - 24px));
+  background: #141c33;
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  border-radius: 14px;
+  padding: 15px 17px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  transition: top 0.3s ease, left 0.3s ease;
+}
+.tour-card h3 { margin: 0 0 6px; font-size: 15px; }
+.tour-card p { margin: 0 0 12px; font-size: 13px; color: var(--text-dim); line-height: 1.55; }
+.tour-dots { display: flex; gap: 5px; margin-bottom: 10px; }
+.tour-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(148, 168, 220, 0.25); }
+.tour-dots i.on { background: var(--accent); }
+.tour-actions { display: flex; justify-content: space-between; gap: 8px; }
+.tour-actions .btn { padding: 6px 13px; font-size: 12.5px; }

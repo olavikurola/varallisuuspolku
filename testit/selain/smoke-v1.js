@@ -13,7 +13,7 @@ const { chromium } = require('playwright');
   const ok = (c, n, d = '') => { if (c) console.log('  ✓ ' + n); else { failed++; console.error('  ✗ ' + n + (d ? ' — ' + d : '')); } };
 
   await page.goto('http://localhost:8123/', { waitUntil: 'networkidle' });
-  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-tour-done', '1'); }); // kierros testataan erikseen
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(400);
   // Ensivierailu avaa piirtopöydän automaattisesti (V4) — palataan normaalitilaan

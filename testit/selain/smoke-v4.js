@@ -14,7 +14,7 @@ const { chromium } = require('playwright');
 
   // 1) Ensivierailu: piirtopöytä aukeaa esimerkillä, pulssivihje näkyy
   await page.goto('http://localhost:8123/', { waitUntil: 'networkidle' });
-  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-tour-done', '1'); }); // kierros testataan erikseen
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(600);
   ok(await page.evaluate(() => document.body.classList.contains('fs')), 'ensivierailu avaa piirtopöydän');
@@ -87,6 +87,40 @@ const { chromium } = require('playwright');
   ok(title.includes('Varallisuuspolku') && title.includes('Wealth Path'), 'title: Varallisuuspolku · Wealth Path', title);
   const og = await page.evaluate(() => document.querySelector('meta[property="og:title"]').content);
   ok(og.includes('Wealth Path'), 'og:title päivitetty', og);
+
+  // 5) Esittelykierros: käynnistyy ensivierailijalle piirtopöydältä
+  // poistuttaessa, kulkee 8 askelta ja päättyy piirtopöytään
+  await page.evaluate(() => localStorage.clear());
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForTimeout(600);
+  await page.keyboard.press('Escape'); // pois piirtopöydältä
+  await page.waitForTimeout(800);      // maybeStartTour-viive
+  ok(await page.evaluate(() => !document.getElementById('tour').hidden), 'kierros käynnistyy ensivierailijalle');
+  ok(await page.evaluate(() => document.getElementById('tourCard').textContent.includes('Tervetuloa')), 'aloituskortti näkyy');
+  for (let i = 0; i < 7; i++) { await page.click('#tourNext'); await page.waitForTimeout(180); }
+  ok(await page.evaluate(() => document.getElementById('tourCard').textContent.includes('Valikko')), 'viimeinen askel: Valikko');
+  await page.waitForTimeout(450); // valokeilan siirtymäanimaatio loppuun
+  const spot = await page.evaluate(() => {
+    const h = document.getElementById('tourHole').getBoundingClientRect();
+    const m = document.getElementById('moreBtn').getBoundingClientRect();
+    return h.left <= m.left + 2 && h.right >= m.right - 2;
+  });
+  ok(spot, 'valokeila osoittaa kohteeseen');
+  await page.click('#tourNext'); // "Ala piirtää" → piirtopöytä
+  await page.waitForTimeout(500);
+  ok(await page.evaluate(() => document.getElementById('tour').hidden), 'kierros päättyy viimeisestä askeleesta');
+  ok(await page.evaluate(() => document.body.classList.contains('fs')), 'lopetus avaa piirtopöydän');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(700);
+  ok(await page.evaluate(() => document.getElementById('tour').hidden), 'kierros ei toistu (localStorage)');
+  await page.evaluate(() => openMoreMenu(document.getElementById('moreBtn')));
+  await page.waitForTimeout(200);
+  await page.click('#mi-tour');
+  await page.waitForTimeout(300);
+  ok(await page.evaluate(() => !document.getElementById('tour').hidden), 'uusintakierros ☰-valikosta');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+  ok(await page.evaluate(() => document.getElementById('tour').hidden), 'Esc sulkee kierroksen');
 
   ok(errors.length === 0, 'ei konsolivirheitä', errors.join(' | '));
 

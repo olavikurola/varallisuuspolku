@@ -126,16 +126,6 @@
     </aside>
 
     <section class="chart-col">
-      <div class="onboard" id="onboard" hidden>
-        <b class="ob-long">Näin pääset alkuun:</b>
-        <div class="ob-steps">
-          <span data-step="basics" role="button" tabindex="0"><i aria-hidden="true">1</i><em class="stl">Syötä perustiedot</em><em class="sts">Perustiedot</em></span>
-          <span data-step="events" role="button" tabindex="0"><i aria-hidden="true">2</i><em class="stl">Raahaa tapahtumat graafille</em><em class="sts">Tapahtumat</em></span>
-          <span data-step="summary" role="button" tabindex="0"><i aria-hidden="true">3</i><em class="stl">Avaa Suunnitelmani</em><em class="sts">Suunnitelmani</em></span>
-        </div>
-        <button class="btn examples-trigger" id="onboardExamples">Kokeile esimerkkiä</button>
-        <button class="btn ghost" id="onboardClose" aria-label="Sulje vinkki"><span class="oc-long">Selvä ✓</span><span class="oc-short" aria-hidden="true">✕</span></button>
-      </div>
       <div class="hud" id="hud" hidden>
         <div class="hud-metrics" id="hudMetrics"></div>
         <div class="hud-actions">
@@ -182,6 +172,11 @@
     </section>
   </main>
 
+  <div class="tour" id="tour" hidden aria-live="polite">
+    <div class="tour-hole" id="tourHole"></div>
+    <div class="tour-card" id="tourCard" role="dialog" aria-label="Esittelykierros"></div>
+  </div>
+
   <div class="summary" id="infoModal" hidden>
     <div class="sum-bar">
       <button class="btn ghost" id="infoClose">Sulje</button>
@@ -200,8 +195,11 @@
       dokumentiksi, jonka voi antaa vaikka varainhoitajalle keskustelun pohjaksi.</p>
 
       <h2>Vinkit</h2>
-      <p><b>Esimerkit</b> (Elämäntapahtumat-kortissa) antaa valmiin pohjan eri elämäntilanteisiin. <b>Vertaile</b>
-      (⋯-valikossa) tallentaa nykyisen suunnitelman haamukäyräksi, jota vasten näet muutosten vaikutuksen.
+      <p><b>Piirtopöytä</b> (graafin ⛶-nappi tai F) on nopein tapa suunnitella: tartu käyrään,
+      tapahtumaan tai eläkeikäviivaan ja vedä — kone laskee vedon hinnan. <b>Esittelykierros</b>
+      (☰-valikossa) käy palvelun läpi kahdeksalla klikkauksella.
+      <b>Esimerkit</b> (Elämäntapahtumat-kortissa) antaa valmiin pohjan eri elämäntilanteisiin. <b>Vertaile</b>
+      (☰-valikossa) tallentaa nykyisen suunnitelman haamukäyräksi, jota vasten näet muutosten vaikutuksen.
       <b>Vuositaulukko</b> (graafin alla) näyttää luvut vuosi vuodelta ja vie ne CSV:nä.
       <b>Ctrl+Z</b> kumoaa viimeisimmän muutoksen, ja tapahtuman voi <b>monistaa</b>
       muokkausikkunasta (esim. toinen lapsi). Suunnitelmani-sivun <b>Kopioi jakolinkki</b> jakaa

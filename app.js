@@ -846,7 +846,6 @@ function addEvent(type, age) {
 function openPopover(id) {
   const ev = state.events.find((e) => e.id === id);
   if (!ev) return;
-  dismissOnboard(); // käyttäjä on jo vauhdissa — vinkki pois
   openPopoverId = id;
   const def = EVENT_TYPES[ev.type];
 
@@ -1279,6 +1278,7 @@ document.addEventListener('pointerdown', (e) => {
 });
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
+  if (tourStep >= 0) { endTour(); return; }
   if (fsOn) {
     // Piirtopöydässä Esc purkaa yhden kerroksen kerrallaan
     if (!drawEsc()) exitFs();
@@ -1349,6 +1349,7 @@ function exitFs(fromPop = false) {
   if (!fromPop && history.state && history.state.fs) { try { history.back(); } catch (e) {} }
   renderChart();
   announce('Piirtopöytä suljettu');
+  maybeStartTour(); // ensivierailija saa kojelaudan esittelykierroksen
 }
 
 window.addEventListener('popstate', () => { if (fsOn) exitFs(true); });
@@ -1376,7 +1377,7 @@ updateHud = function () {
     curP != null ? Math.round(curP * 100) + ' %' : '–',
     curP != null && ghostP != null ? Math.round(curP * 100) - Math.round(ghostP * 100) : null,
     1, (x) => `${x} %-yks`, sim.successStale ? ' stale' : '');
-  metric('Eläkeiässä',
+  metric('Varallisuus eläkeiässä',
     sim.wAtRet != null ? fmtCompact(sim.wAtRet) : '–',
     sim.wAtRet != null && g && g.wAtRet != null ? sim.wAtRet - g.wAtRet : null,
     500, fmtCompact, '');
@@ -2141,6 +2142,7 @@ function bindDraw() {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'f' && e.key !== 'F') return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (tourStep >= 0) return; // kierroksen aikana kerros pysyy paikallaan
     const t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
     e.preventDefault();
@@ -2709,47 +2711,133 @@ function bindInputs() {
   $('tax').addEventListener('change', (e) => { state.tax = e.target.checked; renderAll(); });
 }
 
-/* ===================== Aloitusvinkki ===================== */
-// Näytetään vain ensikäynnillä; poistuu kuittauksesta tai heti kun käyttäjä
-// alkaa oikeasti käyttää sovellusta (avaa tapahtuman tai lataa esimerkin).
+/* ===================== Esittelykierros ===================== */
+// Spotlight-kierros ensikertalaiselle: tummennettu kerros, valokeila kohteen
+// ympärillä ja kortti, joka kuljettaa kahdeksalla klikkauksella palvelun läpi.
+// Käynnistyy kerran, kun ensivierailija poistuu piirtopöydältä kojelaudalle;
+// uusintakierros löytyy ☰-valikosta. Korvasi aiemman aloitusvinkkipalkin.
 
-const ONBOARD_KEY = 'vp-onboarded';
+const TOUR_KEY = 'vp-tour-done';
+let tourStep = -1;
 
-function dismissOnboard() {
-  const el = $('onboard');
-  if (el && !el.hidden) el.hidden = true;
-  for (const b of document.querySelectorAll('.step-badge')) b.remove();
-  try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (e) {}
+const TOUR_STEPS = [
+  { t: 'Tervetuloa Varallisuuspolkuun', s: null,
+    x: 'Koko elinkaaresi talous yhdellä näkymällä: säästöt, isot hankinnat ja eläke. Kaikki laskenta ja data pysyvät omassa selaimessasi. Kierros kestää alle minuutin.' },
+  { t: 'Perustiedot', s: '.card[data-card="basics"]',
+    x: 'Ikä, nykyinen varallisuus ja kuukausisäästö. Jokainen muutos päivittää koko laskennan heti.' },
+  { t: 'Elämäntapahtumat', s: '.card[data-card="events"]',
+    x: 'Raahaa tapahtuma graafille tai napauta sitä: asunto, lapsi, perintö… Lainallisissa on korko ja kuukausierä mukana. Valmiit pohjat löytyvät Esimerkeistä.' },
+  { t: 'Elinkaarigraafi', s: '#chartWrap',
+    x: 'Viiva on odotettu kehitys ja vyöhyke markkinoiden vaihteluväli tuhansista satunnaisista poluista. Liikuta kohdistinta, niin näet luvut missä tahansa iässä.' },
+  { t: 'Tunnusluvut', s: '#stats',
+    x: 'Seuraukset yhdellä rivillä — tärkeimpänä onnistumistodennäköisyys: kuinka suuri osa markkinapoluista riittää suunnitelman loppuun asti.' },
+  { t: 'Piirtopöytä', s: '#fsOpen',
+    x: 'Tästä (tai F) aukeaa kokoruudun piirtotila: tartu käyrään, tapahtumaan tai eläkeikäviivaan ja vedä — kone laskee jokaisen vedon hinnan. 🎯 lisää varallisuustavoitteen.' },
+  { t: 'Suunnitelmani', s: '#summaryBtn',
+    x: 'Suunnitelmasi tulostettavana dokumenttina — vaikka varainhoitajalle. Jakolinkki kopioi koko suunnitelman talteen tai kaverille.' },
+  { t: 'Valikko', s: '#moreBtn',
+    x: 'Vertailu tallentaa nykyisen suunnitelman haamukäyräksi muutosten taakse. Täältä löytyvät myös Vaurastumisen kartta ja palvelun tiedot.' },
+];
+
+function tourShow(i) {
+  tourStep = i;
+  const st = TOUR_STEPS[i];
+  const tour = $('tour'), hole = $('tourHole'), card = $('tourCard');
+  tour.hidden = false;
+  const target = st.s ? document.querySelector(st.s) : null;
+  if (target) target.scrollIntoView({ block: 'center' });
+
+  const last = i === TOUR_STEPS.length - 1;
+  card.innerHTML =
+    `<div class="tour-dots">${TOUR_STEPS.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>` +
+    `<h3>${st.t}</h3><p>${st.x}</p>` +
+    `<div class="tour-actions">` +
+    `<button class="btn ghost" id="tourSkip">${last ? 'Sulje' : 'Ohita kierros'}</button>` +
+    `<button class="btn" id="tourNext">${last ? 'Ala piirtää ✏' : `Seuraava (${i + 1}/${TOUR_STEPS.length})`}</button>` +
+    `</div>`;
+  $('tourSkip').addEventListener('click', (e) => { e.stopPropagation(); endTour(); });
+  $('tourNext').addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (last) { endTour(); enterFs(); } else tourShow(i + 1);
+  });
+
+  // Mittaus vasta kun scrollIntoView on asettunut
+  requestAnimationFrame(() => {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    if (target) {
+      const r = target.getBoundingClientRect();
+      const pad = 8;
+      hole.style.left = (r.left - pad) + 'px';
+      hole.style.top = (r.top - pad) + 'px';
+      hole.style.width = (r.width + pad * 2) + 'px';
+      hole.style.height = (r.height + pad * 2) + 'px';
+      hole.classList.remove('none');
+    } else {
+      hole.style.left = vw / 2 + 'px';
+      hole.style.top = vh / 2 + 'px';
+      hole.style.width = '0px';
+      hole.style.height = '0px';
+      hole.classList.add('none');
+    }
+    const cw = card.offsetWidth, ch = card.offsetHeight;
+    let top, left;
+    if (target) {
+      const r = target.getBoundingClientRect();
+      top = r.bottom + 16;
+      if (top + ch > vh - 12) top = r.top - ch - 16;   // ei mahdu alle → ylle
+      if (top < 12) top = Math.max(12, vh - ch - 16);  // ei ylle → alalaitaan
+      left = clamp(r.left + r.width / 2 - cw / 2, 12, Math.max(12, vw - cw - 12));
+    } else {
+      top = vh * 0.42 - ch / 2;
+      left = (vw - cw) / 2;
+    }
+    card.style.top = Math.round(top) + 'px';
+    card.style.left = Math.round(left) + 'px';
+  });
+  announce(`${st.t}. ${st.x}`);
 }
 
-function initOnboard() {
-  let seen = false;
-  try { seen = localStorage.getItem(ONBOARD_KEY) === '1'; } catch (e) {}
-  if (seen) return;
-  $('onboard').hidden = false;
-  $('onboardClose').addEventListener('click', dismissOnboard);
-  // Askelnumerot piirtävät polun näkymään: ① Perustiedot → ② Elämäntapahtumat → ③ Yhteenveto
-  const put = (el, n) => { if (el) el.insertAdjacentHTML('afterbegin', `<i class="step-badge" aria-hidden="true">${n}</i>`); };
-  put(document.querySelector('.card[data-card="basics"] h2'), 1);
-  put(document.querySelector('.card[data-card="events"] h2'), 2);
-  put($('summaryBtn'), 3);
-  // Askel on oikopolku kohteeseensa — tärkeä etenkin mobiilissa, jossa
-  // kortit ovat graafin alapuolella
-  for (const s of document.querySelectorAll('.onboard .ob-steps span')) {
-    const go = () => {
-      const t = s.dataset.step;
-      if (t === 'summary') { openSummary(); return; }
-      const card = document.querySelector(`.card[data-card="${t}"]`);
-      if (card) {
-        card.classList.remove('collapsed');
-        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    };
-    s.addEventListener('click', go);
-    s.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
-    });
-  }
+function startTour() {
+  closePopover();
+  closeMoreMenu();
+  closeExamplesMenu();
+  closeSummary();
+  if (fsOn) exitFs();
+  try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) {}
+  tourShow(0);
+}
+
+function endTour() {
+  $('tour').hidden = true;
+  tourStep = -1;
+  try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) {}
+}
+
+// Ensivierailija: kierros alkaa, kun piirtopöydältä palataan kojelaudalle
+function maybeStartTour() {
+  if (visitKind === 'returning') return;
+  let done = false;
+  try { done = localStorage.getItem(TOUR_KEY) === '1'; } catch (e) {}
+  if (done) return;
+  setTimeout(() => { if (!fsOn) startTour(); }, 350);
+}
+
+function bindTour() {
+  // Klikkaus tummennettuun alueeseen vie eteenpäin
+  $('tour').addEventListener('click', () => {
+    if (tourStep < 0) return;
+    if (tourStep === TOUR_STEPS.length - 1) endTour();
+    else tourShow(tourStep + 1);
+  });
+  window.addEventListener('resize', () => { if (tourStep >= 0) tourShow(tourStep); });
+  document.addEventListener('keydown', (e) => {
+    if (tourStep < 0) return;
+    if (e.key === 'Enter' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      if (tourStep === TOUR_STEPS.length - 1) endTour();
+      else tourShow(tourStep + 1);
+    }
+  });
 }
 
 /* ===================== Toast ===================== */
@@ -2882,7 +2970,6 @@ function openExamplesMenu(anchor) {
     b.innerHTML = `<div>${ex.name}</div><div class="mdesc">${ex.desc}</div>`;
     b.addEventListener('click', () => {
       closeExamplesMenu();
-      dismissOnboard();
       pushUndoNow(); // nykyinen suunnitelma talteen ennen korvaamista
       applySaved(JSON.parse(JSON.stringify(ex.data)));
       syncInputs();
@@ -2945,6 +3032,8 @@ function openMoreMenu(anchor) {
     () => { location.href = 'analytiikka.html'; });
   add('mi-info', 'Tietoa palvelusta', 'Oletukset, tietosuoja ja vinkit',
     () => { $('infoModal').hidden = false; });
+  add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti kahdeksalla klikkauksella',
+    () => startTour());
 
   // Nollaus vaatii toisen klikkauksen — valikko pysyy auki vahvistusta varten
   const reset = add('mi-reset', 'Nollaa suunnitelma', 'Aloita puhtaalta pöydältä', null, true);
@@ -3447,7 +3536,7 @@ bindInputs();
 bindActions();
 bindDraw();
 bindPanelCards();
-initOnboard();
+bindTour();
 renderAll();
 pushUndoNow(); // lähtötila kumoamishistorian pohjaksi
 
