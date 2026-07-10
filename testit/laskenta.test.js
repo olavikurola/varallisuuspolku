@@ -122,6 +122,129 @@ console.log('Apurit');
   ok(L.kthSmallest(arr.slice(), 0) === 0 && L.kthSmallest(arr.slice(), 9) === 9 && L.kthSmallest(arr.slice(), 4) === 4, 'kthSmallest');
 }
 
+console.log('Pro: oletusarvot = perustila bitilleen');
+{
+  const a = L.simulate(plan());
+  const st = plan();
+  st.proOn = true;
+  st.pro = L.defaultPro();
+  const b = L.simulate(st);
+  ok(a.exp.every((v, i) => v === b.exp[i]), 'odotuspolku identtinen pro-oletuksilla');
+  ok(a.successProb === b.successProb, 'onnistumis-% identtinen');
+  ok([...a.opt].every((v, i) => v === b.opt[i]), 'viuhka identtinen');
+  st.proOn = false; // vipu pois: pro-asetukset passiivisia
+  st.pro.mu.stocks = 15;
+  const c = L.simulate(st);
+  ok(a.exp.every((v, i) => v === c.exp[i]), 'proOn=false → asetukset eivät vaikuta');
+}
+
+console.log('Pro: markkinaoletukset');
+{
+  const st = plan();
+  st.proOn = true;
+  st.pro = L.defaultPro();
+  st.pro.mu.stocks = 9;
+  const hi = L.simulate(st);
+  ok(hi.wEnd > L.simulate(plan()).wEnd, 'suurempi tuotto-odotus kasvattaa loppuvarallisuutta');
+  // kovarianssi: tyypilliset korrelaatiot < täyskorrelaatio → pienempi σ → parempi onnistumis-%
+  const st2 = plan();
+  st2.proOn = true;
+  st2.pro = L.defaultPro();
+  st2.pro.corr = [0.2, 0, 0.2];
+  const cov = L.simulate(st2);
+  const base = L.simulate(plan());
+  ok(cov.successProb >= base.successProb, 'hajautushyöty ei heikennä onnistumista', `${cov.successProb} vs ${base.successProb}`);
+  ok(cov.exp.every((v, i) => v === base.exp[i]), 'korrelaatiot eivät muuta odotuspolkua');
+  // PSD-pakotus: mahdoton matriisi kutistuu eikä kaada laskentaa
+  const badM = L.corrMatrixOf(3, [1, -0.5, 1]);
+  const fixed = L.ensurePSD(badM);
+  ok(fixed.shrunk === true, 'ei-PSD-matriisi kutistetaan');
+  ok(isFinite(L.portfolioStatsPro([0.5, 0.3, 0.2], L.classesOf(st2), fixed.M, 0).sigma), 'kutistettu matriisi antaa äärellisen σ:n');
+  // TER syö tuottoa
+  const st3 = plan();
+  st3.proOn = true;
+  st3.pro = L.defaultPro();
+  st3.pro.ter = 1;
+  ok(L.simulate(st3).wEnd < base.wEnd, 'TER pienentää loppuvarallisuutta');
+  // t-jakauma: deterministinen ja eri kuin normaali
+  const st4 = plan();
+  st4.proOn = true;
+  st4.pro = L.defaultPro();
+  st4.pro.mc.dist = 't';
+  st4.pro.mc.df = 4;
+  const t1 = L.simulate(st4), t2 = L.simulate(JSON.parse(JSON.stringify(st4)));
+  ok(t1.successProb === t2.successProb, 't-jakauma deterministinen (CRN)');
+  ok(t1.successProb !== base.successProb, 't-jakauma eroaa normaalista');
+  // siemen vaihtaa maailmanhistoriat mutta ei odotuspolkua
+  const st5 = plan();
+  st5.proOn = true;
+  st5.pro = L.defaultPro();
+  st5.pro.mc.seed = 42;
+  const s5 = L.simulate(st5);
+  ok(s5.exp.every((v, i) => v === base.exp[i]), 'siemen ei muuta odotuspolkua');
+}
+
+console.log('Pro: strategiat, vaiheistus ja verot');
+{
+  const base = L.simulate(plan());
+  // %-salkusta: ei ehdy, ratkaisijat ohitetaan
+  const stP = plan();
+  stP.proOn = true;
+  stP.pro = L.defaultPro();
+  stP.pro.wd.mode = 'pct';
+  stP.pro.wd.pct = 4;
+  stP.events.find((e) => e.type === 'retirement').goal = 'withdrawal';
+  const pct = L.simulate(stP);
+  ok(pct.depletionAge == null, 'prosenttistrategia ei ehdy');
+  ok(pct.solvedWithdrawal == null, 'ratkaisija ohitetaan pct-strategiassa');
+  // guardrails: ajautuu ja pysyy äärellisenä; bisektio toimii (endW monotoninen)
+  const stG = plan();
+  stG.proOn = true;
+  stG.pro = L.defaultPro();
+  stG.pro.wd.mode = 'guard';
+  const g = L.simulate(stG);
+  ok(isFinite(g.wEnd), 'guardrails laskee');
+  // vaiheistus: pienempi kulutus loppuiässä → suurempi loppuvarallisuus
+  const stF = plan();
+  stF.proOn = true;
+  stF.pro = L.defaultPro();
+  stF.pro.phases = [{ to: 75, mult: 100 }, { to: 85, mult: 85 }, { to: 200, mult: 70 }];
+  ok(L.simulate(stF).wEnd > base.wEnd, 'go-go/slow-go kasvattaa loppuvarallisuutta');
+  // hankintameno-olettama: vero ei kasva, tyypillisesti pienenee
+  const stA = plan();
+  stA.proOn = true;
+  stA.pro = L.defaultPro();
+  stA.pro.tax.acq = true;
+  ok(L.simulate(stA).taxPaid <= base.taxPaid + 1, 'hankintameno-olettama ei kasvata veroa');
+  // veroparametrit: nollavero = ei veroa
+  const stT = plan();
+  stT.proOn = true;
+  stT.pro = L.defaultPro();
+  stT.pro.tax.low = 0; stT.pro.tax.high = 0;
+  ok(L.simulate(stT).taxPaid < 1, 'nollaveroparametrit nollaavat veron');
+}
+
+console.log('Pro: analyysit ja stressit');
+{
+  const st = plan();
+  st.proOn = true;
+  st.pro = L.defaultPro();
+  st.pro.mc.stress = ['bear', 'lost'];
+  const s = L.simulate(st);
+  ok(Array.isArray(s.stress) && s.stress.length === 2, 'stressipolut lasketaan');
+  ok(s.stress[0].arr.length === s.months + 1, 'stressipolku täysimittainen');
+  ok(s.stress[0].arr[s.months] < s.exp[s.months], 'karhuskenaario odotettua heikompi');
+  ok(s.ruinCurve && s.ruinCurve[s.months] >= 0 && s.ruinCurve[s.months] <= 1, 'ehtymiskäyrä ∈ [0,1]');
+  ok(Math.abs((1 - s.ruinCurve[s.months]) - s.successProb) < 1e-9, 'ehtymiskäyrän loppu = 1 − onnistumis-%');
+  st.pro.mc.pctLo = 5; st.pro.mc.pctHi = 95;
+  const wide = L.simulate(st);
+  ok(wide.pess[600] <= s.pess[600] && wide.opt[600] >= s.opt[600], 'P5–P95 leveämpi kuin P10–P90');
+  const rows = L.tornado(plan());
+  ok(rows.length >= 6 && Math.abs(rows[0].delta) >= Math.abs(rows[rows.length - 1].delta), 'tornado järjestää herkkyydet');
+  const sus = L.sustainableByAge(plan(), 5);
+  ok(sus.length > 5 && sus.every((p, i) => i === 0 || p.wd >= sus[i - 1].wd - 1), 'kestävä tulo kasvaa eläkeiän myötä', JSON.stringify(sus.slice(0, 3)));
+}
+
 console.log('Varmuustaso-ratkaisu (karkea→tarkka)');
 {
   const st = plan();
