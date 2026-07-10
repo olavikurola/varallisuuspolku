@@ -1727,27 +1727,28 @@ function drawLayers() {
   const ex = scaleX(a1), ey = scaleY(sim.exp[months]);
   el('circle', { cx: ex, cy: ey, r: sel && sel.kind === 'end' ? 7 : 4.5, class: 'end-handle' + (sel && sel.kind === 'end' ? ' on' : '') }, svg);
 
-  // Gripit: hillityt tartuntapisteet segmenttien keskellä; pulssi opastustilassa
-  const grip = (m) => {
-    const g = el('g', { class: 'grip' + (drawGuideOn ? ' pulse' : '') }, svg);
-    const gx = scaleX(a0 + m / 12), gy = scaleY(sim.exp[m]);
-    for (const dx of [-7, 0, 7]) el('circle', { cx: gx + dx, cy: gy, r: 2 }, g);
-  };
-  grip(Math.max(6, Math.round(mRet / 2)));
-  if (retA != null && mRet < months - 6) grip(mRet + Math.round((months - mRet) / 2));
+  // Hover-esikatselu: koko segmentti hehkuu osoittimen alla — pysyvä
+  // affordanssi (koko käyrä on tartuntapintaa, ei vain yksi piste)
+  const hoverFor = (dd, wd) => el('path', { d: dd, class: 'hover-stroke' + (wd ? ' wd' : ''), fill: 'none' }, svg);
+  const hovAcc = hoverFor(pathOf(0, mRet), false);
+  const hovWd = retA != null && mRet < months ? hoverFor(pathOf(mRet, months), true) : null;
 
   // Osumakerrokset: näkymätön leveä stroke — prioriteetti maalausjärjestyksellä
   // (alin ensin): segmentit < eläkeikäviiva < tavoitepisteet < tapahtumamerkit.
   // Poikkeama suunnitelman 5.1-järjestykseen (viiva > pisteet): oletuspaikka
   // on eläkeiässä eli viivan päällä — pieni tähtäin voittaa leveän viivan
   // omalla kiekollaan, muuten pistettä ei saisi koskaan kiinni.
-  const hit = (dd, kind, id) => {
+  const hit = (dd, kind, id, hoverEl) => {
     const p = el('path', { d: dd, class: 'hit', fill: 'none', stroke: 'transparent', 'stroke-width': 38, 'pointer-events': 'stroke' }, svg);
     p.addEventListener('pointerdown', (e) => drawPointerDown(e, kind, id));
+    if (hoverEl) {
+      p.addEventListener('pointerenter', () => { if (!drawState.drag) hoverEl.style.opacity = 1; });
+      p.addEventListener('pointerleave', () => { hoverEl.style.opacity = 0; });
+    }
     return p;
   };
-  hit(pathOf(0, mRet), 'acc', null);
-  if (retA != null && mRet < months) hit(pathOf(mRet, months), 'wd', null);
+  hit(pathOf(0, mRet), 'acc', null, hovAcc);
+  if (retA != null && mRet < months) hit(pathOf(mRet, months), 'wd', null, hovWd);
   if (retA != null) hit(`M ${scaleX(retA).toFixed(1)} ${plot.t} L ${scaleX(retA).toFixed(1)} ${plot.t + plot.h}`, 'retline', null);
   drawGoalMarkers(true); // tavoitepisteet: osuma viivan yläpuolella
   const endHit = el('circle', { cx: ex, cy: ey, r: 20, class: 'hit', fill: 'transparent', 'pointer-events': 'all' }, svg);
@@ -1913,12 +1914,10 @@ function drawShowHint() {
   try { tutored = localStorage.getItem(DRAW_TUTOR_KEY) === '1'; } catch (e) {}
   if (tutored) return;
   drawGuideOn = true;
-  $('drawHint').hidden = false;
-  renderChart(true); // haamunuolet + gripit pulssaamaan
+  renderChart(true); // haamunuolet näkyviin
 }
 
 function drawDismissHint() {
-  $('drawHint').hidden = true;
   if (!drawGuideOn) return;
   drawGuideOn = false;
   if (fsOn) renderChart(true);
@@ -1928,45 +1927,47 @@ function drawMarkTutored() {
   try { localStorage.setItem(DRAW_TUTOR_KEY, '1'); } catch (e) {}
 }
 
-// Haamunuolet: pystypari kertymäkäyrällä (säästö joustaa) ja vaakapari
-// eläkeikäviivalla. Piirretään markereiden päälle, ei nappaa osoitinta.
+// Haamunuolet: tartuntakahva käyrällä ja kaksipäinen nuoli KOHTEEN LÄPI —
+// nuoli, kahva ja teksti pysyvät kiinni toisissaan. Ei nappaa osoitinta.
 function drawGuides() {
   if (!drawGuideOn || drawState.sel || drawState.drag || !sim) return;
   const { a0, months } = sim;
   const retA = sim.retireAge;
   const mRet = retA != null ? clamp(Math.round((retA - a0) * 12), 0, months) : months;
-  const mid = Math.max(6, Math.round(mRet / 2));
-  const gx = scaleX(a0 + mid / 12);
-  // Matalalla kulkeva käyrä: ankkuri pysyy piirtoalueella, nuolet eivät
-  // valu akselitekstien päälle
-  const gy = clamp(scaleY(sim.exp[mid]), plot.t + 80, plot.t + plot.h - 52);
+  // Tartuntakohta 2/3 matkaa eläkeikään: yleensä vapaana oletusmerkeistä
+  // ja tarpeeksi korkealla, jotta nuoli ja teksti mahtuvat
+  const mG = Math.max(6, Math.round(mRet * 2 / 3));
+  const gx = scaleX(a0 + mG / 12);
+  const gy = clamp(scaleY(sim.exp[mG]), plot.t + 44, plot.t + plot.h - 36);
 
-  const glyph = (parent, x, y, ch) => {
-    const t = el('text', { x, y, class: 'guide-arrow', 'text-anchor': 'middle' }, parent);
-    t.textContent = ch;
-  };
+  const arrow = (parent, d) => el('path', { d, class: 'guide-arrow-path' }, parent);
   const label = (parent, x, y, txt) => {
     const t = el('text', {
-      x: clamp(x, plot.l + 80, plot.l + plot.w - 80), y,
+      x: clamp(x, plot.l + 100, plot.l + plot.w - 100), y,
       class: 'guide-label', 'text-anchor': 'middle',
     }, parent);
     t.textContent = txt;
   };
 
+  // Kertymäkäyrä: kahvarengas käyräpisteessä + pystynuoli sen läpi
   const g1 = el('g', { class: 'guide' }, svg);
+  el('circle', { cx: gx, cy: gy, r: 6, class: 'guide-handle' }, g1);
   const g1a = el('g', { class: 'guide-bob-y' }, g1);
-  glyph(g1a, gx, gy - 22, '↑');
-  glyph(g1a, gx, gy + 40, '↓');
-  label(g1, gx, gy - 50, 'Tartu käyrään ja vedä — säästö joustaa');
+  arrow(g1a, `M ${gx} ${gy - 30} L ${gx} ${gy - 11} M ${gx} ${gy + 11} L ${gx} ${gy + 30}`
+    + ` M ${gx - 5} ${gy - 24} L ${gx} ${gy - 31} L ${gx + 5} ${gy - 24}`
+    + ` M ${gx - 5} ${gy + 24} L ${gx} ${gy + 31} L ${gx + 5} ${gy + 24}`);
+  label(g1, gx, gy - 46 < plot.t + 18 ? gy + 54 : gy - 46, 'Tartu käyrään ja vedä — säästö joustaa');
 
+  // Eläkeikäviiva: vaakanuoli viivan poikki, merkkipinon alapuolella
   if (retA != null) {
     const rx = scaleX(retA);
-    const gy2 = plot.t + 96;
+    const ry = plot.t + Math.min(150, plot.h * 0.3);
     const g2 = el('g', { class: 'guide' }, svg);
     const g2a = el('g', { class: 'guide-bob-x' }, g2);
-    glyph(g2a, rx - 26, gy2, '←');
-    glyph(g2a, rx + 26, gy2, '→');
-    label(g2, rx, gy2 - 28, 'Eläkeikä — vedä viivaa');
+    arrow(g2a, `M ${rx - 30} ${ry} L ${rx - 8} ${ry} M ${rx + 8} ${ry} L ${rx + 30} ${ry}`
+      + ` M ${rx - 24} ${ry - 5} L ${rx - 31} ${ry} L ${rx - 24} ${ry + 5}`
+      + ` M ${rx + 24} ${ry - 5} L ${rx + 31} ${ry} L ${rx + 24} ${ry + 5}`);
+    label(g2, rx, ry - 18, 'Tartu viivaan ja vedä — eläkeikä siirtyy');
   }
 }
 

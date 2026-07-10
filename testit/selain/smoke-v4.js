@@ -18,7 +18,7 @@ const { chromium } = require('playwright');
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(600);
   ok(await page.evaluate(() => document.body.classList.contains('fs')), 'ensivierailu avaa piirtopöydän');
-  ok(await page.evaluate(() => !document.getElementById('drawHint').hidden), 'pulssivihje näkyy');
+  ok((await page.locator('.guide-handle').count()) === 1, 'tartuntakahva käyrällä');
   ok(await page.evaluate(() => state.events.length >= 3), 'esimerkkisuunnitelma ladattu');
 
   // Aloitusopasteet: haamunuolet näkyvät ennen ensimmäistäkään klikkausta,
@@ -32,7 +32,6 @@ const { chromium } = require('playwright');
   await page.mouse.click(pC.x, pC.y); // tartunta → opasteet pois
   await page.waitForTimeout(250);
   ok((await page.locator('.guide').count()) === 0, 'tartunta piilottaa opasteet');
-  ok(await page.evaluate(() => document.getElementById('drawHint').hidden), 'ohjerivi piiloutuu samalla');
   // ilman suoritettua vetoa opastus palaa seuraavalla avauksella
   await page.keyboard.press('Escape'); // valinta pois
   await page.keyboard.press('Escape'); // ulos

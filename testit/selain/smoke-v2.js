@@ -40,8 +40,8 @@ const { chromium } = require('playwright');
   await page.keyboard.press('f');
   await page.waitForTimeout(500);
   ok(await page.evaluate(() => document.body.classList.contains('fs')), 'piirtopöytä auki (F)');
-  ok(await page.evaluate(() => !document.getElementById('drawHint').hidden), 'ensiavauksen vihje näkyy');
-  ok((await page.locator('.grip').count()) >= 1, 'gripit piirretty');
+  ok((await page.locator('.guide').count()) >= 2, 'haamunuoliopasteet näkyvät');
+  ok((await page.locator('.guide-handle').count()) === 1, 'tartuntakahva käyrällä');
   ok((await page.locator('.hit').count()) >= 3, 'osumakerrokset piirretty');
 
   // 1) Kertymäsegmentti: napautus valitsee — ei vielä säädä

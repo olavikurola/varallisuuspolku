@@ -1294,12 +1294,17 @@ body.fs .fs-open { display: none; }
 .end-handle { fill: #fbbf24; stroke: #0a0e1a; stroke-width: 2; pointer-events: none; opacity: 0.9; }
 .end-handle.on { fill: var(--accent); }
 
-.grip circle { fill: rgba(232, 237, 248, 0.45); pointer-events: none; }
-.grip.pulse circle { animation: gripPulse 2s ease-in-out 3; }
-@keyframes gripPulse {
-  0%, 100% { r: 2; fill: rgba(232, 237, 248, 0.45); }
-  50% { r: 4.5; fill: var(--accent); }
+/* Hover-esikatselu: segmentti hehkuu osoittimen alla — koko käyrä on tartuntapintaa */
+.hover-stroke {
+  stroke: rgba(45, 212, 191, 0.16);
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
 }
+.hover-stroke.wd { stroke: rgba(139, 124, 246, 0.2); }
 
 .marker.sel circle.bg { stroke: var(--accent); }
 
@@ -1341,26 +1346,6 @@ body.fs .fs-open { display: none; }
 .dchip-actions button:hover { background: rgba(45, 212, 191, 0.2); }
 .dchip-actions button.danger { color: var(--danger); border-color: rgba(248, 113, 113, 0.4); background: rgba(248, 113, 113, 0.08); }
 
-/* Ensiavauksen ohjerivi */
-.draw-hint {
-  position: absolute;
-  left: 50%; top: 14px;
-  transform: translateX(-50%);
-  z-index: 24;
-  pointer-events: none;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--accent);
-  background: rgba(10, 14, 26, 0.88);
-  border: 1px dashed rgba(45, 212, 191, 0.5);
-  border-radius: 10px;
-  padding: 8px 16px;
-  max-width: calc(100% - 24px);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* ---------- Tavoitepisteet ---------- */
 .goal-ring { fill: none; stroke: #fbbf24; stroke-width: 2; opacity: 0.9; }
 .goal-ring2 { fill: none; stroke: #fbbf24; stroke-width: 1.2; opacity: 0.55; }
@@ -1374,14 +1359,20 @@ body.fs .fs-open { display: none; }
 body.fs .chart-wrap:focus { outline: 2px solid rgba(45, 212, 191, 0.35); outline-offset: -2px; }
 body.fs .chart-wrap:focus:not(:focus-visible) { outline: none; }
 
-/* Aloitusopasteet: haamunuolet tartuntakohdissa (pelien tutoriaalityyliin) */
+/* Aloitusopasteet: kahva + kaksipäinen nuoli kohteen läpi (pelien tutoriaalityyliin) */
 .guide { pointer-events: none; }
-.guide-arrow {
-  fill: var(--accent);
-  font-size: 21px;
-  font-weight: 800;
-  opacity: 0.9;
-  font-family: inherit;
+.guide-handle {
+  fill: rgba(10, 14, 26, 0.85);
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.guide-arrow-path {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.95;
 }
 .guide-label {
   font-size: 12.5px;
