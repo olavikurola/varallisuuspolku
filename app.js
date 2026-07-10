@@ -4225,7 +4225,10 @@ if (location.hash === '#yhteenveto') {
 // SEO ei kärsi: piirtotila on CSS-kerros, sisältö pysyy DOMissa.
 if (visitKind !== 'returning' && $('summary').hidden) enterFs();
 
-new ResizeObserver(() => { renderChart(); }).observe(wrap);
+// Koon muutos vaatii vain geometrian uusiksi — sim ei riipu koosta.
+// (Täysi render tässä loisi silmukan: workerin tulos muuttaa tunnuslukujen
+// rivitystä → korkeus värähtää → täysi render pyyhkisi tuloksen ja tilaisi uuden.)
+new ResizeObserver(() => { if (sim) renderChart(true); }).observe(wrap);
 
 // Offline-tuki: service worker välimuistittaa sovelluksen (verkko ensin,
 // välimuisti varalla) — asennettuna PWA toimii ilman verkkoyhteyttä

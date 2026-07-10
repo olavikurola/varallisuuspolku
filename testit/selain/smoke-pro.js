@@ -96,6 +96,14 @@ const { chromium } = require('playwright');
   await page.selectOption('[data-pact="paths"]', '1000');
   await settle(1000);
   ok(await page.evaluate(() => sim.mcPaths === 1000), 'polkumäärä vaihtuu (worker)');
+  // 20 000: tulos jää voimaan myös kun layout elää (ResizeObserver-regressio)
+  await page.selectOption('[data-pact="paths"]', '20000');
+  await settle(20000);
+  ok(await page.evaluate(() => sim.mcPaths === 20000), '20 000 polkua pysyy voimassa');
+  await page.waitForTimeout(1200);
+  ok(await page.evaluate(() => sim.mcPaths === 20000 && !sim.successStale), 'tulos ei pyyhkiydy uudella renderillä');
+  await page.selectOption('[data-pact="paths"]', '5000');
+  await settle(5000);
   await page.selectOption('[data-pact="pcts"]', '5-95');
   await settle(1000);
   ok(await page.evaluate(() => sim.pctLo === 5 && sim.pctHi === 95), 'viuhkan persentiilit vaihtuvat');
