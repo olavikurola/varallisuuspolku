@@ -942,6 +942,8 @@ input[type="range"]::-moz-range-thumb {
 /* ---------- Vuositaulukko ---------- */
 .legend .btn-mini { padding: 4px 11px; font-size: 11.5px; margin-left: auto; }
 .table-scroll { overflow-x: auto; margin-top: 14px; scrollbar-width: thin; scrollbar-color: #2a3550 transparent; }
+/* Vieritettävässä taulukossa solu ei rivity kesken luvun ("30 v" yhdellä rivillä) */
+.table-scroll .sum-table th, .table-scroll .sum-table td:first-child, .table-scroll .sum-table td.num { white-space: nowrap; }
 .table-sheet .sum-table { min-width: 640px; }
 .table-sheet .sum-table td.num.dbt { color: var(--danger); }
 .table-sheet .sum-table td.num.net { color: #fbbf24; }
@@ -1188,7 +1190,10 @@ input[type="range"]::-moz-range-thumb {
   .stats { grid-template-columns: 1fr 1fr; }
   .topbar { flex-wrap: wrap; }
   .topbar-note { display: none; }
-  .sum-tiles { grid-template-columns: 1fr 1fr; }
+  /* minmax(0,1fr): pitkä yksisanainen otsikko ei levitä ruudukkoa arkin yli */
+  .sum-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sum-tile { min-width: 0; }
+  .sum-tile .k { letter-spacing: 0.4px; overflow-wrap: break-word; }
   .sum-sheet { padding: 22px 18px; }
   .sum-head { flex-direction: column; }
   .sum-meta { text-align: left; white-space: normal; }
@@ -1207,7 +1212,8 @@ input[type="range"]::-moz-range-thumb {
     gap: 8px;
   }
   .topbar-right::-webkit-scrollbar { display: none; }
-  #summaryBtn { order: -1; }
+  /* Sama järjestys kuin työpöydällä: ☰ Valikko vasemmassa laidassa,
+     Suunnitelmani (päätoiminto) sen jälkeen */
   .btn { padding: 7px 12px; flex: 0 0 auto; }
 
   /* Aloitusvinkki: pelkkä klikattava numeropolku + huomaamaton ✕ yhdellä
@@ -1480,3 +1486,18 @@ body.fs .chart-wrap:focus:not(:focus-visible) { outline: none; }
 }
 .goal-line { stroke: rgba(251, 191, 36, 0.25); stroke-width: 1.2; stroke-dasharray: 3 5; pointer-events: none; }
 .goal-line.on { stroke: rgba(251, 191, 36, 0.6); }
+
+/* Vertailupalkki mobiilissa: yksi pyyhkäistävä rivi — chipit ja napit
+   eivät kasaudu päällekkäin eivätkä rivity (UX-auditointi 10.7.2026) */
+@media (max-width: 560px) {
+  .compare-bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 8px; }
+  .compare-bar::-webkit-scrollbar { display: none; }
+  .compare-bar .cmp-deltas { flex-wrap: nowrap; flex: 0 0 auto; }
+  .compare-bar .btn { flex: 0 0 auto; }
+  .compare-bar .cmp-title { flex: 0 0 auto; }
+}
+
+/* Tulostuksessa taulukko levittäytyy kokonaan — ei leikattua vierityslaatikkoa */
+@media print {
+  .table-scroll { overflow: visible; }
+}

@@ -1473,6 +1473,8 @@ function selInfo() {
 
 function updateSelChip() {
   if (!fsOn || !drawState.sel || drawState.drag) { if (!drawState.drag) chipHide(); return; }
+  // Muokkausdialogi kertoo jo saman — päällekkäinen chippi pois tieltä
+  if (openPopoverId != null) { chipHide(); return; }
   const info = selInfo();
   if (!info) { chipHide(); return; }
   chipShowAt(info.html, info.x, info.y, false);
@@ -3385,7 +3387,7 @@ function renderSummary() {
     `<h2>Suunnitelmani kulmakivet</h2>` +
     `<ol class="sum-points">${summaryPoints(s).map(li).join('')}</ol>` +
     `<h2>Elämäntapahtumat aikajanalla</h2>` +
-    `<table class="sum-table"><thead><tr><th>Tapahtuma</th><th>Ajankohta</th><th>Summa</th><th>Rahoitus</th><th>Huom.</th></tr></thead><tbody>${evRows}</tbody></table>` +
+    `<div class="table-scroll"><table class="sum-table"><thead><tr><th>Tapahtuma</th><th>Ajankohta</th><th>Summa</th><th>Rahoitus</th><th>Huom.</th></tr></thead><tbody>${evRows}</tbody></table></div>` +
     `<h2>Keskusteltavaa esim. varainhoitajan kanssa</h2>` +
     `<ul class="sum-points">${summaryTalks(s).map(li).join('')}</ul>` +
     `<p class="sum-assump">Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa${state.savingsGrowth > 0 ? `; säästön kasvu ${state.savingsGrowth.toLocaleString('fi-FI')} %/v` : ''}${state.real ? `; inflaatio ${pctFmt(INFLATION)}/v, luvut nykyrahassa` : ''}${state.glide ? '; ikäsidonnainen allokaatio' : ''}${s.pension > 0 ? '; lakisääteinen työeläke huomioitu eläketulona' : ''}${state.tax ? '; myyntivoittovero 30/34 % nostojen voitto-osuudesta' : ''}${(s.saleInfos || []).some((x) => x.tax > 0.5) ? '; omaisuuden myynnissä hankintameno-olettama' : ''}. ` +
