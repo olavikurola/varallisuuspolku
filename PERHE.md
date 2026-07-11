@@ -223,6 +223,12 @@ nykyinen state, yksin-tila pikselintarkasti ennallaan):
   riittävyys) + perheen tunnusluvut, henkilötaulukko ja siirtotaulukko
 - **Perhevuoristo**: 2.5D-ridgeline-katselunäkymä (Yhteensä + henkilöt), ei riippuvuuksia
 - Perhelinkki `#f=`-etuliitteellä (versiovahti), oma localStorage-avain, yksilölinkit ennallaan
+- **Perhe kasvaa neljään (11.7.2026)**: jo syntyneet lapset täysinä jäseninä (oma käyrä,
+  perustiedot, oma väri chipissä/graafissa/Vuoristossa; pohja: ikä 10, 50 €/kk, ei eläkettä).
+  Havainto: F6:n gridimuunnos koskee vain syntymättömiä — jo syntynyt lapsi on vain henkilö,
+  jonka ikä on pieni, ja kotitalous-MC hyväksyi N henkilöä valmiiksi. Siirrot kohdennetaan
+  `peerPid`-tunnisteella (popoveriin saaja/antaja-valinta kun jäseniä > 2); perheratkaisija
+  joustaa vain aikuisia; leskiturva rajattu aikuispariin; ✕ poistaa aktiivisen henkilön.
 
 **Perustellut poikkeamat suunnitelmasta:** täysi kaistanäkymä-EDITORI korvattiin chipeillä +
 yhteiskäyräoverlaylla + Vuoristo-katselulla — kompleksisuusbudjetti (Olavin vaatimus: kasvu ei
@@ -230,9 +236,10 @@ saa näkyä käyttäjälle) ja profiilivaihdon riskittömyys painoivat enemmän 
 Akseli säilyi aktiivisen henkilön ikäakselina (kalenterivuodet ovat jo alarivinä) — puolison
 käyrä mapataan samaan kalenteriin kuukausi-indeksillä.
 
-**Jäljellä (F6+):** lapsihaarat omina virtoina (vaatii tulevaisuudessa alkavien simulaatioiden
-gridimuunnoksen), reiluussääntövalinta perheratkaisijaan (nyt: sama euromäärä), leskiturva
-graafi-overlayna, P2P-yhteissuunnittelu, perhesuunnitelmien vertailudata.
+**Jäljellä (F6+):** syntymättömät lapset (vaatii tulevaisuudessa alkavien simulaatioiden
+gridimuunnoksen; jo syntyneet toteutettu 11.7.2026), käyrän "haarautuminen" lapsen
+täysi-ikäistyessä, reiluussääntövalinta perheratkaisijaan (nyt: sama euromäärä aikuisille),
+leskiturva graafi-overlayna, P2P-yhteissuunnittelu, perhesuunnitelmien vertailudata.
 
 ## 11. Avoimet kysymykset Olaville
 
