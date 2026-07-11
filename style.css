@@ -1639,3 +1639,10 @@ body.pro .pro-switch { border-color: rgba(139, 124, 246, 0.55); }
 }
 .saver-box .note { margin: 2px 0 8px; }
 .saver-box .note b { color: var(--accent); }
+
+/* Perhevuoristo */
+.mtn-wrap { margin-top: 8px; }
+#mountainSvg { width: 100%; height: auto; display: block; }
+.mtn-name { font-size: 12px; font-weight: 700; font-family: inherit; }
+.mtn-tick { font-size: 10px; fill: var(--text-faint); font-family: inherit; }
+#legendFamily .btn-mini { margin-left: 8px; padding: 3px 9px; font-size: 11px; }

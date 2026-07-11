@@ -206,7 +206,35 @@ perhesuunnitelmilta v1:ssä (ominaisuus "katoaa" perhekäyttäjältä — kerrot
 Vertailukohta (haamu) ja skenaariot toimivat vain saman tilan sisällä; tilanvaihto
 tyhjentää ne varoituksella.
 
-## 10. Avoimet kysymykset Olaville
+## 10. Toteutustilanne (11.7.2026)
+
+**Toteutettu ja tuotannossa** (arkkitehtuuri: profiilivaihto — aktiivinen henkilö on täsmälleen
+nykyinen state, yksin-tila pikselintarkasti ennallaan):
+
+- Henkilöchipit Perustiedoissa (＋ → puoliso, vaihto, nimeäminen, ✕×2 poistaa) — §9:n sisäänkäynti
+- Koherentti kotitalous-MC (`mcHousehold`): sama markkinahistoria molemmille, perheen onnistumis-%
+  = molempien varat riittävät; koherenssitodistus testinä (identtiset henkilöt → p, ei p²)
+- Yhteiskäyrä + puolison käyrä graafissa ja piirtopöydällä; perhe-HUD-mittari
+- **Perheratkaisija**: tartu yhteiskäyrään piirtopöydällä — molempien kuukausisäästöt joustavat
+  yhtä paljon, chippi näyttää jaon; toimii myös Tab+nuolilla
+- **Siirrot** (📤/📥): parisynkatut tapahtumat molempien suunnitelmissa (linkId; sama
+  kalenterihetki eri i'illä); eivät päädy vertailudataan
+- **Leskiturvatarkastelu** Suunnitelmani-perheosiossa (kuolema eläkeiässä → leski perii,
+  riittävyys) + perheen tunnusluvut, henkilötaulukko ja siirtotaulukko
+- **Perhevuoristo**: 2.5D-ridgeline-katselunäkymä (Yhteensä + henkilöt), ei riippuvuuksia
+- Perhelinkki `#f=`-etuliitteellä (versiovahti), oma localStorage-avain, yksilölinkit ennallaan
+
+**Perustellut poikkeamat suunnitelmasta:** täysi kaistanäkymä-EDITORI korvattiin chipeillä +
+yhteiskäyräoverlaylla + Vuoristo-katselulla — kompleksisuusbudjetti (Olavin vaatimus: kasvu ei
+saa näkyä käyttäjälle) ja profiilivaihdon riskittömyys painoivat enemmän kuin rinnakkaiseditointi.
+Akseli säilyi aktiivisen henkilön ikäakselina (kalenterivuodet ovat jo alarivinä) — puolison
+käyrä mapataan samaan kalenteriin kuukausi-indeksillä.
+
+**Jäljellä (F6+):** lapsihaarat omina virtoina (vaatii tulevaisuudessa alkavien simulaatioiden
+gridimuunnoksen), reiluussääntövalinta perheratkaisijaan (nyt: sama euromäärä), leskiturva
+graafi-overlayna, P2P-yhteissuunnittelu, perhesuunnitelmien vertailudata.
+
+## 11. Avoimet kysymykset Olaville
 
 1. Oletuskukkaro: *Omat kukkarot* (riski näkyy) vai *Yhteinen* (yksinkertaisempi)? Ehdotus: omat.
 2. Lapsihaaran oletusikä (18? 20?) ja haaran alkupääoman esitystapa.

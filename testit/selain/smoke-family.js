@@ -98,6 +98,44 @@ const { chromium } = require('playwright');
   const statTxt = await page.evaluate(() => document.getElementById('stats').textContent);
   ok(statTxt.includes('Perheen onnistumis-%'), 'perhekortti tunnusluvuissa');
 
+  // siirrot: pari syntyy, peilautuu ja siivoutuu
+  ok((await page.locator('#palette .chip', { hasText: 'Siirto puolisolle' }).count()) === 1, 'siirtochipit paletissa perhetilassa');
+  await page.evaluate(() => { addEvent('transferOut', 45); closePopover(); });
+  await page.waitForTimeout(400);
+  const pair = await page.evaluate(() => {
+    const me = state.events.find((e) => e.type === 'transferOut');
+    const ot = me && family.persons[otherIdx()].data.events.find((e) => e.type === 'transferIn' && e.linkId === me.linkId);
+    return { me: !!me, ot: !!ot, sum: me && ot ? me.amount + ot.amount : null };
+  });
+  ok(pair.me && pair.ot && pair.sum === 0, 'siirto syntyy parina (summat peilikuvat)', JSON.stringify(pair));
+  await page.evaluate(() => { state.events.find((e) => e.type === 'transferOut').age = 50; renderAll(); });
+  await page.waitForTimeout(300);
+  ok(await page.evaluate(() => {
+    const me = state.events.find((e) => e.type === 'transferOut');
+    const ot = family.persons[otherIdx()].data.events.find((x) => x.linkId === me.linkId);
+    return ot && ot.age === 50 - state.ageNow + family.persons[otherIdx()].data.ageNow;
+  }), 'iän muutos peilautuu samaan kalenterihetkeen');
+  ok(await page.evaluate(() => !buildDonationPayload(state, sim).events.some((e) => e.type && e.type.startsWith('transfer'))),
+    'siirrot eivät päädy vertailudataan');
+  await page.evaluate(() => { state.events = state.events.filter((e) => e.type !== 'transferOut'); renderAll(); });
+  await page.waitForTimeout(300);
+  ok(await page.evaluate(() => !family.persons[otherIdx()].data.events.some((e) => e.type === 'transferIn')),
+    'poisto siivoaa parin puolisolta');
+
+  // Suunnitelmani: perheosio + leskiturva; Vuoristo-näkymä
+  await page.evaluate(() => openSummary());
+  await page.waitForTimeout(500);
+  const sumT = await page.evaluate(() => document.getElementById('sumSheet').textContent);
+  ok(sumT.includes('Perheen suunnitelma'), 'Suunnitelmani sisältää perheosion');
+  ok(sumT.includes('Leskiturvatarkastelu'), 'leskiturvatarkastelu mukana');
+  await page.evaluate(() => closeSummary());
+  await page.evaluate(() => document.getElementById('famMountainBtn').click());
+  await page.waitForTimeout(400);
+  ok(await page.evaluate(() => !document.getElementById('mountainModal').hidden), 'Perhevuoristo avautuu');
+  ok((await page.locator('#mountainSvg path').count()) === 3, 'kolme virtaa vuoristossa');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+
   // #f=-perhelinkki roundtrip
   const url = await page.evaluate(() => makeShareUrl());
   ok(url.includes('#f='), 'perhelinkki käyttää omaa etuliitettä (versiovahti)');
@@ -120,6 +158,8 @@ const { chromium } = require('playwright');
   await page.keyboard.press('f');
   await page.waitForTimeout(500);
   ok(await page.evaluate(() => document.body.classList.contains('fs')), 'piirtopöytä aukeaa perhetilassa');
+  // skaala asettuu ennen geometriaan nojaavia klikkejä
+  await page.waitForFunction(() => sim && sim.mcPaths === 5000 && !sim.successStale, null, { timeout: 8000 }).catch(() => {});
   const m0 = await page.evaluate(() => state.monthly);
   const pC = await page.evaluate(() => {
     const r = document.getElementById('chart').getBoundingClientRect();
@@ -134,6 +174,31 @@ const { chromium } = require('playwright');
   await page.mouse.up();
   await page.waitForTimeout(400);
   ok(await page.evaluate(() => state.monthly) > m0, 'käyrän veto toimii perhetilassa');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+
+  // perheratkaisija: tartu yhteiskäyrään — molempien säästöt joustavat samalla
+  ok(await page.evaluate(() => document.getElementById('hudMetrics').textContent.includes('Perheen onnistumis-%')),
+    'HUD näyttää perheen onnistumisen');
+  const mMe0 = await page.evaluate(() => state.monthly);
+  const mOt0 = await page.evaluate(() => family.persons[otherIdx()].data.monthly);
+  const pT = await page.evaluate(() => {
+    const r = document.getElementById('chart').getBoundingClientRect();
+    const m = Math.round((50 - sim.a0) * 12);
+    return { x: r.left + scaleX(50), y: r.top + scaleY(famTotalCache[m]) };
+  });
+  await page.mouse.click(pT.x, pT.y);
+  await page.waitForTimeout(250);
+  ok(await page.evaluate(() => drawState.sel && drawState.sel.kind === 'famtotal'), 'yhteiskäyrä valittavissa piirtopöydällä');
+  await page.mouse.move(pT.x, pT.y);
+  await page.mouse.down();
+  await page.mouse.move(pT.x, pT.y - 60, { steps: 6 });
+  await page.mouse.up();
+  await page.waitForTimeout(500);
+  const mMe1 = await page.evaluate(() => state.monthly);
+  const mOt1 = await page.evaluate(() => family.persons[otherIdx()].data.monthly);
+  ok(mMe1 > mMe0 && (mMe1 - mMe0) === (mOt1 - mOt0), 'perheratkaisija joustaa molempia yhtä paljon',
+    `minä ${mMe0}→${mMe1}, puoliso ${mOt0}→${mOt1}`);
   await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');
   await page.waitForTimeout(400);

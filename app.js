@@ -22,6 +22,10 @@ const EVENT_TYPES = {
   // Tavoitepiste on mittari, ei kassavirta (metric): simulaattori ohittaa sen,
   // graafi näyttää vajeet ja MC-ylitysosuuden, Ratkaise hakee säästön
   goal:        { icon: '🎯', label: 'Tavoite',             amount: 100000, metric: true },
+  // Siirrot puolisolle/puolisolta: näkyvät vain perhetilassa ja pysyvät
+  // pareina synkassa molempien suunnitelmissa (linkId)
+  transferOut: { icon: '📤', label: 'Siirto puolisolle',   amount: -5000, familyOnly: true },
+  transferIn:  { icon: '📥', label: 'Siirto puolisolta',   amount: 5000,  familyOnly: true },
   retirement:  { icon: '🌴', label: 'Eläkkeelle jäänti',   withdrawal: 2400, pension: 1500, pensionAge: 65, unique: true },
 };
 
@@ -100,6 +104,8 @@ const DATA_API = 'https://varallisuuspolku-data.up.railway.app';
 function buildDonationPayload(st, s) {
   const events = [];
   for (const e of [...st.events].sort((a, b) => a.age - b.age)) {
+    // Perheen sisäiset siirrot eivät kuulu vertailudataan
+    if (EVENT_TYPES[e.type] && EVENT_TYPES[e.type].familyOnly) continue;
     if (e.type === 'retirement') {
       const ev = {
         type: 'retirement', age: Math.round(e.age),
@@ -274,6 +280,7 @@ let hoverLine = null, hoverDot = null, balHoverLine = null;
 let baseline = null;
 let ghostSim = null;
 let ghostDirty = true;  // haamu lasketaan vain kun vertailukohta vaihtuu
+let famTotalCache = null; // perheen yhteiskäyrä piirtopöydän osumia varten
 let lastFullSim = null; // viimeisin täysi sim — kevyen raahausframen jäädytetyt arvot
 let dragLight = false;  // piirtotilan raahaus käynnissä → kevyt frame (ei MC:tä)
 let fsOn = false;       // kokoruudun piirtotila päällä
@@ -327,10 +334,21 @@ function renderChart(reuse = false) {
   plot.h = H - plot.t - plot.b;
 
   const { a0, a1, months } = sim;
-  // Perheen yhteiskäyrä mukaan skaalaan, jos puoliso on mukana
-  const famOther = familyOn() ? getOtherSim() : null;
-  const famTotal = famOther ? householdExp([sim, famOther]) : null;
-  const yMax = Math.max(10000, famTotal ? famTotal[Math.min(famTotal.length - 1, months)] * 1.02 : 0,
+  // Perheen yhteiskäyrä: raahauksen aikana puolison polku tulee suoraan
+  // perheratkaisijalta (otherExpLive), muuten välimuistista
+  let famTotal = null, famOtherExp = null;
+  if (familyOn()) {
+    const liveO = drawState.drag && drawState.drag.otherExpLive;
+    const os = liveO ? null : getOtherSim();
+    famOtherExp = liveO || (os ? os.exp : null);
+    if (famOtherExp) {
+      const oM = famOtherExp.length - 1;
+      famTotal = new Float64Array(months + 1);
+      for (let i = 0; i <= months; i++) famTotal[i] = sim.exp[Math.min(i, sim.months)] + famOtherExp[Math.min(i, oM)];
+    }
+  }
+  famTotalCache = famTotal;
+  const yMax = Math.max(10000, famTotal ? famTotal[months] * 1.02 : 0,
     Math.max(...sim.opt, ...sim.invested, ...(ghostSim ? ghostSim.exp : []))) * 1.08;
 
   scaleX = (age) => plot.l + ((age - a0) / (a1 - a0)) * plot.w;
@@ -452,13 +470,13 @@ function renderChart(reuse = false) {
 
   /* Perhevirta: puolison käyrä ja perheen yhteiskäyrä */
   const legFam = $('legendFamily');
-  if (famOther && famTotal) {
-    const oM = Math.min(famOther.months, months);
+  if (famOtherExp && famTotal) {
+    const oM = Math.min(famOtherExp.length - 1, months);
     let op = '';
-    for (let i = 0; i <= oM; i++) op += `${i ? ' L' : 'M'} ${scaleX(a0 + i / 12).toFixed(1)},${scaleY(famOther.exp[i]).toFixed(1)}`;
+    for (let i = 0; i <= oM; i++) op += `${i ? ' L' : 'M'} ${scaleX(a0 + i / 12).toFixed(1)},${scaleY(famOtherExp[i]).toFixed(1)}`;
     el('path', { d: op, fill: 'none', stroke: '#64748b', 'stroke-width': 1.5, opacity: 0.75, 'pointer-events': 'none' }, svg);
     let tp = '';
-    for (let i = 0; i <= months; i++) tp += `${i ? ' L' : 'M'} ${scaleX(a0 + i / 12).toFixed(1)},${scaleY(famTotal[Math.min(i, famTotal.length - 1)]).toFixed(1)}`;
+    for (let i = 0; i <= months; i++) tp += `${i ? ' L' : 'M'} ${scaleX(a0 + i / 12).toFixed(1)},${scaleY(famTotal[i]).toFixed(1)}`;
     el('path', { d: tp, fill: 'none', stroke: '#e8edf8', 'stroke-width': 2, opacity: 0.85, 'pointer-events': 'none' }, svg);
     if (legFam) legFam.hidden = false;
   } else if (legFam) legFam.hidden = true;
@@ -814,6 +832,7 @@ function buildPalette() {
   const pal = $('palette');
   pal.innerHTML = '';
   for (const [type, def] of Object.entries(EVENT_TYPES)) {
+    if (def.familyOnly && !familyOn()) continue; // siirrot vain perhetilassa
     const chip = document.createElement('div');
     chip.className = 'chip';
     chip.title = def.label;
@@ -925,6 +944,11 @@ function addEvent(type, age) {
       if (def.rec) { ev.recMonthly = def.rec.monthly; ev.recYears = def.rec.years; }
     }
     state.events.push(ev);
+    // Siirto syntyy parina: peilikappale puolison suunnitelmaan (linkId)
+    if (def.familyOnly && familyOn()) {
+      ev.linkId = 'tr' + (idSeq++) + '-' + Math.floor(Math.random() * 1e6);
+      mirrorTransfer(ev);
+    }
   }
   renderAll();
   openPopover(ev.id);
@@ -1381,6 +1405,7 @@ document.addEventListener('keydown', (e) => {
   $('donateModal').hidden = true;
   $('compareModal').hidden = true;
   $('proModal').hidden = true;
+  $('mountainModal').hidden = true;
   closeExamplesMenu();
   closeMoreMenu();
 });
@@ -1478,6 +1503,11 @@ updateHud = function () {
     sim.sustainableWd != null ? `${Math.round(sim.sustainableWd).toLocaleString('fi-FI')} €/kk` : '–',
     sim.sustainableWd != null && g && g.sustainableWd != null ? sim.sustainableWd - g.sustainableWd : null,
     20, (x) => `${Math.round(x).toLocaleString('fi-FI')} €/kk`, '');
+  if (familyOn()) {
+    metric('Perheen onnistumis-%',
+      jointMc ? Math.round(jointMc.successProb * 100) + ' %' : '…',
+      null, 1, (x) => x, sim.successStale ? ' stale' : '');
+  }
   box.innerHTML = items.join('');
 };
 
@@ -1552,6 +1582,13 @@ function selInfo() {
       aria: `Eläkeikä ${Math.round(retA)} vuotta`,
       html: `<div class="dchip-row"><b>Eläkeikä</b> ${Math.round(retA)} v</div>${hint}` };
   }
+  if (s.kind === 'famtotal' && famTotalCache) {
+    const m = Math.max(6, Math.round(mRet / 2));
+    return { x: scaleX(a0 + m / 12), y: scaleY(famTotalCache[m]),
+      aria: 'Perheen yhteiskäyrä valittu — raahaus joustaa molempien kuukausisäästöjä',
+      html: '<div class="dchip-row"><b>Perheen yhteiskäyrä</b></div>'
+        + '<div class="dchip-note">Raahaa — molempien kuukausisäästöt joustavat yhtä paljon</div>' };
+  }
   if (s.kind === 'event' || s.kind === 'goal') {
     const ev = state.events.find((x) => x.id === s.id);
     if (!ev) return null;
@@ -1618,6 +1655,7 @@ function drawStartDrag(e, kind, id) {
     kind, id: id == null ? null : id, ev,
     // Esikäsittely kerran — per frame vain runPath-bisektio
     solver: needSolver ? makeDragSolver(state, lastFullSim || sim) : null,
+    famSolver: kind === 'famtotal' ? makeFamilySolver() : null,
     cancelSnap: JSON.stringify(serialize()),
     startX: e.clientX, startY: e.clientY,
     startPy: clamp(e.clientY - rect.top, plot.t, plot.t + plot.h),
@@ -1663,6 +1701,7 @@ function drawDragMove(e2) {
   else if (d.kind === 'retline') chip = dragRetline(d, invX(px), noSnap);
   else if (d.kind === 'event') chip = dragEvent(d, invX(px), py, noSnap);
   else if (d.kind === 'goal') chip = dragGoal(d, invX(px), invY(py), noSnap);
+  else if (d.kind === 'famtotal') chip = dragFamTotal(d, invX(px), invY(py), noSnap);
   if (chip) {
     chipShowAt(chip.html, px, py, !!chip.constraint);
     // Raja vastustaa: värinä kun osutaan rajaan (Android; iOS ei tue vibratea)
@@ -1736,6 +1775,28 @@ function dragRetline(d, age, noSnap) {
   return { html: chipWrap(chipRow('Eläkeikä', d.startAge, a, 'v'), constraint), constraint };
 }
 
+// Perheen yhteiskäyrä: yhtä suuri lisäys molempien kuukausisäästöön
+function dragFamTotal(d, age, val, noSnap) {
+  const s = d.famSolver;
+  if (!s) return null;
+  const m = s.monthFor(clamp(age, sim.a0 + 1 / 12, sim.a1));
+  const lo = -Math.min(s.m0me, s.m0o);
+  let dEur = solveParam((x) => s.totalAt(x, m), Math.max(0, val), lo, 1e6, true);
+  dEur = noSnap ? Math.round(dEur) : snapTo(dEur, 10);
+  let constraint = null;
+  if (dEur <= lo) { dEur = lo; constraint = 'Säästö ei voi olla negatiivinen'; }
+  else if (dEur >= 1e6) { dEur = 1e6; constraint = 'Yläraja vastassa'; }
+  state.monthly = Math.max(0, s.m0me + dEur);
+  $('monthly').value = state.monthly;
+  family.persons[otherIdx()].data.monthly = Math.max(0, s.m0o + dEur);
+  d.otherExpLive = s.otherExpWith(dEur); // puolison polku elää samassa framessa
+  const oName = family.persons[otherIdx()].name;
+  return { html: chipWrap(
+    chipRow('Perheen säästö', s.m0me + s.m0o, Math.max(0, s.m0me + dEur) + Math.max(0, s.m0o + dEur), '€/kk'),
+    constraint,
+    `${escapeHtml(currentName())} ${fmtNum(Math.max(0, s.m0me + dEur))} · ${escapeHtml(oName)} ${fmtNum(Math.max(0, s.m0o + dEur))} €/kk`), constraint };
+}
+
 // Elämäntapahtuma: vaaka = ikä, pysty = summa (käyrän skaalalla)
 function dragEvent(d, age, py, noSnap) {
   const ev = d.ev;
@@ -1767,6 +1828,7 @@ function drawDragUp() {
   if (!d) return;
   if (d.moved) {
     drawMarkTutored(); // ensimmäinen onnistunut veto kuittaa opastuksen
+    if (d.famSolver) otherDirty = true; // puolison säästö muuttui — sim uusiksi
     renderAll(); // täysi laskenta + tallennus + MC-tarkennuspyyntö (debounce)
     updateSelChip();
     announce(dragAnnounce(d));
@@ -1783,6 +1845,7 @@ function drawDragUp() {
 function dragAnnounce(d) {
   const p = sim && sim.successProb != null && !sim.successStale
     ? `, onnistumistodennäköisyys ${Math.round(sim.successProb * 100)} prosenttia` : '';
+  if (d.kind === 'famtotal') return `Perheen säästö ${fmtNum(state.monthly + (familyOn() ? family.persons[otherIdx()].data.monthly : 0))} euroa kuukaudessa${p}`;
   if (d.kind === 'acc') return `Kuukausisäästö ${fmtNum(state.monthly)} euroa kuukaudessa${p}`;
   if (d.kind === 'wd' || d.kind === 'end') return `Kuukausitulo ${fmtNum(d.ev ? d.ev.withdrawal : 0)} euroa kuukaudessa${p}`;
   if (d.kind === 'retline') return `Eläkeikä ${fmtNum(d.ev ? d.ev.age : 0)} vuotta${p}`;
@@ -1798,6 +1861,10 @@ function drawCancelDrag() {
   dragLight = false;
   if (d && d.moved) {
     try { applySaved(JSON.parse(d.cancelSnap)); syncInputs(); } catch (err) {}
+    if (d.famSolver) { // puolison säästö takaisin lähtöarvoon
+      family.persons[otherIdx()].data.monthly = d.famSolver.m0o;
+      otherDirty = true;
+    }
   }
   renderAll();
   updateSelChip();
@@ -1855,6 +1922,13 @@ function drawLayers() {
   };
   hit(pathOf(0, mRet), 'acc', null, hovAcc);
   if (retA != null && mRet < months) hit(pathOf(mRet, months), 'wd', null, hovWd);
+  // Perheen yhteiskäyrä: veto joustaa molempien säästöjä (perheratkaisija)
+  if (familyOn() && famTotalCache) {
+    const pf = (i) => `${scaleX(a0 + i / 12).toFixed(1)},${scaleY(famTotalCache[i]).toFixed(1)}`;
+    let fd = `M ${pf(0)}`;
+    for (let i = 1; i <= months; i++) fd += ` L ${pf(i)}`;
+    hit(fd, 'famtotal', null);
+  }
   if (retA != null) hit(`M ${scaleX(retA).toFixed(1)} ${plot.t} L ${scaleX(retA).toFixed(1)} ${plot.t + plot.h}`, 'retline', null, hovRet);
   drawGoalMarkers(true); // tavoitepisteet: osuma viivan yläpuolella
   const endHit = el('circle', { cx: ex, cy: ey, r: 20, class: 'hit', fill: 'transparent', 'pointer-events': 'all' }, svg);
@@ -1898,6 +1972,9 @@ function drawCycleList() {
     items.push({ kind: 'wd', id: null, age: (sim.retireAge + sim.a1) / 2 });
   }
   items.push({ kind: 'end', id: null, age: sim.a1 });
+  if (familyOn() && famTotalCache) {
+    items.push({ kind: 'famtotal', id: null, age: sim.a0 + (sim.retireAge != null ? (sim.retireAge - sim.a0) / 3 : 10) });
+  }
   return items.sort((a, b) => a.age - b.age);
 }
 
@@ -1943,6 +2020,13 @@ function drawNudge(axis, dir, big) {
     state.monthly = clamp(snapTo(state.monthly + dir * 10 * mult, 10), 0, 1e6);
     $('monthly').value = state.monthly;
     text = `Kuukausisäästö ${fmtNum(state.monthly)} euroa kuukaudessa`;
+  } else if (s.kind === 'famtotal') {
+    state.monthly = clamp(snapTo(state.monthly + dir * 10 * mult, 10), 0, 1e6);
+    $('monthly').value = state.monthly;
+    const od = family.persons[otherIdx()].data;
+    od.monthly = clamp(snapTo(od.monthly + dir * 10 * mult, 10), 0, 1e6);
+    otherDirty = true;
+    text = `Perheen säästö ${fmtNum(state.monthly + od.monthly)} euroa kuukaudessa`;
   } else if (s.kind === 'wd' || s.kind === 'end') {
     if (!ev) return;
     const pmN = proOf(state);
@@ -3562,6 +3646,7 @@ let famRemoveArm = false;
 
 const familyOn = () => !!(family && family.persons.length > 1);
 const otherIdx = () => (family.active === 0 ? 1 : 0);
+const currentName = () => (family ? family.persons[family.active].name : 'Minä');
 
 function saveActiveIntoFamily() {
   if (family) family.persons[family.active].data = JSON.parse(JSON.stringify(serialize()));
@@ -3656,6 +3741,7 @@ function removeSpouse() {
 function renderFamilyChips() {
   const box = $('familyChips');
   if (!box) return;
+  buildPalette(); // siirtochipit näkyvät vain perhetilassa
   if (!familyOn()) {
     box.innerHTML = '<button class="fam-add" data-fam="add" title="Lisää puoliso — suunnitelkaa yhdessä ja näkekää perheen yhteiskäyrä">＋</button>';
     return;
@@ -3680,6 +3766,8 @@ function bindFamily() {
       if (i !== family.active) switchPerson(i);
     }
   });
+  $('famMountainBtn').addEventListener('click', openMountain);
+  $('mountainClose').addEventListener('click', () => { $('mountainModal').hidden = true; });
   box.addEventListener('dblclick', (e) => {
     const b = e.target.closest('[data-fam]');
     if (!b || !family) return;
@@ -3696,6 +3784,184 @@ function bindFamily() {
   });
 }
 
+/* --- Siirrot: pari pysyy synkassa molempien suunnitelmissa --- */
+
+// Sama kalenterihetki, eri iät: puolison ikä samana kuukautena
+const otherAgeOf = (age) => {
+  const od = family.persons[otherIdx()].data;
+  return clamp(age - state.ageNow + od.ageNow, od.ageNow, od.ageEnd);
+};
+
+function mirrorTransfer(ev) {
+  if (!familyOn() || !ev.linkId) return;
+  const od = family.persons[otherIdx()].data;
+  const otherType = ev.type === 'transferOut' ? 'transferIn' : 'transferOut';
+  let tw = od.events.find((x) => x.linkId === ev.linkId);
+  if (!tw) {
+    tw = { id: 800000 + Math.floor(Math.random() * 1e5), linkId: ev.linkId };
+    od.events.push(tw);
+  }
+  tw.type = otherType;
+  tw.age = otherAgeOf(ev.age);
+  tw.amount = -ev.amount;
+  if (ev.name) tw.name = ev.name; else delete tw.name;
+  otherDirty = true;
+}
+
+// Ajetaan tallennuksen yhteydessä: aktiivisen siirrot peilataan ja
+// puolisolta poistetaan parit, joiden vastinkappale on poistettu
+function reconcileTransfers() {
+  if (!familyOn()) return;
+  const od = family.persons[otherIdx()].data;
+  const activeLinks = new Set();
+  for (const e of state.events) {
+    if (EVENT_TYPES[e.type] && EVENT_TYPES[e.type].familyOnly && e.linkId) {
+      activeLinks.add(e.linkId);
+      mirrorTransfer(e);
+    }
+  }
+  const before = od.events.length;
+  od.events = od.events.filter((e) => !(EVENT_TYPES[e.type] && EVENT_TYPES[e.type].familyOnly && e.linkId && !activeLinks.has(e.linkId)));
+  if (od.events.length !== before) otherDirty = true;
+}
+
+/* --- Perheratkaisija: tartu yhteiskäyrään, molempien säästöt joustavat --- */
+
+// Esikäsittely kerran per veto; per frame vain kaksi runPathia.
+// Jakosääntö: sama euromäärä molemmille (selkein chippiin).
+function makeFamilySolver() {
+  const meCtx = prepareSim(state);
+  const meRet = meCtx.retire ? meCtx.retire.age : null;
+  const meMu = buildMu(meCtx, state, meRet).muM;
+  const meWd = meCtx.retire ? meCtx.retire.withdrawal : 0;
+  const od = JSON.parse(JSON.stringify(family.persons[otherIdx()].data));
+  const oCtx = prepareSim(od);
+  const oRet = oCtx.retire ? oCtx.retire.age : null;
+  const oMu = buildMu(oCtx, od, oRet).muM;
+  const oWd = oCtx.retire ? oCtx.retire.withdrawal : 0;
+  const m0me = state.monthly, m0o = od.monthly;
+  const wAt = (ctx, st2, wd, ret, mu, save, m) =>
+    runPath(ctx, st2, wd, ret, mu, { clamp0: true, monthlySave: save, stopAt: Math.max(0, Math.min(m, ctx.months)) }).stopW;
+  return {
+    m0me, m0o, od,
+    monthFor: (age) => clamp(Math.round((age - meCtx.a0) * 12), 0, Math.max(meCtx.months, oCtx.months)),
+    totalAt: (dEur, m) =>
+      wAt(meCtx, state, meWd, meRet, meMu, Math.max(0, m0me + dEur), m)
+      + wAt(oCtx, od, oWd, oRet, oMu, Math.max(0, m0o + dEur), m),
+    otherExpWith: (dEur) => runPath(oCtx, od, oWd, oRet, oMu, { clamp0: true, monthlySave: Math.max(0, m0o + dEur), collect: true }).arr,
+  };
+}
+
+/* --- Leskiturva: deterministinen tarkastelu Suunnitelmani-dokumenttiin --- */
+
+// "Jos henkilö kuolee iässä X": lesken suunnitelmaan lisätään perintönä
+// vainajan sijoitusvarallisuus kuolinhetkellä; tulos = riittävyys.
+function widowCheck(deadIdx, deathAgeOfDead) {
+  const persons = family.persons;
+  const dead = JSON.parse(JSON.stringify(persons[deadIdx].data));
+  const surv = JSON.parse(JSON.stringify(persons[deadIdx === 0 ? 1 : 0].data));
+  const dSim = simulate(dead);
+  const mD = clamp(Math.round((deathAgeOfDead - dead.ageNow) * 12), 0, dSim.months);
+  const inherit = Math.max(0, dSim.exp[mD]);
+  const survAge = clamp(deathAgeOfDead - dead.ageNow + surv.ageNow, surv.ageNow, surv.ageEnd - 1);
+  surv.events = surv.events.filter((e) => !(EVENT_TYPES[e.type] && EVENT_TYPES[e.type].familyOnly));
+  surv.events.push({ id: 899999, type: 'inheritance', age: survAge, amount: Math.round(inherit) });
+  const sSim = simulate(surv);
+  return { inherit, survAge, depletionAge: sSim.depletionAge, a1: sSim.a1 };
+}
+
+/* --- Suunnitelmani: perheosio --- */
+
+function familySummaryHtml() {
+  if (!familyOn()) return '';
+  saveActiveIntoFamily();
+  const sims = family.persons.map((p) => simulate(JSON.parse(JSON.stringify(p.data))));
+  const joint = mcHousehold(family.persons.map((p) => JSON.parse(JSON.stringify(p.data))), { paths: 300 });
+  const total = householdExp(sims);
+  const yearNow = new Date().getFullYear();
+
+  let rows = '';
+  family.persons.forEach((p, i) => {
+    const s = sims[i];
+    rows += `<tr><td>${escapeHtml(p.name)}</td>`
+      + `<td class="num">${fmtEur(p.data.monthly)}/kk</td>`
+      + `<td class="num">${s.retireAge != null ? Math.round(s.retireAge) + ' v' : '—'}</td>`
+      + `<td class="num">${s.wAtRet != null ? fmtCompact(s.wAtRet) : '—'}</td>`
+      + `<td class="num">${s.successProb != null ? Math.round(s.successProb * 100) + ' %' : '—'}</td></tr>`;
+  });
+
+  // siirrot (dedupe linkId:llä, suunta antajalta saajalle)
+  const seen = new Set();
+  let trRows = '';
+  family.persons.forEach((p, i) => {
+    for (const e of p.data.events) {
+      if (e.type !== 'transferOut' || !e.linkId || seen.has(e.linkId)) continue;
+      seen.add(e.linkId);
+      const year = yearNow + Math.round(e.age - p.data.ageNow);
+      trRows += `<tr><td>${escapeHtml(p.name)} → ${escapeHtml(family.persons[i === 0 ? 1 : 0].name)}</td>`
+        + `<td class="num">${Math.round(e.age)} v · ~${year}</td><td class="num">${fmtEur(-e.amount)}</td></tr>`;
+    }
+  });
+
+  // leskiturva: kuolema eläkeiässä (tai 70 v jos eläkettä ei ole)
+  let widowRows = '';
+  family.persons.forEach((p, i) => {
+    const ret = p.data.events.find((e) => e.type === 'retirement');
+    const dAge = ret ? Math.round(ret.age) : 70;
+    const w = widowCheck(i, dAge);
+    const other = family.persons[i === 0 ? 1 : 0].name;
+    widowRows += `<li>Jos <b>${escapeHtml(p.name)}</b> kuolee ${dAge} v iässä: ${escapeHtml(other)} perii sijoitusvarallisuuden ~<b>${fmtCompact(w.inherit)}</b> — `
+      + (w.depletionAge != null && w.depletionAge < w.a1 - 1
+        ? `lesken varat ehtyvät noin <b class="wr">${Math.round(w.depletionAge)} v</b> iässä.`
+        : `lesken varat riittävät suunnitelman loppuun.`) + '</li>';
+  });
+
+  return `<h2>Perheen suunnitelma</h2>`
+    + `<div class="sum-tiles">`
+    + `<div class="sum-tile"><div class="k">Perheen onnistumistodennäköisyys</div><div class="v accent">${Math.round(joint.successProb * 100)} %</div><div class="s">sama markkinahistoria molemmille</div></div>`
+    + `<div class="sum-tile"><div class="k">Yhteisvarallisuus lopussa</div><div class="v">${fmtCompact(total[total.length - 1])}</div><div class="s">molempien sijoitukset yhteensä</div></div>`
+    + `</div>`
+    + `<table class="sum-table"><thead><tr><th>Henkilö</th><th>Säästö</th><th>Eläkeikä</th><th>Eläkkeellä</th><th>Onnistumis-%</th></tr></thead><tbody>${rows}</tbody></table>`
+    + (trRows ? `<h2>Siirrot perheessä</h2><table class="sum-table"><thead><tr><th>Siirto</th><th>Ajankohta</th><th>Summa</th></tr></thead><tbody>${trRows}</tbody></table>` : '')
+    + `<h2>Leskiturvatarkastelu</h2><ul class="sum-points">${widowRows}</ul>`
+    + `<p class="sum-disclaimer">Leskiturva on karkea tarkastelu: perintö siirtyy leskelle sellaisenaan, perhe-eläkettä tai perintöveroa ei mallinneta.</p>`;
+}
+
+/* --- Perhevuoristo: 2.5D-katselunäkymä --- */
+
+function openMountain() {
+  saveActiveIntoFamily();
+  const sims = family.persons.map((p) => simulate(JSON.parse(JSON.stringify(p.data))));
+  const total = householdExp(sims);
+  const months = total.length - 1;
+  const W = 760, rowH = 130, pad = 46, offX = 26, offY = 34;
+  const series = [
+    { name: 'Yhteensä', arr: total, color: '#e8edf8' },
+    ...family.persons.map((p, i) => ({ name: p.name, arr: sims[i].exp, color: i === family.active ? '#2dd4bf' : '#64748b' })),
+  ].reverse(); // taaimmainen ensin
+  const H = pad * 2 + rowH + offY * (series.length - 1);
+  const maxV = Math.max(...total) || 1;
+  let g = '';
+  series.forEach((s, i) => {
+    const baseY = H - pad - i * offY;
+    const x0 = pad + (series.length - 1 - i) * offX;
+    const w = W - pad * 2 - offX * (series.length - 1);
+    const xs = (m) => x0 + (Math.min(m, s.arr.length - 1) / months) * w;
+    const ys = (v) => baseY - (v / maxV) * rowH;
+    let d = `M ${xs(0).toFixed(1)} ${baseY}`;
+    const step = Math.max(1, Math.round(months / 240));
+    for (let m = 0; m <= months; m += step) d += ` L ${xs(m).toFixed(1)} ${ys(s.arr[Math.min(m, s.arr.length - 1)]).toFixed(1)}`;
+    d += ` L ${xs(months).toFixed(1)} ${baseY} Z`;
+    g += `<path d="${d}" fill="rgba(10,14,26,0.88)" stroke="${s.color}" stroke-width="1.8"/>`
+      + `<text x="${x0 + 8}" y="${baseY - 7}" class="mtn-name" fill="${s.color}">${escapeHtml(s.name)}</text>`;
+  });
+  const yearNow = new Date().getFullYear();
+  g += `<text x="${pad}" y="${H - 8}" class="mtn-tick">${yearNow}</text>`
+    + `<text x="${W - pad}" y="${H - 8}" text-anchor="end" class="mtn-tick">${yearNow + Math.round(months / 12)}</text>`;
+  $('mountainSvg').setAttribute('viewBox', `0 0 ${W} ${H}`);
+  $('mountainSvg').innerHTML = g;
+  $('mountainModal').hidden = false;
+}
 /* ===================== Säästökyky-apuri (tulot ja menot) ===================== */
 // Rajaus: tulot ja menot ovat PÄÄTÖKSEN apuväline, eivät kirjanpitoa.
 // Apuri laskee säästövaran ja -asteen ja kirjoittaa tuloksen olemassa
@@ -4072,7 +4338,7 @@ function applySaved(data) {
 
 function saveState() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(serialize())); } catch (e) { /* yksityistila tms. */ }
-  if (family) { saveActiveIntoFamily(); persistFamily(); }
+  if (family) { reconcileTransfers(); saveActiveIntoFamily(); persistFamily(); }
   pushUndoDebounced();
 }
 
@@ -4430,6 +4696,7 @@ function renderSummary() {
     `<div class="table-scroll"><table class="sum-table"><thead><tr><th>Tapahtuma</th><th>Ajankohta</th><th>Summa</th><th>Rahoitus</th><th>Huom.</th></tr></thead><tbody>${evRows}</tbody></table></div>` +
     `<h2>Keskusteltavaa esim. varainhoitajan kanssa</h2>` +
     `<ul class="sum-points">${summaryTalks(s).map(li).join('')}</ul>` +
+    (familyOn() ? familySummaryHtml() : '') +
     (state.proOn ? proSummaryHtml(s) : '') +
     `<p class="sum-assump">Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa${state.savingsGrowth > 0 ? `; säästön kasvu ${state.savingsGrowth.toLocaleString('fi-FI')} %/v` : ''}${state.real ? `; inflaatio ${pctFmt(INFLATION)}/v, luvut nykyrahassa` : ''}${state.glide ? '; ikäsidonnainen allokaatio' : ''}${s.pension > 0 ? '; lakisääteinen työeläke huomioitu eläketulona' : ''}${state.tax ? '; myyntivoittovero 30/34 % nostojen voitto-osuudesta' : ''}${(s.saleInfos || []).some((x) => x.tax > 0.5) ? '; omaisuuden myynnissä hankintameno-olettama' : ''}. ` +
     `Lainat annuiteettilainoina. Onnistumistodennäköisyys perustuu ${(s.mcPaths || MC_LIVE).toLocaleString('fi-FI')} satunnaiseen markkinapolkuun${s.conf ? `; tavoitteet mitoitettu ${Math.round(s.conf * 100)} % onnistumisvarmuudelle` : ''}. Laadittu Varallisuuspolku-työkalulla.</p>` +
