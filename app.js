@@ -554,6 +554,12 @@ function renderChart(reuse = false) {
     }, g);
     const ico = el('text', { x, y: y + 5.5, 'text-anchor': 'middle', 'font-size': 15 }, g);
     ico.textContent = def.icon;
+    if (ev.shared) {
+      // ½-tunnus: hankinta on jaettu puolison kanssa
+      el('circle', { cx: x + 13, cy: y - 11, r: 7, fill: '#141c33', stroke: 'rgba(45,212,191,0.6)', 'stroke-width': 1, 'pointer-events': 'none' }, g);
+      const half = el('text', { x: x + 13, y: y - 8, 'text-anchor': 'middle', 'font-size': 9, fill: '#2dd4bf', 'pointer-events': 'none' }, g);
+      half.textContent = '½';
+    }
     const title = el('title', {}, g);
     let tdesc;
     if (ev.type === 'retirement') {
@@ -570,6 +576,7 @@ function renderChart(reuse = false) {
     if (ev.type !== 'retirement') {
       if (ev.recMonthly && ev.recYears > 0) tdesc += `${tdesc ? ' · ' : ''}${ev.recMonthly > 0 ? '+' : ''}${fmtEur(ev.recMonthly)}/kk ${Math.round(ev.recYears)} v`;
       if (ev.isAsset && ev.sellAge != null) tdesc += ` · myynti ${Math.round(ev.sellAge)} v`;
+      if (ev.shared) tdesc += ' · jaettu puoliksi (oma osuus)';
     }
     title.textContent = `${evLabel(ev)} · ${Math.round(ev.age)} v · ${tdesc}`;
 
@@ -1058,6 +1065,19 @@ function openPopover(id) {
         `</div>`;
     }
 
+    // Jaettu hankinta: puolet kummallekin aikuiselle (vain perhetilassa)
+    if (familyOn() && shareable(ev) && !family.persons[family.active].child
+      && (ev.shared || adultPeerIdx() >= 0)) {
+      const ti = ev.peerPid != null ? idxOfPid(ev.peerPid) : adultPeerIdx();
+      const peerName = ti >= 0 ? family.persons[ti].name : 'puoliso';
+      fields +=
+        `<label class="toggle" style="margin-top:2px"><input id="pv-shared" type="checkbox" ${ev.shared ? 'checked' : ''} /><span class="switch"></span>` +
+        `<span>Jaettu puolison kanssa <small>puolet kummallekin — kentissä oma osuutesi</small></span></label>` +
+        (ev.shared
+          ? `<p class="note">Koko summa ${fmtEur(Math.abs(ev.amount) * 2)}${ev.recMonthly ? ` + ${fmtEur(Math.abs(ev.recMonthly) * 2)}/kk` : ''} — toinen puolikas on kirjattu: ${escapeHtml(peerName)}. Muutokset synkataan molemmille.</p>`
+          : '');
+    }
+
     if (ev.amount < 0) {
       const isLoan = ev.financing === 'loan';
       fields +=
@@ -1169,6 +1189,23 @@ function openPopover(id) {
     ev.amount = ev.type === 'transferOut' ? -v : v;
     e.target.value = ev.amount;
     renderAllKeepPopover();
+  });
+  const sh = $('pv-shared');
+  if (sh) sh.addEventListener('change', (e) => {
+    if (e.target.checked) {
+      // puolita osuudet; pari peilautuu puolisolle tallennuksessa
+      ev.shared = true;
+      ev.linkId = newLinkId('sh');
+      ev.peerPid = family.persons[adultPeerIdx()].pid;
+      halveShared(ev);
+    } else {
+      // pari pois puolisolta, oma osuus takaisin täydeksi
+      const ti = ev.peerPid != null ? idxOfPid(ev.peerPid) : -1;
+      if (ti >= 0) family.persons[ti].data.events = family.persons[ti].data.events.filter((x) => x.linkId !== ev.linkId);
+      unshareEvent(ev);
+    }
+    renderAllKeepPopover(); // tallennus peilaa parin
+    openPopover(id); // kentät näyttävät uudet osuudet
   });
   const peerSel = $('pv-peer');
   if (peerSel) peerSel.addEventListener('change', (e) => {
@@ -2918,6 +2955,7 @@ function renderEventList() {
       amStr = `${fmtCompact(ev.recMonthly)}/kk`;
     }
     let loanBadge = ev.amount < 0 && ev.financing === 'loan' ? '<span class="loan-badge">laina</span>' : '';
+    if (ev.shared) loanBadge += '<span class="loan-badge share-badge">½ jaettu</span>';
     if (ev.type !== 'retirement' && ev.recMonthly) loanBadge += '<span class="loan-badge rec-badge">toistuva</span>';
     if (ev.isAsset && ev.sellAge != null) loanBadge += `<span class="loan-badge sale-badge">myynti ${Math.round(ev.sellAge)} v</span>`;
     const goalBadge = { withdrawal: '→ 0 €', age: 'aikaisin', saving: 'tavoite' }[g];
@@ -3765,6 +3803,7 @@ function addPerson(role) {
     d.pro = null;
   }
   const kidCount = family.persons.filter((p) => p.child).length;
+  const ownerIdx = family.active; // jakodialogin tarjoaja = lisääjä
   family.persons.push({
     pid: 'p' + (Date.now() % 1e8),
     name: role === 'spouse' ? 'Puoliso' : (kidCount ? `Lapsi ${kidCount + 1}` : 'Lapsi'),
@@ -3776,6 +3815,70 @@ function addPerson(role) {
   toast(role === 'spouse'
     ? 'Puoliso lisätty — täytä hänen tietonsa. Yhteiskäyrä piirtyy graafiin.'
     : 'Lapsi lisätty — aseta ikä ja säästö (esim. lahjarahat). Siirrot löytyvät paletista.');
+  if (role === 'spouse') maybeOfferShareSplit(ownerIdx);
+}
+
+/* --- Jakodialogi: puolitetaanko olemassa olevat hankinnat puolisolle? --- */
+
+// Näytetään kerran puolison lisäyksen yhteydessä, jos lisääjällä on
+// kulutapahtumia. Sama asia hoituu myöhemmin tapahtuman Jaettu-kytkimestä.
+function maybeOfferShareSplit(ownerIdx) {
+  const owner = family && family.persons[ownerIdx];
+  if (!owner || owner.child) return;
+  const cands = owner.data.events.filter((e) => shareable(e) && !e.shared && (e.amount < 0 || (e.recMonthly || 0) < 0));
+  if (!cands.length) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'share-ask';
+  wrap.innerHTML = `<div class="share-card" role="dialog" aria-label="Jaetaanko yhteiset hankinnat">
+    <h3>Jaetaanko yhteiset hankinnat?</h3>
+    <p class="note">Valitut kulut puolitetaan teille kahdelle — puolikkaat pysyvät synkassa
+    ja näkyvät molempien suunnitelmissa samassa kalenterihetkessä. Valintaa voi muuttaa
+    myöhemmin tapahtuman Jaettu-kytkimestä.</p>
+    ${cands.map((e) => `<label class="toggle"><input type="checkbox" data-share="${e.id}" ${SHARE_PRESET.has(e.type) ? 'checked' : ''} /><span class="switch"></span>
+      <span>${EVENT_TYPES[e.type].icon} ${escapeHtml(evLabel(e))} <small>${Math.round(e.age)} v · ${fmtEur(Math.abs(e.amount))}${e.recMonthly ? ` + ${fmtEur(Math.abs(e.recMonthly))}/kk` : ''}</small></span></label>`).join('')}
+    <div class="actions"><button class="btn" id="shareApply">Jaa valitut puoliksi</button>
+    <button class="btn ghost" id="shareSkip">Ei kiitos</button></div>
+  </div>`;
+  document.body.appendChild(wrap);
+  $('shareSkip').addEventListener('click', () => wrap.remove());
+  $('shareApply').addEventListener('click', () => {
+    const ids = [...wrap.querySelectorAll('[data-share]:checked')].map((x) => +x.dataset.share);
+    wrap.remove();
+    if (ids.length) applyShareSplit(ownerIdx, ids);
+  });
+}
+
+// Aktiivinen henkilö on juuri lisätty puoliso (state); omistaja on toinen.
+// Puolikas kirjoitetaan suoraan stateen — reconcile pitää parin synkassa
+// tästä eteenpäin kummalta puolelta tahansa muokattaessa.
+function applyShareSplit(ownerIdx, ids) {
+  pushUndoNow();
+  const owner = family.persons[ownerIdx];
+  const ownerActive = ownerIdx === family.active;
+  const oEvents = ownerActive ? state.events : owner.data.events;
+  let n = 0;
+  for (const id of ids) {
+    const e = oEvents.find((x) => x.id === id);
+    if (!e || e.shared) continue;
+    e.shared = true;
+    e.linkId = newLinkId('sh');
+    e.peerPid = ownerActive ? family.persons[adultPeerIdx()].pid : activePid();
+    halveShared(e);
+    if (!ownerActive) {
+      // puolikas aktiiviselle (puolisolle) heti; jatkossa reconcile synkkaa
+      const age = clamp(e.age - owner.data.ageNow + state.ageNow, state.ageNow, state.ageEnd);
+      const tw = { id: idSeq++, linkId: e.linkId, type: e.type, shared: true, peerPid: owner.pid, age, amount: e.amount };
+      for (const k of SHARE_FIELDS) if (e[k] != null) tw[k] = e[k];
+      if (e.sellAge != null) tw.sellAge = clamp(e.sellAge - owner.data.ageNow + state.ageNow, age + 1, state.ageEnd);
+      if (e.name) tw.name = e.name;
+      state.events.push(tw);
+    }
+    n++;
+  }
+  persistFamily();
+  renderAll();
+  toast(`${n} hankintaa jaettu puoliksi — puolikkaat näkyvät molempien suunnitelmissa`);
+  announce(`${n} hankintaa jaettu puoliksi`);
 }
 
 function openFamAddMenu(anchor) {
@@ -3832,7 +3935,9 @@ function removePerson() {
   const pid = me.pid;
   family.persons.splice(family.active, 1);
   for (const p of family.persons) {
+    // poistuneen siirtoparit pois; jaetut hankinnat palautuvat täysiksi
     p.data.events = p.data.events.filter((e) => !(EVENT_TYPES[e.type] && EVENT_TYPES[e.type].familyOnly && e.peerPid === pid));
+    for (const e of p.data.events) if (e.shared && e.peerPid === pid) unshareEvent(e);
   }
   family.active = 0;
   famSimCache.clear();
@@ -3897,48 +4002,83 @@ function bindFamily() {
   });
 }
 
-/* --- Siirrot: pari pysyy synkassa osapuolten suunnitelmissa --- */
+/* --- Siirrot ja jaetut tapahtumat: pari pysyy synkassa osapuolilla --- */
 
 // Sama kalenterihetki, eri iät: kohdehenkilön ikä samana kuukautena
 const peerAgeOf = (age, od) => clamp(age - state.ageNow + od.ageNow, od.ageNow, od.ageEnd);
+
+// Jaettu hankinta: kulu puoliksi molemmille aikuisille. Kumpikin puolikas on
+// tavallinen tapahtuma omassa suunnitelmassa (moottori ei tiedä jaosta mitään);
+// linkId+peerPid pitävät parin synkassa täsmälleen kuten siirroissa.
+const SHARE_FIELDS = ['financing', 'down', 'rate', 'years', 'recMonthly', 'recYears', 'isAsset', 'appr', 'sellTaxFree'];
+const SHARE_PRESET = new Set(['home', 'car', 'cottage', 'renovation', 'wedding']); // dialogin esivalinta
+const shareable = (e) => {
+  const def = EVENT_TYPES[e.type];
+  return !!def && !def.familyOnly && !def.metric && e.type !== 'retirement';
+};
+const isPaired = (e) => !!e.linkId && (e.shared || (EVENT_TYPES[e.type] && EVENT_TYPES[e.type].familyOnly));
+const adultPeerIdx = () => family.persons.findIndex((p, i) => i !== family.active && !p.child);
+const newLinkId = (pfx) => pfx + (idSeq++) + '-' + Math.floor(Math.random() * 1e6);
+function halveShared(e) {
+  e.amount = Math.round(e.amount / 2);
+  if (e.down != null) e.down = Math.round(e.down / 2);
+  if (e.recMonthly != null) e.recMonthly = Math.round(e.recMonthly / 2);
+}
+function unshareEvent(e) {
+  e.amount = Math.round(e.amount * 2);
+  if (e.down != null) e.down = Math.round(e.down * 2);
+  if (e.recMonthly != null) e.recMonthly = Math.round(e.recMonthly * 2);
+  delete e.shared; delete e.linkId; delete e.peerPid;
+}
 
 function mirrorTransfer(ev) {
   if (!familyOn() || !ev.linkId) return;
   // kohde: peerPid tai (kahden hengen perheessä / puuttuessa) se toinen
   let ti = ev.peerPid != null ? idxOfPid(ev.peerPid) : -1;
-  if (ti < 0 || ti === family.active) ti = otherIdx();
+  if (ti < 0 || ti === family.active) ti = ev.shared ? adultPeerIdx() : otherIdx();
+  if (ti < 0) return;
   ev.peerPid = family.persons[ti].pid;
   const od = family.persons[ti].data;
-  const otherType = ev.type === 'transferOut' ? 'transferIn' : 'transferOut';
   let tw = od.events.find((x) => x.linkId === ev.linkId);
   if (!tw) {
     tw = { id: 800000 + Math.floor(Math.random() * 1e5), linkId: ev.linkId };
     od.events.push(tw);
   }
-  tw.type = otherType;
   tw.age = peerAgeOf(ev.age, od);
-  tw.amount = -ev.amount;
   tw.peerPid = activePid(); // parin toinen pää osoittaa takaisin
   if (ev.name) tw.name = ev.name; else delete tw.name;
+  if (ev.shared) {
+    // sama tapahtuma, sama osuus — vain iät mapataan kalenteriin
+    tw.type = ev.type;
+    tw.amount = ev.amount;
+    tw.shared = true;
+    for (const k of SHARE_FIELDS) { if (ev[k] != null) tw[k] = ev[k]; else delete tw[k]; }
+    if (ev.sellAge != null) tw.sellAge = clamp(peerAgeOf(ev.sellAge, od), tw.age + 1, od.ageEnd);
+    else delete tw.sellAge;
+  } else {
+    tw.type = ev.type === 'transferOut' ? 'transferIn' : 'transferOut';
+    tw.amount = -ev.amount;
+  }
 }
 
-// Ajetaan tallennuksen yhteydessä: aktiivisen siirrot peilataan kohteilleen,
-// ja muilta poistetaan NE parit, joiden vastinkappale kuuluisi aktiiviselle
-// mutta on poistettu. Muiden keskinäisiin siirtoihin ei kosketa.
+// Ajetaan tallennuksen yhteydessä: aktiivisen parilliset tapahtumat (siirrot
+// ja jaetut) peilataan kohteilleen, ja muilta poistetaan NE parit, joiden
+// vastinkappale kuuluisi aktiiviselle mutta on poistettu. Muiden keskinäisiin
+// pareihin ei kosketa.
 function reconcileTransfers() {
   if (!familyOn()) return;
   const me = activePid();
   const activeLinks = new Set();
   for (const e of state.events) {
-    if (EVENT_TYPES[e.type] && EVENT_TYPES[e.type].familyOnly && e.linkId) {
+    if (isPaired(e)) {
       activeLinks.add(e.linkId);
       mirrorTransfer(e);
     }
   }
   const two = family.persons.length === 2;
-  for (const { p, i } of othersOf()) {
+  for (const { p } of othersOf()) {
     p.data.events = p.data.events.filter((e) => {
-      if (!(EVENT_TYPES[e.type] && EVENT_TYPES[e.type].familyOnly && e.linkId)) return true;
+      if (!isPaired(e)) return true;
       const peer = e.peerPid || (two ? me : null);
       return peer !== me || activeLinks.has(e.linkId);
     });
@@ -4065,7 +4205,7 @@ function familySummaryHtml() {
     + `<table class="sum-table"><thead><tr><th>Henkilö</th><th>Säästö</th><th>Eläkeikä</th><th>Eläkkeellä</th><th>Onnistumis-%</th></tr></thead><tbody>${rows}</tbody></table>`
     + (trRows ? `<h2>Siirrot perheessä</h2><table class="sum-table"><thead><tr><th>Siirto</th><th>Ajankohta</th><th>Summa</th></tr></thead><tbody>${trRows}</tbody></table>` : '')
     + (widowRows ? `<h2>Leskiturvatarkastelu</h2><ul class="sum-points">${widowRows}</ul>`
-      + `<p class="sum-disclaimer">Leskiturva on karkea tarkastelu: perintö siirtyy leskelle sellaisenaan, perhe-eläkettä tai perintöveroa ei mallinneta.</p>` : '');
+      + `<p class="sum-disclaimer">Leskiturva on karkea tarkastelu: perintö siirtyy leskelle sellaisenaan, perhe-eläkettä tai perintöveroa ei mallinneta. Jaetut hankinnat säilyvät leskellä omana osuutenaan.</p>` : '');
 }
 
 /* --- Perhevuoristo: 2.5D-katselunäkymä --- */

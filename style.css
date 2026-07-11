@@ -653,6 +653,12 @@ input[type="range"]::-moz-range-thumb {
   background: rgba(96, 165, 250, 0.1);
   border-color: rgba(96, 165, 250, 0.3);
 }
+.share-badge {
+  color: var(--accent);
+  background: rgba(45, 212, 191, 0.1);
+  border-color: rgba(45, 212, 191, 0.3);
+  text-transform: none;
+}
 .sale-badge {
   color: #fbbf24;
   background: rgba(251, 191, 36, 0.1);
@@ -1625,6 +1631,37 @@ body.pro .pro-switch { border-color: rgba(139, 124, 246, 0.55); }
 }
 .fam-del { padding: 2px 7px; opacity: 0.6; }
 .fam-del:hover, .fam-del.armed { color: var(--danger); border-color: rgba(248, 113, 113, 0.5); opacity: 1; }
+/* Jakodialogi: puolitetaanko hankinnat puolison lisäyksen yhteydessä */
+.share-ask {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(4, 6, 14, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.share-card {
+  background: #141c33;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+  width: 100%;
+  max-width: 430px;
+  max-height: 82vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.share-card h3 { margin: 0; font-size: 16px; }
+.share-card .note { margin: 0; font-size: 12.5px; color: var(--text-dim); line-height: 1.5; }
+.share-card .toggle small { display: block; color: var(--text-faint); }
+.share-card .actions { display: flex; gap: 8px; margin-top: 6px; }
+.share-card .actions .btn { flex: 1; }
+
 /* Lapsichippi kantaa käyränsä värin (--kid asetetaan inline) */
 .fam-chip.kid { border-color: color-mix(in srgb, var(--kid) 45%, transparent); }
 .fam-chip.kid.on {
