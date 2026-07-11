@@ -24,8 +24,8 @@ const EVENT_TYPES = {
   goal:        { icon: '🎯', label: 'Tavoite',             amount: 100000, metric: true },
   // Siirrot puolisolle/puolisolta: näkyvät vain perhetilassa ja pysyvät
   // pareina synkassa molempien suunnitelmissa (linkId)
-  transferOut: { icon: '📤', label: 'Siirto puolisolle',   amount: -5000, familyOnly: true },
-  transferIn:  { icon: '📥', label: 'Siirto puolisolta',   amount: 5000,  familyOnly: true },
+  transferOut: { icon: '📤', label: 'Siirto läheiselle',   amount: -5000, familyOnly: true },
+  transferIn:  { icon: '📥', label: 'Siirto läheiseltä',   amount: 5000,  familyOnly: true },
   retirement:  { icon: '🌴', label: 'Eläkkeelle jäänti',   withdrawal: 2400, pension: 1500, pensionAge: 65, unique: true },
 };
 
@@ -243,11 +243,11 @@ function requestMcRefresh() {
       });
     }
     if (familyOn()) {
-      // Perheen yhteinen MC: molemmat henkilöt samaan maailmaan
+      // Perheen yhteinen MC: kaikki henkilöt samaan maailmaan
       saveActiveIntoFamily();
       mcWorker.postMessage({
         task: 'mcJoint', seq: mcSeq,
-        states: [JSON.parse(JSON.stringify(family.persons[0].data)), JSON.parse(JSON.stringify(family.persons[1].data))],
+        states: family.persons.map((p) => JSON.parse(JSON.stringify(p.data))),
         paths: pCur ? pCur.mc.paths : MC_FULL,
       });
     }
@@ -334,17 +334,19 @@ function renderChart(reuse = false) {
   plot.h = H - plot.t - plot.b;
 
   const { a0, a1, months } = sim;
-  // Perheen yhteiskäyrä: raahauksen aikana puolison polku tulee suoraan
-  // perheratkaisijalta (otherExpLive), muuten välimuistista
-  let famTotal = null, famOtherExp = null;
+  // Perheen yhteiskäyrä: raahauksen aikana muiden polut tulevat suoraan
+  // perheratkaisijalta (othersLive), muuten välimuistista
+  let famTotal = null, famOthers = null;
   if (familyOn()) {
-    const liveO = drawState.drag && drawState.drag.otherExpLive;
-    const os = liveO ? null : getOtherSim();
-    famOtherExp = liveO || (os ? os.exp : null);
-    if (famOtherExp) {
-      const oM = famOtherExp.length - 1;
+    const live = drawState.drag && (drawState.drag.othersLive || drawState.drag.otherExpLive);
+    famOthers = live || othersOf().map((o) => ({ i: o.i, arr: personSim(o.i).exp }));
+    if (famOthers.length) {
       famTotal = new Float64Array(months + 1);
-      for (let i = 0; i <= months; i++) famTotal[i] = sim.exp[Math.min(i, sim.months)] + famOtherExp[Math.min(i, oM)];
+      for (let i = 0; i <= months; i++) {
+        let s = sim.exp[Math.min(i, sim.months)];
+        for (const o of famOthers) s += o.arr[Math.min(i, o.arr.length - 1)];
+        famTotal[i] = s;
+      }
     }
   }
   famTotalCache = famTotal;
@@ -468,13 +470,18 @@ function renderChart(reuse = false) {
     });
   }
 
-  /* Perhevirta: puolison käyrä ja perheen yhteiskäyrä */
+  /* Perhevirta: muiden henkilöiden käyrät ja perheen yhteiskäyrä */
   const legFam = $('legendFamily');
-  if (famOtherExp && famTotal) {
-    const oM = Math.min(famOtherExp.length - 1, months);
-    let op = '';
-    for (let i = 0; i <= oM; i++) op += `${i ? ' L' : 'M'} ${scaleX(a0 + i / 12).toFixed(1)},${scaleY(famOtherExp[i]).toFixed(1)}`;
-    el('path', { d: op, fill: 'none', stroke: '#64748b', 'stroke-width': 1.5, opacity: 0.75, 'pointer-events': 'none' }, svg);
+  if (famOthers && famOthers.length && famTotal) {
+    for (const o of famOthers) {
+      const per = family.persons[o.i];
+      const kidIdx = family.persons.slice(0, o.i).filter((x) => x.child).length;
+      const col = per && per.child ? kidColor(kidIdx) : '#64748b';
+      const oM = Math.min(o.arr.length - 1, months);
+      let op = '';
+      for (let i = 0; i <= oM; i++) op += `${i ? ' L' : 'M'} ${scaleX(a0 + i / 12).toFixed(1)},${scaleY(o.arr[i]).toFixed(1)}`;
+      el('path', { d: op, fill: 'none', stroke: col, 'stroke-width': 1.5, opacity: 0.75, 'pointer-events': 'none' }, svg);
+    }
     let tp = '';
     for (let i = 0; i <= months; i++) tp += `${i ? ' L' : 'M'} ${scaleX(a0 + i / 12).toFixed(1)},${scaleY(famTotal[i]).toFixed(1)}`;
     el('path', { d: tp, fill: 'none', stroke: '#e8edf8', 'stroke-width': 2, opacity: 0.85, 'pointer-events': 'none' }, svg);
@@ -1014,6 +1021,21 @@ function openPopover(id) {
       `<span class="input"><input id="pv-age" type="number" min="${state.ageNow + 1}" max="${state.ageEnd}" step="1" value="${Math.round(ev.age)}" /><em>v</em></span></label>` +
       `<label class="field"><span class="field-label">Tavoitesumma</span>` +
       `<span class="input"><input id="pv-amount" type="number" min="0" step="5000" value="${ev.amount}" /><em>€</em></span></label>`;
+  } else if (def.familyOnly && familyOn()) {
+    // Siirto: pari kirjautuu molempien suunnitelmiin — kohde valittavissa
+    const out = ev.type === 'transferOut';
+    const ti = ev.peerPid != null && idxOfPid(ev.peerPid) >= 0 ? idxOfPid(ev.peerPid) : otherIdx();
+    const peers = othersOf();
+    fields =
+      `<p class="note">Siirto kirjautuu molempien suunnitelmiin samaan kalenterihetkeen — vastapuolelle peilikuvana.</p>` +
+      `<label class="field"><span class="field-label">Ikä (oma)</span>` +
+      `<span class="input"><input id="pv-age" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${Math.round(ev.age)}" /><em>v</em></span></label>` +
+      `<label class="field"><span class="field-label">Summa</span>` +
+      `<span class="input"><input id="pv-amount" type="number" step="1000" value="${ev.amount}" /><em>€</em></span></label>` +
+      (peers.length > 1
+        ? `<label class="field"><span class="field-label">${out ? 'Saaja' : 'Antaja'}</span>` +
+          `<span class="input"><select id="pv-peer">${peers.map((x) => `<option value="${x.p.pid}"${x.i === ti ? ' selected' : ''}>${escapeHtml(x.p.name)}</option>`).join('')}</select></span></label>`
+        : `<p class="note">${out ? 'Saaja' : 'Antaja'}: <b>${escapeHtml(family.persons[ti] ? family.persons[ti].name : '?')}</b></p>`);
   } else {
     fields =
       `<label class="field"><span class="field-label">Ikä</span>` +
@@ -1140,6 +1162,24 @@ function openPopover(id) {
       updateLoanNote();
       renderAllKeepPopover();
     }
+  });
+  // Siirron etumerkki seuraa suuntaa: läheiselle − , läheiseltä +
+  if (def.familyOnly && am) am.addEventListener('change', (e) => {
+    const v = Math.abs(parseFloat(e.target.value) || 0);
+    ev.amount = ev.type === 'transferOut' ? -v : v;
+    e.target.value = ev.amount;
+    renderAllKeepPopover();
+  });
+  const peerSel = $('pv-peer');
+  if (peerSel) peerSel.addEventListener('change', (e) => {
+    // vanha pari pois vanhalta kohteelta; reconcile peilaa uudelle
+    const oldTi = ev.peerPid != null ? idxOfPid(ev.peerPid) : -1;
+    if (oldTi >= 0 && ev.linkId) {
+      const od = family.persons[oldTi].data;
+      od.events = od.events.filter((x) => x.linkId !== ev.linkId);
+    }
+    ev.peerPid = e.target.value;
+    renderAllKeepPopover();
   });
   const wd = $('pv-wd');
   if (wd) wd.addEventListener('input', (e) => {
@@ -1775,26 +1815,21 @@ function dragRetline(d, age, noSnap) {
   return { html: chipWrap(chipRow('Eläkeikä', d.startAge, a, 'v'), constraint), constraint };
 }
 
-// Perheen yhteiskäyrä: yhtä suuri lisäys molempien kuukausisäästöön
+// Perheen yhteiskäyrä: yhtä suuri lisäys jokaisen aikuisen kuukausisäästöön
 function dragFamTotal(d, age, val, noSnap) {
   const s = d.famSolver;
   if (!s) return null;
   const m = s.monthFor(clamp(age, sim.a0 + 1 / 12, sim.a1));
-  const lo = -Math.min(s.m0me, s.m0o);
-  let dEur = solveParam((x) => s.totalAt(x, m), Math.max(0, val), lo, 1e6, true);
+  let dEur = solveParam((x) => s.totalAt(x, m), Math.max(0, val), s.loD, 1e6, true);
   dEur = noSnap ? Math.round(dEur) : snapTo(dEur, 10);
   let constraint = null;
-  if (dEur <= lo) { dEur = lo; constraint = 'Säästö ei voi olla negatiivinen'; }
+  if (dEur <= s.loD) { dEur = s.loD; constraint = 'Säästö ei voi olla negatiivinen'; }
   else if (dEur >= 1e6) { dEur = 1e6; constraint = 'Yläraja vastassa'; }
-  state.monthly = Math.max(0, s.m0me + dEur);
-  $('monthly').value = state.monthly;
-  family.persons[otherIdx()].data.monthly = Math.max(0, s.m0o + dEur);
-  d.otherExpLive = s.otherExpWith(dEur); // puolison polku elää samassa framessa
-  const oName = family.persons[otherIdx()].name;
+  s.apply(dEur);
+  d.othersLive = s.liveOthers(dEur); // muiden polut elävät samassa framessa
   return { html: chipWrap(
-    chipRow('Perheen säästö', s.m0me + s.m0o, Math.max(0, s.m0me + dEur) + Math.max(0, s.m0o + dEur), '€/kk'),
-    constraint,
-    `${escapeHtml(currentName())} ${fmtNum(Math.max(0, s.m0me + dEur))} · ${escapeHtml(oName)} ${fmtNum(Math.max(0, s.m0o + dEur))} €/kk`), constraint };
+    chipRow('Perheen säästö', s.m0sum, s.sumWith(dEur), '€/kk'),
+    constraint, s.splitNote(dEur)), constraint };
 }
 
 // Elämäntapahtuma: vaaka = ikä, pysty = summa (käyrän skaalalla)
@@ -1828,7 +1863,6 @@ function drawDragUp() {
   if (!d) return;
   if (d.moved) {
     drawMarkTutored(); // ensimmäinen onnistunut veto kuittaa opastuksen
-    if (d.famSolver) otherDirty = true; // puolison säästö muuttui — sim uusiksi
     renderAll(); // täysi laskenta + tallennus + MC-tarkennuspyyntö (debounce)
     updateSelChip();
     announce(dragAnnounce(d));
@@ -1845,7 +1879,7 @@ function drawDragUp() {
 function dragAnnounce(d) {
   const p = sim && sim.successProb != null && !sim.successStale
     ? `, onnistumistodennäköisyys ${Math.round(sim.successProb * 100)} prosenttia` : '';
-  if (d.kind === 'famtotal') return `Perheen säästö ${fmtNum(state.monthly + (familyOn() ? family.persons[otherIdx()].data.monthly : 0))} euroa kuukaudessa${p}`;
+  if (d.kind === 'famtotal') return `Perheen säästö ${fmtNum(familyOn() ? family.persons.reduce((s, pp, pi) => s + (pi === family.active ? state : pp.data).monthly, 0) : state.monthly)} euroa kuukaudessa${p}`;
   if (d.kind === 'acc') return `Kuukausisäästö ${fmtNum(state.monthly)} euroa kuukaudessa${p}`;
   if (d.kind === 'wd' || d.kind === 'end') return `Kuukausitulo ${fmtNum(d.ev ? d.ev.withdrawal : 0)} euroa kuukaudessa${p}`;
   if (d.kind === 'retline') return `Eläkeikä ${fmtNum(d.ev ? d.ev.age : 0)} vuotta${p}`;
@@ -1861,10 +1895,7 @@ function drawCancelDrag() {
   dragLight = false;
   if (d && d.moved) {
     try { applySaved(JSON.parse(d.cancelSnap)); syncInputs(); } catch (err) {}
-    if (d.famSolver) { // puolison säästö takaisin lähtöarvoon
-      family.persons[otherIdx()].data.monthly = d.famSolver.m0o;
-      otherDirty = true;
-    }
+    if (d.famSolver) d.famSolver.apply(0); // muiden säästöt takaisin lähtöarvoihin
   }
   renderAll();
   updateSelChip();
@@ -2021,12 +2052,15 @@ function drawNudge(axis, dir, big) {
     $('monthly').value = state.monthly;
     text = `Kuukausisäästö ${fmtNum(state.monthly)} euroa kuukaudessa`;
   } else if (s.kind === 'famtotal') {
-    state.monthly = clamp(snapTo(state.monthly + dir * 10 * mult, 10), 0, 1e6);
+    // sama askel jokaiselle aikuiselle
+    let sum = 0;
+    family.persons.forEach((p, pi) => {
+      const data = pi === family.active ? state : p.data;
+      if (!p.child) data.monthly = clamp(snapTo(data.monthly + dir * 10 * mult, 10), 0, 1e6);
+      sum += data.monthly;
+    });
     $('monthly').value = state.monthly;
-    const od = family.persons[otherIdx()].data;
-    od.monthly = clamp(snapTo(od.monthly + dir * 10 * mult, 10), 0, 1e6);
-    otherDirty = true;
-    text = `Perheen säästö ${fmtNum(state.monthly + od.monthly)} euroa kuukaudessa`;
+    text = `Perheen säästö ${fmtNum(sum)} euroa kuukaudessa`;
   } else if (s.kind === 'wd' || s.kind === 'end') {
     if (!ev) return;
     const pmN = proOf(state);
@@ -2387,6 +2421,7 @@ function openFsAddMenu(anchor) {
   add('🎯', 'Varallisuustavoite', () => addFromFs('goal')).classList.add('wide');
   for (const [type, def] of Object.entries(EVENT_TYPES)) {
     if (type === 'goal') continue;
+    if (def.familyOnly && !familyOn()) continue; // siirrot vain perhetilassa
     if (def.unique && state.events.some((e) => e.type === type)) continue; // esim. eläke jo graafilla
     add(def.icon, def.label, () => addFromFs(type));
   }
@@ -3638,15 +3673,42 @@ function proSummaryHtml(s) {
 // markkinahistoria osuu molempiin, kukin salkku reagoi omalla riskillään.
 
 const FAMILY_KEY = 'vp-family-v1';
-let family = null;    // { persons: [{name, data}], active }
-let otherSim = null;  // puolison välimuistitettu sim
-let otherDirty = true;
+const FAM_MAX = 4; // 2 aikuista + 2 lasta
+let family = null;    // { persons: [{pid, name, role: me|spouse|child, child, data}], active }
 let jointMc = null;   // workerin perhe-MC (onnistumis-% + viuhka)
 let famRemoveArm = false;
+let famAddMenuEl = null;
+const famSimCache = new Map(); // henkilöiden simit (avain: idx, validointi: data-json)
 
 const familyOn = () => !!(family && family.persons.length > 1);
-const otherIdx = () => (family.active === 0 ? 1 : 0);
+// Kahden hengen polut ja testit: "se toinen" = ensimmäinen ei-aktiivinen
+const otherIdx = () => family.persons.findIndex((_, i) => i !== family.active);
 const currentName = () => (family ? family.persons[family.active].name : 'Minä');
+const activePid = () => (family ? family.persons[family.active].pid : null);
+const idxOfPid = (pid) => (family ? family.persons.findIndex((p) => p.pid === pid) : -1);
+const hasSpouse = () => !!(family && family.persons.some((p) => p.role === 'spouse'));
+const kidColor = (i) => ['#e879f9', '#38bdf8', '#a3e635'][i % 3];
+
+// Vanhat tallenteet (v1: 2 henkilöä ilman pid/roolia) → nykymuoto
+function migrateFamily() {
+  if (!family) return;
+  family.persons.forEach((p, i) => {
+    if (!p.pid) p.pid = 'p' + i;
+    if (!p.role) p.role = i === 0 ? 'me' : (p.data && p.data.ageNow < 18 ? 'child' : 'spouse');
+    p.child = p.role === 'child';
+  });
+}
+
+function personSim(i) {
+  const j = JSON.stringify(family.persons[i].data);
+  const c = famSimCache.get(i);
+  if (c && c.json === j) return c.sim;
+  const s = simulate(JSON.parse(j));
+  famSimCache.set(i, { json: j, sim: s });
+  return s;
+}
+const othersOf = () => family.persons.map((p, i) => ({ p, i })).filter((x) => x.i !== family.active);
+function getOtherSim() { return familyOn() ? personSim(otherIdx()) : null; }
 
 function saveActiveIntoFamily() {
   if (family) family.persons[family.active].data = JSON.parse(JSON.stringify(serialize()));
@@ -3660,7 +3722,7 @@ function persistFamily() {
 }
 
 function validFamily(o) {
-  return o && Array.isArray(o.persons) && o.persons.length >= 1 && o.persons.length <= 2
+  return o && Array.isArray(o.persons) && o.persons.length >= 1 && o.persons.length <= FAM_MAX
     && o.persons.every((p) => p && p.data && typeof p.data === 'object' && Array.isArray(p.data.events));
 }
 
@@ -3669,37 +3731,75 @@ function loadFamily() {
     const raw = JSON.parse(localStorage.getItem(FAMILY_KEY));
     if (validFamily(raw)) {
       family = {
-        persons: raw.persons.map((p) => ({ name: String(p.name || 'Henkilö').slice(0, 16), data: p.data })),
-        active: raw.active === 1 ? 1 : 0,
+        persons: raw.persons.map((p) => ({ pid: p.pid, name: String(p.name || 'Henkilö').slice(0, 16), role: p.role, child: !!p.child, data: p.data })),
+        active: clamp(Math.round(raw.active || 0), 0, raw.persons.length - 1),
       };
+      migrateFamily();
     }
   } catch (e) { /* viallinen — ohitetaan */ }
 }
 
-function getOtherSim() {
-  if (!familyOn()) return null;
-  if (otherDirty) {
-    try { otherSim = simulate(JSON.parse(JSON.stringify(family.persons[otherIdx()].data))); }
-    catch (e) { otherSim = null; }
-    otherDirty = false;
-  }
-  return otherSim;
-}
-
-function addSpouse() {
-  if (family && family.persons.length >= 2) return;
+// ＋ avaa valikon: puoliso (jos ei jo ole) tai lapsi (jo syntynyt —
+// oma käyrä ja perustiedot heti; syntymättömät lapset ovat F6-työtä)
+function addPerson(role) {
+  closeFamAddMenu();
+  if (family && family.persons.length >= FAM_MAX) { toast('Perheessä on jo neljä henkilöä.'); return; }
+  if (role === 'spouse' && hasSpouse()) return;
   pushUndoNow();
-  if (!family) family = { persons: [{ name: 'Minä', data: JSON.parse(JSON.stringify(serialize())) }], active: 0 };
-  // Puolison pohja: omat perusasetukset mutta puhdas tapahtumalista —
-  // tapahtumat ovat henkilökohtaisia
+  if (!family) {
+    family = { persons: [{ pid: 'p0', name: 'Minä', role: 'me', child: false, data: JSON.parse(JSON.stringify(serialize())) }], active: 0 };
+  }
   const d = JSON.parse(JSON.stringify(serialize()));
   d.startCapital = 0;
-  d.events = [{ id: 1, type: 'retirement', age: 65, withdrawal: d.expenses ? Math.round(d.expenses / 100) * 100 : 2400, pension: 1500, pensionAge: 65 }];
-  family.persons.push({ name: 'Puoliso', data: d });
+  d.income = null; d.expenses = null;
+  if (role === 'spouse') {
+    d.events = [{ id: 1, type: 'retirement', age: 65, withdrawal: 2400, pension: 1500, pensionAge: 65 }];
+  } else {
+    // Lapsi: oma pieni virta — ikä, lahjarahat ja pitkä horisontti
+    d.ageNow = 10;
+    d.ageEnd = 90;
+    d.monthly = 50;
+    d.savingsGrowth = 0;
+    d.events = [];
+    d.proOn = false;
+    d.pro = null;
+  }
+  const kidCount = family.persons.filter((p) => p.child).length;
+  family.persons.push({
+    pid: 'p' + (Date.now() % 1e8),
+    name: role === 'spouse' ? 'Puoliso' : (kidCount ? `Lapsi ${kidCount + 1}` : 'Lapsi'),
+    role, child: role === 'child', data: d,
+  });
   saveActiveIntoFamily();
   persistFamily();
-  switchPerson(1);
-  toast('Puoliso lisätty — täytä hänen tietonsa. Yhteiskäyrä piirtyy graafiin.');
+  switchPerson(family.persons.length - 1);
+  toast(role === 'spouse'
+    ? 'Puoliso lisätty — täytä hänen tietonsa. Yhteiskäyrä piirtyy graafiin.'
+    : 'Lapsi lisätty — aseta ikä ja säästö (esim. lahjarahat). Siirrot löytyvät paletista.');
+}
+
+function openFamAddMenu(anchor) {
+  if (famAddMenuEl) { closeFamAddMenu(); return; }
+  if (family && family.persons.length >= FAM_MAX) { toast('Perheessä on jo neljä henkilöä.'); return; }
+  const menu = document.createElement('div');
+  menu.className = 'menu';
+  const add = (icon, name, desc, fn) => {
+    const b = document.createElement('button');
+    b.innerHTML = `<div>${icon} ${name}</div><div class="mdesc">${desc}</div>`;
+    b.addEventListener('click', fn);
+    menu.appendChild(b);
+  };
+  if (!hasSpouse()) add('🧑‍🤝‍🧑', 'Puoliso', 'Oma suunnitelma ja yhteinen käyrä', () => addPerson('spouse'));
+  add('🧒', 'Lapsi', 'Oma käyrä jo syntyneelle — lahjarahat ja siirrot', () => addPerson('child'));
+  document.body.appendChild(menu);
+  const r = anchor.getBoundingClientRect();
+  menu.style.top = r.bottom + 8 + 'px';
+  menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 10)) + 'px';
+  famAddMenuEl = menu;
+}
+
+function closeFamAddMenu() {
+  if (famAddMenuEl) { famAddMenuEl.remove(); famAddMenuEl = null; }
 }
 
 function switchPerson(i) {
@@ -3709,7 +3809,6 @@ function switchPerson(i) {
   applySaved(JSON.parse(JSON.stringify(family.persons[i].data)));
   syncInputs();
   closePopover();
-  otherDirty = true;
   jointMc = null;
   persistFamily();
   renderFamilyChips();
@@ -3717,25 +3816,35 @@ function switchPerson(i) {
   announce(`${family.persons[i].name} valittu`);
 }
 
-function removeSpouse() {
-  if (!familyOn()) return;
-  const j = otherIdx();
+// ✕ poistaa AKTIIVISEN henkilön (paitsi ensimmäisen) — vaihda ensin
+// poistettavaan; siirtoparit siivotaan kaikilta
+function removePerson() {
+  if (!familyOn() || family.active === 0) return;
+  const me = family.persons[family.active];
   if (!famRemoveArm) {
     famRemoveArm = true;
     renderFamilyChips();
-    toast(`Poistetaanko ${family.persons[j].name}? Napauta ✕ uudestaan.`);
+    toast(`Poistetaanko ${me.name}? Napauta ✕ uudestaan.`);
     setTimeout(() => { famRemoveArm = false; renderFamilyChips(); }, 3000);
     return;
   }
   famRemoveArm = false;
-  family = null; // aktiivinen henkilö jää stateen — takaisin yksin-tilaan
-  otherSim = null;
+  const pid = me.pid;
+  family.persons.splice(family.active, 1);
+  for (const p of family.persons) {
+    p.data.events = p.data.events.filter((e) => !(EVENT_TYPES[e.type] && EVENT_TYPES[e.type].familyOnly && e.peerPid === pid));
+  }
+  family.active = 0;
+  famSimCache.clear();
   jointMc = null;
+  applySaved(JSON.parse(JSON.stringify(family.persons[0].data)));
+  syncInputs();
+  if (family.persons.length === 1) family = null; // takaisin yksin-tilaan
   persistFamily();
   renderFamilyChips();
   renderAll();
-  toast('Palattiin yhden suunnittelijan tilaan — Ctrl+Z ei palauta puolisoa, jakolinkki palauttaa');
-  announce('Puoliso poistettu');
+  toast(`${me.name} poistettu — jakolinkki palauttaa tarvittaessa`);
+  announce(`${me.name} poistettu`);
 }
 
 function renderFamilyChips() {
@@ -3743,12 +3852,16 @@ function renderFamilyChips() {
   if (!box) return;
   buildPalette(); // siirtochipit näkyvät vain perhetilassa
   if (!familyOn()) {
-    box.innerHTML = '<button class="fam-add" data-fam="add" title="Lisää puoliso — suunnitelkaa yhdessä ja näkekää perheen yhteiskäyrä">＋</button>';
+    box.innerHTML = '<button class="fam-add" data-fam="add" title="Lisää puoliso tai lapsi — perheen yhteiskäyrä piirtyy graafiin">＋</button>';
     return;
   }
-  box.innerHTML = family.persons.map((p, i) =>
-    `<button class="fam-chip${i === family.active ? ' on' : ''}" data-fam="p${i}" title="${i === family.active ? 'Kaksoisnapautus nimeää' : 'Vaihda: ' + escapeHtml(p.name)}">${escapeHtml(p.name)}</button>`
-  ).join('') + `<button class="fam-del${famRemoveArm ? ' armed' : ''}" data-fam="del" title="Poista puoliso">✕</button>`;
+  box.innerHTML = family.persons.map((p, ci) => {
+    const kidIdx = family.persons.slice(0, ci).filter((x) => x.child).length;
+    const style = p.child ? ` style="--kid:${kidColor(kidIdx)}"` : '';
+    return `<button class="fam-chip${ci === family.active ? ' on' : ''}${p.child ? ' kid' : ''}" data-fam="p${ci}"${style} title="${ci === family.active ? 'Kaksoisnapautus nimeää' : 'Vaihda: ' + escapeHtml(p.name)}">${escapeHtml(p.name)}</button>`;
+  }).join('')
+    + (family.persons.length < FAM_MAX ? '<button class="fam-add" data-fam="add" title="Lisää puoliso tai lapsi">＋</button>' : '')
+    + (family.active > 0 ? `<button class="fam-del${famRemoveArm ? ' armed' : ''}" data-fam="del" title="Poista ${escapeHtml(currentName())}">✕</button>` : '');
 }
 
 function bindFamily() {
@@ -3759,8 +3872,8 @@ function bindFamily() {
     e.stopPropagation(); // h2-klikki taittaisi kortin
     e.preventDefault();
     const k = b.dataset.fam;
-    if (k === 'add') addSpouse();
-    else if (k === 'del') removeSpouse();
+    if (k === 'add') openFamAddMenu(b);
+    else if (k === 'del') removePerson();
     else {
       const i = +k.slice(1);
       if (i !== family.active) switchPerson(i);
@@ -3784,17 +3897,18 @@ function bindFamily() {
   });
 }
 
-/* --- Siirrot: pari pysyy synkassa molempien suunnitelmissa --- */
+/* --- Siirrot: pari pysyy synkassa osapuolten suunnitelmissa --- */
 
-// Sama kalenterihetki, eri iät: puolison ikä samana kuukautena
-const otherAgeOf = (age) => {
-  const od = family.persons[otherIdx()].data;
-  return clamp(age - state.ageNow + od.ageNow, od.ageNow, od.ageEnd);
-};
+// Sama kalenterihetki, eri iät: kohdehenkilön ikä samana kuukautena
+const peerAgeOf = (age, od) => clamp(age - state.ageNow + od.ageNow, od.ageNow, od.ageEnd);
 
 function mirrorTransfer(ev) {
   if (!familyOn() || !ev.linkId) return;
-  const od = family.persons[otherIdx()].data;
+  // kohde: peerPid tai (kahden hengen perheessä / puuttuessa) se toinen
+  let ti = ev.peerPid != null ? idxOfPid(ev.peerPid) : -1;
+  if (ti < 0 || ti === family.active) ti = otherIdx();
+  ev.peerPid = family.persons[ti].pid;
+  const od = family.persons[ti].data;
   const otherType = ev.type === 'transferOut' ? 'transferIn' : 'transferOut';
   let tw = od.events.find((x) => x.linkId === ev.linkId);
   if (!tw) {
@@ -3802,17 +3916,18 @@ function mirrorTransfer(ev) {
     od.events.push(tw);
   }
   tw.type = otherType;
-  tw.age = otherAgeOf(ev.age);
+  tw.age = peerAgeOf(ev.age, od);
   tw.amount = -ev.amount;
+  tw.peerPid = activePid(); // parin toinen pää osoittaa takaisin
   if (ev.name) tw.name = ev.name; else delete tw.name;
-  otherDirty = true;
 }
 
-// Ajetaan tallennuksen yhteydessä: aktiivisen siirrot peilataan ja
-// puolisolta poistetaan parit, joiden vastinkappale on poistettu
+// Ajetaan tallennuksen yhteydessä: aktiivisen siirrot peilataan kohteilleen,
+// ja muilta poistetaan NE parit, joiden vastinkappale kuuluisi aktiiviselle
+// mutta on poistettu. Muiden keskinäisiin siirtoihin ei kosketa.
 function reconcileTransfers() {
   if (!familyOn()) return;
-  const od = family.persons[otherIdx()].data;
+  const me = activePid();
   const activeLinks = new Set();
   for (const e of state.events) {
     if (EVENT_TYPES[e.type] && EVENT_TYPES[e.type].familyOnly && e.linkId) {
@@ -3820,35 +3935,54 @@ function reconcileTransfers() {
       mirrorTransfer(e);
     }
   }
-  const before = od.events.length;
-  od.events = od.events.filter((e) => !(EVENT_TYPES[e.type] && EVENT_TYPES[e.type].familyOnly && e.linkId && !activeLinks.has(e.linkId)));
-  if (od.events.length !== before) otherDirty = true;
+  const two = family.persons.length === 2;
+  for (const { p, i } of othersOf()) {
+    p.data.events = p.data.events.filter((e) => {
+      if (!(EVENT_TYPES[e.type] && EVENT_TYPES[e.type].familyOnly && e.linkId)) return true;
+      const peer = e.peerPid || (two ? me : null);
+      return peer !== me || activeLinks.has(e.linkId);
+    });
+  }
 }
 
 /* --- Perheratkaisija: tartu yhteiskäyrään, molempien säästöt joustavat --- */
 
-// Esikäsittely kerran per veto; per frame vain kaksi runPathia.
-// Jakosääntö: sama euromäärä molemmille (selkein chippiin).
+// Esikäsittely kerran per veto; per frame vain N runPathia.
+// Jakosääntö: sama euromäärä jokaiselle AIKUISELLE — lasten säästöt
+// (lahjarahat) eivät jousta perhevedosta.
 function makeFamilySolver() {
-  const meCtx = prepareSim(state);
-  const meRet = meCtx.retire ? meCtx.retire.age : null;
-  const meMu = buildMu(meCtx, state, meRet).muM;
-  const meWd = meCtx.retire ? meCtx.retire.withdrawal : 0;
-  const od = JSON.parse(JSON.stringify(family.persons[otherIdx()].data));
-  const oCtx = prepareSim(od);
-  const oRet = oCtx.retire ? oCtx.retire.age : null;
-  const oMu = buildMu(oCtx, od, oRet).muM;
-  const oWd = oCtx.retire ? oCtx.retire.withdrawal : 0;
-  const m0me = state.monthly, m0o = od.monthly;
-  const wAt = (ctx, st2, wd, ret, mu, save, m) =>
-    runPath(ctx, st2, wd, ret, mu, { clamp0: true, monthlySave: save, stopAt: Math.max(0, Math.min(m, ctx.months)) }).stopW;
+  const built = family.persons.map((p, i) => {
+    const data = i === family.active ? state : JSON.parse(JSON.stringify(p.data));
+    const ctx = prepareSim(data);
+    const ret = ctx.retire ? ctx.retire.age : null;
+    return {
+      i, child: !!p.child, data, ctx, ret,
+      mu: buildMu(ctx, data, ret).muM,
+      wd: ctx.retire ? ctx.retire.withdrawal : 0,
+      m0: data.monthly,
+    };
+  });
+  const adults = built.filter((b) => !b.child);
+  const wAt = (b, save, m) =>
+    runPath(b.ctx, b.data, b.wd, b.ret, b.mu, { clamp0: true, monthlySave: save, stopAt: Math.max(0, Math.min(m, b.ctx.months)) }).stopW;
+  const saveOf = (b, d) => Math.max(0, b.m0 + (b.child ? 0 : d));
   return {
-    m0me, m0o, od,
-    monthFor: (age) => clamp(Math.round((age - meCtx.a0) * 12), 0, Math.max(meCtx.months, oCtx.months)),
-    totalAt: (dEur, m) =>
-      wAt(meCtx, state, meWd, meRet, meMu, Math.max(0, m0me + dEur), m)
-      + wAt(oCtx, od, oWd, oRet, oMu, Math.max(0, m0o + dEur), m),
-    otherExpWith: (dEur) => runPath(oCtx, od, oWd, oRet, oMu, { clamp0: true, monthlySave: Math.max(0, m0o + dEur), collect: true }).arr,
+    m0sum: built.reduce((s, b) => s + b.m0, 0),
+    loD: -Math.min(...adults.map((b) => b.m0)),
+    monthFor: (age) => clamp(Math.round((age - state.ageNow) * 12), 0, Math.max(...built.map((b) => b.ctx.months))),
+    totalAt: (d, m) => built.reduce((s, b) => s + wAt(b, saveOf(b, d), m), 0),
+    apply: (d) => built.forEach((b) => {
+      const v = saveOf(b, d);
+      if (b.i === family.active) { state.monthly = v; $('monthly').value = v; }
+      else family.persons[b.i].data.monthly = v;
+    }),
+    liveOthers: (d) => built.filter((b) => b.i !== family.active).map((b) => ({
+      i: b.i,
+      arr: runPath(b.ctx, b.data, b.wd, b.ret, b.mu, { clamp0: true, monthlySave: saveOf(b, d), collect: true }).arr,
+    })),
+    sumWith: (d) => built.reduce((s, b) => s + saveOf(b, d), 0),
+    splitNote: (d) => built.map((b) =>
+      `${escapeHtml(family.persons[b.i].name)} ${fmtNum(saveOf(b, d))}`).join(' · ') + ' €/kk',
   };
 }
 
@@ -3856,10 +3990,12 @@ function makeFamilySolver() {
 
 // "Jos henkilö kuolee iässä X": lesken suunnitelmaan lisätään perintönä
 // vainajan sijoitusvarallisuus kuolinhetkellä; tulos = riittävyys.
-function widowCheck(deadIdx, deathAgeOfDead) {
+// Tarkastelu tehdään aikuisten välillä (perintö puolisolle, ei lapsille).
+function widowCheck(deadIdx, deathAgeOfDead, survIdx) {
   const persons = family.persons;
+  if (survIdx == null) survIdx = persons.findIndex((p, i) => i !== deadIdx && !p.child);
   const dead = JSON.parse(JSON.stringify(persons[deadIdx].data));
-  const surv = JSON.parse(JSON.stringify(persons[deadIdx === 0 ? 1 : 0].data));
+  const surv = JSON.parse(JSON.stringify(persons[survIdx].data));
   const dSim = simulate(dead);
   const mD = clamp(Math.round((deathAgeOfDead - dead.ageNow) * 12), 0, dSim.months);
   const inherit = Math.max(0, dSim.exp[mD]);
@@ -3897,34 +4033,39 @@ function familySummaryHtml() {
     for (const e of p.data.events) {
       if (e.type !== 'transferOut' || !e.linkId || seen.has(e.linkId)) continue;
       seen.add(e.linkId);
+      const ti = e.peerPid != null ? idxOfPid(e.peerPid) : family.persons.findIndex((_, j) => j !== i);
+      const to = family.persons[ti] ? family.persons[ti].name : '?';
       const year = yearNow + Math.round(e.age - p.data.ageNow);
-      trRows += `<tr><td>${escapeHtml(p.name)} → ${escapeHtml(family.persons[i === 0 ? 1 : 0].name)}</td>`
+      trRows += `<tr><td>${escapeHtml(p.name)} → ${escapeHtml(to)}</td>`
         + `<td class="num">${Math.round(e.age)} v · ~${year}</td><td class="num">${fmtEur(-e.amount)}</td></tr>`;
     }
   });
 
-  // leskiturva: kuolema eläkeiässä (tai 70 v jos eläkettä ei ole)
+  // leskiturva: aikuisparin tarkastelu, kuolema eläkeiässä (tai 70 v)
   let widowRows = '';
-  family.persons.forEach((p, i) => {
-    const ret = p.data.events.find((e) => e.type === 'retirement');
-    const dAge = ret ? Math.round(ret.age) : 70;
-    const w = widowCheck(i, dAge);
-    const other = family.persons[i === 0 ? 1 : 0].name;
-    widowRows += `<li>Jos <b>${escapeHtml(p.name)}</b> kuolee ${dAge} v iässä: ${escapeHtml(other)} perii sijoitusvarallisuuden ~<b>${fmtCompact(w.inherit)}</b> — `
-      + (w.depletionAge != null && w.depletionAge < w.a1 - 1
-        ? `lesken varat ehtyvät noin <b class="wr">${Math.round(w.depletionAge)} v</b> iässä.`
-        : `lesken varat riittävät suunnitelman loppuun.`) + '</li>';
-  });
+  const adults = family.persons.map((p, i) => ({ p, i })).filter((x) => !x.p.child);
+  if (adults.length >= 2) {
+    adults.forEach(({ p, i }) => {
+      const ret = p.data.events.find((e) => e.type === 'retirement');
+      const dAge = ret ? Math.round(ret.age) : 70;
+      const surv = adults.find((x) => x.i !== i);
+      const w = widowCheck(i, dAge, surv.i);
+      widowRows += `<li>Jos <b>${escapeHtml(p.name)}</b> kuolee ${dAge} v iässä: ${escapeHtml(surv.p.name)} perii sijoitusvarallisuuden ~<b>${fmtCompact(w.inherit)}</b> — `
+        + (w.depletionAge != null && w.depletionAge < w.a1 - 1
+          ? `lesken varat ehtyvät noin <b class="wr">${Math.round(w.depletionAge)} v</b> iässä.`
+          : `lesken varat riittävät suunnitelman loppuun.`) + '</li>';
+    });
+  }
 
   return `<h2>Perheen suunnitelma</h2>`
     + `<div class="sum-tiles">`
     + `<div class="sum-tile"><div class="k">Perheen onnistumistodennäköisyys</div><div class="v accent">${Math.round(joint.successProb * 100)} %</div><div class="s">sama markkinahistoria molemmille</div></div>`
-    + `<div class="sum-tile"><div class="k">Yhteisvarallisuus lopussa</div><div class="v">${fmtCompact(total[total.length - 1])}</div><div class="s">molempien sijoitukset yhteensä</div></div>`
+    + `<div class="sum-tile"><div class="k">Yhteisvarallisuus lopussa</div><div class="v">${fmtCompact(total[total.length - 1])}</div><div class="s">koko perheen sijoitukset yhteensä</div></div>`
     + `</div>`
     + `<table class="sum-table"><thead><tr><th>Henkilö</th><th>Säästö</th><th>Eläkeikä</th><th>Eläkkeellä</th><th>Onnistumis-%</th></tr></thead><tbody>${rows}</tbody></table>`
     + (trRows ? `<h2>Siirrot perheessä</h2><table class="sum-table"><thead><tr><th>Siirto</th><th>Ajankohta</th><th>Summa</th></tr></thead><tbody>${trRows}</tbody></table>` : '')
-    + `<h2>Leskiturvatarkastelu</h2><ul class="sum-points">${widowRows}</ul>`
-    + `<p class="sum-disclaimer">Leskiturva on karkea tarkastelu: perintö siirtyy leskelle sellaisenaan, perhe-eläkettä tai perintöveroa ei mallinneta.</p>`;
+    + (widowRows ? `<h2>Leskiturvatarkastelu</h2><ul class="sum-points">${widowRows}</ul>`
+      + `<p class="sum-disclaimer">Leskiturva on karkea tarkastelu: perintö siirtyy leskelle sellaisenaan, perhe-eläkettä tai perintöveroa ei mallinneta.</p>` : '');
 }
 
 /* --- Perhevuoristo: 2.5D-katselunäkymä --- */
@@ -3937,7 +4078,10 @@ function openMountain() {
   const W = 760, rowH = 130, pad = 46, offX = 26, offY = 34;
   const series = [
     { name: 'Yhteensä', arr: total, color: '#e8edf8' },
-    ...family.persons.map((p, i) => ({ name: p.name, arr: sims[i].exp, color: i === family.active ? '#2dd4bf' : '#64748b' })),
+    ...family.persons.map((p, i) => {
+      const kidIdx = family.persons.slice(0, i).filter((x) => x.child).length;
+      return { name: p.name, arr: sims[i].exp, color: i === family.active ? '#2dd4bf' : (p.child ? kidColor(kidIdx) : '#64748b') };
+    }),
   ].reverse(); // taaimmainen ensin
   const H = pad * 2 + rowH + offY * (series.length - 1);
   const maxV = Math.max(...total) || 1;
@@ -4165,6 +4309,7 @@ document.addEventListener('pointerdown', (e) => {
   if (examplesMenuEl && !examplesMenuEl.contains(e.target) && !(e.target.closest && e.target.closest('.examples-trigger'))) closeExamplesMenu();
   if (moreMenuEl && !moreMenuEl.contains(e.target) && e.target.id !== 'moreBtn') closeMoreMenu();
   if (fsAddMenuEl && !fsAddMenuEl.contains(e.target) && e.target.id !== 'fsAddBtn') closeFsAddMenu();
+  if (famAddMenuEl && !famAddMenuEl.contains(e.target) && !(e.target.closest && e.target.closest('[data-fam="add"]'))) closeFamAddMenu();
 });
 
 /* ===================== ⋯-valikko ===================== */
@@ -4350,14 +4495,14 @@ function loadState() {
   try {
     if (location.hash.startsWith('#f=')) {
       const o = JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(3)))));
-      if (validFamily(o) && o.persons.length === 2) {
+      if (validFamily(o) && o.persons.length >= 2) {
         family = {
-          persons: o.persons.map((p) => ({ name: String(p.name || 'Henkilö').slice(0, 16), data: p.data })),
-          active: o.active === 1 ? 1 : 0,
+          persons: o.persons.map((p) => ({ pid: p.pid, name: String(p.name || 'Henkilö').slice(0, 16), role: p.role, child: !!p.child, data: p.data })),
+          active: clamp(Math.round(o.active || 0), 0, o.persons.length - 1),
         };
+        migrateFamily();
         if (applySaved(JSON.parse(JSON.stringify(family.persons[family.active].data)))) {
           history.replaceState(null, '', location.pathname);
-          otherDirty = true;
           persistFamily();
           saveState();
           visitKind = 'shared';

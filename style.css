@@ -189,7 +189,8 @@ body {
   transition: border-color 0.15s;
 }
 .input:focus-within { border-color: var(--accent); }
-.input input {
+.input input,
+.input select {
   flex: 1;
   min-width: 0;
   background: none;
@@ -200,6 +201,8 @@ body {
   font-weight: 600;
   padding: 9px 10px;
 }
+.input select { cursor: pointer; }
+.input select option { background: #0d1220; color: var(--text); }
 .input em { font-style: normal; font-size: 12px; color: var(--text-faint); }
 
 input[type="number"]::-webkit-inner-spin-button { opacity: 0.4; }
@@ -1622,6 +1625,13 @@ body.pro .pro-switch { border-color: rgba(139, 124, 246, 0.55); }
 }
 .fam-del { padding: 2px 7px; opacity: 0.6; }
 .fam-del:hover, .fam-del.armed { color: var(--danger); border-color: rgba(248, 113, 113, 0.5); opacity: 1; }
+/* Lapsichippi kantaa käyränsä värin (--kid asetetaan inline) */
+.fam-chip.kid { border-color: color-mix(in srgb, var(--kid) 45%, transparent); }
+.fam-chip.kid.on {
+  color: var(--kid);
+  border-color: color-mix(in srgb, var(--kid) 60%, transparent);
+  background: color-mix(in srgb, var(--kid) 10%, transparent);
+}
 .sw-fam { width: 22px; height: 0; border-top: 2px solid #64748b; }
 .sw-tot { width: 22px; height: 0; border-top: 2px solid #e8edf8; margin-left: 8px; }
 
