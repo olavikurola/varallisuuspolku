@@ -229,6 +229,13 @@ nykyinen state, yksin-tila pikselintarkasti ennallaan):
   jonka ikä on pieni, ja kotitalous-MC hyväksyi N henkilöä valmiiksi. Siirrot kohdennetaan
   `peerPid`-tunnisteella (popoveriin saaja/antaja-valinta kun jäseniä > 2); perheratkaisija
   joustaa vain aikuisia; leskiturva rajattu aikuispariin; ✕ poistaa aktiivisen henkilön.
+- **Jaetut hankinnat (11.7.2026)**: tapahtuman popoverissa "Jaettu puolison kanssa" -kytkin
+  (vain perhetilassa, aikuisille) — summa, käsiraha ja toistuva erä puolittuvat, puolikas
+  peilautuu puolisolle samaan kalenterihetkeen samalla linkId+peerPid-koneistolla kuin siirrot;
+  moottori näkee vain oman osuuden. Puolison lisäys avaa jakodialogin (kulut listattuna,
+  asunto/auto/mökki/remontti/häät esivalittuina). Kytkimen avaus ja puolison poisto palauttavat
+  täyden hinnan. ½-merkinnät graafissa ja tapahtumalistassa. Jakosuhde v1: aina 50/50 —
+  tulosuhteessa jakaminen kuuluu F6:n reiluussääntöihin.
 
 **Perustellut poikkeamat suunnitelmasta:** täysi kaistanäkymä-EDITORI korvattiin chipeillä +
 yhteiskäyräoverlaylla + Vuoristo-katselulla — kompleksisuusbudjetti (Olavin vaatimus: kasvu ei
