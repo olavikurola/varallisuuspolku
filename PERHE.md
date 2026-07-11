@@ -161,7 +161,52 @@ Yhteensä ≈ **70–100 h**. Jokainen PR: determinismi- ja yhteensopivuustestit
 5. **Leskiturvan väärintulkinta neuvonnaksi** → sama minä/me-muotoinen kieli ja disclaimer kuin
    muuallakin; karkeus sanotaan ääneen.
 
-## 9. Avoimet kysymykset Olaville
+## 9. UX-vaikutusarvio: sotkeeko tämä muun kokemuksen? (lisätty 11.7.2026)
+
+Rehellinen arvio pintakohta kerrallaan. Tiivistelmä: yksin käyttävän kokemus on pidettävissä
+pikselintarkasti ennallaan — Pro todisti tilaeristyksen toimivan (identiteettitestit, nolla
+regressiota) — mutta kuusi aitoa riskiä vaatii kurinalaisuutta, ja neljä niistä muuttaa
+tätä suunnitelmaa (korjaukset alla).
+
+**Ei vaikutusta:** ensivierailuflow (oletus on aina yksi henkilö), piirtopöydän ydinvedot,
+tavoitepisteet, Vaurastumisen kartta, palvelin, PWA. Yksin-tilan smoket ajetaan aina
+perhetila pois päältä — sama vartiointi kuin Prossa.
+
+**Aidot riskit ja vastaukset:**
+
+1. **Sisäänkäyntien ryöstäytyminen.** Paneelin yläosassa on jo Pro-vipu; "＋ Lisää henkilö"
+   -elementti sen viereen aloittaisi nappien kertymisen, jota vastaan yläpalkkilinjaus on.
+   → *Muutos:* perhetilan sisäänkäynti on Perustiedot-kortin otsikkorivin henkilöchipit —
+   yksin-tilassa näkymätön, ei uutta pysyvää elementtiä.
+2. **Kombinatoriikka on suurin piilokustannus.** Pro × Perhe × piirtopöytä × mobiili = jokainen
+   uusi ominaisuus testataan neljässä maailmassa. → *Muutos:* markkinaoletukset, inflaatio,
+   verot ja MC-asetukset ovat PERHETASON asetuksia (sama markkinamaailma kaikille — myös
+   laskennallisesti oikein); henkilökohtaisia ovat vain allokaatio ja nostostrategia.
+   Tämä puolittaa matriisin eikä hajota Pro-kortteja per henkilö.
+3. **Vanha asiakas + perhelinkki = hiljainen datan menetys.** Vanha (esim. PWA-välimuistista
+   ajava) versio pudottaisi tuntemattomat household-kentät ja tallentaisi typistetyn
+   suunnitelman päälle. → *Muutos F0:aan:* linkkiin versiokenttä; vanhat versiot näyttävät
+   "linkki vaatii uudemman version" eivätkä kirjoita localStorageen.
+4. **Valintakerrosten kasautuminen piirtopöydällä.** Kaista-aktivointi + valinta + veto = kolme
+   elettä mobiilissa; nykyinen malli on kaksi. → *Muutos:* kaistan aktivointi sulautuu
+   valintaan — napautus mihin tahansa objektiin millä tahansa kaistalla valitsee suoraan ja
+   aktivoi kaistan sivutuotteena. Elemäärä ei kasva.
+5. **Opastuksen paisuminen.** +3 askelta pääkierrokseen veisi sen 12:een. → *Muutos:*
+   pääkierros ei muutu; perhetilan ensiavaus saa oman 3 askeleen minikierroksen
+   (sama malli kuin Pro-esittelysivu).
+6. **Renderöintikustannus perhetilassa.** Sync-300-MC × 4 henkilöä ≈ 80–100 ms per muutos —
+   syöttökentät tuntuisivat tahmeilta (nyt ~25 ms). → *Lievennys F1:een:* perhetilassa
+   välitön esikatselu 150 polulla + worker tarkentaa kuten nyt; raahauksen kevyt frame
+   pysyy deterministisenä (~2 ms × henkilöt).
+
+**Hyväksyttävät myönnytykset (sanotaan ääneen):** mobiilissa perhetila on katselu- ja
+yksi-kaista-muokkauspainotteinen — täysi kaistanäkymä on työpöytäkokemus. Suunnitelmani
+vaihtaa minä-muodosta me-muotoon perhetilassa. Vertailudatakortti piilotetaan
+perhesuunnitelmilta v1:ssä (ominaisuus "katoaa" perhekäyttäjältä — kerrotaan miksi).
+Vertailukohta (haamu) ja skenaariot toimivat vain saman tilan sisällä; tilanvaihto
+tyhjentää ne varoituksella.
+
+## 10. Avoimet kysymykset Olaville
 
 1. Oletuskukkaro: *Omat kukkarot* (riski näkyy) vai *Yhteinen* (yksinkertaisempi)? Ehdotus: omat.
 2. Lapsihaaran oletusikä (18? 20?) ja haaran alkupääoman esitystapa.
