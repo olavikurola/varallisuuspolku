@@ -1067,6 +1067,65 @@ function proInflBump(c, d) {
   c.pro.infl = (c.pro.infl != null ? c.pro.infl : 2) + d;
 }
 
+/* ===================== Kotitalous (Perhevirta v1) ===================== */
+// Koherentti kotitalous-MC: SAMA markkinahistoria kaikille — henkilön 1
+// siemen ja jakauma jaetaan, joten polku i antaa saman shokkijonon z_m
+// jokaiselle kuukaudelle, ja kukin salkku reagoi omalla σ:llaan.
+// Molempien simulaatiot alkavat tästä hetkestä → kuukausi-indeksi m on
+// sama kalenterikuukausi kaikille (ei uudelleengridausta).
+// Henkilön horisontin jälkeen varallisuus jäädytetään viimeiseen arvoon.
+
+function mcHousehold(states, { paths = MC_LIVE } = {}) {
+  const ctxs = states.map((st) => prepareSim(st));
+  const mus = ctxs.map((c, k) => buildMu(c, states[k], c.retire ? c.retire.age : null));
+  const months = Math.max(...ctxs.map((c) => c.months));
+  // Yhteinen maailma: shokit henkilön 1 asetuksilla (siemen, jakauma)
+  const shockSt = states[0];
+  const buf = new Float32Array((months + 1) * paths);
+  const last = new Float64Array(states.length);
+  let ok = 0;
+  for (let i = 0; i < paths; i++) {
+    let allSurvive = true;
+    for (let k = 0; k < states.length; k++) {
+      const shockFn = makeShock(shockSt, mus[k].sigA, i);
+      last[k] = states[k].startCapital;
+      const record = (m, w) => { buf[m * paths + i] += w; last[k] = w; };
+      const wd = ctxs[k].retire ? ctxs[k].retire.withdrawal : 0;
+      const retAge = ctxs[k].retire ? ctxs[k].retire.age : null;
+      const r = runPath(ctxs[k], states[k], wd, retAge, mus[k].muM, { clamp0: true, shockFn, record });
+      if (r.depletion != null) allSurvive = false;
+      // horisontin jälkeen: jäädytetty loppuarvo mukaan summaan
+      for (let m = ctxs[k].months + 1; m <= months; m++) buf[m * paths + i] += last[k];
+    }
+    if (allSurvive) ok++;
+  }
+  const startSum = states.reduce((s, st) => s + st.startCapital, 0);
+  for (let i = 0; i < paths; i++) buf[i] = startSum;
+
+  const p10 = new Float64Array(months + 1);
+  const p90 = new Float64Array(months + 1);
+  const col = new Float32Array(paths);
+  const k10 = Math.floor(0.10 * (paths - 1));
+  const k90 = Math.ceil(0.90 * (paths - 1));
+  for (let m = 0; m <= months; m++) {
+    col.set(buf.subarray(m * paths, (m + 1) * paths));
+    p10[m] = kthSmallest(col, k10);
+    p90[m] = kthSmallest(col, k90);
+  }
+  return { successProb: ok / paths, p10, p90, months };
+}
+
+// Perheen deterministinen yhteiskäyrä: odotuspolkujen summa, horisontin
+// jälkeen henkilön viimeinen arvo jäädytettynä
+function householdExp(sims) {
+  const months = Math.max(...sims.map((s) => s.months));
+  const total = new Float64Array(months + 1);
+  for (const s of sims) {
+    for (let m = 0; m <= months; m++) total[m] += s.exp[Math.min(m, s.months)];
+  }
+  return total;
+}
+
 /* Node-testit */
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -1079,5 +1138,6 @@ if (typeof module !== 'undefined' && module.exports) {
     defaultPro, proOf, inflOf, classesOf, weightsAt, portfolioStatsPro,
     corrMatrixOf, ensurePSD, STRESS_DEFS, PRO_BASE_ASSETS,
     sustainableByAge, tornado, baseWEnd,
+    mcHousehold, householdExp,
   };
 }

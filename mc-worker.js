@@ -26,6 +26,13 @@ self.onmessage = (e) => {
         goalShares: r.goalShares, months: r.months, paths: r.paths,
         ruin: r.ruin, pctLo: r.pctLo, pctHi: r.pctHi,
       }, [r.p10.buffer, r.p90.buffer, r.ruin.buffer]);
+    } else if (d.task === 'mcJoint') {
+      // Perheen yhteinen MC: sama markkinahistoria kaikille (Perhevirta)
+      const r = mcHousehold(d.states, { paths: d.paths || MC_FULL });
+      self.postMessage({
+        seq: d.seq, task: 'mcJoint', ok: true,
+        successProb: r.successProb, p10: r.p10, p90: r.p90, months: r.months, paths: d.paths || MC_FULL,
+      }, [r.p10.buffer, r.p90.buffer]);
     } else if (d.task === 'solveGoals') {
       // Varmuustasomoodin Ratkaise: karkea→tarkka-bisektio + edistyminen
       const res = solveGoalsMonthlyConf(d.st, d.points, d.conf, d.paths || MC_FULL,

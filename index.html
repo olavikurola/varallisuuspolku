@@ -55,7 +55,7 @@
       </div>
 
       <section class="card" data-card="basics">
-        <h2>Perustiedot</h2>
+        <h2>Perustiedot <span class="fam-chips" id="familyChips"></span></h2>
         <div class="row2">
           <label class="field">
             <span class="field-label">Ikä nyt</span>
@@ -80,6 +80,19 @@
           <span class="field-label">Säästön vuosikasvu <small>palkka nousee → säästö kasvaa vuosittain</small></span>
           <span class="input"><input id="savingsGrowth" type="number" min="0" max="15" step="0.5" value="1.5" /><em>%/v</em></span>
         </label>
+        <div class="saver">
+          <a href="#" id="saverLink">💡 Säästökyky-apuri <small>tuloista ja menoista säästöksi</small></a>
+          <div class="saver-box" id="saverBox" hidden>
+            <div class="row2">
+              <label class="field"><span class="field-label">Nettotulot</span>
+                <span class="input"><input id="savIncome" type="number" min="0" step="100" /><em>€/kk</em></span></label>
+              <label class="field"><span class="field-label">Menot</span>
+                <span class="input"><input id="savExpenses" type="number" min="0" step="100" /><em>€/kk</em></span></label>
+            </div>
+            <p class="note" id="savNote"></p>
+            <button class="btn ghost btn-mini" id="savApply">Käytä säästövara kuukausisäästönä</button>
+          </div>
+        </div>
       </section>
 
       <section class="card" data-card="events">
@@ -189,6 +202,7 @@
         <span class="lg"><i class="sw sw-dash"></i>Sijoitettu pääoma</span>
         <span class="lg"><i class="sw sw-marker">🏠</i>Elämäntapahtuma</span>
         <span class="lg" id="legendCompare" hidden><i class="sw sw-ghost"></i>Vertailukohta</span>
+        <span class="lg" id="legendFamily" hidden><i class="sw sw-fam"></i>Puoliso <i class="sw sw-tot"></i>Yhteensä</span>
         <button class="btn ghost btn-mini" id="tableBtn" title="Vuosikohtaiset luvut taulukkona ja CSV:nä">Vuositaulukko</button>
       </div>
       <div class="balance-panel" id="balancePanel" hidden>

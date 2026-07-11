@@ -1595,3 +1595,47 @@ body.pro .pro-switch { border-color: rgba(139, 124, 246, 0.55); }
 .scen-add .pname { flex: 1; }
 
 .stress-label { font-size: 9.5px; font-weight: 600; font-family: inherit; paint-order: stroke; stroke: rgba(10, 14, 26, 0.9); stroke-width: 3px; }
+
+/* ---------- Perhevirta: henkilöchipit ja yhteiskäyrä ---------- */
+.fam-chips { display: inline-flex; gap: 5px; margin-left: 10px; vertical-align: 1px; }
+.fam-add, .fam-chip, .fam-del {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: rgba(8, 12, 24, 0.5);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 10px;
+  cursor: pointer;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.5;
+}
+.fam-add { padding: 2px 8px; opacity: 0.65; }
+.fam-add:hover { opacity: 1; color: var(--accent); border-color: rgba(45, 212, 191, 0.4); }
+.fam-chip:hover { color: var(--text); }
+.fam-chip.on {
+  color: var(--accent);
+  border-color: rgba(45, 212, 191, 0.5);
+  background: rgba(45, 212, 191, 0.08);
+}
+.fam-del { padding: 2px 7px; opacity: 0.6; }
+.fam-del:hover, .fam-del.armed { color: var(--danger); border-color: rgba(248, 113, 113, 0.5); opacity: 1; }
+.sw-fam { width: 22px; height: 0; border-top: 2px solid #64748b; }
+.sw-tot { width: 22px; height: 0; border-top: 2px solid #e8edf8; margin-left: 8px; }
+
+/* Säästökyky-apuri: huomaamaton linkki, taittuva laatikko */
+.saver { margin-top: 10px; font-size: 12px; }
+.saver > a { color: var(--text-faint); text-decoration: none; }
+.saver > a:hover { color: var(--accent); }
+.saver > a small { color: var(--text-faint); }
+.saver-box {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: rgba(8, 12, 24, 0.4);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+}
+.saver-box .note { margin: 2px 0 8px; }
+.saver-box .note b { color: var(--accent); }

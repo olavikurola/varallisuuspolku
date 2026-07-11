@@ -15,6 +15,7 @@ const EVENT_TYPES = {
   renovation:  { icon: '🛠️', label: 'Remontti',            amount: -30000,  loan: { share: 0.1,  rate: 4.5, years: 10 }, defaultFin: 'loan' },
   travel:      { icon: '✈️', label: 'Unelmamatka',         amount: -8000,   loan: CONSUMER_LOAN, defaultFin: 'cash' },
   recurring:   { icon: '💳', label: 'Kuukausimeno',        amount: 0,       loan: CONSUMER_LOAN, defaultFin: 'cash', rec: { monthly: -200, years: 10 } },
+  sidegig:     { icon: '💼', label: 'Sivutulo',            amount: 0,       loan: CONSUMER_LOAN, defaultFin: 'cash', rec: { monthly: 300, years: 10 } },
   cottage:     { icon: '🏡', label: 'Mökki / vene',        amount: -120000, loan: { share: 0.25, rate: 4.0, years: 15 }, defaultFin: 'loan', asset: { appr: 2.0 } },
   inheritance: { icon: '💎', label: 'Perintö / lahja',     amount: 60000 },
   bonus:       { icon: '💰', label: 'Bonus / myyntivoitto', amount: 20000 },
@@ -47,6 +48,8 @@ const state = {
   tax: true,          // myyntivoittovero nostoissa (oletuksena päällä uusille)
   proOn: false,       // Pro-tila: ammattilaissäädöt (laskenta.js/proOf)
   pro: null,
+  income: null,       // Säästökyky-apuri: nettotulot €/kk (valinnainen)
+  expenses: null,     // ja menot €/kk — eläketarpeen oletus ja säästöaste
   events: [
     { id: idSeq++, type: 'home', age: 35, amount: -220000, financing: 'loan', down: 33000, rate: 3.5, years: 25, isAsset: true, appr: 2.0 },
     { id: idSeq++, type: 'car',  age: 45, amount: -25000,  financing: 'loan', down: 5000,  rate: 4.5, years: 6,  isAsset: true, appr: -10.0 },
@@ -180,6 +183,10 @@ function initMcWorker() {
   mcWorker.addEventListener('message', (e) => {
     const d = e.data;
     if (d.task === 'solveGoals') { onSolveGoalsMsg(d); return; }
+    if (d.task === 'mcJoint') {
+      if (d.ok && d.seq === mcSeq) { jointMc = d; renderStats(); }
+      return;
+    }
     if (!d.ok || d.task !== 'mc') return;
     if (d.kind === 'ghost') {
       if (ghostSim && d.months === ghostSim.months) {
@@ -227,6 +234,15 @@ function requestMcRefresh() {
       mcWorker.postMessage({
         task: 'mc', kind: 'ghost', seq: mcSeq, st: JSON.parse(JSON.stringify(baseline)),
         paths: pG ? pG.mc.paths : MC_FULL, withdrawal: ghostSim.withdrawal, retireAge: ghostSim.retireAge,
+      });
+    }
+    if (familyOn()) {
+      // Perheen yhteinen MC: molemmat henkilöt samaan maailmaan
+      saveActiveIntoFamily();
+      mcWorker.postMessage({
+        task: 'mcJoint', seq: mcSeq,
+        states: [JSON.parse(JSON.stringify(family.persons[0].data)), JSON.parse(JSON.stringify(family.persons[1].data))],
+        paths: pCur ? pCur.mc.paths : MC_FULL,
       });
     }
   }, 200);
@@ -311,7 +327,11 @@ function renderChart(reuse = false) {
   plot.h = H - plot.t - plot.b;
 
   const { a0, a1, months } = sim;
-  const yMax = Math.max(10000, Math.max(...sim.opt, ...sim.invested, ...(ghostSim ? ghostSim.exp : []))) * 1.08;
+  // Perheen yhteiskäyrä mukaan skaalaan, jos puoliso on mukana
+  const famOther = familyOn() ? getOtherSim() : null;
+  const famTotal = famOther ? householdExp([sim, famOther]) : null;
+  const yMax = Math.max(10000, famTotal ? famTotal[Math.min(famTotal.length - 1, months)] * 1.02 : 0,
+    Math.max(...sim.opt, ...sim.invested, ...(ghostSim ? ghostSim.exp : []))) * 1.08;
 
   scaleX = (age) => plot.l + ((age - a0) / (a1 - a0)) * plot.w;
   scaleY = (v) => plot.t + plot.h - (v / yMax) * plot.h;
@@ -429,6 +449,19 @@ function renderChart(reuse = false) {
       if (gp) el('path', { d: gp, fill: 'none', stroke: SCEN_COLORS[i % 3], 'stroke-width': 1.6, 'stroke-dasharray': '5 4', opacity: 0.6, 'pointer-events': 'none' }, svg);
     });
   }
+
+  /* Perhevirta: puolison käyrä ja perheen yhteiskäyrä */
+  const legFam = $('legendFamily');
+  if (famOther && famTotal) {
+    const oM = Math.min(famOther.months, months);
+    let op = '';
+    for (let i = 0; i <= oM; i++) op += `${i ? ' L' : 'M'} ${scaleX(a0 + i / 12).toFixed(1)},${scaleY(famOther.exp[i]).toFixed(1)}`;
+    el('path', { d: op, fill: 'none', stroke: '#64748b', 'stroke-width': 1.5, opacity: 0.75, 'pointer-events': 'none' }, svg);
+    let tp = '';
+    for (let i = 0; i <= months; i++) tp += `${i ? ' L' : 'M'} ${scaleX(a0 + i / 12).toFixed(1)},${scaleY(famTotal[Math.min(i, famTotal.length - 1)]).toFixed(1)}`;
+    el('path', { d: tp, fill: 'none', stroke: '#e8edf8', 'stroke-width': 2, opacity: 0.85, 'pointer-events': 'none' }, svg);
+    if (legFam) legFam.hidden = false;
+  } else if (legFam) legFam.hidden = true;
 
   /* viuhkan persentiilit legendaan */
   const lbt = $('legendBandTxt');
@@ -873,7 +906,10 @@ function addEvent(type, age) {
   if (!ev) {
     ev = { id: idSeq++, type, age };
     if (def.withdrawal != null) {
-      ev.withdrawal = def.withdrawal;
+      // Eläketarpeen paras oletus on nykyinen kulutus, jos se on annettu
+      ev.withdrawal = state.expenses
+        ? clamp(Math.round(state.expenses / 100) * 100, 100, 1e6)
+        : def.withdrawal;
       ev.pension = def.pension != null ? def.pension : 0;
       ev.pensionAge = def.pensionAge != null ? def.pensionAge : 65;
     } else if (def.metric) {
@@ -2304,6 +2340,16 @@ function renderStats() {
     cls: 'accent',
     s: s.retireAge != null ? `${Math.round(s.retireAge)} v iässä` : 'ei eläketapahtumaa',
   });
+  // Perheen yhteinen onnistuminen: sama markkinahistoria molemmille,
+  // molempien varojen on riitettävä
+  if (familyOn()) {
+    cards.push({
+      k: 'Perheen onnistumis-%',
+      v: jointMc ? Math.round(jointMc.successProb * 100) + ' %' : '…',
+      cls: 'accent',
+      s: 'sama markkinamyrsky molemmille · molempien varat riittävät',
+    });
+  }
   // Loppuvarallisuus yhtenä korttina: netto kun taseessa on omaisuutta tai
   // velkaa (sijoitukset alarivillä), muuten pelkät sijoitukset
   if (s.hasNet) {
@@ -3499,6 +3545,206 @@ function proSummaryHtml(s) {
     + '<p class="sum-disclaimer">Pro-oletukset ovat laatijan omia — eivät palvelun suosituksia.</p>';
 }
 
+/* ===================== Perhevirta v1: puoliso ja yhteiskäyrä ===================== */
+// Profiilivaihtomalli: aktiivinen henkilö on täsmälleen nykyinen state —
+// yksikään olemassa oleva polku ei muutu, ja yksin käyttävälle näkyy vain
+// pieni ＋-chip Perustiedoissa. Perhe on kääre, joka säilöö henkilöiden
+// tilannekuvat ja vaihtaa ne paikalleen. Yhteiskäyrä ja perheen
+// onnistumis-% lasketaan koherentilla kotitalous-MC:llä: sama
+// markkinahistoria osuu molempiin, kukin salkku reagoi omalla riskillään.
+
+const FAMILY_KEY = 'vp-family-v1';
+let family = null;    // { persons: [{name, data}], active }
+let otherSim = null;  // puolison välimuistitettu sim
+let otherDirty = true;
+let jointMc = null;   // workerin perhe-MC (onnistumis-% + viuhka)
+let famRemoveArm = false;
+
+const familyOn = () => !!(family && family.persons.length > 1);
+const otherIdx = () => (family.active === 0 ? 1 : 0);
+
+function saveActiveIntoFamily() {
+  if (family) family.persons[family.active].data = JSON.parse(JSON.stringify(serialize()));
+}
+
+function persistFamily() {
+  try {
+    if (family) localStorage.setItem(FAMILY_KEY, JSON.stringify(family));
+    else localStorage.removeItem(FAMILY_KEY);
+  } catch (e) {}
+}
+
+function validFamily(o) {
+  return o && Array.isArray(o.persons) && o.persons.length >= 1 && o.persons.length <= 2
+    && o.persons.every((p) => p && p.data && typeof p.data === 'object' && Array.isArray(p.data.events));
+}
+
+function loadFamily() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(FAMILY_KEY));
+    if (validFamily(raw)) {
+      family = {
+        persons: raw.persons.map((p) => ({ name: String(p.name || 'Henkilö').slice(0, 16), data: p.data })),
+        active: raw.active === 1 ? 1 : 0,
+      };
+    }
+  } catch (e) { /* viallinen — ohitetaan */ }
+}
+
+function getOtherSim() {
+  if (!familyOn()) return null;
+  if (otherDirty) {
+    try { otherSim = simulate(JSON.parse(JSON.stringify(family.persons[otherIdx()].data))); }
+    catch (e) { otherSim = null; }
+    otherDirty = false;
+  }
+  return otherSim;
+}
+
+function addSpouse() {
+  if (family && family.persons.length >= 2) return;
+  pushUndoNow();
+  if (!family) family = { persons: [{ name: 'Minä', data: JSON.parse(JSON.stringify(serialize())) }], active: 0 };
+  // Puolison pohja: omat perusasetukset mutta puhdas tapahtumalista —
+  // tapahtumat ovat henkilökohtaisia
+  const d = JSON.parse(JSON.stringify(serialize()));
+  d.startCapital = 0;
+  d.events = [{ id: 1, type: 'retirement', age: 65, withdrawal: d.expenses ? Math.round(d.expenses / 100) * 100 : 2400, pension: 1500, pensionAge: 65 }];
+  family.persons.push({ name: 'Puoliso', data: d });
+  saveActiveIntoFamily();
+  persistFamily();
+  switchPerson(1);
+  toast('Puoliso lisätty — täytä hänen tietonsa. Yhteiskäyrä piirtyy graafiin.');
+}
+
+function switchPerson(i) {
+  if (!family || i === family.active || !family.persons[i]) return;
+  saveActiveIntoFamily();
+  family.active = i;
+  applySaved(JSON.parse(JSON.stringify(family.persons[i].data)));
+  syncInputs();
+  closePopover();
+  otherDirty = true;
+  jointMc = null;
+  persistFamily();
+  renderFamilyChips();
+  renderAll();
+  announce(`${family.persons[i].name} valittu`);
+}
+
+function removeSpouse() {
+  if (!familyOn()) return;
+  const j = otherIdx();
+  if (!famRemoveArm) {
+    famRemoveArm = true;
+    renderFamilyChips();
+    toast(`Poistetaanko ${family.persons[j].name}? Napauta ✕ uudestaan.`);
+    setTimeout(() => { famRemoveArm = false; renderFamilyChips(); }, 3000);
+    return;
+  }
+  famRemoveArm = false;
+  family = null; // aktiivinen henkilö jää stateen — takaisin yksin-tilaan
+  otherSim = null;
+  jointMc = null;
+  persistFamily();
+  renderFamilyChips();
+  renderAll();
+  toast('Palattiin yhden suunnittelijan tilaan — Ctrl+Z ei palauta puolisoa, jakolinkki palauttaa');
+  announce('Puoliso poistettu');
+}
+
+function renderFamilyChips() {
+  const box = $('familyChips');
+  if (!box) return;
+  if (!familyOn()) {
+    box.innerHTML = '<button class="fam-add" data-fam="add" title="Lisää puoliso — suunnitelkaa yhdessä ja näkekää perheen yhteiskäyrä">＋</button>';
+    return;
+  }
+  box.innerHTML = family.persons.map((p, i) =>
+    `<button class="fam-chip${i === family.active ? ' on' : ''}" data-fam="p${i}" title="${i === family.active ? 'Kaksoisnapautus nimeää' : 'Vaihda: ' + escapeHtml(p.name)}">${escapeHtml(p.name)}</button>`
+  ).join('') + `<button class="fam-del${famRemoveArm ? ' armed' : ''}" data-fam="del" title="Poista puoliso">✕</button>`;
+}
+
+function bindFamily() {
+  const box = $('familyChips');
+  box.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-fam]');
+    if (!b) return;
+    e.stopPropagation(); // h2-klikki taittaisi kortin
+    e.preventDefault();
+    const k = b.dataset.fam;
+    if (k === 'add') addSpouse();
+    else if (k === 'del') removeSpouse();
+    else {
+      const i = +k.slice(1);
+      if (i !== family.active) switchPerson(i);
+    }
+  });
+  box.addEventListener('dblclick', (e) => {
+    const b = e.target.closest('[data-fam]');
+    if (!b || !family) return;
+    e.stopPropagation();
+    const k = b.dataset.fam;
+    if (!k.startsWith('p')) return;
+    const i = +k.slice(1);
+    const name = prompt('Nimi:', family.persons[i].name);
+    if (name && name.trim()) {
+      family.persons[i].name = name.trim().slice(0, 16);
+      persistFamily();
+      renderFamilyChips();
+    }
+  });
+}
+
+/* ===================== Säästökyky-apuri (tulot ja menot) ===================== */
+// Rajaus: tulot ja menot ovat PÄÄTÖKSEN apuväline, eivät kirjanpitoa.
+// Apuri laskee säästövaran ja -asteen ja kirjoittaa tuloksen olemassa
+// olevaan kuukausisäästöön — moottori näkee edelleen vain nettovirrat.
+// Menot antavat myös eläkeajan tulotarpeelle järkevän oletuksen.
+
+function updateSaverNote() {
+  const note = $('savNote');
+  if (!note) return;
+  const inc = state.income, exp = state.expenses;
+  if (inc == null && exp == null) { note.textContent = 'Vapaaehtoinen: lukuja ei jaeta mihinkään.'; return; }
+  const parts = [];
+  if (inc != null && exp != null) {
+    const room = Math.max(0, inc - exp);
+    parts.push(`Säästövara <b>${fmtEur(room)}/kk</b>`);
+  }
+  if (inc > 0) parts.push(`nykyinen säästöaste <b>${Math.round(state.monthly / inc * 100)} %</b> nettotuloista`);
+  note.innerHTML = parts.join(' · ') || 'Täytä molemmat kentät.';
+}
+
+function bindSaver() {
+  $('saverLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    const box = $('saverBox');
+    box.hidden = !box.hidden;
+    if (!box.hidden) updateSaverNote();
+  });
+  const num = (id, key) => {
+    $(id).addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value);
+      state[key] = isNaN(v) ? null : clamp(v, 0, 1e6);
+      updateSaverNote();
+      saveState();
+    });
+  };
+  num('savIncome', 'income');
+  num('savExpenses', 'expenses');
+  $('savApply').addEventListener('click', () => {
+    if (state.income == null || state.expenses == null) { toast('Täytä nettotulot ja menot ensin.'); return; }
+    const room = Math.max(0, Math.round((state.income - state.expenses) / 10) * 10);
+    pushUndoNow();
+    state.monthly = clamp(room, 0, 1e6);
+    $('monthly').value = state.monthly;
+    renderAll();
+    updateSaverNote();
+    toast(`Kuukausisäästö ${fmtEur(state.monthly)}/kk säästövarasta`);
+  });
+}
+
 /* ===================== Toast ===================== */
 
 let toastEl = null, toastTimer = null;
@@ -3699,7 +3945,7 @@ function openMoreMenu(anchor) {
   const reset = add('mi-reset', 'Nollaa suunnitelma', 'Aloita puhtaalta pöydältä', null, true);
   reset.addEventListener('click', () => {
     if (reset.dataset.armed) {
-      try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(BASELINE_KEY); } catch (e) {}
+      try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(BASELINE_KEY); localStorage.removeItem(FAMILY_KEY); localStorage.removeItem(SCEN_KEY); } catch (e) {}
       location.hash = '';
       location.reload();
       return;
@@ -3735,11 +3981,13 @@ function serialize() {
     glide: state.glide, real: state.real, tax: state.tax,
     events: state.events,
   };
-  // Pro-kentät vain kun niitä on — vanhat linkit ja tallennukset ennallaan
+  // Pro- ja apurikentät vain kun niitä on — vanhat linkit ennallaan
   if (state.proOn || state.pro) {
     o.proOn = !!state.proOn;
     if (state.pro) o.pro = state.pro;
   }
+  if (state.income != null) o.income = state.income;
+  if (state.expenses != null) o.expenses = state.expenses;
   return o;
 }
 
@@ -3753,6 +4001,8 @@ function applySaved(data) {
   // Pro: raakadata talteen — proOf normalisoi ja kiristää rajat käytössä
   state.proOn = !!data.proOn;
   state.pro = data.pro && typeof data.pro === 'object' ? data.pro : null;
+  state.income = typeof data.income === 'number' && isFinite(data.income) ? clamp(data.income, 0, 1e6) : null;
+  state.expenses = typeof data.expenses === 'number' && isFinite(data.expenses) ? clamp(data.expenses, 0, 1e6) : null;
   // Uudet kentät: vanhat tallennukset/linkit eivät saa muuttua — jos kenttä
   // puuttuu, käytetään neutraalia arvoa (kasvu 0 %, ei veroa), ei uutta oletusta.
   state.savingsGrowth = typeof data.savingsGrowth === 'number' && isFinite(data.savingsGrowth)
@@ -3822,6 +4072,7 @@ function applySaved(data) {
 
 function saveState() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(serialize())); } catch (e) { /* yksityistila tms. */ }
+  if (family) { saveActiveIntoFamily(); persistFamily(); }
   pushUndoDebounced();
 }
 
@@ -3830,6 +4081,26 @@ function saveState() {
 let visitKind = 'returning'; // 'first' | 'shared' | 'returning'
 
 function loadState() {
+  try {
+    if (location.hash.startsWith('#f=')) {
+      const o = JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(3)))));
+      if (validFamily(o) && o.persons.length === 2) {
+        family = {
+          persons: o.persons.map((p) => ({ name: String(p.name || 'Henkilö').slice(0, 16), data: p.data })),
+          active: o.active === 1 ? 1 : 0,
+        };
+        if (applySaved(JSON.parse(JSON.stringify(family.persons[family.active].data)))) {
+          history.replaceState(null, '', location.pathname);
+          otherDirty = true;
+          persistFamily();
+          saveState();
+          visitKind = 'shared';
+          return;
+        }
+        family = null;
+      }
+    }
+  } catch (e) { /* viallinen perhelinkki — ohitetaan */ }
   try {
     if (location.hash.startsWith('#s=')) {
       const json = decodeURIComponent(escape(atob(location.hash.slice(3))));
@@ -3859,11 +4130,21 @@ function syncInputs() {
   $('glide').checked = state.glide;
   $('real').checked = state.real;
   $('tax').checked = state.tax;
+  $('savIncome').value = state.income != null ? state.income : '';
+  $('savExpenses').value = state.expenses != null ? state.expenses : '';
+  updateSaverNote();
   applyProUI(); // vipu, kortit ja body.pro seuraavat tilaa (myös undo/esimerkit)
 }
 
-const makeShareUrl = () =>
-  location.origin + location.pathname + '#s=' + btoa(unescape(encodeURIComponent(JSON.stringify(serialize()))));
+// Perhelinkki käyttää omaa #f=-etuliitettä: vanha versio ei tunnista sitä
+// eikä siten typistä perhesuunnitelmaa hiljaa omakseen (§9 versiovahti)
+const makeShareUrl = () => {
+  if (familyOn()) {
+    saveActiveIntoFamily();
+    return location.origin + location.pathname + '#f=' + btoa(unescape(encodeURIComponent(JSON.stringify(family))));
+  }
+  return location.origin + location.pathname + '#s=' + btoa(unescape(encodeURIComponent(JSON.stringify(serialize()))));
+};
 
 async function copyShareUrl(btn) {
   const url = makeShareUrl();
@@ -4201,6 +4482,7 @@ function renderAll() {
 
 buildPalette();
 initMcWorker();
+loadFamily();
 loadState();
 loadBaseline();
 syncInputs();
@@ -4210,7 +4492,10 @@ bindDraw();
 bindPanelCards();
 bindTour();
 bindPro();
+bindFamily();
+bindSaver();
 loadScenarios();
+renderFamilyChips();
 renderAll();
 pushUndoNow(); // lähtötila kumoamishistorian pohjaksi
 

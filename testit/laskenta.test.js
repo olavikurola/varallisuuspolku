@@ -245,6 +245,32 @@ console.log('Pro: analyysit ja stressit');
   ok(sus.length > 5 && sus.every((p, i) => i === 0 || p.wd >= sus[i - 1].wd - 1), 'kestävä tulo kasvaa eläkeiän myötä', JSON.stringify(sus.slice(0, 3)));
 }
 
+console.log('Kotitalous (Perhevirta): koherentti perhe-MC');
+{
+  const a = plan();
+  const b = plan();
+  b.ageNow = 28;
+  b.monthly = 500;
+  b.startCapital = 5000;
+  b.events = [{ id: 1, type: 'retirement', age: 65, withdrawal: 1500, pension: 1200, pensionAge: 65 }];
+  const ra = L.simulate(a), rb = L.simulate(b);
+  const r = L.mcHousehold([a, b], { paths: 300 });
+  ok(r.months === Math.max(ra.months, rb.months), 'yhteinen horisontti = pisin henkilöistä');
+  ok(r.successProb <= Math.min(ra.successProb, rb.successProb) + 1e-9, 'perheen onnistuminen ≤ heikoin henkilö');
+  ok(r.successProb === L.mcHousehold([a, b], { paths: 300 }).successProb, 'deterministinen (CRN)');
+  let band = true;
+  for (let m = 0; m <= r.months; m += 7) if (r.p10[m] > r.p90[m] + 1e-6) band = false;
+  ok(band, 'perheviuhka P10 ≤ P90');
+  const tot = L.householdExp([ra, rb]);
+  ok(Math.abs(tot[0] - (a.startCapital + b.startCapital)) < 1e-6, 'yhteiskäyrä alkaa pääomien summasta');
+  ok(Math.abs(tot[100] - (ra.exp[100] + rb.exp[100])) < 1e-6, 'yhteiskäyrä = odotuspolkujen summa');
+  ok(Math.abs(tot[tot.length - 1] - (ra.exp[ra.months] + rb.exp[Math.min(tot.length - 1, rb.months)])) < 1e-6, 'lyhyempi horisontti jäädytetään loppuarvoon');
+  // Koherenssin todistus: identtiset henkilöt jakavat saman markkinakohtalon —
+  // riippumattomissa maailmoissa perheonnistuminen olisi p², samassa p
+  const r2 = L.mcHousehold([plan(), plan()], { paths: 300 });
+  ok(Math.abs(r2.successProb - ra.successProb) < 1e-9, 'sama maailma: identtiset henkilöt → sama onnistumis-%', `${r2.successProb} vs ${ra.successProb}`);
+}
+
 console.log('Varmuustaso-ratkaisu (karkea→tarkka)');
 {
   const st = plan();
