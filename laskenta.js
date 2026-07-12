@@ -460,20 +460,23 @@ function buildMu(ctx, st, retAge) {
   const acct = acctOf(st);
   const fee = (feeOr0(st.feePct) + (acct === 'ins' ? feeOr0(st.wrapFee) : 0)) / 100;
   const divTax = acct === 'aot' && st.tax ? (feeOr0(st.divYield) / 100) * 0.85 * TAX_LOW : 0;
+  // Reaalituotto tarkalla Fisher-kaavalla (1+r)/(1+i), kuten omaisuuserissä —
+  // vähennysapproksimaatio yliarvioi reaalituottoa ~0,1 %-yks/v. Nimellistilassa
+  // infl = 0 → jakaja on 1 ja polku on bitilleen entinen.
   if (p) {
     const classes = classesOf(st);
     const corrM = p.corr ? ensurePSD(corrMatrixOf(classes.length, p.corr)).M : null;
     for (let m = 1; m <= months; m++) {
       const w = weightsAt(a0 + m / 12, retAge, st);
       const { mu, sigma } = portfolioStatsPro(w, classes, corrM, p.ter);
-      muM[m] = Math.pow(1 + mu - infl - fee - divTax * w[0], 1 / 12) - 1;
+      muM[m] = Math.pow((1 + mu - fee - divTax * w[0]) / (1 + infl), 1 / 12) - 1;
       sigA[m] = sigma;
     }
   } else {
     for (let m = 1; m <= months; m++) {
       const alloc = allocationAt(a0 + m / 12, retAge, st);
       const { mu, sigma } = portfolioStats(alloc);
-      muM[m] = Math.pow(1 + mu - infl - fee - divTax * alloc.s, 1 / 12) - 1;
+      muM[m] = Math.pow((1 + mu - fee - divTax * alloc.s) / (1 + infl), 1 / 12) - 1;
       sigA[m] = sigma;
     }
   }

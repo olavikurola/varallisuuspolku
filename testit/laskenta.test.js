@@ -312,6 +312,12 @@ console.log('Korkoa korolle: analyyttiset identiteetit joka elinkaarivaiheessa')
     'verojen menetetty korkoa korolle näkyy (ero > maksetut verot)',
     `ero ${Math.round(rWd.exp[120] - rWdTax.exp[120])} vs verot ${Math.round(rWdTax.taxPaid)}`);
 
+  // (4b) Inflaatiokorjaus tarkalla Fisher-kaavalla: w_n = S·(1,07/1,02)^(n/12)
+  const rl = { ...acc, real: true };
+  const rRl = L.simulate(rl);
+  relClose(rRl.exp[120], 50000 * Math.pow(1.07 / 1.02, 10), 1e-9,
+    'reaalituotto Fisher-kaavalla (sama kuin omaisuuserissä)');
+
   // (5) Omaisuuserä: arvo kompoundaa geometrisesti kuukausittain
   const ast = {
     ...acc, startCapital: 0, monthly: 0,
