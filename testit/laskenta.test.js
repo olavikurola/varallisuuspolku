@@ -271,6 +271,64 @@ console.log('Kotitalous (Perhevirta): koherentti perhe-MC');
   ok(Math.abs(r2.successProb - ra.successProb) < 1e-9, 'sama maailma: identtiset henkilöt → sama onnistumis-%', `${r2.successProb} vs ${ra.successProb}`);
 }
 
+console.log('Korkoa korolle: analyyttiset identiteetit joka elinkaarivaiheessa');
+{
+  // Suljetun muodon kaavat: k = kuukausikerroin (1+mu)^(1/12).
+  // Moottorin odotuspolun on osuttava näihin liukulukutarkkuudella.
+  const k = Math.pow(1.07, 1 / 12);
+  const relClose = (a, b, tol, name, extra) => ok(Math.abs(a - b) <= tol * Math.abs(b), name, `${a} vs ${b}${extra || ''}`);
+
+  // (1) Kertyminen pelkällä alkupääomalla: w_n = S·1,07^(n/12)
+  const acc = {
+    ageNow: 30, ageEnd: 40, startCapital: 50000, monthly: 0, savingsGrowth: 0,
+    allocStocks: 100, allocBonds: 0, glide: false, real: false, tax: false, events: [],
+  };
+  const rAcc = L.simulate(acc);
+  relClose(rAcc.exp[120], 50000 * Math.pow(1.07, 10), 1e-9, 'pääoma kompoundaa: S·(1+r)^t');
+
+  // (2) Kuukausisäästö: annuiteetin päätearvo w_n = C·(k^n − 1)/(k − 1)
+  const sav = { ...acc, startCapital: 0, monthly: 500, events: [] };
+  const rSav = L.simulate(sav);
+  relClose(rSav.exp[120], 500 * (Math.pow(k, 120) - 1) / (k - 1), 1e-9,
+    'säästövirta kompoundaa: annuiteetin päätearvo');
+
+  // (3) REALISOINTIVAIHE: nostojen jälkeen jäljelle jäävä pääoma jatkaa
+  // kompoundaamista — w_n = S·k^n − W·(k^n − 1)/(k − 1)
+  const wd = {
+    ageNow: 60, ageEnd: 70, startCapital: 1000000, monthly: 0, savingsGrowth: 0,
+    allocStocks: 100, allocBonds: 0, glide: false, real: false, tax: false,
+    events: [{ id: 1, type: 'retirement', age: 60, withdrawal: 2000, pension: 0 }],
+  };
+  const rWd = L.simulate(wd);
+  relClose(rWd.exp[120], 1000000 * Math.pow(k, 120) - 2000 * (Math.pow(k, 120) - 1) / (k - 1), 1e-9,
+    'realisointivaihe: jäljelle jäävä pääoma kompoundaa nostojen välissä');
+
+  // (4) Verojen menetetty tuotto: aikaisin maksettu vero ei kompoundaa
+  // omistajalle → varallisuusero verolliseen > nimellisesti maksetut verot
+  const wdTax = { ...wd, tax: true, events: [{ id: 1, type: 'retirement', age: 60, withdrawal: 2000, pension: 0 }] };
+  const rWdTax = L.simulate(wdTax);
+  ok(rWdTax.taxPaid > 0, 'nostoista kertyy veroa');
+  ok(rWd.exp[120] - rWdTax.exp[120] > rWdTax.taxPaid,
+    'verojen menetetty korkoa korolle näkyy (ero > maksetut verot)',
+    `ero ${Math.round(rWd.exp[120] - rWdTax.exp[120])} vs verot ${Math.round(rWdTax.taxPaid)}`);
+
+  // (5) Omaisuuserä: arvo kompoundaa geometrisesti kuukausittain
+  const ast = {
+    ...acc, startCapital: 0, monthly: 0,
+    events: [{ id: 1, type: 'home', age: 30, amount: -220000, financing: 'cash', isAsset: true, appr: 2.0 }],
+  };
+  const rAst = L.simulate(ast);
+  relClose(rAst.assets[120], 220000 * Math.pow(1.02, 10), 1e-9, 'omaisuuserä kompoundaa: P·(1+a)^t');
+
+  // (6) Palkkakehitys: kasvava säästövirta — kasvavan annuiteetin päätearvo
+  // w_n = C·Σ g^((j−1)/12)·k^(n−j), g = 1,015 (suora summa vertailuna)
+  const grw = { ...acc, startCapital: 0, monthly: 500, savingsGrowth: 1.5 };
+  const rGrw = L.simulate(grw);
+  let ref = 0;
+  for (let j = 1; j <= 120; j++) ref = ref * k + 500 * Math.pow(1.015, (j - 1) / 12);
+  relClose(rGrw.exp[120], ref, 1e-9, 'kasvava säästövirta kompoundaa oikein');
+}
+
 console.log('Sijoitustili (kuori) ja kulut');
 {
   // Identiteetti: puuttuva/oletus-acct ja nollakulut = bitilleen entinen polku
