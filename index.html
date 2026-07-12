@@ -133,6 +133,27 @@
           <span class="switch"></span>
           <span>Myyntivoittovero <small>verot mukana eläkeajan nostoissa (30/34&nbsp;%)</small></span>
         </label>
+        <div class="field" style="margin-top:12px">
+          <span class="field-label">Sijoitustili <small>vaikuttaa verotukseen</small></span>
+          <div class="seg seg-goal" id="acctSeg">
+            <button type="button" data-acct="aot">Arvo-osuustili</button>
+            <button type="button" data-acct="ost">Osakesäästötili</button>
+            <button type="button" data-acct="ins">Vakuutuskuori</button>
+          </div>
+        </div>
+        <p class="note" id="acctNote"></p>
+        <div class="row2">
+          <label class="field"><span class="field-label">Sijoituskulut</span>
+            <span class="input"><input id="feePct" type="number" min="0" max="10" step="0.05" value="0" /><em>%/v</em></span></label>
+          <label class="field" id="wrapFeeField" hidden><span class="field-label">Kuoren kulu</span>
+            <span class="input"><input id="wrapFee" type="number" min="0" max="10" step="0.05" value="0" /><em>%/v</em></span></label>
+          <label class="field" id="divYieldField"><span class="field-label">Osinkotuotto <small>suorat osakkeet</small></span>
+            <span class="input"><input id="divYield" type="number" min="0" max="10" step="0.5" value="0" /><em>%/v</em></span></label>
+        </div>
+        <p class="note" id="acctCompareNote" hidden>
+          <a href="#" id="acctCompareLink">Vertaa arvo-osuustiliin</a> — nykyinen suunnitelma
+          AOT:na haamukäyräksi, erot näkyvät tunnusluvuissa.
+        </p>
       </section>
 
       <section class="card pro-card" data-card="promkt" hidden>

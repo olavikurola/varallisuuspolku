@@ -271,6 +271,58 @@ console.log('Kotitalous (Perhevirta): koherentti perhe-MC');
   ok(Math.abs(r2.successProb - ra.successProb) < 1e-9, 'sama maailma: identtiset henkilöt → sama onnistumis-%', `${r2.successProb} vs ${ra.successProb}`);
 }
 
+console.log('Sijoitustili (kuori) ja kulut');
+{
+  // Identiteetti: puuttuva/oletus-acct ja nollakulut = bitilleen entinen polku
+  const base = L.simulate(plan());
+  const st1 = plan();
+  st1.acct = 'aot'; st1.feePct = 0; st1.wrapFee = 0; st1.divYield = 0;
+  const r1 = L.simulate(st1);
+  ok(r1.exp.every((v, i) => v === base.exp[i]), 'oletusarvoilla polku bitilleen sama');
+  ok(L.acctOf({}) === 'aot' && L.acctOf({ acct: 'ost' }) === 'ost' && L.acctOf({ acct: 'x' }) === 'aot', 'acctOf normalisoi');
+
+  // OST = AOT kun ei osinkoja eikä hankintameno-olettamaa: sama voitto-
+  // osuusverotus → identtinen polku (dokumentoi mallin rehellisesti)
+  const stOst = plan(); stOst.acct = 'ost';
+  const rOst = L.simulate(stOst);
+  ok(rOst.exp.every((v, i) => v === base.exp[i]), 'OST = AOT ilman osinkoja/olettamaa (sama voitto-osuusvero)');
+
+  // Kulut vähentävät tuottoa; vakuutuskuoren kulu tulee päälle vain ins-tilillä
+  const stFee = plan(); stFee.feePct = 1;
+  ok(L.simulate(stFee).wEnd < base.wEnd, 'sijoituskulu pienentää loppuvarallisuutta');
+  const stIns = plan(); stIns.acct = 'ins'; stIns.wrapFee = 0.5;
+  const stAotWrap = plan(); stAotWrap.wrapFee = 0.5;
+  ok(L.simulate(stIns).wEnd < base.wEnd, 'kuoren kulu pienentää tuottoa vakuutuskuorella');
+  ok(L.simulate(stAotWrap).wEnd === base.wEnd, 'kuoren kulu ei vaikuta arvo-osuustilillä');
+
+  // Osinkoverojarru: vain AOT + vero päällä; kuorissa osingot kertyvät verotta
+  const stDivA = plan(); stDivA.divYield = 3.5;
+  const stDivO = plan(); stDivO.divYield = 3.5; stDivO.acct = 'ost';
+  const stDivNoTax = plan(); stDivNoTax.divYield = 3.5; stDivNoTax.tax = false;
+  const baseNoTax = plan(); baseNoTax.tax = false;
+  ok(L.simulate(stDivA).wEnd < base.wEnd, 'osinkovero jarruttaa arvo-osuustilillä');
+  ok(L.simulate(stDivO).wEnd === base.wEnd, 'OST:lla osingot verotta (kuoren hyöty)');
+  ok(L.simulate(stDivNoTax).wEnd === L.simulate(baseNoTax).wEnd, 'ilman verokytkintä osinkojarrua ei ole');
+  ok(L.simulate(stDivO).wEnd > L.simulate(stDivA).wEnd, 'vertailu: sama salkku kuoressa voittaa osinko-osakkeilla');
+
+  // Hankintameno-olettama (Pro) koskee vain arvo-osuustiliä
+  const withAcq = (acct) => {
+    const st = plan();
+    st.proOn = true;
+    st.pro = { tax: { acq: true } };
+    if (acct) st.acct = acct;
+    return L.simulate(st);
+  };
+  const plain = (acct) => {
+    const st = plan();
+    if (acct) st.acct = acct;
+    return L.simulate(st);
+  };
+  ok(withAcq(null).taxPaid <= plain(null).taxPaid + 1e-9, 'olettama ei ainakaan kasvata veroa (AOT)');
+  ok(withAcq('ost').taxPaid === plain('ost').taxPaid, 'olettama ei vaikuta OST:lla (portti)');
+  ok(withAcq('ins').taxPaid === plain('ins').taxPaid, 'olettama ei vaikuta vakuutuskuorella (portti)');
+}
+
 console.log('Varmuustaso-ratkaisu (karkea→tarkka)');
 {
   const st = plan();

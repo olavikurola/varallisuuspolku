@@ -19,6 +19,18 @@ const INFLATION = 0.02;
 // voitto-osuus (arvon ja jäljellä olevan hankintahinnan erotus).
 const TAX_LOW = 0.30, TAX_HIGH = 0.34, TAX_BRACKET = 30000;
 
+// Sijoitustili (kuori): 'aot' arvo-osuustili (oletus), 'ost' osakesäästötili,
+// 'ins' sijoitusvakuutus/kapitalisaatiosopimus. Nostojen verotus on kaikissa
+// sama voitto-osuusmenetelmä (OST ja kuoret v. 2020 säännöillä; AOT:lla
+// hankintahinnan seuranta antaa saman tuloksen ilman sisäisiä realisointeja).
+// Erot, jotka mallinnetaan: (1) hankintameno-olettama koskee vain AOT:a,
+// (2) AOT:lla suorien osakkeiden osingoista menee vero vuosittain
+// (85 % veronalaista × 30 %) — kuorissa osingot kertyvät verotta,
+// (3) vakuutuskuorella oma vuosikulu. OST:n 100 000 €:n talletuskatto ja
+// tappioiden vähennysrajoitukset eivät ole mallissa (UI varoittaa katosta).
+const acctOf = (st) => (st.acct === 'ost' || st.acct === 'ins') ? st.acct : 'aot';
+const feeOr0 = (v) => (typeof v === 'number' && isFinite(v) ? clamp(v, 0, 10) : 0);
+
 // Monte Carlo: kiinteät polkukohtaiset siemenet = yhteiset satunnaisluvut
 // (CRN). Polku i saa aina saman shokkijonon parametreista riippumatta, joten
 // viuhka ja onnistumis-% eivät väpätä säätöjen välillä ja deltat ovat reiluja.
@@ -297,7 +309,9 @@ function prepareSim(st) {
   const taxLow = pro ? pro.tax.low / 100 : TAX_LOW;
   const taxHigh = pro ? pro.tax.high / 100 : TAX_HIGH;
   const taxBracket = pro ? pro.tax.bracket : TAX_BRACKET;
-  const taxAcq = !!(pro && pro.tax.acq);
+  // Hankintameno-olettama koskee vain arvo-osuustiliä — OST:n ja
+  // vakuutuskuoren nostot verotetaan aina todellisesta voitto-osuudesta
+  const taxAcq = !!(pro && pro.tax.acq) && acctOf(st) === 'aot';
   const wdMode = pro ? pro.wd.mode : 'fixed';
   const wdPctM = pro ? pro.wd.pct / 100 / 12 : 0;
   const wdBand = pro ? pro.wd.band / 100 : 0.2;
@@ -438,19 +452,28 @@ function buildMu(ctx, st, retAge) {
   const sigA = new Float64Array(months + 1);
   const p = proOf(st);
   const infl = st.real ? inflOf(st) : 0;
+  // Sijoituskulut ja kuori: kulut (%/v) vähentävät tuottoa; vakuutuskuorella
+  // lisäksi kuoren kulu. Arvo-osuustilillä suorien osakkeiden osingoista
+  // menee vero vuosittain (85 % × 30 % osinkotuotosta osakepainon osalta) —
+  // kuorissa (OST/vakuutus) osingot kertyvät verotta. Oletuksilla (0) kaikki
+  // termit ovat nollia ja polku on bitilleen entinen.
+  const acct = acctOf(st);
+  const fee = (feeOr0(st.feePct) + (acct === 'ins' ? feeOr0(st.wrapFee) : 0)) / 100;
+  const divTax = acct === 'aot' && st.tax ? (feeOr0(st.divYield) / 100) * 0.85 * TAX_LOW : 0;
   if (p) {
     const classes = classesOf(st);
     const corrM = p.corr ? ensurePSD(corrMatrixOf(classes.length, p.corr)).M : null;
     for (let m = 1; m <= months; m++) {
       const w = weightsAt(a0 + m / 12, retAge, st);
       const { mu, sigma } = portfolioStatsPro(w, classes, corrM, p.ter);
-      muM[m] = Math.pow(1 + mu - infl, 1 / 12) - 1;
+      muM[m] = Math.pow(1 + mu - infl - fee - divTax * w[0], 1 / 12) - 1;
       sigA[m] = sigma;
     }
   } else {
     for (let m = 1; m <= months; m++) {
-      const { mu, sigma } = portfolioStats(allocationAt(a0 + m / 12, retAge, st));
-      muM[m] = Math.pow(1 + mu - infl, 1 / 12) - 1;
+      const alloc = allocationAt(a0 + m / 12, retAge, st);
+      const { mu, sigma } = portfolioStats(alloc);
+      muM[m] = Math.pow(1 + mu - infl - fee - divTax * alloc.s, 1 / 12) - 1;
       sigA[m] = sigma;
     }
   }
@@ -1130,7 +1153,7 @@ function householdExp(sims) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     ASSETS, INFLATION, TAX_LOW, TAX_HIGH, TAX_BRACKET, MC_SEED, MC_LIVE, MC_FULL,
-    clamp, loanPayment, mulberry32, round2sig, snapTo,
+    clamp, loanPayment, mulberry32, round2sig, snapTo, acctOf,
     baseAlloc, allocationAt, portfolioStats,
     prepareSim, buildMu, runPath, mcSuccess, mcCollect, kthSmallest,
     solveSustainable, solveParam, makeDragSolver, solveGoalsMonthly, solveGoalsMonthlyConf,

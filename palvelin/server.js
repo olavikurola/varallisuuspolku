@@ -64,6 +64,11 @@ function sanitize(p) {
     glide: !!p.glide, real: !!p.real, tax: !!p.tax,
     events: [],
   };
+  // Sijoitustili ja kulut (valinnaiset, v1.1)
+  if (!opt(p.acct, (v) => v === 'ost' || v === 'ins')) return null;
+  if (p.acct !== undefined) out.acct = p.acct;
+  if (!opt(p.feePct, (v) => num(v, 0, 20))) return null;
+  if (p.feePct !== undefined) out.feePct = p.feePct;
 
   for (const e of p.events) {
     if (!e || !EVENT_TYPES.includes(e.type) || !int(e.age, 0, 105)) return null;
