@@ -4508,6 +4508,8 @@ function openMoreMenu(anchor) {
   reset.addEventListener('click', () => {
     if (reset.dataset.armed) {
       try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(BASELINE_KEY); localStorage.removeItem(FAMILY_KEY); localStorage.removeItem(SCEN_KEY); } catch (e) {}
+      // Nollaaja ei ole ensivierailija: paluu dashboardille, ei piirtopöydälle
+      try { sessionStorage.setItem('vp-reset', '1'); } catch (e) {}
       location.hash = '';
       location.reload();
       return;
@@ -4650,8 +4652,11 @@ function saveState() {
 }
 
 // Ensivierailu ja jakolinkki avaavat piirtopöydän suoraan (lanseerausflow);
-// palaava käyttäjä saa normaalinäkymän kuten ennen
+// palaava käyttäjä saa normaalinäkymän kuten ennen. Nollaus näyttää
+// ensivierailulta (tallenne puuttuu) — sessionStorage-lippu erottaa sen,
+// jotta paluu on dashboardille eikä piirtopöydälle.
 let visitKind = 'returning'; // 'first' | 'shared' | 'returning'
+let resetVisit = false;
 
 function loadState() {
   try {
@@ -4686,9 +4691,13 @@ function loadState() {
     }
   } catch (e) { /* viallinen linkki — ohitetaan */ }
   try {
+    resetVisit = sessionStorage.getItem('vp-reset') === '1';
+    if (resetVisit) sessionStorage.removeItem('vp-reset');
+  } catch (e) {}
+  try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) applySaved(JSON.parse(raw));
-    else visitKind = 'first';
+    else visitKind = resetVisit ? 'returning' : 'first';
   } catch (e) { /* viallinen tallennus — ohitetaan */ }
 }
 
@@ -5143,6 +5152,7 @@ if (location.hash === '#yhteenveto') {
 // tarttumaan), jakolinkki linkin suunnitelmalla — Esc paljastaa koko sivun.
 // SEO ei kärsi: piirtotila on CSS-kerros, sisältö pysyy DOMissa.
 if (visitKind !== 'returning' && $('summary').hidden) enterFs();
+else if (resetVisit) toast('Aloitettu puhtaalta pöydältä — täytä Perustiedot tai avaa piirtopöytä ⛶');
 
 // Koon muutos vaatii vain geometrian uusiksi — sim ei riipu koosta.
 // (Täysi render tässä loisi silmukan: workerin tulos muuttaa tunnuslukujen
