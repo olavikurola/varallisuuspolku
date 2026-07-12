@@ -4722,20 +4722,19 @@ function syncInputs() {
   applyProUI(); // vipu, kortit ja body.pro seuraavat tilaa (myös undo/esimerkit)
 }
 
-/* --- Sijoitustili (kuori): segmentti, selite ja vertailulinkki --- */
+/* --- Sijoitustili (kuori): valinta, tiivis selite ja vertailunappi --- */
 
 const ACCT_NOTES = {
-  aot: 'Nostoista vero realisoituneesta voitosta (30/34 %). Suorien osakkeiden osingoista vero vuosittain — kasvurahastoilla jätä osinkotuotto nollaan.',
-  ost: 'Osakesäästötili: ei veroa tilin sisällä, nostosta verotetaan voiton osuus. Hankintameno-olettamaa ei sovelleta.',
-  ins: 'Sijoitusvakuutus / kapitalisaatiosopimus: ei veroa kuoren sisällä, nostosta verotetaan voiton osuus. Kuoren vuosikulu vähentää tuottoa.',
+  aot: 'Nostoista vero voiton osuudesta · suorien osakkeiden osingoista vero vuosittain.',
+  ost: 'Ei veroa tilillä · nostosta vero voiton osuudesta · talletuskatto 100 000 €',
+  ins: 'Ei veroa kuoressa · nostosta vero voiton osuudesta · kuoren kulu vähentää tuottoa.',
 };
 
 function updateAcctUI() {
-  const seg = $('acctSeg');
-  if (!seg) return;
-  for (const b of seg.querySelectorAll('button')) b.classList.toggle('on', b.dataset.acct === state.acct);
+  const sel = $('acctSel');
+  if (!sel) return;
+  sel.value = state.acct;
   $('wrapFeeField').hidden = state.acct !== 'ins';
-  $('divYieldField').hidden = false;
   let note = ACCT_NOTES[state.acct];
   if (state.acct === 'ost') {
     // Talletuskatto 100 000 €: karkea arvio ylitysvuodesta (talletukset, ei tuotto)
@@ -4745,20 +4744,20 @@ function updateAcctUI() {
       cum += state.monthly * 12 * Math.pow(1 + g, y);
       if (cum >= 100000) yr = new Date().getFullYear() + y + 1;
     }
-    if (cum >= 100000) note += ` Huom: talletuskatto 100 000 € ylittyy arviolta ${yr ? 'vuonna ' + yr : 'heti'} — ylimenevä osa mallinnetaan samoin ehdoin.`;
+    if (cum >= 100000) note += yr ? ` · ylittyy ~${yr}` : ' · talletuksesi ylittävät katon';
+    note += '.';
   }
   $('acctNote').textContent = note;
-  $('acctCompareNote').hidden = state.acct === 'aot';
+  $('acctCompareLink').hidden = state.acct === 'aot';
 }
 
 function bindAcct() {
-  $('acctSeg').addEventListener('click', (e) => {
-    const b = e.target.closest('button[data-acct]');
-    if (!b || b.dataset.acct === state.acct) return;
-    state.acct = b.dataset.acct;
+  $('acctSel').addEventListener('change', (e) => {
+    if (e.target.value === state.acct) return;
+    state.acct = e.target.value;
     updateAcctUI();
     renderAll();
-    announce(`Sijoitustili: ${b.textContent}`);
+    announce(`Sijoitustili: ${e.target.options[e.target.selectedIndex].text}`);
   });
   $('acctCompareLink').addEventListener('click', (e) => {
     e.preventDefault();

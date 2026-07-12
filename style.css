@@ -1631,6 +1631,15 @@ body.pro .pro-switch { border-color: rgba(139, 124, 246, 0.55); }
 }
 .fam-del { padding: 2px 7px; opacity: 0.6; }
 .fam-del:hover, .fam-del.armed { color: var(--danger); border-color: rgba(248, 113, 113, 0.5); opacity: 1; }
+/* Sijoitustili: tiivis selite ja vertailunappi */
+.acct-note {
+  margin: 8px 2px 12px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-faint);
+}
+#acctCompareLink { margin-top: 12px; }
+
 /* Jakodialogi: puolitetaanko hankinnat puolison lisäyksen yhteydessä */
 .share-ask {
   position: fixed;
