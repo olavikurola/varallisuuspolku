@@ -206,6 +206,7 @@ function initMcWorker() {
       if (ghostSim && d.months === ghostSim.months) {
         ghostMc = d;
         updateHud();
+        renderStats(); // deltat samalla polkumäärällä myös kojelaudan kortteihin
       }
       return;
     }
@@ -624,9 +625,21 @@ function updateCrosshair(px, localY) {
   hoverDot.setAttribute('cx', x); hoverDot.setAttribute('cy', scaleY(sim.exp[m])); hoverDot.setAttribute('opacity', 1);
   if (balHoverLine) { balHoverLine.setAttribute('x1', x); balHoverLine.setAttribute('x2', x); balHoverLine.setAttribute('opacity', 1); }
 
+  // Vertailu päällä: haamun arvo ja ero tässä iässä — "milloin ero syntyy"
+  // löytyy liu'uttamalla
+  let gRow = '';
+  if (baseline && ghostSim) {
+    const gv = ghostSim.exp[Math.min(m, ghostSim.months)];
+    const d = sim.exp[m] - gv;
+    if (Math.abs(d) >= 500) {
+      gRow = `<div class="tt-row"><span>Vertailu</span><b>${fmtCompact(gv)} · <span class="${d >= 0 ? 'ok' : 'dbt'}">${d >= 0 ? '+' : '−'}${fmtCompact(Math.abs(d))}</span></b></div>`;
+    }
+  }
+
   tooltip.innerHTML =
     `<div class="tt-age">Ikä ${Math.round(age)} v · ${yearNow + Math.round(age - a0)}</div>` +
     `<div class="tt-row"><span>Sijoitukset</span><b class="hl">${fmtEur(sim.exp[m])}</b></div>` +
+    gRow +
     `<div class="tt-row"><span>Vaihteluväli</span><b>${fmtCompact(sim.pess[m])} – ${fmtCompact(sim.opt[m])}</b></div>` +
     `<div class="tt-row"><span>Sijoitettu</span><b>${fmtEur(sim.invested[m])}</b></div>` +
     (sim.assets[m] > 0.5 ? `<div class="tt-row"><span>Omaisuus</span><b class="ast">${fmtEur(sim.assets[m])}</b></div>` : '') +
@@ -1522,7 +1535,7 @@ function enterFs() {
   document.body.classList.add('fs');
   try { history.pushState({ fs: 1 }, ''); } catch (e) { /* esim. sandbox */ }
   // Haamu vertailukohdaksi automaattisesti, jotta HUD-deltat elävät heti
-  if (!baseline) setBaseline();
+  if (!baseline) setBaseline('Lähtötilanne');
   closePopover();
   $('hud').hidden = false;
   wrap.setAttribute('role', 'application');
@@ -2498,11 +2511,24 @@ function renderStats() {
   const s = sim || simulate(state);
   const cards = [];
 
+  // Vertailu päällä: kortit näyttävät eron haamuun. Onnistumis-%:n delta
+  // lasketaan samalla polkumäärällä molemmin puolin (muuten vertailu on vino).
+  const g = baseline ? ghostSim : null;
+  const ghostP = g ? (ghostMc && s.mcPaths === ghostMc.paths ? ghostMc.successProb : g.successProb) : null;
+  const dRow = (cur, base, fmt, eps, goodUp = true) => {
+    if (!g || cur == null || base == null) return '';
+    const d = cur - base;
+    if (Math.abs(d) < eps) return ''; // sama arvo = ei kohinaa (fs asettaa haamun aina)
+    const up = d > 0;
+    return `<div class="d ${up === goodUp ? 'up' : 'down'}">${up ? '▲ +' : '▼ −'}${fmt(Math.abs(d))} vertailuun</div>`;
+  };
+
   cards.push({
     k: 'Varallisuus eläkkeellä',
     v: s.wAtRet != null ? fmtEur(s.wAtRet) : '–',
     cls: 'accent',
     s: s.retireAge != null ? `${Math.round(s.retireAge)} v iässä` : 'ei eläketapahtumaa',
+    d: dRow(s.wAtRet, g && g.wAtRet, fmtCompact, 500),
   });
   // Perheen yhteinen onnistuminen: sama markkinahistoria molemmille,
   // molempien varojen on riitettävä
@@ -2522,6 +2548,7 @@ function renderStats() {
       v: fmtEur(s.net[s.months]),
       cls: 'net',
       s: `sis. sijoitukset ${fmtCompact(s.wEnd)} · ${state.real ? 'nykyrahassa' : 'nimellisarvoin'}`,
+      d: dRow(s.net[s.months], g && (g.net ? g.net[g.months] : g.wEnd), fmtCompact, 500),
     });
   } else {
     cards.push({
@@ -2529,6 +2556,7 @@ function renderStats() {
       v: fmtEur(s.wEnd),
       cls: '',
       s: state.real ? 'nykyrahassa' : 'nimellisarvoin',
+      d: dRow(s.wEnd, g && g.wEnd, fmtCompact, 500),
     });
   }
   cards.push({
@@ -2551,26 +2579,63 @@ function renderStats() {
       : { k: 'Tarvittava säästö', v: 'Ei toteudu', cls: 'bad', s: 'tulotavoite on liian suuri tälle eläkeiälle' });
   }
   // Riittävyys ja onnistumis-% samassa kortissa — kertovat samaa asiaa
+  const pDelta = p != null && ghostP != null ? dRow(p, Math.round(ghostP * 100), (x) => `${x} %-yks`, 1) : '';
   if (s.goal === 'withdrawal' && s.goalUnreachable) {
     cards.push({ k: 'Kestävä kuukausitulo', v: 'Ei toteudu', cls: 'bad', s: `edes 0 €/kk ei riitä ${confTxt || ''}`.trim() });
   } else if (s.solvedWithdrawal != null && (s.depletionAge == null || s.depletionAge >= s.a1 - 1)) {
     cards.push({ k: 'Kestävä kuukausitulo', v: `${fmtEur(s.solvedWithdrawal)}/kk`, cls: 'accent',
-      s: [s.pension > 0 ? `sis. työeläke ${fmtEur(s.pension)}/kk` : null, confTxt || pTxt].filter(Boolean).join(' · ') || `varat loppuun ${Math.round(s.a1)} v mennessä` });
+      s: [s.pension > 0 ? `sis. työeläke ${fmtEur(s.pension)}/kk` : null, confTxt || pTxt].filter(Boolean).join(' · ') || `varat loppuun ${Math.round(s.a1)} v mennessä`,
+      d: dRow(s.solvedWithdrawal, g && (g.solvedWithdrawal != null ? g.solvedWithdrawal : g.sustainableWd), (x) => `${Math.round(x).toLocaleString('fi-FI')} €/kk`, 20) });
   } else if (s.depletionAge != null) {
     cards.push({ k: 'Riittävyys', v: `Ehtyy ~${Math.round(s.depletionAge)} v`, cls: 'bad',
-      s: [pTxt, 'kokeile lisätä säästöä'].filter(Boolean).join(' · ') });
+      s: [pTxt, 'kokeile lisätä säästöä'].filter(Boolean).join(' · '), d: pDelta });
   } else {
     cards.push({ k: 'Riittävyys', v: 'Varat riittävät ✓', cls: 'ok',
-      s: [`${Math.round(s.a1)} v ikään asti`, pTxt].filter(Boolean).join(' · ') });
+      s: [`${Math.round(s.a1)} v ikään asti`, pTxt].filter(Boolean).join(' · '), d: pDelta });
   }
 
   if (s.taxPaid > 0.5) {
-    cards.push({ k: 'Myyntivoittovero', v: fmtEur(s.taxPaid), cls: '', s: 'arvio nostoista ja myynneistä' });
+    cards.push({ k: 'Myyntivoittovero', v: fmtEur(s.taxPaid), cls: '', s: 'arvio nostoista ja myynneistä',
+      d: dRow(s.taxPaid, g && g.taxPaid, fmtCompact, 500, false) });
   }
 
   $('stats').innerHTML = cards.map((c) =>
-    `<div class="stat"><div class="k">${c.k}</div><div class="v ${c.cls}">${c.v}</div><div class="s">${c.s}</div></div>`
+    `<div class="stat"><div class="k">${c.k}</div><div class="v ${c.cls}">${c.v}</div><div class="s">${c.s}</div>${c.d || ''}</div>`
   ).join('');
+  updateCmpPill();
+}
+
+/* --- Vertailupilleri: nimetty vertailukohta ja tärkein euroero graafilla --- */
+
+function updateCmpPill() {
+  const pill = $('cmpPill');
+  if (!pill) return;
+  const g = baseline ? ghostSim : null;
+  if (!g || !sim || fsOn) { pill.hidden = true; return; }
+  const both = sim.wAtRet != null && g.wAtRet != null;
+  const d = both ? sim.wAtRet - g.wAtRet : sim.wEnd - g.wEnd;
+  // Identtinen suunnitelma (esim. piirtopöydän automaattihaamu ilman
+  // muutoksia) ei tarvitse pilleriä — se ilmestyy kun eroa syntyy
+  if (Math.abs(d) < 500) { pill.hidden = true; return; }
+  const dTxt = `${both ? 'eläkeiässä' : 'lopussa'} <b class="${d > 0 ? 'pos' : 'neg'}">${d > 0 ? '+' : '−'}${fmtCompact(Math.abs(d))}</b>`;
+  $('cmpPillTxt').innerHTML = `Vertailussa: <b>${escapeHtml(baseline.cmpName || 'oma vertailukohta')}</b> · ${dTxt}`;
+  pill.hidden = false;
+}
+
+function bindCmpPill() {
+  $('cmpPillU').addEventListener('click', () => {
+    setBaseline(baseline && baseline.cmpName); // nimi säilyy päivityksessä
+    renderStats();
+    toast('Vertailukohta päivitetty nykyiseen suunnitelmaan');
+    announce('Vertailukohta päivitetty');
+  });
+  $('cmpPillX').addEventListener('click', () => {
+    clearBaseline();
+    updateCompareBtn();
+    renderStats();
+    toast('Vertailu lopetettu');
+    announce('Vertailu lopetettu');
+  });
 }
 
 /* ===================== Skenaariovertailu ===================== */
@@ -2590,8 +2655,9 @@ function computeGhost() {
   }
 }
 
-function setBaseline() {
+function setBaseline(name) {
   baseline = JSON.parse(JSON.stringify(serialize()));
+  if (name) baseline.cmpName = name;
   ghostDirty = true;
   try { localStorage.setItem(BASELINE_KEY, JSON.stringify(baseline)); } catch (e) {}
   renderChart();
@@ -2623,43 +2689,19 @@ function updateCompareBtn() {
   if (d) d.textContent = baseline ? 'Poista vertailukohta' : 'Tallenna nykyinen suunnitelma haamukäyräksi';
 }
 
+// Erillinen vertailupalkki poistettu: erot asuvat tunnuslukukorttien
+// delta-riveillä ja graafin vertailupillerissä. Tässä vain legenda.
 function renderCompare() {
-  const bar = $('compareBar');
-  const legend = $('legendCompare');
   updateCompareBtn();
+  const legend = $('legendCompare');
+  if (!legend) return;
   const active = !!(baseline && ghostSim && sim);
-
-  const chips = [];
-  let anyDelta = false;
-  // higher-is-better -metriikoille up = vihreä, down = punainen
-  const add = (label, cur, base, eps, fmt) => {
-    if (cur == null || base == null) return;
-    const d = cur - base;
-    const dir = Math.abs(d) < eps ? 'flat' : d > 0 ? 'up' : 'down';
-    if (dir !== 'flat') anyDelta = true;
-    const val = dir === 'flat' ? '±0' : (d > 0 ? '+' : '−') + fmt(Math.abs(d));
-    chips.push(`<span class="cmp-chip"><span class="ck">${label}</span><span class="cv ${dir}">${val}</span></span>`);
-  };
-  if (!active) {
-    bar.hidden = true;
-    if (legend) legend.hidden = true;
-    return;
-  }
-  add('Eläkevarallisuus', sim.wAtRet, ghostSim.wAtRet, 500, fmtCompact);
-  // Vertaa samaa suuretta molemmilta: netto vs. netto tai sijoitukset vs. sijoitukset
-  const useNet = sim.hasNet;
-  const curEnd = useNet ? sim.net[sim.months] : sim.wEnd;
-  const baseEnd = useNet ? ghostSim.net[ghostSim.months] : ghostSim.wEnd;
-  add(useNet ? 'Nettovarallisuus lopussa' : 'Loppuvarallisuus', curEnd, baseEnd, 500, fmtCompact);
-  if (sim.solvedWithdrawal != null && ghostSim.solvedWithdrawal != null)
-    add('Kestävä tulo', sim.solvedWithdrawal, ghostSim.solvedWithdrawal, 20, (x) => `${Math.round(x).toLocaleString('fi-FI')} €/kk`);
-  add('Onnistuminen', sim.successProb != null ? Math.round(sim.successProb * 100) : null,
-    ghostSim.successProb != null ? Math.round(ghostSim.successProb * 100) : null, 0.5, (x) => `${Math.round(x)} %-yks`);
-
-  // Palkki näkyy vain kun on jotain kerrottavaa — ±0-rivi olisi pelkkää kohinaa
-  bar.hidden = !anyDelta;
-  if (legend) legend.hidden = !anyDelta;
-  if (anyDelta) $('cmpDeltas').innerHTML = chips.join('');
+  const diff = active && (
+    Math.abs((sim.wAtRet || 0) - (ghostSim.wAtRet || 0)) >= 500
+    || Math.abs(sim.wEnd - ghostSim.wEnd) >= 500
+    || (sim.successProb != null && ghostSim.successProb != null
+      && Math.abs(sim.successProb - ghostSim.successProb) >= 0.005));
+  legend.hidden = !diff;
 }
 
 /* ===================== Vuositaulukko ja CSV ===================== */
@@ -4766,6 +4808,7 @@ function bindAcct() {
     const b = JSON.parse(JSON.stringify(serialize()));
     b.acct = 'aot';
     delete b.wrapFee;
+    b.cmpName = 'Arvo-osuustili'; // vertailupilleri nimeää katkoviivan
     baseline = b;
     ghostDirty = true;
     try { localStorage.setItem(BASELINE_KEY, JSON.stringify(baseline)); } catch (err) {}
@@ -4834,8 +4877,6 @@ function bindActions() {
     toast('Valinta nollattu — kysymys näytetään taas Suunnitelmani-sivulla.');
   });
 
-  $('cmpUpdate').addEventListener('click', () => setBaseline());
-  $('cmpClear').addEventListener('click', () => clearBaseline());
   // Tase-paneelin supistus
   const balanceToggle = $('balanceToggle');
   let balCollapsed = false;
@@ -5136,6 +5177,7 @@ bindPro();
 bindFamily();
 bindSaver();
 bindAcct();
+bindCmpPill();
 loadScenarios();
 renderFamilyChips();
 renderAll();

@@ -198,15 +198,14 @@
         </div>
       </div>
       <div class="stats" id="stats"></div>
-      <div class="compare-bar" id="compareBar" hidden>
-        <span class="cmp-title">Vertailu</span>
-        <div class="cmp-deltas" id="cmpDeltas"></div>
-        <button class="btn ghost" id="cmpUpdate" title="Aseta nykyinen suunnitelma uudeksi vertailukohdaksi">Päivitä</button>
-        <button class="btn ghost" id="cmpClear" title="Poista vertailu">Poista</button>
-      </div>
       <div class="chart-wrap" id="chartWrap">
         <svg id="chart" role="img" aria-label="Varallisuuden odotettu kehitys iän mukaan elämäntapahtumineen"></svg>
         <button class="fs-open" id="fsOpen" title="Piirrä polkuasi — piirtopöytä (F)" aria-label="Avaa piirtopöytä">⛶</button>
+        <div class="cmp-pill" id="cmpPill" hidden>
+          <span id="cmpPillTxt"></span>
+          <button type="button" id="cmpPillU" title="Aseta nykyinen suunnitelma uudeksi vertailukohdaksi" aria-label="Päivitä vertailukohta">⟳</button>
+          <button type="button" id="cmpPillX" title="Lopeta vertailu" aria-label="Lopeta vertailu">✕</button>
+        </div>
         <div class="tooltip" id="tooltip" hidden></div>
         <div class="popover" id="popover" hidden></div>
         <div class="dchip" id="dchip" hidden></div>

@@ -422,26 +422,7 @@ input[type="range"]::-moz-range-thumb {
 .stat .v.bad { color: var(--danger); }
 .stat .v.accent { background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
-/* ---------- Vertailupalkki ---------- */
-.compare-bar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  padding: 9px 14px;
-  background: linear-gradient(180deg, rgba(139, 124, 246, 0.08), rgba(10, 14, 26, 0.2));
-  border: 1px solid rgba(139, 124, 246, 0.25);
-  border-radius: 13px;
-  flex: 0 0 auto;
-}
-.compare-bar .cmp-title {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.4px;
-  color: var(--accent-2);
-}
-.cmp-deltas { display: flex; flex-wrap: wrap; gap: 6px 8px; flex: 1; min-width: 0; }
+/* ---------- Vertailuchipit (vertailumodaali) ---------- */
 .cmp-chip {
   display: inline-flex; align-items: baseline; gap: 6px;
   font-size: 12px;
@@ -456,7 +437,6 @@ input[type="range"]::-moz-range-thumb {
 .cmp-chip .cv.up { color: var(--ok); }
 .cmp-chip .cv.down { color: var(--danger); }
 .cmp-chip .cv.flat { color: var(--text-faint); }
-.compare-bar .btn { padding: 5px 11px; font-size: 12px; }
 .sw-ghost { width: 22px; height: 0; border-top: 2px dashed #9aa7c4; opacity: 0.85; }
 
 /* ---------- Chart ---------- */
@@ -1219,7 +1199,7 @@ input[type="range"]::-moz-range-thumb {
 .fs-open:hover { color: var(--accent); border-color: rgba(45, 212, 191, 0.4); }
 
 body.fs { overflow: hidden; }
-body.fs .topbar, body.fs .panel, body.fs .stats, body.fs .compare-bar,
+body.fs .topbar, body.fs .panel, body.fs .stats,
 body.fs .legend, body.fs .balance-panel { display: none !important; }
 body.fs .layout { display: block; min-height: 0; }
 body.fs .chart-col {
@@ -1416,16 +1396,6 @@ body.fs .chart-wrap:focus:not(:focus-visible) { outline: none; }
 }
 .goal-line { stroke: rgba(251, 191, 36, 0.25); stroke-width: 1.2; stroke-dasharray: 3 5; pointer-events: none; }
 .goal-line.on { stroke: rgba(251, 191, 36, 0.6); }
-
-/* Vertailupalkki mobiilissa: yksi pyyhkäistävä rivi — chipit ja napit
-   eivät kasaudu päällekkäin eivätkä rivity (UX-auditointi 10.7.2026) */
-@media (max-width: 560px) {
-  .compare-bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 8px; }
-  .compare-bar::-webkit-scrollbar { display: none; }
-  .compare-bar .cmp-deltas { flex-wrap: nowrap; flex: 0 0 auto; }
-  .compare-bar .btn { flex: 0 0 auto; }
-  .compare-bar .cmp-title { flex: 0 0 auto; }
-}
 
 /* Tulostuksessa taulukko levittäytyy kokonaan — ei leikattua vierityslaatikkoa */
 @media print {
@@ -1631,6 +1601,51 @@ body.pro .pro-switch { border-color: rgba(139, 124, 246, 0.55); }
 }
 .fam-del { padding: 2px 7px; opacity: 0.6; }
 .fam-del:hover, .fam-del.armed { color: var(--danger); border-color: rgba(248, 113, 113, 0.5); opacity: 1; }
+/* Vertailupilleri: nimetty vertailukohta ja euroero graafin kulmassa */
+.cmp-pill {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+  background: rgba(10, 14, 26, 0.82);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 5px 4px 12px;
+  backdrop-filter: blur(4px);
+  max-width: calc(100% - 70px);
+}
+.cmp-pill span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmp-pill b { color: var(--text); font-weight: 600; }
+.cmp-pill .pos { color: var(--ok); }
+.cmp-pill .neg { color: var(--danger); }
+.cmp-pill button {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.cmp-pill button:hover { color: var(--danger); background: rgba(248, 113, 113, 0.12); }
+body.fs .cmp-pill { display: none; }
+@media (max-width: 560px) {
+  .cmp-pill { top: 8px; left: 8px; font-size: 11px; }
+}
+
+/* Tunnuslukukorttien delta-rivit vertailua vasten (sama kieli kuin HUDissa) */
+.stat .d { margin-top: 3px; font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat .d.up { color: var(--ok); }
+.stat .d.down { color: var(--danger); }
+.stat .d.flat { color: var(--text-faint); font-weight: 500; }
+
 /* Sijoitustili: tiivis selite ja vertailunappi */
 .acct-note {
   margin: 8px 2px 12px;
