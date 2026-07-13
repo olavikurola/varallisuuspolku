@@ -49,6 +49,7 @@ const state = {
   allocBonds: 20,
   glide: false,
   real: false,
+  inflation: 2,       // inflaatio-oletus %/v (käytössä kun real=true; 2 % = ennallaan)
   tax: true,          // myyntivoittovero nostoissa (oletuksena päällä uusille)
   acct: 'aot',        // sijoitustili: aot | ost (osakesäästötili) | ins (vakuutuskuori)
   feePct: 0,          // sijoituskulut %/v (rahastojen TER, kaupankäynti)
@@ -3119,8 +3120,13 @@ function bindInputs() {
     renderAll();
   });
   $('glide').addEventListener('change', (e) => { state.glide = e.target.checked; renderAll(); });
-  $('real').addEventListener('change', (e) => { state.real = e.target.checked; renderAll(); });
+  $('real').addEventListener('change', (e) => {
+    state.real = e.target.checked;
+    $('inflationField').hidden = !state.real; // kenttä näkyy vain korjauksen ollessa päällä
+    renderAll();
+  });
   $('tax').addEventListener('change', (e) => { state.tax = e.target.checked; renderAll(); });
+  num('inflation', 'inflation', 0, 15);
 }
 
 /* ===================== Esittelykierros ===================== */
@@ -4591,6 +4597,8 @@ function serialize() {
     allocStocks: state.allocStocks, allocBonds: state.allocBonds,
     glide: state.glide, real: state.real, tax: state.tax,
     events: state.events,
+    // Inflaatio mukaan vain kun poikkeaa oletuksesta — vanhat linkit ennallaan
+    ...(state.inflation !== 2 ? { inflation: state.inflation } : {}),
   };
   // Pro- ja apurikentät vain kun niitä on — vanhat linkit ennallaan
   if (state.proOn || state.pro) {
@@ -4614,6 +4622,7 @@ function applySaved(data) {
   }
   state.glide = !!data.glide;
   state.real = !!data.real;
+  state.inflation = typeof data.inflation === 'number' && isFinite(data.inflation) ? clamp(data.inflation, 0, 15) : 2;
   // Pro: raakadata talteen — proOf normalisoi ja kiristää rajat käytössä
   state.proOn = !!data.proOn;
   state.pro = data.pro && typeof data.pro === 'object' ? data.pro : null;
@@ -4758,6 +4767,8 @@ function syncInputs() {
   $('allocBonds').value = state.allocBonds;
   $('glide').checked = state.glide;
   $('real').checked = state.real;
+  $('inflation').value = state.inflation;
+  $('inflationField').hidden = !state.real;
   $('tax').checked = state.tax;
   $('savIncome').value = state.income != null ? state.income : '';
   $('savExpenses').value = state.expenses != null ? state.expenses : '';
@@ -5117,7 +5128,7 @@ function renderSummary() {
     `<ul class="sum-points">${summaryTalks(s).map(li).join('')}</ul>` +
     (familyOn() ? familySummaryHtml() : '') +
     (state.proOn ? proSummaryHtml(s) : '') +
-    `<p class="sum-assump">Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa${state.savingsGrowth > 0 ? `; säästön kasvu ${state.savingsGrowth.toLocaleString('fi-FI')} %/v` : ''}${state.real ? `; inflaatio ${pctFmt(INFLATION)}/v, luvut nykyrahassa` : ''}${state.glide ? '; ikäsidonnainen allokaatio' : ''}${s.pension > 0 ? '; lakisääteinen työeläke huomioitu eläketulona' : ''}${state.tax ? '; myyntivoittovero 30/34 % nostojen voitto-osuudesta' : ''}${state.acct === 'ost' ? '; osakesäästötili (osingot ja myynnit tilillä verotta, nostosta vero voitto-osuudesta)' : state.acct === 'ins' ? `; vakuutuskuori (tuotot kuoressa verotta, nostosta vero voitto-osuudesta${state.wrapFee > 0 ? `, kuoren kulu ${state.wrapFee.toLocaleString('fi-FI')} %/v` : ''})` : ''}${state.feePct > 0 ? `; sijoituskulut ${state.feePct.toLocaleString('fi-FI')} %/v` : ''}${state.acct === 'aot' && state.tax && state.divYield > 0 ? `; suorien osakkeiden osinkotuotto ${state.divYield.toLocaleString('fi-FI')} %/v verotettuna vuosittain` : ''}${(s.saleInfos || []).some((x) => x.tax > 0.5) ? '; omaisuuden myynnissä hankintameno-olettama' : ''}. ` +
+    `<p class="sum-assump">Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa${state.savingsGrowth > 0 ? `; säästön kasvu ${state.savingsGrowth.toLocaleString('fi-FI')} %/v` : ''}${state.real ? `; inflaatio ${state.inflation.toLocaleString('fi-FI')} %/v, luvut nykyrahassa` : ''}${state.glide ? '; ikäsidonnainen allokaatio' : ''}${s.pension > 0 ? '; lakisääteinen työeläke huomioitu eläketulona' : ''}${state.tax ? '; myyntivoittovero 30/34 % nostojen voitto-osuudesta' : ''}${state.acct === 'ost' ? '; osakesäästötili (osingot ja myynnit tilillä verotta, nostosta vero voitto-osuudesta)' : state.acct === 'ins' ? `; vakuutuskuori (tuotot kuoressa verotta, nostosta vero voitto-osuudesta${state.wrapFee > 0 ? `, kuoren kulu ${state.wrapFee.toLocaleString('fi-FI')} %/v` : ''})` : ''}${state.feePct > 0 ? `; sijoituskulut ${state.feePct.toLocaleString('fi-FI')} %/v` : ''}${state.acct === 'aot' && state.tax && state.divYield > 0 ? `; suorien osakkeiden osinkotuotto ${state.divYield.toLocaleString('fi-FI')} %/v verotettuna vuosittain` : ''}${(s.saleInfos || []).some((x) => x.tax > 0.5) ? '; omaisuuden myynnissä hankintameno-olettama' : ''}. ` +
     `Lainat annuiteettilainoina. Onnistumistodennäköisyys perustuu ${(s.mcPaths || MC_LIVE).toLocaleString('fi-FI')} satunnaiseen markkinapolkuun${s.conf ? `; tavoitteet mitoitettu ${Math.round(s.conf * 100)} % onnistumisvarmuudelle` : ''}. Laadittu Varallisuuspolku-työkalulla.</p>` +
     `<p class="sum-disclaimer">Tämä yhteenveto kuvaa laatijansa omia tavoitteita, valintoja ja oletuksia. Se ei ole sijoitusneuvontaa eikä sijoitussuositus — sen voi antaa esimerkiksi varainhoitajalle keskustelun pohjaksi.</p>`;
 }

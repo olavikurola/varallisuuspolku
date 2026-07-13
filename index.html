@@ -182,7 +182,11 @@
         <label class="toggle">
           <input id="real" type="checkbox" />
           <span class="switch"></span>
-          <span>Inflaatiokorjattu <small>2&nbsp;%/v — luvut nykyrahassa</small></span>
+          <span>Inflaatiokorjattu <small>luvut tämän päivän rahassa</small></span>
+        </label>
+        <label class="field" id="inflationField" hidden style="margin-top:10px">
+          <span class="field-label">Inflaatio-oletus <small>oma arviosi</small></span>
+          <span class="input"><input id="inflation" type="number" min="0" max="15" step="0.1" value="2" /><em>%/v</em></span>
         </label>
         <label class="toggle">
           <input id="tax" type="checkbox" />

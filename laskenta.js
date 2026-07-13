@@ -139,9 +139,12 @@ function proOf(st) {
   return out;
 }
 
+// Inflaatio-oletus: Pro-tila voittaa (pro.infl); muuten käyttäjän oma
+// state.inflation jos asetettu, muuten oletus 2 %. Puuttuva/2 % = entinen polku.
 const inflOf = (st) => {
   const p = proOf(st);
-  return p ? p.infl / 100 : INFLATION;
+  if (p) return p.infl / 100;
+  return typeof st.inflation === 'number' && isFinite(st.inflation) ? st.inflation / 100 : INFLATION;
 };
 
 // Omaisuusluokat riveinä: 3 perusluokkaa (+ pro-lisäluokat)

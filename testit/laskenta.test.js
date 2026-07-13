@@ -318,6 +318,19 @@ console.log('Korkoa korolle: analyyttiset identiteetit joka elinkaarivaiheessa')
   relClose(rRl.exp[120], 50000 * Math.pow(1.07 / 1.02, 10), 1e-9,
     'reaalituotto Fisher-kaavalla (sama kuin omaisuuserissä)');
 
+  // (4c) Käyttäjän oma inflaatio-oletus: asettamaton = 2 % (ennallaan);
+  // eksplisiittinen 2 % bittiidenttinen; korkeampi pienentää reaalivarallisuutta;
+  // vaikuttaa vain kun real=true
+  const inflBase = plan(); inflBase.real = true; // ei inflation-kenttää → oletus 2 %
+  const inflExplicit = plan(); inflExplicit.real = true; inflExplicit.inflation = 2;
+  const rBase = L.simulate(inflBase), rExpl = L.simulate(inflExplicit);
+  ok(rExpl.exp.every((v, i) => v === rBase.exp[i]), 'oma inflaatio 2 % = oletus (bittiidenttinen)');
+  const inflHi = plan(); inflHi.real = true; inflHi.inflation = 4;
+  ok(L.simulate(inflHi).exp[120] < rBase.exp[120], 'korkeampi inflaatio pienentää reaalivarallisuutta');
+  const inflNoReal = plan(); inflNoReal.inflation = 5; // real=false → ei vaikutusta
+  const nomBase = L.simulate(plan()); // nimellinen (real=false)
+  ok(L.simulate(inflNoReal).exp.every((v, i) => v === nomBase.exp[i]), 'inflaatio ei vaikuta ilman inflaatiokorjausta');
+
   // (5) Omaisuuserä: arvo kompoundaa geometrisesti kuukausittain
   const ast = {
     ...acc, startCapital: 0, monthly: 0,
