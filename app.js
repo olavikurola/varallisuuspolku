@@ -166,6 +166,15 @@ function buildDonationPayload(st, s) {
   return payload;
 }
 
+// Plausible-ydintapahtumat: piirtopöytä avattu, veto tehty, jakolinkki
+// luotu, vertailujako. Vain tapahtuman nimi (+ vedon tyyppi) — ei sisältöä,
+// ei tunnisteita. Goalit lisätään Plausible-hallinnassa samoilla nimillä.
+function track(name, props) {
+  try {
+    if (window.plausible) window.plausible(name, props ? { props } : undefined);
+  } catch (e) { /* analytiikka ei saa koskaan haitata käyttöä */ }
+}
+
 // djb2 — kevyt tiiviste "sama suunnitelma jo lahjoitettu" -muistiin
 function hashStr(s) {
   let h = 5381;
@@ -986,6 +995,7 @@ function addEvent(type, age) {
       mirrorTransfer(ev);
     }
   }
+  track('Veto tehty', { tyyppi: EVENT_TYPES[type].label });
   renderAll();
   openPopover(ev.id);
   return ev;
@@ -1533,6 +1543,7 @@ function drawEsc() {
 function enterFs() {
   if (fsOn) return;
   fsOn = true;
+  track('Piirtopöytä avattu');
   document.body.classList.add('fs');
   try { history.pushState({ fs: 1 }, ''); } catch (e) { /* esim. sandbox */ }
   // Haamu vertailukohdaksi automaattisesti, jotta HUD-deltat elävät heti
@@ -2883,6 +2894,7 @@ async function sendDonation() {
       body: JSON.stringify(pendingPayload),
     });
     if (!res.ok) throw new Error('http ' + res.status);
+    track('Vertailujako');
     setDonateState({ donatedHash: hashStr(JSON.stringify(pendingPayload)), declined: false });
     $('donateModal').hidden = true;
     renderDonateSlot();
@@ -4846,6 +4858,7 @@ const makeShareUrl = () => {
 
 async function copyShareUrl(btn) {
   const url = makeShareUrl();
+  track('Jakolinkki luotu', { tyyppi: familyOn() ? 'perhe' : 'oma' });
   const orig = btn.textContent;
   try {
     await navigator.clipboard.writeText(url);
