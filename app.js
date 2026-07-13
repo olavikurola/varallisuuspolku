@@ -3146,7 +3146,7 @@ const TOUR_STEPS = [
   { t: 'Pro-tila', s: '#proSwitch',
     x: 'Kytkin avaa ammattilaissäädöt: omat tuotto-oletukset ja korrelaatiot, kulut, nostostrategiat ja syvemmät analyysit. Perusversio riittää pitkälle — Pro odottaa, kun tarvitset sitä.' },
   { t: 'Piirtopöytä', s: '#fsOpen',
-    x: 'Tästä (tai F) aukeaa kokoruudun piirtotila: tartu käyrään, tapahtumaan tai eläkeikäviivaan ja vedä — kone laskee jokaisen vedon hinnan. 🎯 lisää varallisuustavoitteen.' },
+    x: 'Kun perustietosi ovat valmiit, tämä on työpöytäsi: tästä (tai F) aukeaa kokoruudun piirtotila — tartu käyrään, tapahtumaan tai eläkeikäviivaan ja vedä, kone laskee jokaisen vedon hinnan.' },
   { t: 'Suunnitelmani', s: '#summaryBtn',
     x: 'Suunnitelmasi tulostettavana dokumenttina — vaikka varainhoitajalle. Jakolinkki kopioi koko suunnitelman talteen tai kaverille.' },
   { t: 'Valikko', s: '#moreBtn',
@@ -3167,12 +3167,12 @@ function tourShow(i) {
     `<h3>${st.t}</h3><p>${st.x}</p>` +
     `<div class="tour-actions">` +
     `<button class="btn ghost" id="tourSkip">${last ? 'Sulje' : 'Ohita kierros'}</button>` +
-    `<button class="btn" id="tourNext">${last ? 'Ala piirtää ✏' : `Seuraava (${i + 1}/${TOUR_STEPS.length})`}</button>` +
+    `<button class="btn" id="tourNext">${last ? 'Aloita: täytä omat tietosi' : `Seuraava (${i + 1}/${TOUR_STEPS.length})`}</button>` +
     `</div>`;
   $('tourSkip').addEventListener('click', (e) => { e.stopPropagation(); endTour(); });
   $('tourNext').addEventListener('click', (e) => {
     e.stopPropagation();
-    if (last) { endTour(); enterFs(); } else tourShow(i + 1);
+    if (last) { endTour(); focusBasics(); } else tourShow(i + 1);
   });
 
   // Mittaus vasta kun scrollIntoView on asettunut
@@ -3209,6 +3209,18 @@ function tourShow(i) {
     card.style.left = Math.round(left) + 'px';
   });
   announce(`${st.t}. ${st.x}`);
+}
+
+// Kierroksen päätös: työ alkaa Perustiedoista — vieritetään korttiin,
+// kohdistetaan ikäkenttään ja hehkautetaan kortti hetkeksi
+function focusBasics() {
+  const card = document.querySelector('.card[data-card="basics"]');
+  if (!card) return;
+  card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  card.classList.add('basics-glow');
+  setTimeout(() => card.classList.remove('basics-glow'), 2400);
+  setTimeout(() => { try { $('ageNow').focus({ preventScroll: true }); } catch (e) {} }, 450);
+  announce('Aloita täyttämällä perustiedot: ikä, varallisuus ja kuukausisäästö');
 }
 
 function startTour() {

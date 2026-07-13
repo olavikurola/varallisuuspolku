@@ -1601,6 +1601,16 @@ body.pro .pro-switch { border-color: rgba(139, 124, 246, 0.55); }
 }
 .fam-del { padding: 2px 7px; opacity: 0.6; }
 .fam-del:hover, .fam-del.armed { color: var(--danger); border-color: rgba(248, 113, 113, 0.5); opacity: 1; }
+/* Kierroksen päätös: Perustiedot-kortin hehku ohjaa katseen aloituspisteeseen */
+.card.basics-glow {
+  animation: basicsGlow 2.4s ease-out;
+}
+@keyframes basicsGlow {
+  0% { box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.7), 0 0 32px rgba(45, 212, 191, 0.25); }
+  60% { box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.45), 0 0 20px rgba(45, 212, 191, 0.12); }
+  100% { box-shadow: 0 0 0 0 rgba(45, 212, 191, 0); }
+}
+
 /* Vertailupilleri: nimetty vertailukohta ja euroero graafin kulmassa */
 .cmp-pill {
   position: absolute;

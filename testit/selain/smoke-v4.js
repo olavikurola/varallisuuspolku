@@ -109,13 +109,11 @@ const { chromium } = require('playwright');
     return h.left <= m.left + 2 && h.right >= m.right - 2;
   });
   ok(spot, 'valokeila osoittaa kohteeseen');
-  await page.click('#tourNext'); // "Ala piirtää" → piirtopöytä
-  await page.waitForTimeout(500);
+  await page.click('#tourNext'); // "Aloita: täytä omat tietosi" → Perustiedot
+  await page.waitForTimeout(800);
   ok(await page.evaluate(() => document.getElementById('tour').hidden), 'kierros päättyy viimeisestä askeleesta');
-  ok(await page.evaluate(() => document.body.classList.contains('fs')), 'lopetus avaa piirtopöydän');
-  await page.keyboard.press('Escape');
-  await page.waitForTimeout(700);
-  ok(await page.evaluate(() => document.getElementById('tour').hidden), 'kierros ei käynnisty uudelleen piirtopöydältä poistuttaessa');
+  ok(await page.evaluate(() => !document.body.classList.contains('fs')), 'päätös jää kojelaudalle (työ alkaa Perustiedoista)');
+  ok(await page.evaluate(() => document.activeElement && document.activeElement.id === 'ageNow'), 'kohdistus ikäkenttään');
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(1000);
   ok(await page.evaluate(() => !document.getElementById('tour').hidden), 'kierros toistuu joka latauksella');
