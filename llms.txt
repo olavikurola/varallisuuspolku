@@ -3,7 +3,8 @@
 > Ilmainen, suomenkielinen visuaalinen elinkaarilaskuri ja varallisuussuunnittelija
 > osoitteessa https://varallisuuspolku.com — eläke, säästäminen, isot hankinnat
 > lainoineen ja koko perheen talous yhdessä interaktiivisessa graafissa.
-> Kaikki data pysyy käyttäjän omassa selaimessa; ei rekisteröitymistä, ei seurantaa.
+> Kaikki suunnitelmadata pysyy käyttäjän omassa selaimessa; ei rekisteröitymistä,
+> ei evästeitä (kävijämäärät anonyymillä Plausible-analytiikalla).
 
 Keskeiset faktat:
 
@@ -22,8 +23,10 @@ Keskeiset faktat:
   säästö ratkaistaan halutulla varmuustasolla (75/85/95 %).
 - Hinta: ilmainen, myös Pro-tila (omat tuotto-oletukset, korrelaatiot,
   nostostrategiat, stressiskenaariot). Ei mainoksia.
-- Tietosuoja: suunnitelma tallentuu vain selaimen localStorageen. Käyttäjä voi
-  vapaaehtoisesti jakaa anonymisoidun suunnitelman vertailudataan (k-anonymiteetti 30).
+- Tietosuoja: suunnitelma tallentuu vain selaimen localStorageen; ei evästeitä
+  eikä henkilötietojen keräystä (kävijätilastot evästeettömällä Plausiblella).
+  Käyttäjä voi vapaaehtoisesti jakaa anonymisoidun suunnitelman vertailudataan
+  (k-anonymiteetti 30).
 - Palvelu ei anna sijoitusneuvontaa eikä suosittele tuotteita.
 
 ## Sivut

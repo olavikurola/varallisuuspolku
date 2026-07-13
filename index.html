@@ -21,6 +21,12 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <link rel="stylesheet" href="fonts.css" />
   <link rel="stylesheet" href="style.css" />
+  <!-- Privacy-friendly analytics by Plausible -->
+  <script async src="https://plausible.io/js/pa-gxRZu9FAu8RyeQ_oaNFz0.js"></script>
+  <script>
+    window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+    plausible.init()
+  </script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -53,7 +59,7 @@
     "@type": "FAQPage",
     "mainEntity": [
       { "@type": "Question", "name": "Minne tietoni tallentuvat?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Vain omaan selaimeesi. Varallisuuspolku ei käytä pilvipalvelua, rekisteröitymistä eikä seurantaa — suunnitelma ei lähde laitteeltasi mihinkään ilman erillistä lupaa. Jakaminen tapahtuu linkillä, jonka luot itse." } },
+        "acceptedAnswer": { "@type": "Answer", "text": "Vain omaan selaimeesi. Varallisuuspolku ei käytä pilvipalvelua, rekisteröitymistä eikä evästeitä — suunnitelma ei lähde laitteeltasi mihinkään ilman erillistä lupaa. Kävijämäärät mitataan anonyymillä, evästeettömällä Plausible-analytiikalla, joka ei näe suunnitelmasi sisältöä eikä yksilöi kävijää. Jakaminen tapahtuu linkillä, jonka luot itse." } },
       { "@type": "Question", "name": "Mitä laskenta huomioi?",
         "acceptedAnswer": { "@type": "Answer", "text": "Kuukausitason korkoa korolle, palkkakehityksen, lainat annuiteetteina, myyntivoittoveron (30/34 % nostojen voitto-osuudesta), työeläkkeen, inflaatiokorjauksen ja tuhansien polkujen Monte Carlo -simulaation, josta lasketaan suunnitelman onnistumistodennäköisyys." } },
       { "@type": "Question", "name": "Osakesäästötili, arvo-osuustili vai vakuutuskuori?",
@@ -246,8 +252,10 @@
           <details>
             <summary>Minne tietoni tallentuvat?</summary>
             <p>Vain omaan selaimeesi. Varallisuuspolku ei käytä pilvipalvelua, rekisteröitymistä
-            eikä seurantaa — suunnitelma ei lähde laitteeltasi mihinkään ilman erillistä lupaasi.
-            Jakaminen tapahtuu linkillä, jonka luot itse.</p>
+            eikä evästeitä — suunnitelma ei lähde laitteeltasi mihinkään ilman erillistä lupaasi.
+            Kävijämäärät mitataan anonyymillä, evästeettömällä Plausible-analytiikalla, joka ei
+            näe suunnitelmasi sisältöä eikä yksilöi kävijää. Jakaminen tapahtuu linkillä, jonka
+            luot itse.</p>
           </details>
           <details>
             <summary>Mitä laskenta huomioi?</summary>
@@ -445,12 +453,14 @@
       asentaa aloitusnäytölle (PWA), jolloin se toimii myös ilman verkkoyhteyttä.</p>
 
       <h2>Tietosuoja</h2>
-      <p><b>Sovellus ei lähetä mitään mihinkään ilman erillistä, tapauskohtaista lupaasi.</b>
+      <p><b>Suunnitelmasi ei lähde laitteeltasi mihinkään ilman erillistä, tapauskohtaista lupaasi.</b>
       Laskenta tapahtuu kokonaan selaimessa ja suunnitelma tallentuu selaimen omaan muistiin
-      (localStorage) vain tällä laitteella. Palvelu ei käytä evästeitä, analytiikkaa eikä ulkopuolisia
-      verkkopalveluita — myös fontit tarjoillaan sivuston omalta palvelimelta. Ainoa poikkeus on
-      vapaaehtoinen anonyymi vertailudata (alla), jonka sisällön näet kokonaisuudessaan ennen
-      jakamista.</p>
+      (localStorage) vain tällä laitteella. Palvelu ei käytä evästeitä eikä kerää henkilötietoja;
+      fontit tarjoillaan sivuston omalta palvelimelta. Kävijämäärät mitataan
+      <a href="https://plausible.io/privacy-focused-web-analytics" rel="noopener">Plausible-analytiikalla</a>,
+      joka on evästeetön eikä yksilöi kävijää — se laskee vain sivulatauksia, ei näe suunnitelmasi
+      sisältöä. Ainoa suunnitelmadataa koskeva poikkeus on vapaaehtoinen anonyymi vertailudata
+      (alla), jonka sisällön näet kokonaisuudessaan ennen jakamista.</p>
       <p>Huomaa: <b>Jaa linkki</b> pakkaa koko suunnitelmasi verkko-osoitteeseen. Linkin saaja näkee
       suunnitelman sisällön, joten jaa se vain henkilöille, joille haluat sen näyttää.</p>
 
