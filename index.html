@@ -21,6 +21,54 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <link rel="stylesheet" href="fonts.css" />
   <link rel="stylesheet" href="style.css" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Varallisuuspolku",
+    "alternateName": "Wealth Path",
+    "url": "https://varallisuuspolku.com/",
+    "description": "Ilmainen visuaalinen elinkaarilaskuri: eläke, säästäminen, isot hankinnat lainoineen ja koko perheen talous yhdessä näkymässä. Monte Carlo -simulaatio, suomalainen verotus (myyntivoittovero, osakesäästötili, vakuutuskuori) ja työeläke. Kaikki data pysyy omassa selaimessa.",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Web",
+    "inLanguage": "fi",
+    "isAccessibleForFree": true,
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+    "featureList": [
+      "Elinkaarigraafi ja piirtopöytä: tartu käyrään ja vedä — laskenta reagoi heti",
+      "Monte Carlo -simulaatio ja onnistumistodennäköisyys",
+      "Suomalainen verotus: myyntivoittovero, hankintameno-olettama, osakesäästötili ja vakuutuskuori",
+      "Lakisääteinen työeläke ja varhaiseläke (FIRE)",
+      "Elämäntapahtumat lainoineen: asunto, auto, lapsi, remontti",
+      "Perhesuunnittelu: puoliso ja lapset, yhteinen onnistumis-%, leskiturva",
+      "Skenaariovertailu haamukäyränä ja euroeroina",
+      "Toimii ilman rekisteröitymistä — data pysyy selaimessa"
+    ],
+    "creator": { "@type": "Person", "name": "Olavi Kurola" }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "Minne tietoni tallentuvat?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Vain omaan selaimeesi. Varallisuuspolku ei käytä pilvipalvelua, rekisteröitymistä eikä seurantaa — suunnitelma ei lähde laitteeltasi mihinkään ilman erillistä lupaa. Jakaminen tapahtuu linkillä, jonka luot itse." } },
+      { "@type": "Question", "name": "Mitä laskenta huomioi?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Kuukausitason korkoa korolle, palkkakehityksen, lainat annuiteetteina, myyntivoittoveron (30/34 % nostojen voitto-osuudesta), työeläkkeen, inflaatiokorjauksen ja tuhansien polkujen Monte Carlo -simulaation, josta lasketaan suunnitelman onnistumistodennäköisyys." } },
+      { "@type": "Question", "name": "Osakesäästötili, arvo-osuustili vai vakuutuskuori?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Laskuri mallintaa kaikki kolme suomalaisittain: kuorissa osingot ja myynnit kertyvät verotta ja nostosta verotetaan voiton osuus; arvo-osuustilillä suorien osakkeiden osingoista menee vero vuosittain ja hankintameno-olettama on käytettävissä. Vertailu näyttää eron euroina." } },
+      { "@type": "Question", "name": "Voiko koko perheen taloutta suunnitella?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Kyllä — jopa neljä henkilöä: puoliso ja lapset omina käyrinään, perheen yhteinen onnistumistodennäköisyys samassa markkinahistoriassa, rahasiirrot, jaetut hankinnat ja leskiturvatarkastelu." } },
+      { "@type": "Question", "name": "Sopiiko FIRE- ja varhaiseläkesuunnitteluun?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Kyllä. Laskuri ratkaisee aikaisimman mahdollisen eläkeiän, kestävän kuukausitulon ja tarvittavan säästön — halutessasi 75, 85 tai 95 prosentin varmuustasolla. Työeläkkeen alkamisen voi asettaa eri ikään kuin töiden lopettamisen." } },
+      { "@type": "Question", "name": "Onko tämä sijoitusneuvontaa?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Ei. Varallisuuspolku on laskuri, joka näyttää omien oletustesi seuraukset — se ei suosittele tuotteita eikä anna sijoitusneuvontaa. Suunnitelmani-dokumentin voi ottaa mukaan esimerkiksi varainhoitajatapaamiseen." } },
+      { "@type": "Question", "name": "Mitä palvelu maksaa?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Ei mitään. Kaikki ominaisuudet, myös ammattilaistason Pro-tila, ovat ilmaisia, eikä palvelussa ole mainoksia." } }
+    ]
+  }
+  </script>
 </head>
 <body>
   <header class="topbar">
@@ -35,8 +83,8 @@
         </svg>
       </div>
       <div>
-        <div class="brand-name">Varallisuuspolku</div>
-        <div class="brand-tag">Koko elinkaaresi vaurastuminen yhdellä näkymällä</div>
+        <h1 class="brand-name">Varallisuuspolku</h1>
+        <p class="brand-tag">Koko elinkaaresi vaurastuminen yhdellä näkymällä</p>
       </div>
     </div>
     <div class="topbar-right">
@@ -186,6 +234,64 @@
           <div class="dist-list" id="distList"></div>
         </div>
         <p class="hint" id="distHint">Jakauma seuraa graafin kohdistinta — oletuksena eläkeikä.</p>
+      </section>
+
+      <section class="card" data-card="about">
+        <h2>Tietoa ja usein kysyttyä</h2>
+        <div class="about-body">
+          <p>Varallisuuspolku on <strong>ilmainen elinkaarilaskuri ja varallisuussuunnittelija</strong>:
+          eläkelaskuri, sijoituslaskuri ja korkoa korolle -laskuri samassa näkymässä. Piirrä koko
+          elämäsi talous — säästäminen, asunnon osto lainoineen, lapset, eläke ja varhaiseläke
+          (FIRE) — ja katso Monte Carlo -simulaatiosta, kuinka todennäköisesti varasi riittävät.</p>
+          <details>
+            <summary>Minne tietoni tallentuvat?</summary>
+            <p>Vain omaan selaimeesi. Varallisuuspolku ei käytä pilvipalvelua, rekisteröitymistä
+            eikä seurantaa — suunnitelma ei lähde laitteeltasi mihinkään ilman erillistä lupaasi.
+            Jakaminen tapahtuu linkillä, jonka luot itse.</p>
+          </details>
+          <details>
+            <summary>Mitä laskenta huomioi?</summary>
+            <p>Kuukausitason korkoa korolle, palkkakehityksen, lainat annuiteetteina,
+            myyntivoittoveron (30/34&nbsp;% nostojen voitto-osuudesta), työeläkkeen,
+            inflaatiokorjauksen ja tuhansien polkujen Monte Carlo -simulaation, josta lasketaan
+            suunnitelman onnistumistodennäköisyys. Laskentakaavat on varmennettu analyyttisiä
+            korkolaskuidentiteettejä vasten.</p>
+          </details>
+          <details>
+            <summary>Osakesäästötili, arvo-osuustili vai vakuutuskuori?</summary>
+            <p>Laskuri mallintaa kaikki kolme suomalaisittain: kuorissa (osakesäästötili,
+            sijoitusvakuutus) osingot ja myynnit kertyvät verotta ja nostosta verotetaan voiton
+            osuus; arvo-osuustilillä suorien osakkeiden osingoista menee vero vuosittain ja
+            hankintameno-olettama on käytettävissä. Vertailu näyttää eron euroina haamukäyränä.</p>
+          </details>
+          <details>
+            <summary>Voiko koko perheen taloutta suunnitella?</summary>
+            <p>Kyllä — jopa neljä henkilöä: puoliso ja lapset omina käyrinään, perheen yhteinen
+            onnistumistodennäköisyys samassa markkinahistoriassa, rahasiirrot, jaetut hankinnat
+            puoliksi ja leskiturvatarkastelu.</p>
+          </details>
+          <details>
+            <summary>Sopiiko FIRE- ja varhaiseläkesuunnitteluun?</summary>
+            <p>Kyllä. Laskuri ratkaisee aikaisimman mahdollisen eläkeiän, kestävän kuukausitulon
+            ja tarvittavan säästön — halutessasi 75, 85 tai 95&nbsp;prosentin varmuustasolla.
+            Työeläkkeen alkamisen voi asettaa eri ikään kuin töiden lopettamisen.</p>
+          </details>
+          <details>
+            <summary>Onko tämä sijoitusneuvontaa?</summary>
+            <p>Ei. Varallisuuspolku on laskuri, joka näyttää omien oletustesi seuraukset — se ei
+            suosittele tuotteita eikä anna sijoitusneuvontaa. Suunnitelmani-dokumentin voi ottaa
+            mukaan esimerkiksi varainhoitajatapaamiseen keskustelun pohjaksi.</p>
+          </details>
+          <details>
+            <summary>Mitä palvelu maksaa?</summary>
+            <p>Ei mitään. Kaikki ominaisuudet, myös ammattilaistason Pro-tila, ovat ilmaisia,
+            eikä palvelussa ole mainoksia.</p>
+          </details>
+          <p class="about-links">
+            <a href="analytiikka.html">Vaurastumisen kartta — avoin vertailudata</a> ·
+            <a href="https://github.com/olavikurola/varallisuuspolku" rel="noopener">Lähdekoodi (GitHub)</a>
+          </p>
+        </div>
       </section>
 
       <p class="disclaimer">Laskelma on suuntaa antava havainnollistus, ei sijoitusneuvontaa. Suunnitelma tallentuu selaimeesi automaattisesti. Oletukset ja tietosuoja: <a href="#" id="disclaimerInfo">Tietoa palvelusta</a>.</p>

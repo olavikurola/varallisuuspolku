@@ -1,0 +1,34 @@
+# Varallisuuspolku
+
+> Ilmainen, suomenkielinen visuaalinen elinkaarilaskuri ja varallisuussuunnittelija
+> osoitteessa https://varallisuuspolku.com — eläke, säästäminen, isot hankinnat
+> lainoineen ja koko perheen talous yhdessä interaktiivisessa graafissa.
+> Kaikki data pysyy käyttäjän omassa selaimessa; ei rekisteröitymistä, ei seurantaa.
+
+Keskeiset faktat:
+
+- Laskenta: kuukausitason korkoa korolle, palkkakehitys, lainat annuiteetteina,
+  Monte Carlo -simulaatio (oletus 5 000 polkua) ja onnistumistodennäköisyys.
+  Kaavat varmennettu analyyttisillä korkolaskuidentiteeteillä.
+- Suomalainen verotus: myyntivoittovero 30/34 % nostojen voitto-osuudesta,
+  hankintameno-olettama, lakisääteinen työeläke, sijoitustilien vertailu
+  (arvo-osuustili, osakesäästötili, sijoitusvakuutus/vakuutuskuori).
+- Vuorovaikutus: graafi on ohjain — käyrään, tapahtumiin ja eläkeikäviivaan
+  tartutaan ja vedetään, kone ratkaisee jokaisen vedon hinnan heti.
+- Perhe: enintään 4 henkilöä (puoliso + lapset), perheen yhteinen
+  onnistumis-% samassa markkinahistoriassa, rahasiirrot, jaetut hankinnat,
+  leskiturvatarkastelu.
+- FIRE/varhaiseläke: aikaisin eläkeikä, kestävä kuukausitulo ja tarvittava
+  säästö ratkaistaan halutulla varmuustasolla (75/85/95 %).
+- Hinta: ilmainen, myös Pro-tila (omat tuotto-oletukset, korrelaatiot,
+  nostostrategiat, stressiskenaariot). Ei mainoksia.
+- Tietosuoja: suunnitelma tallentuu vain selaimen localStorageen. Käyttäjä voi
+  vapaaehtoisesti jakaa anonymisoidun suunnitelman vertailudataan (k-anonymiteetti 30).
+- Palvelu ei anna sijoitusneuvontaa eikä suosittele tuotteita.
+
+## Sivut
+
+- [Varallisuuspolku](https://varallisuuspolku.com/): itse suunnittelutyökalu
+- [Vaurastumisen kartta](https://varallisuuspolku.com/analytiikka.html): avoin,
+  anonyymi vertailudata suomalaisten taloussuunnitelmista ikäryhmittäin
+- [Lähdekoodi](https://github.com/olavikurola/varallisuuspolku): avoin GitHubissa

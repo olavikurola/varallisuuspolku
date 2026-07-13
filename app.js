@@ -5143,7 +5143,7 @@ function bindPanelCards() {
   try { saved = JSON.parse(localStorage.getItem(PANEL_KEY)) || {}; } catch (e) {}
   for (const card of document.querySelectorAll('.panel .card[data-card]')) {
     const key = card.dataset.card;
-    const defCollapsed = key === 'dist'; // jakauma oletuksena kiinni — passiivisin osio
+    const defCollapsed = key === 'dist' || key === 'about'; // passiiviset osiot kiinni (sisältö silti DOMissa hakukoneille)
     if (saved[key] != null ? saved[key] : defCollapsed) card.classList.add('collapsed');
     card.querySelector('h2').addEventListener('click', () => {
       const c = card.classList.toggle('collapsed');

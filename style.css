@@ -61,8 +61,8 @@ body {
 }
 .brand-mark svg { width: 30px; height: 30px; display: block; }
 
-.brand-name { font-weight: 800; font-size: 18px; letter-spacing: 0.2px; }
-.brand-tag { font-size: 12.5px; color: var(--text-dim); margin-top: 1px; }
+.brand-name { margin: 0; font-weight: 800; font-size: 18px; letter-spacing: 0.2px; }
+.brand-tag { margin: 1px 0 0; font-size: 12.5px; color: var(--text-dim); }
 .topbar-note { font-size: 13px; color: var(--text-dim); white-space: nowrap; }
 .topbar-note b { color: var(--accent); font-weight: 600; }
 
@@ -1601,6 +1601,30 @@ body.pro .pro-switch { border-color: rgba(139, 124, 246, 0.55); }
 }
 .fam-del { padding: 2px 7px; opacity: 0.6; }
 .fam-del:hover, .fam-del.armed { color: var(--danger); border-color: rgba(248, 113, 113, 0.5); opacity: 1; }
+/* Tietoa ja usein kysyttyä: indeksoitava sisältö paneelin hännillä */
+.about-body p { margin: 0 0 10px; font-size: 12.5px; line-height: 1.6; color: var(--text-dim); }
+.about-body strong { color: var(--text); }
+.about-body details {
+  margin: 0 0 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 7px 10px;
+  background: rgba(8, 12, 24, 0.35);
+}
+.about-body summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  list-style-position: outside;
+}
+.about-body summary::marker { color: var(--accent); }
+.about-body details[open] summary { margin-bottom: 6px; }
+.about-body details p { margin: 0; }
+.about-links { margin-top: 10px !important; }
+.about-links a { color: var(--accent); text-decoration: none; }
+.about-links a:hover { text-decoration: underline; }
+
 /* Kierroksen päätös: Perustiedot-kortin hehku ohjaa katseen aloituspisteeseen */
 .card.basics-glow {
   animation: basicsGlow 2.4s ease-out;

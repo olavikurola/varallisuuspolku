@@ -1,0 +1,5 @@
+# Varallisuuspolku — kaikki botit tervetulleita, myös AI-indeksoijat.
+User-agent: *
+Allow: /
+
+Sitemap: https://varallisuuspolku.com/sitemap.xml
