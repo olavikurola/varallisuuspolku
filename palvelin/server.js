@@ -27,7 +27,9 @@ const RATE_LIMIT = 10;        // lahjoitusta / IP / tunti
 const STATS_TTL = 5 * 60 * 1000;
 
 const ALLOWED_ORIGINS = [
-  'https://olavikurola.github.io',
+  'https://varallisuuspolku.com',
+  'https://www.varallisuuspolku.com',
+  'https://olavikurola.github.io', // vanha osoite: jaetut linkit uudelleenohjautuvat
   'http://localhost:3000', 'http://localhost:8080', 'http://localhost:5173',
 ];
 const isDevOrigin = (o) => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o || '');
