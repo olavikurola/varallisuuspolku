@@ -1565,7 +1565,6 @@ function exitFs(fromPop = false) {
   if (!fromPop && history.state && history.state.fs) { try { history.back(); } catch (e) {} }
   renderChart();
   announce('Piirtopöytä suljettu');
-  maybeStartTour(); // ensivierailija saa kojelaudan esittelykierroksen
 }
 
 window.addEventListener('popstate', () => { if (fsOn) exitFs(true); });
@@ -3228,14 +3227,8 @@ function endTour() {
   try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) {}
 }
 
-// Ensivierailija: kierros alkaa, kun piirtopöydältä palataan kojelaudalle
-function maybeStartTour() {
-  if (visitKind === 'returning') return;
-  let done = false;
-  try { done = localStorage.getItem(TOUR_KEY) === '1'; } catch (e) {}
-  if (done) return;
-  setTimeout(() => { if (!fsOn) startTour(); }, 350);
-}
+// (Kierros käynnistyy automaattisesti joka latauksella — käynnistys
+// asuu bootissa; ☰-valikon "Esittelykierros" toistaa sen milloin vain.)
 
 function bindTour() {
   // Klikkaus tummennettuun alueeseen vie eteenpäin
@@ -5192,8 +5185,17 @@ if (location.hash === '#yhteenveto') {
 // Ensivierailu avaa piirtopöydän esimerkkisuunnitelmalla (pulssivihje ohjaa
 // tarttumaan), jakolinkki linkin suunnitelmalla — Esc paljastaa koko sivun.
 // SEO ei kärsi: piirtotila on CSS-kerros, sisältö pysyy DOMissa.
-if (visitKind !== 'returning' && $('summary').hidden) enterFs();
-else if (resetVisit) toast('Aloitettu puhtaalta pöydältä — täytä Perustiedot tai avaa piirtopöytä ⛶');
+// Laskeutuminen aina kojelaudalle ja opastus käyntiin joka latauksella
+// (linjaus 13.7.2026): kierroksesta pääsee pois yhdellä eleellä (Esc/
+// tausta/✕) ja viimeinen askel "Ala piirtää" avaa piirtopöydän. Suora
+// #yhteenveto-linkki saa dokumentin ilman kierrosta. Testit ja
+// generaattorit hiljentävät automaatin avaimella vp-autotour-off.
+if (resetVisit) toast('Aloitettu puhtaalta pöydältä — täytä Perustiedot tai avaa piirtopöytä ⛶');
+let autoTourOff = false;
+try { autoTourOff = localStorage.getItem('vp-autotour-off') === '1'; } catch (e) {}
+if (!autoTourOff && $('summary').hidden) {
+  setTimeout(() => { if (!fsOn && tourStep < 0 && $('summary').hidden) startTour(); }, 600);
+}
 
 // Koon muutos vaatii vain geometrian uusiksi — sim ei riipu koosta.
 // (Täysi render tässä loisi silmukan: workerin tulos muuttaa tunnuslukujen

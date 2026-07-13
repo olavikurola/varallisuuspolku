@@ -12,14 +12,18 @@ const { chromium } = require('playwright');
   let failed = 0;
   const ok = (c, n, d = '') => { if (c) console.log('  ✓ ' + n); else { failed++; console.error('  ✗ ' + n + (d ? ' — ' + d : '')); } };
 
-  // 1) Ensivierailu: piirtopöytä aukeaa esimerkillä, pulssivihje näkyy
+  // 1) Ensivierailu: laskeutuminen kojelaudalle (13.7.2026 alkaen — opastus
+  // testataan osiossa 5, tässä hiljennetty); piirtopöytä avataan itse
   await page.goto('http://localhost:8123/', { waitUntil: 'networkidle' });
-  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-tour-done', '1'); }); // kierros testataan erikseen
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-autotour-off', '1'); localStorage.setItem('vp-tour-done', '1'); });
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForTimeout(600);
-  ok(await page.evaluate(() => document.body.classList.contains('fs')), 'ensivierailu avaa piirtopöydän');
-  ok((await page.locator('.guide-handle').count()) === 1, 'tartuntakahva käyrällä');
+  await page.waitForTimeout(900);
+  ok(await page.evaluate(() => !document.body.classList.contains('fs')), 'ensivierailu laskeutuu kojelaudalle');
   ok(await page.evaluate(() => state.events.length >= 3), 'esimerkkisuunnitelma ladattu');
+  await page.keyboard.press('f');
+  await page.waitForTimeout(500);
+  ok(await page.evaluate(() => document.body.classList.contains('fs')), 'piirtopöytä aukeaa F:llä');
+  ok((await page.locator('.guide-handle').count()) === 1, 'tartuntakahva käyrällä');
 
   // Aloitusopasteet: haamunuolet näkyvät ennen ensimmäistäkään klikkausta,
   // väistyvät tartunnasta ja kuittautuvat pysyvästi vasta suoritetusta vedosta
@@ -69,16 +73,17 @@ const { chromium } = require('playwright');
   ok(await page.evaluate(() => !document.body.classList.contains('fs')), 'palaava käyttäjä saa normaalinäkymän');
   ok(await page.evaluate(() => state.monthly === 1200), 'oma suunnitelma säilyi');
 
-  // 3) Jakolinkki avaa piirtopöydän linkin suunnitelmalla
+  // 3) Jakolinkki: linkin suunnitelma kojelaudalle, opastus käynnistyy
   const url = await page.evaluate(() => {
     state.monthly = 777;
     return makeShareUrl();
   });
   const page2 = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page2.goto(url.replace(/^https?:\/\/[^/]+/, 'http://localhost:8123'), { waitUntil: 'networkidle' });
-  await page2.waitForTimeout(600);
-  ok(await page2.evaluate(() => document.body.classList.contains('fs')), 'jakolinkki avaa piirtopöydän');
+  await page2.waitForTimeout(1000);
+  ok(await page2.evaluate(() => !document.body.classList.contains('fs')), 'jakolinkki laskeutuu kojelaudalle');
   ok(await page2.evaluate(() => state.monthly === 777), 'linkin suunnitelma käytössä', String(await page2.evaluate(() => state.monthly)));
+  ok(await page2.evaluate(() => !document.getElementById('tour').hidden), 'opastus käynnistyy myös jakolinkistä');
   await page2.close();
 
   // 4) Copy: title molemmilla nimillä
@@ -87,14 +92,13 @@ const { chromium } = require('playwright');
   const og = await page.evaluate(() => document.querySelector('meta[property="og:title"]').content);
   ok(og.includes('Wealth Path'), 'og:title päivitetty', og);
 
-  // 5) Esittelykierros: käynnistyy ensivierailijalle piirtopöydältä
-  // poistuttaessa, kulkee 8 askelta ja päättyy piirtopöytään
+  // 5) Esittelykierros: käynnistyy automaattisesti kojelaudalla joka
+  // latauksella, kulkee 8 askelta ja päättyy piirtopöytään
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForTimeout(600);
-  await page.keyboard.press('Escape'); // pois piirtopöydältä
-  await page.waitForTimeout(800);      // maybeStartTour-viive
-  ok(await page.evaluate(() => !document.getElementById('tour').hidden), 'kierros käynnistyy ensivierailijalle');
+  await page.waitForTimeout(1000); // autokäynnistyksen viive (600 ms)
+  ok(await page.evaluate(() => !document.body.classList.contains('fs')), 'laskeutuminen kojelaudalle');
+  ok(await page.evaluate(() => !document.getElementById('tour').hidden), 'kierros käynnistyy automaattisesti');
   ok(await page.evaluate(() => document.getElementById('tourCard').textContent.includes('Tervetuloa')), 'aloituskortti näkyy');
   for (let i = 0; i < 8; i++) { await page.click('#tourNext'); await page.waitForTimeout(180); }
   ok(await page.evaluate(() => document.getElementById('tourCard').textContent.includes('Valikko')), 'viimeinen askel: Valikko');
@@ -111,7 +115,13 @@ const { chromium } = require('playwright');
   ok(await page.evaluate(() => document.body.classList.contains('fs')), 'lopetus avaa piirtopöydän');
   await page.keyboard.press('Escape');
   await page.waitForTimeout(700);
-  ok(await page.evaluate(() => document.getElementById('tour').hidden), 'kierros ei toistu (localStorage)');
+  ok(await page.evaluate(() => document.getElementById('tour').hidden), 'kierros ei käynnisty uudelleen piirtopöydältä poistuttaessa');
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForTimeout(1000);
+  ok(await page.evaluate(() => !document.getElementById('tour').hidden), 'kierros toistuu joka latauksella');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  ok(await page.evaluate(() => document.getElementById('tour').hidden), 'Esc sulkee heti');
   await page.evaluate(() => openMoreMenu(document.getElementById('moreBtn')));
   await page.waitForTimeout(200);
   await page.click('#mi-tour');

@@ -17,7 +17,7 @@ const { chromium } = require('playwright');
   };
 
   await page.goto('http://localhost:8123/', { waitUntil: 'networkidle' });
-  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-tour-done', '1'); }); // kierros testataan erikseen
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-autotour-off', '1'); localStorage.setItem('vp-tour-done', '1'); }); // kierros testataan erikseen
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(400);
   // Ensivierailu avaa piirtopöydän automaattisesti (V4) — palataan normaalitilaan
