@@ -373,6 +373,27 @@ function renderGate(me) {
   $('anUpdated').textContent = `Päivitetty ${new Date(stats.updated).toLocaleDateString('fi-FI')}.`;
   const all = stats.groups.all || { n: stats.total };
 
+  // Edistymismittari: kun mikään ikäryhmä ei vielä yllä k-anon-rajaan,
+  // kuusi erillistä tyhjätilaa korvautuu yhdellä yhteisellä tavoitteella
+  const bestN = Math.max(0, ...Object.entries(stats.groups)
+    .filter(([g]) => g !== 'all').map(([, v]) => v.n || 0));
+  const anyOpen = Object.entries(stats.groups).some(([g, v]) => g !== 'all' && (v.n || 0) >= stats.kAnon);
+  const prog = $('anProgress');
+  if (prog) {
+    if (!anyOpen) {
+      const pct = Math.min(100, Math.round(bestN / stats.kAnon * 100));
+      prog.hidden = false;
+      prog.innerHTML =
+        `<div class="an-prog-head"><b>Kartta aukeaa yhdessä:</b> suurimmassa ikäryhmässä on nyt `
+        + `<b>${bestN}/${stats.kAnon}</b> jaettua suunnitelmaa (kaikkiaan ${stats.total}).</div>`
+        + `<div class="an-prog-bar"><i style="width:${pct}%"></i></div>`
+        + `<div class="an-prog-sub">Jakaumat julkaistaan, kun ikäryhmässä on ${stats.kAnon} anonyymiä suunnitelmaa. `
+        + `Ole yksi avaajista — jaa omasi <a href="./#yhteenveto">Suunnitelmani-sivulta</a>.</div>`;
+    } else {
+      prog.hidden = true;
+    }
+  }
+
   // Tunnuslukutiilet
   const tiles = [{ k: 'Jaettuja suunnitelmia', v: String(stats.total) }];
   if (all.monthly) tiles.push({ k: 'Mediaani kk-säästö', v: `${Math.round(all.monthly.p50).toLocaleString('fi-FI')} €/kk` });

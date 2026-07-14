@@ -976,6 +976,35 @@ input[type="range"]::-moz-range-thumb {
 .an-you-banner.faint { background: none; border-color: var(--border-soft); color: var(--text-dim); }
 .an-you-banner a { color: var(--accent); }
 .an-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 16px; }
+
+.dc-progress { display: block; margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--accent); }
+
+/* Edistymismittari: kartta aukeaa yhdessä (k-anon-tavoite) */
+.an-progress {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, rgba(45, 212, 191, 0.08), rgba(10, 14, 26, 0.2));
+  border: 1px solid rgba(45, 212, 191, 0.25);
+  border-radius: 13px;
+}
+.an-prog-head { font-size: 14px; }
+.an-prog-head b { color: var(--accent); }
+.an-prog-bar {
+  height: 8px;
+  margin: 10px 0 8px;
+  background: rgba(8, 12, 24, 0.6);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.an-prog-bar i {
+  display: block;
+  height: 100%;
+  min-width: 6px;
+  background: linear-gradient(90deg, #2dd4bf, #8b7cf6);
+  border-radius: 999px;
+}
+.an-prog-sub { font-size: 12.5px; color: var(--text-dim); }
+.an-prog-sub a { color: var(--accent); }
 .an-card {
   background: linear-gradient(180deg, var(--card), var(--bg-2));
   border: 1px solid var(--border);

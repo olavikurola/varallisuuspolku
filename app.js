@@ -175,6 +175,15 @@ function track(name, props) {
   } catch (e) { /* analytiikka ei saa koskaan haitata käyttöä */ }
 }
 
+// Kerran istunnossa: usein toistuvat eleet (vedot) eivät paisuta tapahtumamäärää —
+// Plausiblen uniques-luku on joka tapauksessa suppilon mittari
+const trackedOnce = new Set();
+function trackOnce(name, props) {
+  if (trackedOnce.has(name)) return;
+  trackedOnce.add(name);
+  track(name, props);
+}
+
 // djb2 — kevyt tiiviste "sama suunnitelma jo lahjoitettu" -muistiin
 function hashStr(s) {
   let h = 5381;
@@ -995,7 +1004,7 @@ function addEvent(type, age) {
       mirrorTransfer(ev);
     }
   }
-  track('Veto tehty', { tyyppi: EVENT_TYPES[type].label });
+  track('Tapahtuma lisätty', { tyyppi: EVENT_TYPES[type].label });
   renderAll();
   openPopover(ev.id);
   return ev;
@@ -2224,6 +2233,7 @@ function drawDismissHint() {
 }
 
 function drawMarkTutored() {
+  trackOnce('Veto tehty'); // aito säätöele (raahaus tai näppäimistö), kerran/istunto
   try { localStorage.setItem(DRAW_TUTOR_KEY, '1'); } catch (e) {}
 }
 
@@ -2839,9 +2849,11 @@ function renderDonateSlot() {
   } else {
     slot.innerHTML =
       `<div class="donate-card"><div class="dc-text"><b>📊 Haluatko nähdä, miten eri ikäiset suunnittelevat talouttaan ja etenevät vaurastumisen matkalla?</b>` +
-      `<span>Vertailu perustuu käyttäjien anonyymeihin suunnitelmiin. Näet ensin täsmälleen, mitä suunnitelmastasi jaetaan — data on anonyymiä eikä velvoita mihinkään.</span></div>` +
+      `<span>Vertailu perustuu käyttäjien anonyymeihin suunnitelmiin. Näet ensin täsmälleen, mitä suunnitelmastasi jaetaan — data on anonyymiä eikä velvoita mihinkään.</span>` +
+      `<span class="dc-progress" id="dcProgress"></span></div>` +
       `<div class="dc-actions"><button class="btn" id="donateOpenBtn">Kyllä, näytä</button>` +
       `<button class="btn ghost" id="donateNeverBtn">Ei kiitos</button></div></div>`;
+    fillDonateProgress();
   }
   const open = $('donateOpenBtn');
   if (open) open.addEventListener('click', openDonateModal);
@@ -2849,6 +2861,24 @@ function renderDonateSlot() {
   if (never) never.addEventListener('click', () => { setDonateState({ declined: true }); renderDonateSlot(); toast('Selvä — ei kysytä uudestaan. Valinnan voi muuttaa Tietoa-sivulta.'); });
   const cmp = $('donateCompareBtn');
   if (cmp) cmp.addEventListener('click', openCompareModal);
+}
+
+// Kutsukortin edistymisrivi: yhteinen tavoite tekee jakamisesta osallistumista.
+// Tilasto haetaan kerran istunnossa; virhe jättää rivin hiljaa pois.
+let donateStatsCache = null;
+async function fillDonateProgress() {
+  const el2 = $('dcProgress');
+  if (!el2) return;
+  try {
+    if (!donateStatsCache) donateStatsCache = await (await fetch(DATA_API + '/stats.json')).json();
+    const s = donateStatsCache;
+    const target = $('dcProgress'); // slotin sisältö on voitu piirtää uusiksi odotuksen aikana
+    if (!target || !s || !s.kAnon) return;
+    const bestN = Math.max(0, ...Object.entries(s.groups || {})
+      .filter(([g]) => g !== 'all').map(([, v]) => v.n || 0));
+    if (bestN >= s.kAnon) return; // kartta jo auki — kutsu riittää ilman mittaria
+    target.textContent = `Kartta aukeaa yhdessä: suurimmassa ikäryhmässä ${bestN}/${s.kAnon} suunnitelmaa — ole yksi avaajista.`;
+  } catch (e) { /* datapalvelin ei tavoitettavissa — ei riviä */ }
 }
 
 let pendingPayload = null;
@@ -2898,14 +2928,20 @@ async function sendDonation() {
   btn.disabled = true;
   btn.textContent = 'Lähetetään…';
   try {
+    // Päivitys korvaa saman selaimen aiemman rivin tilastoissa (rid-ketjutus) —
+    // yksi selain = enintään yksi voimassa oleva rivi vertailudatassa
+    const prevRid = donateState().donatedRid;
+    const body = prevRid ? Object.assign({}, pendingPayload, { replaces: prevRid }) : pendingPayload;
     const res = await fetch(DATA_API + '/donate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(pendingPayload),
+      body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error('http ' + res.status);
     track('Vertailujako');
-    setDonateState({ donatedHash: hashStr(JSON.stringify(pendingPayload)), declined: false });
+    let rid = null;
+    try { rid = (await res.json()).rid || null; } catch (e) { /* vanha palvelin */ }
+    setDonateState({ donatedHash: hashStr(JSON.stringify(pendingPayload)), donatedRid: rid, declined: false });
     $('donateModal').hidden = true;
     renderDonateSlot();
     toast('Kiitos! Suunnitelmasi on nyt anonyymisti mukana vertailudatassa.');
@@ -3176,7 +3212,7 @@ const TOUR_STEPS = [
   { t: 'Piirtopöytä', s: '#fsOpen',
     x: 'Kun perustietosi ovat valmiit, tämä on työpöytäsi: tästä (tai F) aukeaa kokoruudun piirtotila — tartu käyrään, tapahtumaan tai eläkeikäviivaan ja vedä, kone laskee jokaisen vedon hinnan.' },
   { t: 'Suunnitelmani', s: '#summaryBtn',
-    x: 'Suunnitelmasi tulostettavana dokumenttina — vaikka varainhoitajalle. Jakolinkki kopioi koko suunnitelman talteen tai kaverille.' },
+    x: 'Suunnitelmasi tulostettavana dokumenttina — vaikka varainhoitajalle. Jakolinkki kopioi koko suunnitelman talteen tai kaverille. Täältä näet myös, miten ikätoverisi suunnittelevat talouttaan.' },
   { t: 'Valikko', s: '#moreBtn',
     x: 'Vertailu tallentaa nykyisen suunnitelman haamukäyräksi muutosten taakse. Täältä löytyvät myös Vaurastumisen kartta ja palvelun tiedot.' },
 ];
@@ -5157,6 +5193,7 @@ function renderSummary() {
 }
 
 function openSummary() {
+  trackOnce('Suunnitelmani avattu');
   renderSummary();
   renderDonateSlot();
   $('summary').hidden = false;
@@ -5231,15 +5268,21 @@ if (location.hash === '#yhteenveto') {
 // Ensivierailu avaa piirtopöydän esimerkkisuunnitelmalla (pulssivihje ohjaa
 // tarttumaan), jakolinkki linkin suunnitelmalla — Esc paljastaa koko sivun.
 // SEO ei kärsi: piirtotila on CSS-kerros, sisältö pysyy DOMissa.
-// Laskeutuminen aina kojelaudalle ja opastus käyntiin joka latauksella
-// (linjaus 13.7.2026): kierroksesta pääsee pois yhdellä eleellä (Esc/
-// tausta/✕) ja viimeinen askel "Ala piirtää" avaa piirtopöydän. Suora
-// #yhteenveto-linkki saa dokumentin ilman kierrosta. Testit ja
-// generaattorit hiljentävät automaatin avaimella vp-autotour-off.
+// Laskeutuminen aina kojelaudalle; opastus käynnistyy automaattisesti,
+// kunnes käyttäjällä on oma tallennettu suunnitelma TAI kierros on
+// kertaalleen nähty (E4 15.7.2026 — palaajat ovat todennäköisimmät
+// suunnitelman loppuunviejät, eikä heitä pysäytetä joka käynnillä).
+// Uusinta aina ☰-valikosta. Suora #yhteenveto-linkki saa dokumentin
+// ilman kierrosta. Testit ja generaattorit hiljentävät automaatin
+// avaimella vp-autotour-off.
 if (resetVisit) toast('Aloitettu puhtaalta pöydältä — täytä Perustiedot tai avaa piirtopöytä ⛶');
 let autoTourOff = false;
-try { autoTourOff = localStorage.getItem('vp-autotour-off') === '1'; } catch (e) {}
-if (!autoTourOff && $('summary').hidden) {
+let tourSeen = false;
+try {
+  autoTourOff = localStorage.getItem('vp-autotour-off') === '1';
+  tourSeen = localStorage.getItem(TOUR_KEY) === '1';
+} catch (e) {}
+if (!autoTourOff && !tourSeen && visitKind !== 'returning' && $('summary').hidden) {
   setTimeout(() => { if (!fsOn && tourStep < 0 && $('summary').hidden) startTour(); }, 600);
 }
 

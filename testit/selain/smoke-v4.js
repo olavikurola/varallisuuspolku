@@ -116,10 +116,8 @@ const { chromium } = require('playwright');
   ok(await page.evaluate(() => document.activeElement && document.activeElement.id === 'ageNow'), 'kohdistus ikäkenttään');
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(1000);
-  ok(await page.evaluate(() => !document.getElementById('tour').hidden), 'kierros toistuu joka latauksella');
-  await page.keyboard.press('Escape');
-  await page.waitForTimeout(300);
-  ok(await page.evaluate(() => document.getElementById('tour').hidden), 'Esc sulkee heti');
+  ok(await page.evaluate(() => document.getElementById('tour').hidden),
+    'nähty kierros ei enää käynnisty automaattisesti (palaajan Esc-vero pois)');
   await page.evaluate(() => openMoreMenu(document.getElementById('moreBtn')));
   await page.waitForTimeout(200);
   await page.click('#mi-tour');

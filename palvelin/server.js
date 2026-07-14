@@ -17,6 +17,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const PORT = process.env.PORT || 8787;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
@@ -123,6 +124,12 @@ function sanitize(p) {
     if (num(d.retireAge, 0, 105)) out.derived.retireAge = d.retireAge;
     if (num(d.taxPaid, 0, 1e12)) out.derived.taxPaid = d.taxPaid;
   }
+  // Päivitys korvaa saman selaimen aiemman rivin (ei käyttäjätunnistetta —
+  // vain kahden peräkkäisen lähetyksen ketjutus rivitunnisteella)
+  if (p.replaces !== undefined) {
+    if (typeof p.replaces !== 'string' || !/^[0-9a-f]{16}$/.test(p.replaces)) return null;
+    out.replaces = p.replaces;
+  }
   return out;
 }
 
@@ -181,13 +188,18 @@ let statsCache = { at: 0, json: null };
 
 function computeStats() {
   if (Date.now() - statsCache.at < STATS_TTL && statsCache.json) return statsCache.json;
-  const rows = [];
+  let rows = [];
   try {
     for (const line of fs.readFileSync(FILE, 'utf8').split('\n')) {
       if (!line.trim()) continue;
       try { rows.push(JSON.parse(line)); } catch (e) { /* rikkinäinen rivi ohitetaan */ }
     }
   } catch (e) { /* ei vielä dataa */ }
+
+  // Supersede: korvatut rivit pois tilastoista (ketju A→B→C jättää vain C:n).
+  // Rivit säilyvät tiedostossa append-only-lokina.
+  const replaced = new Set(rows.map((r) => r.replaces).filter(Boolean));
+  rows = rows.filter((r) => !(r.rid && replaced.has(r.rid)));
 
   const buckets = new Map([['all', []]]);
   for (const r of rows) {
@@ -332,10 +344,13 @@ const server = http.createServer((req, res) => {
       try { parsed = JSON.parse(body); } catch (e) { /* alla */ }
       const clean = sanitize(parsed);
       if (!clean) return send(res, 400, { error: 'invalid' });
+      // rid: satunnainen rivitunniste, jolla saman selaimen myöhempi päivitys
+      // voi korvata tämän rivin tilastoissa (ei sidosta henkilöön tai IP:hen)
+      clean.rid = crypto.randomBytes(8).toString('hex');
       fs.appendFile(FILE, JSON.stringify(clean) + '\n', (err) => {
         if (err) return send(res, 500, { error: 'store_failed' });
         statsCache.at = 0; // seuraava stats-haku laskee uusiksi
-        send(res, 200, { ok: true });
+        send(res, 200, { ok: true, rid: clean.rid });
       });
     });
     return;
