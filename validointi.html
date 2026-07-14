@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Laskennan validointi — Varallisuuspolku</title>
+  <meta name="description" content="Näin Varallisuuspolun laskenta on tarkistettu: käsinlaskettavat vertailuesimerkit, verolaskennan esimerkit, oletusten versiointi ja tunnetut yksinkertaistukset. Jokainen luku on laskettu kahdella riippumattomalla tavalla." />
+  <meta name="theme-color" content="#0a0e1a" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="fi_FI" />
+  <meta property="og:site_name" content="Varallisuuspolku" />
+  <meta property="og:title" content="Laskennan validointi — näin luvut on tarkistettu" />
+  <meta property="og:description" content="Käsinlaskettavat vertailuesimerkit, verolaskennan esimerkit ja tunnetut yksinkertaistukset — avoimesti dokumentoituna." />
+  <meta property="og:url" content="https://varallisuuspolku.com/validointi.html" />
+  <meta property="og:image" content="https://varallisuuspolku.com/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="canonical" href="https://varallisuuspolku.com/validointi.html" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="fonts.css" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Privacy-friendly analytics by Plausible -->
+  <script async src="https://plausible.io/js/pa-gxRZu9FAu8RyeQ_oaNFz0.js"></script>
+  <script>
+    window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+    plausible.init()
+  </script>
+</head>
+<body class="an-body">
+  <header class="topbar">
+    <a class="brand" href="./" style="text-decoration:none;color:inherit">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 29 C17 28 21 17 31 11 L31 32 L9 32 Z" fill="#fff" fill-opacity="0.18" />
+          <path d="M9 29 C17 28 21 17 31 11" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="9" cy="29" r="2" fill="#fff" fill-opacity="0.85" />
+          <circle cx="31" cy="11" r="3.3" fill="#fff" />
+          <circle cx="31" cy="11" r="1.5" fill="#8b7cf6" />
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">Laskennan validointi</div>
+        <div class="brand-tag">Näin Varallisuuspolun luvut on tarkistettu</div>
+      </div>
+    </a>
+    <div class="topbar-right">
+      <a class="btn" href="./">Avaa suunnittelutyökalu</a>
+    </div>
+  </header>
+
+  <main class="an-main">
+    <p class="an-intro">Laskuriin pitää voida luottaa, joten tällä sivulla laskenta näytetään
+    auki: jokainen alla oleva luku on laskettu <b>kahdella toisistaan riippumattomalla
+    tavalla</b> — suljetun muodon korkolaskukaavalla käsin ja Varallisuuspolun
+    laskentamoottorilla (<code>laskenta.js</code>). Tulokset täsmäävät liukulukutarkkuudella
+    (ero alle miljoonasosasentin). Samat tarkistukset ajetaan automaattisesti
+    yksikkötesteinä jokaisen muutoksen yhteydessä, ja kuka tahansa voi toistaa ne
+    itse — ohjeet sivun lopussa.</p>
+
+    <section class="an-card">
+      <h2>Oletukset ja versiointi</h2>
+      <table class="sum-table">
+        <tbody>
+          <tr><td>Verosäännöt</td><td>Suomen pääomatuloverotus, <b>verovuoden 2026 parametrit</b>: 30&nbsp;% vuotuisista voitoista 30&nbsp;000&nbsp;€:oon asti, 34&nbsp;% ylimenevältä osalta. Hankintameno-olettama 40&nbsp;% (omistus ≥&nbsp;10&nbsp;v) / 20&nbsp;%.</td></tr>
+          <tr><td>Tuotto-oletukset</td><td>Osakkeet 7&nbsp;%, korot 3&nbsp;%, käteinen 1,5&nbsp;% vuodessa (nimellisinä). Pro-tilassa muokattavissa.</td></tr>
+          <tr><td>Inflaatio-oletus</td><td>2&nbsp;%/v (muokattavissa). Inflaatiokorjaus tarkalla Fisher-kaavalla (1+r)/(1+i).</td></tr>
+          <tr><td>Monte Carlo</td><td>5&nbsp;000 polkua, kiinteät polkukohtaiset siemenet (CRN) — sama tulos joka ajolla, deltat vertailukelpoisia.</td></tr>
+          <tr><td>Tarkistettu</td><td>14.7.2026 — verosäännöt ja oletukset tarkistetaan vähintään verovuosittain.</td></tr>
+          <tr><td>Lähdekoodi</td><td><a href="https://github.com/olavikurola/varallisuuspolku/blob/main/laskenta.js" rel="noopener">laskenta.js</a> (moottori) · <a href="https://github.com/olavikurola/varallisuuspolku/tree/main/testit" rel="noopener">testit/</a> (automaattiset tarkistukset)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="an-card">
+      <h2>Korkolaskun tarkistukset <small>suljetun muodon kaava vs. moottori</small></h2>
+      <p class="an-intro" style="margin-top:0">Merkinnät: k&nbsp;=&nbsp;1,07<sup>1/12</sup> (kuukausikerroin 7&nbsp;%:n vuosituotolla), n&nbsp;=&nbsp;kuukausien määrä. Kaikissa esimerkeissä 100&nbsp;% osakepaino, ei veroja eikä kuluja, jotta suljettu kaava on olemassa.</p>
+      <div class="table-scroll">
+        <table class="sum-table">
+          <thead>
+            <tr><th>Tarkistus</th><th>Kaava</th><th class="num">Käsin</th><th class="num">Moottori</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Kertasijoitus 50&nbsp;000&nbsp;€, 10&nbsp;v</td><td>S·1,07<sup>10</sup></td><td class="num">98&nbsp;357,57&nbsp;€</td><td class="num">98&nbsp;357,57&nbsp;€</td></tr>
+            <tr><td>Kuukausisäästö 500&nbsp;€/kk, 10&nbsp;v</td><td>C·(k<sup>120</sup>−1)/(k−1)</td><td class="num">85&nbsp;525,87&nbsp;€</td><td class="num">85&nbsp;525,87&nbsp;€</td></tr>
+            <tr><td>Kasvava säästö, +1,5&nbsp;%/v palkkakehitys</td><td>C·Σ&nbsp;1,015<sup>(j−1)/12</sup>·k<sup>120−j</sup></td><td class="num">91&nbsp;397,36&nbsp;€</td><td class="num">91&nbsp;397,36&nbsp;€</td></tr>
+            <tr><td>Nostovaihe: 1&nbsp;M€, nosto 2&nbsp;000&nbsp;€/kk, 10&nbsp;v</td><td>S·k<sup>120</sup>&nbsp;−&nbsp;W·(k<sup>120</sup>−1)/(k−1)</td><td class="num">1&nbsp;625&nbsp;047,89&nbsp;€</td><td class="num">1&nbsp;625&nbsp;047,89&nbsp;€</td></tr>
+            <tr><td>Inflaatiokorjaus (Fisher), 50&nbsp;000&nbsp;€, 10&nbsp;v</td><td>S·(1,07/1,02)<sup>10</sup></td><td class="num">80&nbsp;687,46&nbsp;€</td><td class="num">80&nbsp;687,46&nbsp;€</td></tr>
+            <tr><td>Omaisuuserä 220&nbsp;000&nbsp;€, +2&nbsp;%/v, 10&nbsp;v</td><td>P·1,02<sup>10</sup></td><td class="num">268&nbsp;178,77&nbsp;€</td><td class="num">268&nbsp;178,77&nbsp;€</td></tr>
+            <tr><td>Annuiteettilaina 187&nbsp;000&nbsp;€, 3,5&nbsp;%, 25&nbsp;v</td><td>P·r/(1−(1+r)<sup>−300</sup>)</td><td class="num">936,17&nbsp;€/kk</td><td class="num">936,17&nbsp;€/kk</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="sum-assump">Annuiteettikaava on sama, jota pankkien lainalaskurit käyttävät —
+      voit tarkistaa kuukausierän minkä tahansa pankin laskurilla tai taulukkolaskennan
+      MAKSU/PMT-funktiolla: PMT(3,5&nbsp;%/12;&nbsp;300;&nbsp;−187000)&nbsp;=&nbsp;936,17&nbsp;€.
+      Säästö- ja nostovaiheen kaavat vastaavat taulukkolaskennan TULEVA.ARVO/FV-funktiota
+      kuukausikoroilla.</p>
+    </section>
+
+    <section class="an-card">
+      <h2>Verolaskennan esimerkit <small>lasketaan auki askel askeleelta</small></h2>
+
+      <h3>Myyntivoittovero ja hankintameno-olettama (omaisuuden myynti)</h3>
+      <p class="an-intro" style="margin-top:0">Asunto ostetaan 220&nbsp;000&nbsp;€:lla ja myydään
+      10 vuoden kuluttua, arvonnousu 2&nbsp;%/v. Ei merkitty verovapaaksi omaksi asunnoksi.</p>
+      <table class="sum-table">
+        <tbody>
+          <tr><td>Myyntihinta</td><td class="num">220&nbsp;000&nbsp;€ · 1,02<sup>10</sup> = 268&nbsp;178,77&nbsp;€</td></tr>
+          <tr><td>Todellinen voitto</td><td class="num">268&nbsp;178,77 − 220&nbsp;000 = 48&nbsp;178,77&nbsp;€</td></tr>
+          <tr><td>Hankintameno-olettama (omistus ≥ 10 v)</td><td class="num">verotettava enintään 60&nbsp;% myyntihinnasta = 160&nbsp;907,26&nbsp;€ → todellinen voitto pienempi, verotetaan 48&nbsp;178,77&nbsp;€</td></tr>
+          <tr><td>Vero portaittain</td><td class="num">30&nbsp;000 · 30&nbsp;% + 18&nbsp;178,77 · 34&nbsp;% = 9&nbsp;000,00 + 6&nbsp;180,78 = <b>15&nbsp;180,78&nbsp;€</b></td></tr>
+          <tr><td>Moottorin tulos</td><td class="num"><b>15&nbsp;180,78&nbsp;€</b> — täsmää</td></tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top:18px">Eläkeajan nosto: brutto → netto (voitto-osuusvero)</h3>
+      <p class="an-intro" style="margin-top:0">Nostoista verotetaan vain voiton osuus. Esimerkki:
+      salkun arvo 500&nbsp;000&nbsp;€, josta hankintahintaa 250&nbsp;000&nbsp;€ (voitto-osuus 50&nbsp;%),
+      ja eläkeläinen tarvitsee 2&nbsp;000&nbsp;€ käteen.</p>
+      <table class="sum-table">
+        <tbody>
+          <tr><td>Bruttomyynti</td><td class="num">tarve / (1 − voitto-osuus · vero) = 2&nbsp;000 / (1 − 0,5 · 0,30) = <b>2&nbsp;352,94&nbsp;€</b></td></tr>
+          <tr><td>Vero</td><td class="num">voitto-osuus · brutto · 30&nbsp;% = 0,5 · 2&nbsp;352,94 · 0,30 = <b>352,94&nbsp;€</b></td></tr>
+          <tr><td>Käteen</td><td class="num">2&nbsp;352,94 − 352,94 = <b>2&nbsp;000,00&nbsp;€</b> — täsmälleen tarve</td></tr>
+        </tbody>
+      </table>
+      <p class="sum-assump">Moottori seuraa salkun hankintahintaa kuukausittain: säästöt kasvattavat
+      sitä, myynnit pienentävät suhteessa, ja tuotto kasvattaa vain arvoa. Vuotuiset realisoidut
+      voitot lasketaan yhteen 30&nbsp;000&nbsp;€:n verorajaa varten, ja laskuri nollaa ne
+      kalenterivuosittain.</p>
+
+      <h3 style="margin-top:18px">Osinkoverojarru arvo-osuustilillä</h3>
+      <p class="an-intro" style="margin-top:0">Suorien osakkeiden osingoista 85&nbsp;% on veronalaista
+      pääomatuloa. Jos osinkotuotoksi asetetaan 3,5&nbsp;%/v, arvo-osuustilillä vuosituotosta vähenee
+      3,5&nbsp;% · 85&nbsp;% · 30&nbsp;% ≈ <b>0,89&nbsp;prosenttiyksikköä</b> osakepainon osalta.
+      Osakesäästötilillä ja vakuutuskuoressa osingot kertyvät verotta — tämä ero on tilivertailun ydin.</p>
+    </section>
+
+    <section class="an-card">
+      <h2>Monte Carlo: toistettavuus ja ominaisuudet</h2>
+      <p class="an-intro" style="margin-top:0">Onnistumistodennäköisyys lasketaan tuhansista
+      satunnaisista markkinapoluista. Satunnaisuus on <b>siemennettyä</b> (polku i saa aina saman
+      shokkijonon), joten sama suunnitelma antaa täsmälleen saman tuloksen joka ajolla ja eri
+      suunnitelmien vertailut ovat reiluja — molemmat kokevat samat markkinahistoriat. Automaattiset
+      testit varmistavat lisäksi, että viuhkan alaraja (P10) ei koskaan ylitä ylärajaa (P90),
+      että viuhka alkaa alkupääomasta ja että ehtymiskäyrän loppuarvo on täsmälleen
+      1&nbsp;−&nbsp;onnistumistodennäköisyys.</p>
+      <p class="sum-assump">Esimerkki: oletussuunnitelman onnistumistodennäköisyys 99,0&nbsp;% —
+      bitilleen sama jokaisella ajolla ja jokaisella laitteella.</p>
+    </section>
+
+    <section class="an-card">
+      <h2>Tunnetut yksinkertaistukset <small>mitä malli EI huomioi</small></h2>
+      <p class="an-intro" style="margin-top:0">Jokainen malli yksinkertaistaa. Nämä ovat tiedossa
+      olevat poikkeamat todellisuudesta — laskelma on suuntaa antava havainnollistus, ei veroilmoitus:</p>
+      <table class="sum-table">
+        <tbody>
+          <tr><td>Osakesäästötilin talletuskatto</td><td>100&nbsp;000&nbsp;€:n kattoa ei mallinneta laskennassa (käyttöliittymä varoittaa, kun se ylittyy).</td></tr>
+          <tr><td>Tappioiden vähennysoikeus</td><td>Ei mallinneta — vain voittoja verotetaan, tappiovuosien vähennyksiä ei hyvitetä.</td></tr>
+          <tr><td>Hankintameno-olettama nostoissa</td><td>Pro-tilan olettama eläkeajan kuukausinostoissa arvioi omistusajan suunnitelman alusta, ei eräkohtaisesti.</td></tr>
+          <tr><td>Kertaerien rahoitus</td><td>Sijoituksista rahoitetut kertamenot (esim. remontti) eivät realisoi myyntivoittoveroa — vero lasketaan vain eläkeajan nostoista ja omaisuuden myynneistä.</td></tr>
+          <tr><td>Työeläke</td><td>Käyttäjän oma arvio kuukausitulona — ei ETK:n laskelma. Työeläkkeen ansiotuloverotusta, kansaneläkettä ja takuueläkettä ei mallinneta.</td></tr>
+          <tr><td>Omaisuusluokkien korrelaatio</td><td>Perusversion epävarmuusviuhka olettaa täyskorrelaation (konservatiivinen yksinkertaistus — todellinen hajautushyöty on suurempi). Pro-tilassa korrelaatiot voi asettaa itse.</td></tr>
+          <tr><td>Tuottojen jakauma</td><td>Kuukausituotot normaalijakaumasta ilman autokorrelaatiota (Pro: paksuhäntäinen Studentin&nbsp;t). Todelliset markkinat voivat poiketa tästä.</td></tr>
+          <tr><td>Inflaatio</td><td>Vakio-oletus koko suunnitelman ajan — todellinen inflaatio vaihtelee.</td></tr>
+          <tr><td>Verosääntöjen muutokset</td><td>Laskenta käyttää nykyisiä sääntöjä koko elinkaarelle — tulevia lakimuutoksia ei ennusteta.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="an-card">
+      <h2>Tarkista itse</h2>
+      <p class="an-intro" style="margin-top:0">Kaikki tämän sivun tarkistukset — ja kymmeniä muita —
+      ajetaan automaattisesti jokaisen koodimuutoksen yhteydessä. Voit toistaa ne itse:</p>
+      <ol style="font-size:14px;line-height:1.8;color:var(--text-dim);margin:0 0 10px;padding-left:22px">
+        <li>Lataa lähdekoodi: <a href="https://github.com/olavikurola/varallisuuspolku" rel="noopener">github.com/olavikurola/varallisuuspolku</a></li>
+        <li>Aja yksikkötestit: <code>node testit/laskenta.test.js</code> — ei riippuvuuksia, pelkkä Node.js riittää.</li>
+        <li>Vertaa itse: sovelluksen <b>Vuositaulukko</b> (graafin alla) näyttää luvut vuosi vuodelta ja vie ne CSV:nä taulukkolaskentaan, jossa voit rakentaa oman vertailulaskelman.</li>
+      </ol>
+      <p class="sum-assump">Testit kattavat mm. korkolaskuidentiteetit, verolaskennan, annuiteettilainat,
+      Monte Carlon determinismin, käänteisratkaisijat (bisektio), tavoitepisteet, varmuustasot,
+      perhelaskennan koherenssin ja Pro-tilan oletusarvojen bittitason yhtäpitävyyden perustilan kanssa.</p>
+    </section>
+
+    <p class="sum-assump" style="max-width:860px;margin:0 auto 24px">Laskelma on suuntaa antava
+    havainnollistus, ei sijoitusneuvontaa eikä veroneuvontaa. Historiallinen tuotto ei ole tae
+    tulevasta. <a href="./">Takaisin suunnittelutyökaluun</a> · <a href="saavutettavuus.html">Saavutettavuus</a></p>
+  </main>
+</body>
+</html>

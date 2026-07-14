@@ -3280,7 +3280,8 @@ function tourShow(i) {
 function focusBasics() {
   const card = document.querySelector('.card[data-card="basics"]');
   if (!card) return;
-  card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  card.scrollIntoView({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
   card.classList.add('basics-glow');
   setTimeout(() => card.classList.remove('basics-glow'), 2400);
   setTimeout(() => { try { $('ageNow').focus({ preventScroll: true }); } catch (e) {} }, 450);

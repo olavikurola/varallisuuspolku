@@ -34,4 +34,9 @@ Keskeiset faktat:
 - [Varallisuuspolku](https://varallisuuspolku.com/): itse suunnittelutyökalu
 - [Vaurastumisen kartta](https://varallisuuspolku.com/analytiikka.html): avoin,
   anonyymi vertailudata suomalaisten taloussuunnitelmista ikäryhmittäin
+- [Laskennan validointi](https://varallisuuspolku.com/validointi.html): kaavat
+  tarkistettu käsinlaskettavilla vertailuesimerkeillä, oletusten versiointi
+  (verovuosi) ja tunnetut yksinkertaistukset avoimesti dokumentoituna
+- [Saavutettavuus](https://varallisuuspolku.com/saavutettavuus.html):
+  saavutettavuusseloste (näppäimistökäyttö, ruudunlukija, vähennetty liike)
 - [Lähdekoodi](https://github.com/olavikurola/varallisuuspolku): avoin GitHubissa

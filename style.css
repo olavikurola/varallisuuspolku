@@ -1780,3 +1780,20 @@ body.fs .cmp-pill { display: none; }
 .mtn-name { font-size: 12px; font-weight: 700; font-family: inherit; }
 .mtn-tick { font-size: 10px; fill: var(--text-faint); font-family: inherit; }
 #legendFamily .btn-mini { margin-left: 8px; padding: 3px 9px; font-size: 11px; }
+
+/* Staattisten alasivujen (validointi, saavutettavuus) linkit */
+.an-main a { color: var(--accent); }
+.an-main code { font-size: 0.92em; color: var(--text-dim); }
+
+/* ---------- Saavutettavuus: vähennetty liike ---------- */
+/* Käyttöjärjestelmän "vähennä liikettä" -asetus poistaa animaatiot ja
+   siirtymät (lopputilat säilyvät — 0.01ms hyppää suoraan loppuun).
+   JS-puolen pehmeä vieritys vaimennetaan app.js:ssä samalla kyselyllä. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto !important; }
+}

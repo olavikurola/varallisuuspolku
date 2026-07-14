@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Saavutettavuus — Varallisuuspolku</title>
+  <meta name="description" content="Varallisuuspolun saavutettavuusseloste: näppäimistökäyttö, ruudunlukijatuki, vähennetty liike ja tunnetut puutteet." />
+  <meta name="theme-color" content="#0a0e1a" />
+  <meta property="og:locale" content="fi_FI" />
+  <meta property="og:site_name" content="Varallisuuspolku" />
+  <meta property="og:title" content="Saavutettavuus — Varallisuuspolku" />
+  <meta property="og:url" content="https://varallisuuspolku.com/saavutettavuus.html" />
+  <link rel="canonical" href="https://varallisuuspolku.com/saavutettavuus.html" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="fonts.css" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Privacy-friendly analytics by Plausible -->
+  <script async src="https://plausible.io/js/pa-gxRZu9FAu8RyeQ_oaNFz0.js"></script>
+  <script>
+    window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+    plausible.init()
+  </script>
+</head>
+<body class="an-body">
+  <header class="topbar">
+    <a class="brand" href="./" style="text-decoration:none;color:inherit">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 29 C17 28 21 17 31 11 L31 32 L9 32 Z" fill="#fff" fill-opacity="0.18" />
+          <path d="M9 29 C17 28 21 17 31 11" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="9" cy="29" r="2" fill="#fff" fill-opacity="0.85" />
+          <circle cx="31" cy="11" r="3.3" fill="#fff" />
+          <circle cx="31" cy="11" r="1.5" fill="#8b7cf6" />
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">Saavutettavuus</div>
+        <div class="brand-tag">Varallisuuspolun saavutettavuusseloste</div>
+      </div>
+    </a>
+    <div class="topbar-right">
+      <a class="btn" href="./">Avaa suunnittelutyökalu</a>
+    </div>
+  </header>
+
+  <main class="an-main">
+    <p class="an-intro">Varallisuuspolku on yksityinen, ilmainen verkkopalvelu, jota
+    digipalvelulain saavutettavuusvaatimukset eivät velvoita. Tämä seloste on silti laadittu
+    vapaaehtoisesti, koska taloussuunnittelun pitää olla mahdollisimman monen ulottuvilla.
+    Tavoitteena on WCAG 2.1 AA -taso keskeisissä toiminnoissa. Palvelua ei ole auditoitu
+    ulkopuolisesti — seloste perustuu omaan arviointiin. Päivitetty 14.7.2026.</p>
+
+    <section class="an-card">
+      <h2>Mikä toimii</h2>
+      <table class="sum-table">
+        <tbody>
+          <tr><td>Näppäimistökäyttö</td><td>Kaikki lomakekentät, kytkimet ja painikkeet ovat näppäimistöllä käytettäviä, ja kohdistus näkyy selkeästi. Pikanäppäimet: <b>F</b> avaa piirtopöydän, <b>Esc</b> sulkee, <b>Ctrl+Z</b> kumoaa.</td></tr>
+          <tr><td>Vaihtoehto raahaukselle</td><td>Kaikki graafilla raahaamalla tehtävät muutokset voi tehdä myös lomakekentillä: perustiedot, tapahtumien iät ja summat (Aikajanalla-lista) sekä eläkeasetukset.</td></tr>
+          <tr><td>Vaihtoehto graafille</td><td><b>Vuositaulukko</b> (graafin alla) esittää saman tiedon tekstimuotoisena taulukkona vuosi vuodelta ja vie sen CSV:nä. Keskeiset tulokset näytetään myös tekstikortteina graafin yläpuolella.</td></tr>
+          <tr><td>Ruudunlukija</td><td>Graafeilla on tekstivastineet (ARIA), muutokset kuulutetaan aria-live-alueella ja modaalit on roolitettu. Kokonaisuutena raahauspohjainen suunnittelu on kuitenkin sujuvinta lomakekenttien ja vuositaulukon kautta.</td></tr>
+          <tr><td>Vähennetty liike</td><td>Käyttöjärjestelmän <i>vähennä liikettä</i> -asetus (prefers-reduced-motion) poistaa animaatiot ja pehmeät vieritykset.</td></tr>
+          <tr><td>Ei aikarajoja</td><td>Palvelussa ei ole aikarajoja, automaattisesti sulkeutuvia ilmoituksia eikä välkkyvää sisältöä. Suunnitelma tallentuu automaattisesti.</td></tr>
+          <tr><td>Skaalautuvuus</td><td>Sivu toimii selaimen zoomilla ja mobiililaitteilla. Laajin kokemus on isolla näytöllä.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="an-card">
+      <h2>Tunnetut puutteet</h2>
+      <table class="sum-table">
+        <tbody>
+          <tr><td>Graafin raahaus</td><td>Käyrään tarttuminen ja vetäminen ei ole käytettävissä pelkällä näppäimistöllä. Sama lopputulos saavutetaan lomakekentillä, mutta suora käyrän muokkaus on osoitinlaitteen varassa.</td></tr>
+          <tr><td>Tiheä informaatio</td><td>Graafin työkaluvihjeet ja piirtopöydän mittarit ovat visuaalisesti tiheitä; ruudunlukijalla vastaava tieto on saatavilla vuositaulukosta ja tuloskorteista, mutta ei yhtä hienojakoisesti.</td></tr>
+          <tr><td>Kontrastit</td><td>Tumman teeman himmeimmät aputekstit eivät kaikkialla yllä AA-kontrastiin. Korjataan sitä mukaa kun kohtia tunnistetaan.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="an-card">
+      <h2>Palaute</h2>
+      <p class="an-intro" style="margin:0">Jos kohtaat esteen, jota tämä seloste ei tunnista,
+      kerro siitä: <a href="https://github.com/olavikurola/varallisuuspolku/issues" rel="noopener">GitHub-issue</a>
+      on nopein reitti. Saavutettavuusparannukset priorisoidaan korkealle.</p>
+    </section>
+
+    <p class="sum-assump" style="max-width:860px;margin:0 auto 24px"><a href="./">Takaisin
+    suunnittelutyökaluun</a> · <a href="validointi.html">Laskennan validointi</a></p>
+  </main>
+</body>
+</html>
