@@ -400,6 +400,28 @@ console.log('Sijoitustili (kuori) ja kulut');
   ok(withAcq('ins').taxPaid === plain('ins').taxPaid, 'olettama ei vaikuta vakuutuskuorella (portti)');
 }
 
+console.log('%-nostostrategia: onnistuminen mittaa tulotarpeen täyttymistä');
+{
+  // Davidin bugiraportti (X, 13.7.2026): pct-nostossa salkku ei koskaan ehdy
+  // → onnistuminen oli rakenteellisesti aina 100 %. Nyt tulotarve on lattia.
+  const fire = (pct, need, pension = 0) => ({
+    ageNow: 40, ageEnd: 90, startCapital: 300000, monthly: 0, savingsGrowth: 0,
+    allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: false,
+    proOn: true, pro: { wd: { mode: 'pct', pct } },
+    events: [{ id: 1, type: 'retirement', age: 41, withdrawal: need, pension, pensionAge: 41 }],
+  });
+  const agro = L.simulate(fire(20, 2000));
+  ok(agro.successProb < 0.05, 'ahne 20 %/v nosto 2 000 €/kk tarpeella epäonnistuu', String(agro.successProb));
+  ok(agro.depletionAge != null, 'alitusikä raportoituu (Riittävyys-kortti)');
+  const swr = L.simulate(fire(4, 1000));
+  ok(swr.successProb > agro.successProb, 'maltillinen nosto + pieni tarve onnistuu useammin',
+    `${swr.successProb} vs ${agro.successProb}`);
+  const noFloor = L.simulate(fire(20, 0));
+  ok(noFloor.successProb === 1 && noFloor.depletionAge == null, 'tarve 0 = ei lattiaa (entinen käytös)');
+  const penCover = L.simulate(fire(20, 1500, 2000));
+  ok(penCover.successProb === 1, 'työeläke tarpeen yli → nosto saa huveta (ei alitusta)');
+}
+
 console.log('Varmuustaso-ratkaisu (karkea→tarkka)');
 {
   const st = plan();

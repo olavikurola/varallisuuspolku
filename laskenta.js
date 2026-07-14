@@ -535,6 +535,16 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
       let income;
       if (wdMode === 'pct') {
         income = Math.max(0, w) * wdPctM; // prosentti salkusta — tulo joustaa
+        // FIRE-testi: prosenttinostossa salkku ei matemaattisesti koskaan
+        // ehdy (nosto on aina osuus jäljellä olevasta), joten "varat
+        // riittävät" olisi rakenteellisesti aina tosi. Suunnitelma katsotaan
+        // epäonnistuneeksi, kun tulo (nosto + työeläke) alittaa eläke-
+        // tapahtuman kuukausitulon tarpeen — ensimmäinen alitus ratkaisee
+        // (SWR-testien tapa; monotoninen, joten CRN-vertailut säilyvät).
+        // Tulotarve 0 = ei lattiaa (entinen käytös).
+        if (withdrawal > 0 && income + pen < withdrawal * (phaseMul ? phaseMul[m] : 1) && depletion == null) {
+          depletion = age;
+        }
       } else if (wdMode === 'guard') {
         // Guardrails: perustasoa leikataan/korotetaan kun nostoprosentti
         // karkaa aloitusputkesta (tarkistus kerran vuodessa)

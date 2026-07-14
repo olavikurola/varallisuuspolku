@@ -2598,8 +2598,18 @@ function renderStats() {
       s: [s.pension > 0 ? `sis. työeläke ${fmtEur(s.pension)}/kk` : null, confTxt || pTxt].filter(Boolean).join(' · ') || `varat loppuun ${Math.round(s.a1)} v mennessä`,
       d: dRow(s.solvedWithdrawal, g && (g.solvedWithdrawal != null ? g.solvedWithdrawal : g.sustainableWd), (x) => `${Math.round(x).toLocaleString('fi-FI')} €/kk`, 20) });
   } else if (s.depletionAge != null) {
-    cards.push({ k: 'Riittävyys', v: `Ehtyy ~${Math.round(s.depletionAge)} v`, cls: 'bad',
-      s: [pTxt, 'kokeile lisätä säästöä'].filter(Boolean).join(' · '), d: pDelta });
+    // %-nostossa "ehtyminen" tarkoittaa tulotarpeen alittumista (salkku ei ehdy)
+    const pmWd = proOf(state);
+    const pctMode = pmWd && pmWd.wd.mode === 'pct';
+    cards.push({
+      k: 'Riittävyys',
+      v: pctMode ? `Tulo alittaa tarpeen ~${Math.round(s.depletionAge)} v` : `Ehtyy ~${Math.round(s.depletionAge)} v`,
+      cls: 'bad',
+      s: pctMode
+        ? [pTxt, 'nosto + työeläke ei kata kuukausitulon tarvetta'].filter(Boolean).join(' · ')
+        : [pTxt, 'kokeile lisätä säästöä'].filter(Boolean).join(' · '),
+      d: pDelta,
+    });
   } else {
     cards.push({ k: 'Riittävyys', v: 'Varat riittävät ✓', cls: 'ok',
       s: [`${Math.round(s.a1)} v ikään asti`, pTxt].filter(Boolean).join(' · '), d: pDelta });
@@ -3451,7 +3461,7 @@ function buildProWd() {
   let h = `<div class="field"><span class="field-label">Strategia</span><div class="seg seg-goal">${seg}</div></div>`;
   if (p.wd.mode === 'pct') {
     h += `<div class="prow"><label class="pinline">Nosto ${pin('wd.pct', p.wd.pct, 0.5, 20, 0.1)} % salkusta /v</label></div>`
-      + '<p class="note">Tulo joustaa markkinoiden mukana eikä salkku ehdy — eläketavoitteet ja Kestävä tulo toimivat tässä strategiassa mittareina, eivät ratkaisuina.</p>';
+      + '<p class="note">Tulo joustaa markkinoiden mukana eikä salkku ehdy. Onnistumis-% mittaa siksi tulotarpeen täyttymistä: suunnitelma epäonnistuu, jos nosto + työeläke alittaa eläketapahtuman kuukausitulon tarpeen. Tarve 0 € = ei rajaa. Eläketavoitteet ja Kestävä tulo ovat tässä strategiassa mittareita, eivät ratkaisuja.</p>';
   } else if (p.wd.mode === 'guard') {
     h += `<div class="prow"><label class="pinline">Putki ±${pin('wd.band', p.wd.band, 5, 50, 1)} %</label>`
       + `<label class="pinline">Säätöaskel ${pin('wd.adj', p.wd.adj, 1, 30, 1)} %</label></div>`
