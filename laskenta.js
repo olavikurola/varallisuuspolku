@@ -945,12 +945,24 @@ function simulate(st, opts = {}) {
   out.flows = final.flows;
   out.taxPaid = final.taxPaid + ctx.saleInfos.reduce((a, x) => a + x.tax, 0);
 
-  // Ehtymisjaksot graafin varoitusvyöhykkeiksi
+  // Ehtymisjaksot graafin varoitusvyöhykkeiksi. %-nostossa salkku ei ehdy —
+  // vyöhyke näyttää jaksot, joissa tulo (nosto + työeläke) alittaa tarpeen
+  // (sama semantiikka kuin runPathin lattiatarkistuksessa). Työeläkkeen
+  // alkaminen voi nostaa tulon takaisin tarpeen yli → vyöhykkeitä voi olla useita.
   const dryZones = [];
+  const floorMode = ctx.wdMode === 'pct' && retireAge != null && withdrawal > 0;
   if (depletionAge != null) {
+    const isDry = floorMode
+      ? (m) => {
+          const age = a0 + m / 12;
+          if (age <= retireAge) return false;
+          const pen = age >= ctx.pensionAge ? ctx.pension : 0;
+          return exp[m] * ctx.wdPctM + pen < withdrawal * (ctx.phaseMul ? ctx.phaseMul[m] : 1);
+        }
+      : (m) => exp[m] < 0.5;
     let zs = null;
     for (let m = 1; m <= months; m++) {
-      const dry = exp[m] < 0.5;
+      const dry = isDry(m);
       if (dry && zs == null) zs = m;
       if (zs != null && (!dry || m === months)) {
         const ze = dry ? m : m - 1;
@@ -960,6 +972,7 @@ function simulate(st, opts = {}) {
     }
   }
   out.dryZones = dryZones;
+  out.dryKind = floorMode ? 'floor' : 'depleted'; // graafin varoitusteksti
 
   // Nettovarallisuus = sijoitukset + omaisuuserät − velat
   const net = new Array(months + 1);

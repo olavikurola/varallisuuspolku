@@ -405,7 +405,7 @@ function renderChart(reuse = false) {
     el('rect', { x: x0, y: plot.t, width: x1 - x0, height: plot.h, fill: 'rgba(248,113,113,0.06)' }, svg);
     if (x1 - x0 > 90) {
       const tt = el('text', { x: (x0 + x1) / 2, y: plot.t + 16, 'text-anchor': 'middle', class: 'dry-label' }, svg);
-      tt.textContent = '⚠ varat ehtyneet';
+      tt.textContent = sim.dryKind === 'floor' ? '⚠ tulo alle tarpeen' : '⚠ varat ehtyneet';
     }
   }
 

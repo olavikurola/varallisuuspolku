@@ -420,6 +420,24 @@ console.log('%-nostostrategia: onnistuminen mittaa tulotarpeen täyttymistä');
   ok(noFloor.successProb === 1 && noFloor.depletionAge == null, 'tarve 0 = ei lattiaa (entinen käytös)');
   const penCover = L.simulate(fire(20, 1500, 2000));
   ok(penCover.successProb === 1, 'työeläke tarpeen yli → nosto saa huveta (ei alitusta)');
+
+  // Alitusvyöhykkeet graafiin: %-tilassa dryZones = jaksot joissa tulo < tarve
+  ok(agro.dryZones.length >= 1 && agro.dryKind === 'floor', 'alitusvyöhyke piirtyy (dryKind floor)',
+    JSON.stringify({ n: agro.dryZones.length, kind: agro.dryKind }));
+  ok(agro.dryZones[0].from < 55, 'ahne nosto alittaa tarpeen jo alkuvuosina', String(agro.dryZones[0] && agro.dryZones[0].from));
+  // Myöhään alkava työeläke nostaa tulon takaisin tarpeen yli → vyöhyke päättyy
+  const rec = L.simulate((() => {
+    const st = fire(12, 1500);
+    st.events[0].pension = 1600;
+    st.events[0].pensionAge = 75;
+    return st;
+  })());
+  ok(rec.dryZones.length >= 1 && rec.dryZones.every((z) => z.to <= 75.2),
+    'työeläkkeen alkaminen päättää alitusvyöhykkeen', JSON.stringify(rec.dryZones));
+  // Kiinteä strategia ennallaan: ehtyminen ja vanha teksti
+  const fix = L.simulate({ ...fire(0, 0), proOn: false, pro: null,
+    events: [{ id: 1, type: 'retirement', age: 41, withdrawal: 5000, pension: 0 }] });
+  ok(fix.dryKind === 'depleted' && fix.depletionAge != null, 'kiinteä strategia: ehtymissemantiikka ennallaan');
 }
 
 console.log('Varmuustaso-ratkaisu (karkea→tarkka)');
