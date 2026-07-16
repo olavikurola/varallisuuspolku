@@ -60,10 +60,17 @@ const { chromium } = require('playwright');
   ok((await page.locator('#familyChips .fam-add').count()) === 1, 'yksin-tilassa vain pieni ＋-chip');
   const soloP = await page.evaluate(() => sim.successProb);
   await page.click('#familyChips .fam-add');
+  await page.waitForTimeout(300);
+  await page.click('.menu button:has-text("Puoliso")'); // ＋ avaa valikon (Puoliso/Lapsi)
   await page.waitForTimeout(600);
   ok(await page.evaluate(() => familyOn() && family.persons.length === 2), 'puoliso lisätty');
   ok(await page.evaluate(() => family.active === 1), 'vaihto puolisoon lisättäessä');
   ok((await page.locator('#familyChips .fam-chip').count()) === 2, 'henkilöchipit näkyvät');
+  // Jakodialogi (puolitetaanko hankinnat?) aukeaa, kun lisääjällä on kuluja — ohitetaan
+  if (await page.locator('.share-ask').count()) {
+    await page.click('#shareSkip');
+    await page.waitForTimeout(300);
+  }
 
   // puolison muokkaus ei vuoda henkilöön 1
   await page.fill('#monthly', '600');
@@ -99,7 +106,7 @@ const { chromium } = require('playwright');
   ok(statTxt.includes('Perheen onnistumis-%'), 'perhekortti tunnusluvuissa');
 
   // siirrot: pari syntyy, peilautuu ja siivoutuu
-  ok((await page.locator('#palette .chip', { hasText: 'Siirto puolisolle' }).count()) === 1, 'siirtochipit paletissa perhetilassa');
+  ok((await page.locator('#palette .chip', { hasText: 'Siirto läheiselle' }).count()) === 1, 'siirtochipit paletissa perhetilassa');
   await page.evaluate(() => { addEvent('transferOut', 45); closePopover(); });
   await page.waitForTimeout(400);
   const pair = await page.evaluate(() => {
@@ -203,7 +210,11 @@ const { chromium } = require('playwright');
   await page.keyboard.press('Escape');
   await page.waitForTimeout(400);
 
-  // poisto: kaksi napautusta, paluu yksin-tilaan
+  // poisto: kaksi napautusta, paluu yksin-tilaan — ✕ näkyy vain puolison ollessa aktiivinen
+  if (await page.evaluate(() => family.active === 0)) {
+    await page.click('#familyChips .fam-chip:nth-child(2)');
+    await page.waitForTimeout(400);
+  }
   await page.click('#familyChips .fam-del');
   await page.waitForTimeout(200);
   ok(await page.evaluate(() => familyOn()), 'ensimmäinen ✕ ei vielä poista');

@@ -76,7 +76,7 @@ const { chromium } = require('playwright');
   // 7) Nostostrategia: % salkusta → ei ehdy, huomautus näkyy; takaisin kiinteään
   await page.evaluate(() => { document.querySelector('[data-pact="wd-mode"][data-mode="pct"]').click(); });
   await page.waitForTimeout(500);
-  ok(await page.evaluate(() => document.getElementById('proWd').textContent.includes('mittareina')), '%-strategian huomautus ratkaisijoista');
+  ok(await page.evaluate(() => document.getElementById('proWd').textContent.includes('mittareita, eivät ratkaisuja')), '%-strategian huomautus ratkaisijoista');
   ok(await page.evaluate(() => sim.depletionAge == null), '%-strategia ei ehdy');
   await page.evaluate(() => { document.querySelector('[data-pact="wd-mode"][data-mode="guard"]').click(); });
   await page.waitForTimeout(400);
