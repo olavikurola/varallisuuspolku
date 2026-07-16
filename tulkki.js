@@ -240,8 +240,9 @@
         const nums = [];
         collectNums(ctx, nums);
         aEl.className = 'tk-a';
-        const doubts = renderAnswer(aEl, data.answer, nums);
-        chat.push({ q, a: data.answer });
+        const parsed = extractChange(data.answer);
+        const doubts = renderAnswer(aEl, parsed.text, nums);
+        chat.push({ q, a: parsed.text });
         const meta = document.createElement('div');
         meta.className = 'tk-meta';
         meta.innerHTML =
@@ -253,6 +254,7 @@
           ev.target.disabled = true;
         });
         aEl.appendChild(meta);
+        if (parsed.change) renderChangeCard(parsed.change);
         if (data.usage) {
           $t('tkCost').textContent = `${data.model} · ${data.usage.in}→${data.usage.out} tok`;
         }
@@ -268,6 +270,121 @@
   }
 
   $t('tkForm').addEventListener('submit', (e) => { e.preventDefault(); ask(); });
+
+  /* ---------- Puhu: muutoskomennot esikatseluna ---------- */
+  // Tulkki ei koskaan muuta tilaa suoraan: mallin MUUTOS-rivi validoidaan
+  // whitelistiä vasten, muutos ajetaan esikatseluna (vertailuhaamu = tilanne
+  // ennen kokeilua) ja käyttäjä painaa Pidä tai Palauta. Epäonnistumistila
+  // on aina "ei muutosta". Kentät ja rajat = samat kuin käyttöliittymän
+  // säätimissä; skeeman ulkopuoliset kentät hylätään.
+
+  const FIELDS = {
+    monthly:       { nimi: 'Kuukausisäästö', min: 0, max: 1e6, yks: '€/kk' },
+    startCapital:  { nimi: 'Varallisuus nyt', min: 0, max: 1e9, yks: '€' },
+    savingsGrowth: { nimi: 'Säästön vuosikasvu', min: 0, max: 15, yks: '%/v' },
+    allocStocks:   { nimi: 'Osakepaino', min: 0, max: 100, yks: '%' },
+    allocBonds:    { nimi: 'Korkopaino', min: 0, max: 100, yks: '%' },
+    retAge:        { nimi: 'Eläkeikä', min: 18, max: 100, yks: 'v', ret: 'age' },
+    withdrawal:    { nimi: 'Kuukausitulon tarve', min: 0, max: 1e6, yks: '€/kk', ret: 'withdrawal' },
+    pension:       { nimi: 'Työeläke', min: 0, max: 1e6, yks: '€/kk', ret: 'pension' },
+    pensionAge:    { nimi: 'Työeläkkeen alkamisikä', min: 18, max: 105, yks: 'v', ret: 'pensionAge' },
+  };
+
+  let previewBefore = null; // serialize()-kopio ennen kokeilua (null = ei aktiivista)
+
+  // Irrottaa vastauksen lopusta MUUTOS-rivin; palauttaa {text, change|null}
+  function extractChange(raw) {
+    const m = raw.match(/\nMUUTOS:\s*(\{[\s\S]*\})\s*$/);
+    if (!m) return { text: raw, change: null };
+    const text = raw.slice(0, m.index).trim();
+    try {
+      const o = JSON.parse(m[1]);
+      const list = [];
+      for (const c of (Array.isArray(o.muutokset) ? o.muutokset : []).slice(0, 6)) {
+        const f = FIELDS[c && c.kentta];
+        if (!f || typeof c.arvo !== 'number' || !isFinite(c.arvo)) continue;
+        list.push({ kentta: c.kentta, arvo: Math.min(f.max, Math.max(f.min, c.arvo)) });
+      }
+      if (!list.length) return { text: raw, change: null };
+      return { text, change: { muutokset: list, selite: String(o.selite || '').slice(0, 200) } };
+    } catch (e) { return { text: raw, change: null }; }
+  }
+
+  // Soveltaa muutokset serialisoituun kopioon; palauttaa rivit näytölle
+  function applyChanges(mod, list) {
+    const rows = [];
+    const ret = (mod.events || []).find((e) => e.type === 'retirement');
+    for (const c of list) {
+      const f = FIELDS[c.kentta];
+      let arvo = c.arvo;
+      if (f.ret) {
+        if (!ret) { rows.push({ nimi: f.nimi, ohitettu: 'ei eläketapahtumaa' }); continue; }
+        if (c.kentta === 'retAge') arvo = Math.min(mod.ageEnd - 1, Math.max(mod.ageNow + 1, Math.round(arvo)));
+        const vanha = ret[f.ret];
+        ret[f.ret] = arvo;
+        rows.push({ nimi: f.nimi, vanha, uusi: arvo, yks: f.yks });
+      } else {
+        const vanha = mod[c.kentta];
+        mod[c.kentta] = arvo;
+        rows.push({ nimi: f.nimi, vanha, uusi: arvo, yks: f.yks });
+      }
+    }
+    // osake- ja korkopaino eivät saa ylittää yhteensä sataa
+    if (mod.allocStocks + mod.allocBonds > 100) mod.allocBonds = 100 - mod.allocStocks;
+    return rows;
+  }
+
+  function renderChangeCard(change) {
+    const card = document.createElement('div');
+    card.className = 'tk-change';
+    if (previewBefore) {
+      card.innerHTML = '<div class="tk-ch-note">Päätä ensin edellinen kokeilu (Pidä tai Palauta).</div>';
+      log.appendChild(card);
+      return;
+    }
+    const before = JSON.parse(JSON.stringify(serialize()));
+    const mod = JSON.parse(JSON.stringify(before));
+    const rows = applyChanges(mod, change.muutokset);
+    const applied = rows.filter((r) => !r.ohitettu);
+    if (!applied.length) {
+      card.innerHTML = '<div class="tk-ch-note">Muutosta ei voitu soveltaa suunnitelmaan.</div>';
+      log.appendChild(card);
+      return;
+    }
+    previewBefore = before;
+    setBaseline('Ennen Tulkin kokeilua'); // haamu = tilanne ennen muutosta
+    applySaved(mod);
+    syncInputs();
+    renderAll();
+
+    const fmt = (v) => typeof v === 'number' ? v.toLocaleString('fi-FI') : String(v);
+    card.innerHTML =
+      `<div class="tk-ch-lab">Kokeilu käytössä — vertailu haamuna graafissa</div>` +
+      (change.selite ? `<div class="tk-ch-sel">${esc(change.selite)}</div>` : '') +
+      rows.map((r) => r.ohitettu
+        ? `<div class="tk-ch-row tk-ch-skip">${esc(r.nimi)} · ohitettu (${esc(r.ohitettu)})</div>`
+        : `<div class="tk-ch-row">${esc(r.nimi)}: <s>${fmt(r.vanha)}</s> → <b>${fmt(r.uusi)}</b> ${esc(r.yks)}</div>`).join('') +
+      `<div class="tk-ch-acts">
+        <button type="button" class="tk-keep">Pidä muutos</button>
+        <button type="button" class="tk-mini tk-revert" title="Palauttaa tilanteen ennen kokeilua">Palauta</button>
+      </div>`;
+    card.querySelector('.tk-keep').addEventListener('click', () => {
+      previewBefore = null;
+      card.querySelector('.tk-ch-lab').textContent = 'Muutos pidetty ✓ — vertailukohta jäi graafiin';
+      card.querySelector('.tk-ch-acts').remove();
+    });
+    card.querySelector('.tk-revert').addEventListener('click', () => {
+      applySaved(JSON.parse(JSON.stringify(previewBefore)));
+      previewBefore = null;
+      syncInputs();
+      renderAll();
+      clearBaseline();
+      card.querySelector('.tk-ch-lab').textContent = 'Palautettu ennalleen';
+      card.querySelector('.tk-ch-acts').remove();
+    });
+    log.appendChild(card);
+    log.scrollTop = log.scrollHeight;
+  }
 
   /* ---------- Evalien keräys (golden-setti oikeasta käytöstä) ---------- */
 

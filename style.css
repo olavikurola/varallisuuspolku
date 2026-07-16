@@ -1918,3 +1918,25 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
     border-radius: 16px 16px 0 0;
   }
 }
+
+/* Tulkki: muutoskomennon esikatselukortti */
+.tk-change {
+  border: 1px solid rgba(139, 124, 246, 0.4); border-radius: 11px;
+  padding: 10px 12px; background: rgba(139, 124, 246, 0.08); font-size: 12.5px;
+}
+.tk-ch-lab {
+  font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+  color: #a99cf8; font-weight: 700; margin-bottom: 6px;
+}
+.tk-ch-sel { color: var(--text-dim); margin-bottom: 7px; }
+.tk-ch-row { padding: 2px 0; font-variant-numeric: tabular-nums; }
+.tk-ch-row s { color: var(--text-faint); }
+.tk-ch-row b { color: var(--accent); }
+.tk-ch-skip { color: var(--text-faint); font-style: italic; }
+.tk-ch-note { color: var(--text-dim); }
+.tk-ch-acts { display: flex; gap: 8px; margin-top: 9px; }
+.tk-keep {
+  background: #8b7cf6; color: #140f26; border: 0; border-radius: 8px;
+  font: inherit; font-size: 12px; font-weight: 700; padding: 6px 12px; cursor: pointer;
+}
+.tk-keep:hover { filter: brightness(1.08); }
