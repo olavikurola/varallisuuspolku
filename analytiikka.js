@@ -42,9 +42,9 @@ function svgIn(container, W, H) {
 function fmtCompact(v) {
   const a = Math.abs(v);
   const sign = v < 0 ? '−' : '';
-  if (a >= 1e6) return sign + (a / 1e6).toLocaleString('fi-FI', { maximumFractionDigits: 1 }) + ' M€';
-  if (a >= 1e3) return sign + Math.round(a / 1e3) + ' t€';
-  return sign + Math.round(a) + ' €';
+  if (a >= 1e6) return sign + (a / 1e6).toLocaleString('fi-FI', { maximumFractionDigits: 1 }) + ' M€';
+  if (a >= 1e3) return sign + Math.round(a / 1e3) + ' t€';
+  return sign + Math.round(a) + ' €';
 }
 const text = (svg, x, y, str, cls, anchor) => {
   const t = el('text', { x, y, class: cls || 'an-tick', 'text-anchor': anchor || 'start' }, svg);
@@ -257,7 +257,7 @@ function renderDonut(containerId, slicesIn, note) {
   }
   slices.forEach((s, i) => {
     el('rect', { x: 158, y: 22 + i * 26, width: 11, height: 11, rx: 3, fill: s.c }, svg);
-    text(svg, 176, 32 + i * 26, `${s.l} ${Math.round((s.v / total) * 100)} %`, 'an-tick-strong');
+    text(svg, 176, 32 + i * 26, `${s.l} ${Math.round((s.v / total) * 100)} %`, 'an-tick-strong');
   });
   if (note) text(svg, cx, cy + 4, note, 'an-tick', 'middle');
 }
@@ -266,7 +266,7 @@ function renderDonut(containerId, slicesIn, note) {
 function renderHomeLoan(stats, me) {
   const hl = stats.homeLoan;
   if (!hl) return empty('homeLoan', needMsg(stats.total, stats.kAnon));
-  const pct = (v) => Math.round(v * 100) + ' %';
+  const pct = (v) => Math.round(v * 100) + ' %';
   const myHome = me && me.events.find((e) => e.type === 'home' && e.financing === 'loan');
   const row = (k, q, fmt, mine) =>
     `<div class="an-hl-row"><span class="k">${k}</span><b>${fmt(q.p50)}</b>` +
@@ -276,7 +276,7 @@ function renderHomeLoan(stats, me) {
     row('Asunnon hinta', hl.price, fmtCompact, myHome ? -myHome.amount : null) +
     (hl.downShare ? row('Käsirahan osuus', hl.downShare, pct, myHome && myHome.down != null ? myHome.down / -myHome.amount : null) : '') +
     (hl.years ? row('Laina-aika', hl.years, (v) => Math.round(v) + ' v', myHome ? myHome.years : null) : '') +
-    (hl.rate ? row('Korko-oletus', hl.rate, (v) => v.toLocaleString('fi-FI', { maximumFractionDigits: 1 }) + ' %', myHome ? myHome.rate : null) : '') +
+    (hl.rate ? row('Korko-oletus', hl.rate, (v) => v.toLocaleString('fi-FI', { maximumFractionDigits: 1 }) + ' %', myHome ? myHome.rate : null) : '') +
     `<p class="an-note" style="margin-top:10px">Suunnitelmien asunnonostot lainalla (n = ${hl.n}).</p>`;
 }
 
@@ -286,14 +286,14 @@ function renderRealism(stats, me) {
     ? stats.groups[me.group] : stats.groups.all;
   if (!g || !g.shares) return empty('realism', needMsg(stats.total, stats.kAnon));
   const bar = (k, v) =>
-    `<div class="an-share"><span class="k">${k}</span><span class="sbar"><i style="width:${Math.round(v * 100)}%"></i></span><b>${Math.round(v * 100)} %</b></div>`;
+    `<div class="an-share"><span class="k">${k}</span><span class="sbar"><i style="width:${Math.round(v * 100)}%"></i></span><b>${Math.round(v * 100)} %</b></div>`;
   let html = bar('Myyntivoittovero mallinnettu', g.shares.tax) +
     bar('Ikäsidonnainen allokaatio', g.shares.glide) +
     bar('Inflaatiokorjaus käytössä', g.shares.real);
   if (g.successProb) {
     html += `<div class="an-hl-row" style="margin-top:12px"><span class="k">Onnistumistodennäköisyys</span>` +
-      `<b>${Math.round(g.successProb.p50 * 100)} %</b>` +
-      `<span class="rng">P25–P75: ${Math.round(g.successProb.p25 * 100)}–${Math.round(g.successProb.p75 * 100)} %</span></div>`;
+      `<b>${Math.round(g.successProb.p50 * 100)} %</b>` +
+      `<span class="rng">P25–P75: ${Math.round(g.successProb.p25 * 100)}–${Math.round(g.successProb.p75 * 100)} %</span></div>`;
   }
   $('realism').innerHTML = html + `<p class="an-note" style="margin-top:10px">Osuus suunnitelmista${me && me.group && g !== stats.groups.all ? ` ikäryhmässä ${me.group}` : ''}.</p>`;
 }
@@ -396,20 +396,20 @@ function renderGate(me) {
 
   // Tunnuslukutiilet
   const tiles = [{ k: 'Jaettuja suunnitelmia', v: String(stats.total) }];
-  if (all.monthly) tiles.push({ k: 'Mediaani kk-säästö', v: `${Math.round(all.monthly.p50).toLocaleString('fi-FI')} €/kk` });
+  if (all.monthly) tiles.push({ k: 'Mediaani kk-säästö', v: `${Math.round(all.monthly.p50).toLocaleString('fi-FI')} €/kk` });
   if (all.retireAge) tiles.push({ k: 'Mediaani eläkeikätavoite', v: `${Math.round(all.retireAge.p50)} v` });
   if (all.events) {
     const top = Object.entries(all.events).filter(([t]) => t !== 'retirement').sort((a, b) => b[1] - a[1])[0];
-    if (top && top[1] > 0) tiles.push({ k: 'Yleisin tapahtuma', v: `${ICONS[top[0]]} ${Math.round(top[1] * 100)} %` });
+    if (top && top[1] > 0) tiles.push({ k: 'Yleisin tapahtuma', v: `${ICONS[top[0]]} ${Math.round(top[1] * 100)} %` });
   }
   $('anTiles').innerHTML = tiles.map((c) => `<div class="sum-tile"><div class="k">${c.k}</div><div class="v">${c.v}</div></div>`).join('');
 
   renderHero(stats, me);
   renderRidgeline(stats, me);
   renderQuartCols('savingsChart', stats, 'monthly', me, me ? me.monthly : null,
-    (v) => v >= 1950 ? fmtCompact(v) : Math.round(v / 10) * 10 + ' €');
+    (v) => v >= 1950 ? fmtCompact(v) : Math.round(v / 10) * 10 + ' €');
   renderQuartCols('stocksChart', stats, 'stocks', me, me ? me.stocks : null,
-    (v) => Math.round(v) + ' %', (age) => 110 - age, 100);
+    (v) => Math.round(v) + ' %', (age) => 110 - age, 100);
   renderRetireHist(stats, me);
   renderPenCoverage(stats, me);
 
@@ -425,9 +425,9 @@ function renderGate(me) {
   if (gd.confs) {
     renderDonut('confDonut', [
       { l: 'Odotettu polku', v: gd.confs.none, c: '#8fa0c4' },
-      { l: '75 %', v: gd.confs.c75, c: '#2dd4bf' },
-      { l: '85 %', v: gd.confs.c85, c: '#8b7cf6' },
-      { l: '95 %', v: gd.confs.c95, c: '#fb923c' },
+      { l: '75 %', v: gd.confs.c75, c: '#2dd4bf' },
+      { l: '85 %', v: gd.confs.c85, c: '#8b7cf6' },
+      { l: '95 %', v: gd.confs.c95, c: '#fb923c' },
     ]);
   } else empty('confDonut', needMsg(stats.total, stats.kAnon));
 

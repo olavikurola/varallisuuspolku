@@ -49,16 +49,16 @@ const state = {
   allocBonds: 20,
   glide: false,
   real: false,
-  inflation: 2,       // inflaatio-oletus %/v (käytössä kun real=true; 2 % = ennallaan)
+  inflation: 2,       // inflaatio-oletus %/v (käytössä kun real=true; 2 % = ennallaan)
   tax: true,          // myyntivoittovero nostoissa (oletuksena päällä uusille)
   acct: 'aot',        // sijoitustili: aot | ost (osakesäästötili) | ins (vakuutuskuori)
-  feePct: 0,          // sijoituskulut %/v (rahastojen TER, kaupankäynti)
-  wrapFee: 0,         // vakuutuskuoren vuosikulu %/v (vain acct 'ins')
-  divYield: 0,        // suorien osakkeiden osinkotuotto %/v (0 = kasvurahastot)
+  feePct: 0,          // sijoituskulut %/v (rahastojen TER, kaupankäynti)
+  wrapFee: 0,         // vakuutuskuoren vuosikulu %/v (vain acct 'ins')
+  divYield: 0,        // suorien osakkeiden osinkotuotto %/v (0 = kasvurahastot)
   proOn: false,       // Pro-tila: ammattilaissäädöt (laskenta.js/proOf)
   pro: null,
-  income: null,       // Säästökyky-apuri: nettotulot €/kk (valinnainen)
-  expenses: null,     // ja menot €/kk — eläketarpeen oletus ja säästöaste
+  income: null,       // Säästökyky-apuri: nettotulot €/kk (valinnainen)
+  expenses: null,     // ja menot €/kk — eläketarpeen oletus ja säästöaste
   events: [
     { id: idSeq++, type: 'home', age: 35, amount: -220000, financing: 'loan', down: 33000, rate: 3.5, years: 25, isAsset: true, appr: 2.0 },
     { id: idSeq++, type: 'car',  age: 45, amount: -25000,  financing: 'loan', down: 5000,  rate: 4.5, years: 6,  isAsset: true, appr: -10.0 },
@@ -76,12 +76,12 @@ const fmtEur = (v) => eurFmt.format(Math.round(v));
 function fmtCompact(v) {
   const a = Math.abs(v);
   const sign = v < 0 ? '−' : '';
-  if (a >= 1e6) return sign + (a / 1e6).toLocaleString('fi-FI', { maximumFractionDigits: a >= 1e7 ? 0 : 1 }) + ' M€';
-  if (a >= 1e3) return sign + Math.round(a / 1e3) + ' t€';
-  return sign + Math.round(a) + ' €';
+  if (a >= 1e6) return sign + (a / 1e6).toLocaleString('fi-FI', { maximumFractionDigits: a >= 1e7 ? 0 : 1 }) + ' M€';
+  if (a >= 1e3) return sign + Math.round(a / 1e3) + ' t€';
+  return sign + Math.round(a) + ' €';
 }
 
-const pctFmt = (v) => (v * 100).toLocaleString('fi-FI', { maximumFractionDigits: 1 }) + ' %';
+const pctFmt = (v) => (v * 100).toLocaleString('fi-FI', { maximumFractionDigits: 1 }) + ' %';
 
 const NAME_MAX = 40;
 // Tapahtuman näyttönimi: oma nimi tai tyypin oletusnimi
@@ -724,7 +724,7 @@ function renderBalance() {
   }
   el('line', { x1: plot.l, y1: zeroY, x2: plot.l + plot.w, y2: zeroY, stroke: 'rgba(148,168,220,0.35)', 'stroke-width': 1 }, balSvg);
   const zl = el('text', { x: plot.l - 10, y: zeroY + 4, 'text-anchor': 'end', class: 'axis-text' }, balSvg);
-  zl.textContent = '0 €';
+  zl.textContent = '0 €';
 
   /* vuosipylväät */
   const y0 = Math.ceil(a0), y1 = Math.floor(a1);
@@ -827,7 +827,7 @@ function renderDist() {
 
   let html = slices.map((s) =>
     `<div class="dist-row"><span class="dist-dot" style="background:${s.c}"></span>` +
-    `<span class="dl">${s.l}</span><span class="dp">${Math.round((s.v / total) * 100)} %</span>` +
+    `<span class="dl">${s.l}</span><span class="dp">${Math.round((s.v / total) * 100)} %</span>` +
     `<span class="dv">${fmtCompact(s.v)}</span></div>`
   ).join('');
   if (sim.debt[m] > 0.5) {
@@ -1049,7 +1049,7 @@ function openPopover(id) {
       (g !== 'manual'
         ? `<div class="field"><span class="field-label">Varmuustaso <small>osuus markkinapoluista, joilla tavoite onnistuu</small></span>` +
           `<div class="seg seg-goal" id="pv-confs">` +
-          [[null, 'Odotettu'], [0.75, '75 %'], [0.85, '85 %'], [0.95, '95 %']]
+          [[null, 'Odotettu'], [0.75, '75 %'], [0.85, '85 %'], [0.95, '95 %']]
             .map(([k, lbl]) => `<button type="button" data-conf="${k == null ? '' : k}" class="${(ev.conf || null) === k ? 'on' : ''}">${lbl}</button>`).join('') +
           `</div></div>`
         : '') +
@@ -1610,7 +1610,7 @@ updateHud = function () {
     items.push(`<div class="hud-m${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div>${dh}</div>`);
   };
   metric('Onnistuminen',
-    curP != null ? Math.round(curP * 100) + ' %' : '–',
+    curP != null ? Math.round(curP * 100) + ' %' : '–',
     curP != null && ghostP != null ? Math.round(curP * 100) - Math.round(ghostP * 100) : null,
     1, (x) => `${x} %-yks`, sim.successStale ? ' stale' : '');
   metric('Varallisuus eläkeiässä',
@@ -1618,12 +1618,12 @@ updateHud = function () {
     sim.wAtRet != null && g && g.wAtRet != null ? sim.wAtRet - g.wAtRet : null,
     500, fmtCompact, '');
   metric('Kestävä tulo',
-    sim.sustainableWd != null ? `${Math.round(sim.sustainableWd).toLocaleString('fi-FI')} €/kk` : '–',
+    sim.sustainableWd != null ? `${Math.round(sim.sustainableWd).toLocaleString('fi-FI')} €/kk` : '–',
     sim.sustainableWd != null && g && g.sustainableWd != null ? sim.sustainableWd - g.sustainableWd : null,
-    20, (x) => `${Math.round(x).toLocaleString('fi-FI')} €/kk`, '');
+    20, (x) => `${Math.round(x).toLocaleString('fi-FI')} €/kk`, '');
   if (familyOn()) {
     metric('Perheen onnistumis-%',
-      jointMc ? Math.round(jointMc.successProb * 100) + ' %' : '…',
+      jointMc ? Math.round(jointMc.successProb * 100) + ' %' : '…',
       null, 1, (x) => x, sim.successStale ? ' stale' : '');
   }
   box.innerHTML = items.join('');
@@ -1682,12 +1682,12 @@ function selInfo() {
   if (s.kind === 'acc') {
     return { ...at(Math.max(6, Math.round(mRet / 2))),
       aria: `Kuukausisäästö ${fmtNum(state.monthly)} euroa kuukaudessa`,
-      html: `<div class="dchip-row"><b>Kuukausisäästö</b> ${fmtNum(state.monthly)} €/kk</div>${hint}` };
+      html: `<div class="dchip-row"><b>Kuukausisäästö</b> ${fmtNum(state.monthly)} €/kk</div>${hint}` };
   }
   if (s.kind === 'wd') {
     return { ...at(mRet + Math.round((months - mRet) / 2)),
       aria: `Kuukausitulo eläkkeellä ${fmtNum(sim.withdrawal)} euroa kuukaudessa`,
-      html: `<div class="dchip-row"><b>Kuukausitulo</b> ${fmtNum(sim.withdrawal)} €/kk</div>${hint}` };
+      html: `<div class="dchip-row"><b>Kuukausitulo</b> ${fmtNum(sim.withdrawal)} €/kk</div>${hint}` };
   }
   if (s.kind === 'end') {
     return { ...at(months),
@@ -2251,12 +2251,24 @@ function drawGuides() {
   const gy = clamp(scaleY(sim.exp[mG]), plot.t + 44, plot.t + plot.h - 36);
 
   const arrow = (parent, d) => el('path', { d, class: 'guide-arrow-path' }, parent);
+  // Kapealla kuvaajalla opasteet voivat osua toistensa päälle — väistetään ylös
+  const placedLabels = [];
   const label = (parent, x, y, txt) => {
     const t = el('text', {
       x: clamp(x, plot.l + 100, plot.l + plot.w - 100), y,
       class: 'guide-label', 'text-anchor': 'middle',
     }, parent);
     t.textContent = txt;
+    let b = t.getBBox();
+    const hits = () => placedLabels.some((p) =>
+      b.x < p.x + p.width + 10 && p.x < b.x + b.width + 10 &&
+      b.y < p.y + p.height + 6 && p.y < b.y + b.height + 6);
+    for (let i = 0; hits() && i < 10 && y - 16 > plot.t + 14; i++) {
+      y -= 16;
+      t.setAttribute('y', y);
+      b = t.getBBox();
+    }
+    placedLabels.push(b);
   };
 
   // Kertymäkäyrä: kahvarengas käyräpisteessä + pystynuoli sen läpi
@@ -2361,7 +2373,7 @@ function goalSelInfo(ev) {
     `<div class="dchip-row">${reach != null
       ? `saavutat summan iässä <b>${fmtAge(reach)}</b>`
       : 'odotuspolku ei saavuta summaa suunnitelmassa'}</div>` +
-    (share != null ? `<div class="dchip-row"><b>${Math.round(share * 100)} %</b> poluista ylittää tämän${sim.successStale ? ' (päivittyy…)' : ''}</div>` : '') +
+    (share != null ? `<div class="dchip-row"><b>${Math.round(share * 100)} %</b> poluista ylittää tämän${sim.successStale ? ' (päivittyy…)' : ''}</div>` : '') +
     '<div class="dchip-actions"><button data-act="solve">Ratkaise</button>' +
     '<button data-act="edit">Muokkaa</button><button data-act="del" class="danger">Poista</button></div>';
   return { x, y,
@@ -2421,7 +2433,7 @@ function goalSolve() {
     goalSolvePendingConf = conf;
     const info = selInfo();
     if (info) chipShowAt(`<div class="dchip-row"><b>Ratkaistaan…</b> ${Math.round(conf * 100)} % varmuudella</div>`
-      + '<div class="dchip-note">0 %</div>', info.x, info.y, false);
+      + '<div class="dchip-note">0 %</div>', info.x, info.y, false);
     announce('Ratkaistaan varmuustasolla — tämä kestää hetken');
     mcWorker.postMessage({ task: 'solveGoals', seq: ++mcSeq, st: serialize(), points, conf, paths: MC_FULL });
     return;
@@ -2443,7 +2455,7 @@ function applyGoalSolution(r, conf, goals) {
   renderAll();
   updateSelChip();
   const binding = goals && r.bindingIndex >= 0 ? goals[r.bindingIndex] : null;
-  const msg = `Kuukausisäästö ${fmtNum(state.monthly)} €/kk` +
+  const msg = `Kuukausisäästö ${fmtNum(state.monthly)} €/kk` +
     (conf ? ` (${Math.round(conf * 100)} % varmuus)` : '') +
     (binding && goals.length > 1 ? ` — tiukin: ${evLabel(binding)} ${fmtCompact(binding.amount)} · ${Math.round(binding.age)} v` : '');
   toast(msg);
@@ -2453,7 +2465,7 @@ function applyGoalSolution(r, conf, goals) {
 onSolveGoalsMsg = function (d) {
   if (d.progress != null) {
     const note = $('dchip').querySelector('.dchip-note');
-    if (note && !$('dchip').hidden) note.textContent = Math.round(d.progress * 100) + ' %';
+    if (note && !$('dchip').hidden) note.textContent = Math.round(d.progress * 100) + ' %';
     return;
   }
   const conf = goalSolvePendingConf;
@@ -2556,7 +2568,7 @@ function renderStats() {
   if (familyOn()) {
     cards.push({
       k: 'Perheen onnistumis-%',
-      v: jointMc ? Math.round(jointMc.successProb * 100) + ' %' : '…',
+      v: jointMc ? Math.round(jointMc.successProb * 100) + ' %' : '…',
       cls: 'accent',
       s: 'sama markkinamyrsky molemmille · molempien varat riittävät',
     });
@@ -2584,7 +2596,7 @@ function renderStats() {
     k: 'Sijoitettu yhteensä',
     v: fmtEur(s.deposits),
     cls: '',
-    s: `${fmtEur(state.monthly)}/kk${state.savingsGrowth > 0 ? ` (+${state.savingsGrowth.toLocaleString('fi-FI')} %/v)` : ''} + alkupääoma`,
+    s: `${fmtEur(state.monthly)}/kk${state.savingsGrowth > 0 ? ` (+${state.savingsGrowth.toLocaleString('fi-FI')} %/v)` : ''} + alkupääoma`,
   });
   const confTxt = s.conf ? `${Math.round(s.conf * 100)} % varmuudella` : null;
   const p = s.successProb != null ? Math.round(s.successProb * 100) : null;
@@ -2602,11 +2614,11 @@ function renderStats() {
   // Riittävyys ja onnistumis-% samassa kortissa — kertovat samaa asiaa
   const pDelta = p != null && ghostP != null ? dRow(p, Math.round(ghostP * 100), (x) => `${x} %-yks`, 1) : '';
   if (s.goal === 'withdrawal' && s.goalUnreachable) {
-    cards.push({ k: 'Kestävä kuukausitulo', v: 'Ei toteudu', cls: 'bad', s: `edes 0 €/kk ei riitä ${confTxt || ''}`.trim() });
+    cards.push({ k: 'Kestävä kuukausitulo', v: 'Ei toteudu', cls: 'bad', s: `edes 0 €/kk ei riitä ${confTxt || ''}`.trim() });
   } else if (s.solvedWithdrawal != null && (s.depletionAge == null || s.depletionAge >= s.a1 - 1)) {
     cards.push({ k: 'Kestävä kuukausitulo', v: `${fmtEur(s.solvedWithdrawal)}/kk`, cls: 'accent',
       s: [s.pension > 0 ? `sis. työeläke ${fmtEur(s.pension)}/kk` : null, confTxt || pTxt].filter(Boolean).join(' · ') || `varat loppuun ${Math.round(s.a1)} v mennessä`,
-      d: dRow(s.solvedWithdrawal, g && (g.solvedWithdrawal != null ? g.solvedWithdrawal : g.sustainableWd), (x) => `${Math.round(x).toLocaleString('fi-FI')} €/kk`, 20) });
+      d: dRow(s.solvedWithdrawal, g && (g.solvedWithdrawal != null ? g.solvedWithdrawal : g.sustainableWd), (x) => `${Math.round(x).toLocaleString('fi-FI')} €/kk`, 20) });
   } else if (s.depletionAge != null) {
     // %-nostossa "ehtyminen" tarkoittaa tulotarpeen alittumista (salkku ei ehdy)
     const pmWd = proOf(state);
@@ -2890,7 +2902,7 @@ function openDonateModal() {
   let html = `<h2>Perustiedot</h2>` +
     row('Ikä nyt / suunnitelman loppu', `${p.ageNow} v / ${p.ageEnd} v`) +
     row('Varallisuus nyt', fmtEur(p.startCapital)) +
-    row('Kuukausisäästö', `${fmtEur(p.monthly)}/kk` + (p.savingsGrowth ? ` (+${p.savingsGrowth.toLocaleString('fi-FI')} %/v)` : '')) +
+    row('Kuukausisäästö', `${fmtEur(p.monthly)}/kk` + (p.savingsGrowth ? ` (+${p.savingsGrowth.toLocaleString('fi-FI')} %/v)` : '')) +
     row('Allokaatio', `${p.alloc.stocks} % osakkeet · ${p.alloc.bonds} % korot`) +
     row('Kytkimet', [p.glide && 'ikäsidonnainen', p.real && 'inflaatiokorjattu', p.tax && 'myyntivoittovero'].filter(Boolean).join(' · ') || '—');
   html += `<h2>Tapahtumat (vain tyyppi, ikä ja summat — ei nimiä)</h2>`;
@@ -2900,7 +2912,7 @@ function openDonateModal() {
     if (e.type === 'retirement') {
       desc = `tulotarve ${fmtEur(e.withdrawal)}/kk · työeläke ${fmtEur(e.pension)}/kk` +
         (e.goal && e.goal !== 'manual' ? ` · tavoite: ${{ withdrawal: 'kestävä tulo', age: 'eläkeikä', saving: 'säästö' }[e.goal]}` : '') +
-        (e.conf ? ` · ${Math.round(e.conf * 100)} %` : '');
+        (e.conf ? ` · ${Math.round(e.conf * 100)} %` : '');
     } else {
       desc = [
         e.amount ? fmtEur(e.amount) : null,
@@ -2915,7 +2927,7 @@ function openDonateModal() {
     html += `<h2>Laskennan tulokset</h2>` +
       (p.derived.wAtRet != null ? row('Varallisuus eläkkeellä', fmtEur(p.derived.wAtRet)) : '') +
       row('Sijoitukset lopussa', fmtEur(p.derived.wEnd)) +
-      (p.derived.successProb != null ? row('Onnistumistodennäköisyys', Math.round(p.derived.successProb * 100) + ' %') : '');
+      (p.derived.successProb != null ? row('Onnistumistodennäköisyys', Math.round(p.derived.successProb * 100) + ' %') : '');
   }
   $('donatePreview').innerHTML = html;
   $('donateJson').textContent = JSON.stringify(pendingPayload, null, 2);
@@ -3015,7 +3027,7 @@ async function openCompareModal() {
   };
   add('Kuukausisäästö', g.monthly, state.monthly, (v) => `${fmtEur(v)}/kk`);
   add('Varallisuus nyt', g.startCapital, state.startCapital, fmtCompact);
-  add('Osakepaino', g.stocks, state.allocStocks, (v) => Math.round(v) + ' %');
+  add('Osakepaino', g.stocks, state.allocStocks, (v) => Math.round(v) + ' %');
   if (retire) {
     add('Eläkeikätavoite', g.retireAge, Math.round(retire.age), (v) => Math.round(v) + ' v');
     add('Kuukausitulo eläkkeellä', g.withdrawal, retire.withdrawal, (v) => `${fmtEur(v)}/kk`);
@@ -3029,7 +3041,7 @@ async function openCompareModal() {
       .filter(([t, share]) => share > 0 && t !== 'retirement')
       .sort((a, b) => b[1] - a[1]).slice(0, 6);
     evHtml = `<h2>Yleisimmät suunnitelmien tapahtumat (${gLabel.toLowerCase()})</h2><div class="cmp-events">` +
-      top.map(([t, share]) => `<span class="cmp-chip">${EVENT_TYPES[t].icon} ${EVENT_TYPES[t].label} <b>${Math.round(share * 100)} %</b></span>`).join('') +
+      top.map(([t, share]) => `<span class="cmp-chip">${EVENT_TYPES[t].icon} ${EVENT_TYPES[t].label} <b>${Math.round(share * 100)} %</b></span>`).join('') +
       `</div>`;
   }
 
@@ -3066,7 +3078,7 @@ function renderEventList() {
     if (ev.shared) loanBadge += '<span class="loan-badge share-badge">½ jaettu</span>';
     if (ev.type !== 'retirement' && ev.recMonthly) loanBadge += '<span class="loan-badge rec-badge">toistuva</span>';
     if (ev.isAsset && ev.sellAge != null) loanBadge += `<span class="loan-badge sale-badge">myynti ${Math.round(ev.sellAge)} v</span>`;
-    const goalBadge = { withdrawal: '→ 0 €', age: 'aikaisin', saving: 'tavoite' }[g];
+    const goalBadge = { withdrawal: '→ 0 €', age: 'aikaisin', saving: 'tavoite' }[g];
     if (goalBadge) loanBadge = `<span class="loan-badge zero-badge">${goalBadge}</span>`;
     if (ev.type === 'goal') loanBadge = '<span class="loan-badge goal-badge">🎯 tavoite</span>';
     row.innerHTML =
@@ -3097,20 +3109,20 @@ function renderEventList() {
 
 function updateAllocUI() {
   const a = baseAlloc(state);
-  $('stocksVal').textContent = Math.round(a.s * 100) + ' %';
-  $('bondsVal').textContent = Math.round(a.b * 100) + ' %';
+  $('stocksVal').textContent = Math.round(a.s * 100) + ' %';
+  $('bondsVal').textContent = Math.round(a.b * 100) + ' %';
   const pAl = proOf(state);
   let mu, sigma, extra = '';
   if (pAl) {
     // Pro: omat luokat vähentävät käteisjäännöstä; μ/σ kovarianssilla ja TER:llä
     const cs = proCustomSum();
-    $('cashVal').textContent = Math.max(0, Math.round(100 - a.s * 100 - a.b * 100 - cs)) + ' %';
+    $('cashVal').textContent = Math.max(0, Math.round(100 - a.s * 100 - a.b * 100 - cs)) + ' %';
     const classes = classesOf(state);
     const corrM = pAl.corr ? ensurePSD(corrMatrixOf(classes.length, pAl.corr)).M : null;
     ({ mu, sigma } = portfolioStatsPro(weightsAt(state.ageNow, null, state), classes, corrM, pAl.ter));
-    if (cs > 0) extra = ` · omat luokat ${Math.round(cs)} %`;
+    if (cs > 0) extra = ` · omat luokat ${Math.round(cs)} %`;
   } else {
-    $('cashVal').textContent = Math.round(a.c * 100) + ' %';
+    $('cashVal').textContent = Math.round(a.c * 100) + ' %';
     ({ mu, sigma } = portfolioStats(a));
   }
   const txt = `Tuotto-odotus <b>${pctFmt(mu)}/v</b> · heilunta ±${pctFmt(sigma)}${extra}`;
@@ -3426,7 +3438,7 @@ function buildProMkt() {
   const classes = classesOf(state);
   const custom = state.pro.assets || [];
   const wC = Math.max(0, 100 - state.allocStocks - state.allocBonds - proCustomSum());
-  let h = '<div class="pgrid phead"><span>Luokka</span><span>Tuotto %</span><span>Heilunta %</span><span>Paino %</span><span></span></div>';
+  let h = '<div class="pgrid phead"><span>Luokka</span><span>Tuotto %</span><span>Heilunta %</span><span>Paino %</span><span></span></div>';
   const baseW = [state.allocStocks + '', state.allocBonds + '', wC + ''];
   ['stocks', 'bonds', 'cash'].forEach((k, i) => {
     h += `<div class="pgrid"><span class="pl">${classes[i].name}</span>`
@@ -3443,7 +3455,7 @@ function buildProMkt() {
   });
   if (custom.length < 3) h += '<button class="btn ghost btn-mini" data-pact="class-add">＋ Oma omaisuusluokka</button>';
 
-  h += `<div class="prow"><label class="pinline">Inflaatio-oletus ${pin('infl', p.infl, 0, 10, 0.1)} %/v</label>`
+  h += `<div class="prow"><label class="pinline">Inflaatio-oletus ${pin('infl', p.infl, 0, 10, 0.1)} %/v</label>`
     + `<label class="pinline">Jakauma <select class="pin psel" data-pact="dist">`
     + `<option value="normal"${p.mc.dist === 'normal' ? ' selected' : ''}>Normaali</option>`
     + `<option value="t"${p.mc.dist === 't' ? ' selected' : ''}>Paksuhäntäinen (t)</option></select></label>`
@@ -3456,7 +3468,7 @@ function buildProMkt() {
     const g = p.glide;
     h += `<div class="prow"><label class="pinline">Alkaa ${pin('glide.from', g.from, 18, 100, 1)} v</label>`
       + `<label class="pinline">Päättyy ${pin('glide.to', g.to, 19, 105, 1)} v</label>`
-      + `<label class="pinline">Osakepainosta jäljellä ${pin('glide.endF', g.endF, 0, 100, 5)} %</label></div>`;
+      + `<label class="pinline">Osakepainosta jäljellä ${pin('glide.endF', g.endF, 0, 100, 5)} %</label></div>`;
   }
 
   h += `<label class="toggle ptog"><input type="checkbox" ${state.pro.corr ? 'checked' : ''} data-pact="corr-on" /><span class="switch"></span>`
@@ -3483,10 +3495,10 @@ function buildProMkt() {
 function buildProTax() {
   const p = proOf(state) || defaultPro();
   $('proTax').innerHTML =
-    `<div class="prow"><label class="pinline">Juoksevat kulut (TER) ${pin('ter', p.ter, 0, 3, 0.05)} %/v</label></div>`
-    + `<div class="prow"><label class="pinline">Pääomatulovero ${pin('tax.low', p.tax.low, 0, 70, 1)} %</label>`
-    + `<label class="pinline">korotettu ${pin('tax.high', p.tax.high, 0, 70, 1)} %</label>`
-    + `<label class="pinline">rajalta ${pin('tax.bracket', p.tax.bracket, 0, 1000000, 1000)} €/v</label></div>`
+    `<div class="prow"><label class="pinline">Juoksevat kulut (TER) ${pin('ter', p.ter, 0, 3, 0.05)} %/v</label></div>`
+    + `<div class="prow"><label class="pinline">Pääomatulovero ${pin('tax.low', p.tax.low, 0, 70, 1)} %</label>`
+    + `<label class="pinline">korotettu ${pin('tax.high', p.tax.high, 0, 70, 1)} %</label>`
+    + `<label class="pinline">rajalta ${pin('tax.bracket', p.tax.bracket, 0, 1000000, 1000)} €/v</label></div>`
     + `<label class="toggle ptog"><input type="checkbox" ${p.tax.acq ? 'checked' : ''} data-pp="tax.acq" /><span class="switch"></span>`
     + '<span>Hankintameno-olettama nostoihin <small>verotettavaa voittoa rajaa 40/20 %-olettama — vain arvo-osuustilillä</small></span></label>';
 }
@@ -3497,11 +3509,11 @@ function buildProWd() {
     .map(([k, l]) => `<button type="button" class="${p.wd.mode === k ? 'on' : ''}" data-pact="wd-mode" data-mode="${k}">${l}</button>`).join('');
   let h = `<div class="field"><span class="field-label">Strategia</span><div class="seg seg-goal">${seg}</div></div>`;
   if (p.wd.mode === 'pct') {
-    h += `<div class="prow"><label class="pinline">Nosto ${pin('wd.pct', p.wd.pct, 0.5, 20, 0.1)} % salkusta /v</label></div>`
+    h += `<div class="prow"><label class="pinline">Nosto ${pin('wd.pct', p.wd.pct, 0.5, 20, 0.1)} % salkusta /v</label></div>`
       + '<p class="note">Tulo joustaa markkinoiden mukana eikä salkku ehdy. Onnistumis-% mittaa siksi tulotarpeen täyttymistä: suunnitelma epäonnistuu, jos nosto + työeläke alittaa eläketapahtuman kuukausitulon tarpeen. Tarve 0 € = ei rajaa. Eläketavoitteet ja Kestävä tulo ovat tässä strategiassa mittareita, eivät ratkaisuja.</p>';
   } else if (p.wd.mode === 'guard') {
-    h += `<div class="prow"><label class="pinline">Putki ±${pin('wd.band', p.wd.band, 5, 50, 1)} %</label>`
-      + `<label class="pinline">Säätöaskel ${pin('wd.adj', p.wd.adj, 1, 30, 1)} %</label></div>`
+    h += `<div class="prow"><label class="pinline">Putki ±${pin('wd.band', p.wd.band, 5, 50, 1)} %</label>`
+      + `<label class="pinline">Säätöaskel ${pin('wd.adj', p.wd.adj, 1, 30, 1)} %</label></div>`
       + '<p class="note">Kuukausituloa leikataan tai korotetaan kerran vuodessa, jos nostoprosentti karkaa aloitustason putkesta. Perustaso on eläketapahtuman kuukausitulo.</p>';
   } else {
     h += '<p class="note">Kiinteä kuukausitulo — perusversion käytös. Eläketavoitteet ja piirtopöydän vedot toimivat täysillään.</p>';
@@ -3513,7 +3525,7 @@ function buildProWd() {
     (proOf(state).phases || []).forEach((r, i) => {
       h += `<div class="prow"><span class="pl phl">${labels[i] || ''}</span>`
         + (i < 2 ? `<label class="pinline">ikään ${pin(`phases.${i}.to`, r.to, 18, 200, 1)} v</label>` : '<span class="pinline">siitä eteenpäin</span>')
-        + `<label class="pinline">taso ${pin(`phases.${i}.mult`, r.mult, 10, 150, 5)} %</label></div>`;
+        + `<label class="pinline">taso ${pin(`phases.${i}.mult`, r.mult, 10, 150, 5)} %</label></div>`;
     });
   }
   $('proWd').innerHTML = h;
@@ -3534,7 +3546,7 @@ function buildProMc() {
     + '<div class="field"><span class="field-label">Stressiskenaariot graafiin</span></div>';
   for (const [key, def] of Object.entries(STRESS_DEFS)) {
     h += `<label class="toggle ptog"><input type="checkbox" ${p.mc.stress.includes(key) ? 'checked' : ''} data-pact="stress" data-key="${key}" /><span class="switch"></span>`
-      + `<span>${def.name} <small>${def.months / 12} v · ${Math.round(def.annual * 100)} %/v eläkkeelle jäännistä</small></span></label>`;
+      + `<span>${def.name} <small>${def.months / 12} v · ${Math.round(def.annual * 100)} %/v eläkkeelle jäännistä</small></span></label>`;
   }
   $('proMc').innerHTML = h;
 }
@@ -3729,7 +3741,7 @@ function renderProAna() {
     for (let m = 1; m <= months; m += 3) d += ` L ${xs(m).toFixed(1)} ${ys(sim.ruinCurve[m]).toFixed(1)}`;
     ruinSvg.innerHTML =
       `<line x1="${l}" y1="${ys(0)}" x2="${W - 6}" y2="${ys(0)}" class="ana-axis"/>`
-      + `<text x="${l - 4}" y="${ys(maxR / 1.15) + 3}" class="ana-tick" text-anchor="end">${Math.round(maxR / 1.15 * 100)} %</text>`
+      + `<text x="${l - 4}" y="${ys(maxR / 1.15) + 3}" class="ana-tick" text-anchor="end">${Math.round(maxR / 1.15 * 100)} %</text>`
       + `<text x="${l - 4}" y="${ys(0) + 3}" class="ana-tick" text-anchor="end">0</text>`
       + `<text x="${xs(0)}" y="${H - 3}" class="ana-tick">${Math.round(a0)} v</text>`
       + `<text x="${xs(months)}" y="${H - 3}" class="ana-tick" text-anchor="end">${Math.round(a1)} v</text>`
@@ -3787,24 +3799,24 @@ function proSummaryHtml(s) {
   };
   const names = { stocks: 'Osakkeet', bonds: 'Korot', cash: 'Käteinen' };
   for (const k of ['stocks', 'bonds', 'cash']) {
-    dev(`${names[k]}: tuotto-odotus`, p.mu[k].toLocaleString('fi-FI'), d.mu[k].toLocaleString('fi-FI'), ' %/v');
-    dev(`${names[k]}: heilunta`, p.sigma[k].toLocaleString('fi-FI'), d.sigma[k].toLocaleString('fi-FI'), ' %');
+    dev(`${names[k]}: tuotto-odotus`, p.mu[k].toLocaleString('fi-FI'), d.mu[k].toLocaleString('fi-FI'), ' %/v');
+    dev(`${names[k]}: heilunta`, p.sigma[k].toLocaleString('fi-FI'), d.sigma[k].toLocaleString('fi-FI'), ' %');
   }
   p.assets.forEach((a) => {
-    rows.push(`<tr><td>Oma luokka: ${escapeHtml(a.name)}</td><td class="num">${a.mu} %/v · ±${a.sigma} % · paino ${a.weight} %</td><td class="num">—</td></tr>`);
+    rows.push(`<tr><td>Oma luokka: ${escapeHtml(a.name)}</td><td class="num">${a.mu} %/v · ±${a.sigma} % · paino ${a.weight} %</td><td class="num">—</td></tr>`);
   });
-  dev('Inflaatio-oletus', p.infl.toLocaleString('fi-FI'), d.infl.toLocaleString('fi-FI'), ' %/v');
-  dev('Juoksevat kulut (TER)', p.ter.toLocaleString('fi-FI'), '0', ' %/v');
-  dev('Pääomatulovero', `${p.tax.low}/${p.tax.high}`, '30/34', ' %');
-  dev('Veroraja', p.tax.bracket.toLocaleString('fi-FI'), '30 000', ' €');
+  dev('Inflaatio-oletus', p.infl.toLocaleString('fi-FI'), d.infl.toLocaleString('fi-FI'), ' %/v');
+  dev('Juoksevat kulut (TER)', p.ter.toLocaleString('fi-FI'), '0', ' %/v');
+  dev('Pääomatulovero', `${p.tax.low}/${p.tax.high}`, '30/34', ' %');
+  dev('Veroraja', p.tax.bracket.toLocaleString('fi-FI'), '30 000', ' €');
   if (p.tax.acq) rows.push('<tr><td>Hankintameno-olettama nostoihin</td><td class="num">käytössä</td><td class="num">ei</td></tr>');
-  if (p.glide) rows.push(`<tr><td>Oma glidepath</td><td class="num">${p.glide.from}–${p.glide.to} v → ${p.glide.endF} %</td><td class="num">—</td></tr>`);
+  if (p.glide) rows.push(`<tr><td>Oma glidepath</td><td class="num">${p.glide.from}–${p.glide.to} v → ${p.glide.endF} %</td><td class="num">—</td></tr>`);
   if (p.corr) {
     const { shrunk } = ensurePSD(corrMatrixOf(classesOf(state).length, p.corr));
     rows.push(`<tr><td>Korrelaatiomatriisi</td><td class="num">käytössä${shrunk ? ' (kutistettu)' : ''}</td><td class="num">täyskorrelaatio</td></tr>`);
   }
   if (p.wd.mode !== 'fixed') {
-    rows.push(`<tr><td>Nostostrategia</td><td class="num">${p.wd.mode === 'pct' ? p.wd.pct + ' % salkusta/v' : `guardrails ±${p.wd.band} % / ${p.wd.adj} %`}</td><td class="num">kiinteä</td></tr>`);
+    rows.push(`<tr><td>Nostostrategia</td><td class="num">${p.wd.mode === 'pct' ? p.wd.pct + ' % salkusta/v' : `guardrails ±${p.wd.band} % / ${p.wd.adj} %`}</td><td class="num">kiinteä</td></tr>`);
   }
   if (p.phases) rows.push(`<tr><td>Kulutuksen vaiheistus</td><td class="num">${p.phases.map((r) => `${r.mult} %${r.to < 150 ? ' → ' + r.to + ' v' : ''}`).join(' · ')}</td><td class="num">—</td></tr>`);
   dev('MC-polkuja', p.mc.paths.toLocaleString('fi-FI'), '5 000');
@@ -4245,7 +4257,7 @@ function makeFamilySolver() {
     })),
     sumWith: (d) => built.reduce((s, b) => s + saveOf(b, d), 0),
     splitNote: (d) => built.map((b) =>
-      `${escapeHtml(family.persons[b.i].name)} ${fmtNum(saveOf(b, d))}`).join(' · ') + ' €/kk',
+      `${escapeHtml(family.persons[b.i].name)} ${fmtNum(saveOf(b, d))}`).join(' · ') + ' €/kk',
   };
 }
 
@@ -4286,7 +4298,7 @@ function familySummaryHtml() {
       + `<td class="num">${fmtEur(p.data.monthly)}/kk</td>`
       + `<td class="num">${s.retireAge != null ? Math.round(s.retireAge) + ' v' : '—'}</td>`
       + `<td class="num">${s.wAtRet != null ? fmtCompact(s.wAtRet) : '—'}</td>`
-      + `<td class="num">${s.successProb != null ? Math.round(s.successProb * 100) + ' %' : '—'}</td></tr>`;
+      + `<td class="num">${s.successProb != null ? Math.round(s.successProb * 100) + ' %' : '—'}</td></tr>`;
   });
 
   // siirrot (dedupe linkId:llä, suunta antajalta saajalle)
@@ -4322,7 +4334,7 @@ function familySummaryHtml() {
 
   return `<h2>Perheen suunnitelma</h2>`
     + `<div class="sum-tiles">`
-    + `<div class="sum-tile"><div class="k">Perheen onnistumistodennäköisyys</div><div class="v accent">${Math.round(joint.successProb * 100)} %</div><div class="s">sama markkinahistoria molemmille</div></div>`
+    + `<div class="sum-tile"><div class="k">Perheen onnistumistodennäköisyys</div><div class="v accent">${Math.round(joint.successProb * 100)} %</div><div class="s">sama markkinahistoria molemmille</div></div>`
     + `<div class="sum-tile"><div class="k">Yhteisvarallisuus lopussa</div><div class="v">${fmtCompact(total[total.length - 1])}</div><div class="s">koko perheen sijoitukset yhteensä</div></div>`
     + `</div>`
     + `<table class="sum-table"><thead><tr><th>Henkilö</th><th>Säästö</th><th>Eläkeikä</th><th>Eläkkeellä</th><th>Onnistumis-%</th></tr></thead><tbody>${rows}</tbody></table>`
@@ -4385,7 +4397,7 @@ function updateSaverNote() {
     const room = Math.max(0, inc - exp);
     parts.push(`Säästövara <b>${fmtEur(room)}/kk</b>`);
   }
-  if (inc > 0) parts.push(`nykyinen säästöaste <b>${Math.round(state.monthly / inc * 100)} %</b> nettotuloista`);
+  if (inc > 0) parts.push(`nykyinen säästöaste <b>${Math.round(state.monthly / inc * 100)} %</b> nettotuloista`);
   note.innerHTML = parts.join(' · ') || 'Täytä molemmat kentät.';
 }
 
@@ -4843,7 +4855,7 @@ function syncInputs() {
 
 const ACCT_NOTES = {
   aot: 'Nostoista vero voiton osuudesta · suorien osakkeiden osingoista vero vuosittain.',
-  ost: 'Ei veroa tilillä · nostosta vero voiton osuudesta · talletuskatto 100 000 €',
+  ost: 'Ei veroa tilillä · nostosta vero voiton osuudesta · talletuskatto 100 000 €',
   ins: 'Ei veroa kuoressa · nostosta vero voiton osuudesta · kuoren kulu vähentää tuottoa.',
 };
 
@@ -5035,7 +5047,7 @@ function summaryPoints(s) {
   } else if (s.goal === 'saving' && s.requiredMonthly != null) {
     pts.push({ html: `Säästän <b>${fmtEur(state.monthly)}/kk</b> — tavoitteeni laskennallinen minimi on ${fmtEur(s.requiredMonthly)}/kk.` });
   } else {
-    const grow = state.savingsGrowth > 0 ? `, kasvatan säästöä ${state.savingsGrowth.toLocaleString('fi-FI')} %/v` : '';
+    const grow = state.savingsGrowth > 0 ? `, kasvatan säästöä ${state.savingsGrowth.toLocaleString('fi-FI')} %/v` : '';
     pts.push({ html: `Sijoitan <b>${fmtEur(state.monthly)}/kk</b>${s.retireAge != null ? ' eläkkeelle jäämiseen asti' : ' koko suunnitelman ajan'}${grow} (alkupääoma ${fmtEur(state.startCapital)}).` });
   }
 
@@ -5109,13 +5121,13 @@ function summaryTalks(s) {
     talks.push({ warn: true, html: `Laskelmassa varani ehtyvät noin <b>${Math.round(s.depletionAge)} v</b> iässä — miten loppuvuodet katetaan?` });
   }
   if (s.successProb != null && p < 65) {
-    talks.push({ html: `Onnistumistodennäköisyys on <b>${p} %</b> — haluan keskustella keinoista: suurempi säästö, maltillisempi nosto tai myöhäisempi eläköityminen.` });
+    talks.push({ html: `Onnistumistodennäköisyys on <b>${p} %</b> — haluan keskustella keinoista: suurempi säästö, maltillisempi nosto tai myöhäisempi eläköityminen.` });
   }
   if (!state.events.some((e) => e.type === 'retirement')) {
     talks.push({ html: 'Suunnitelmastani puuttuu vielä eläketavoite — haluan hahmottaa, milloin ja millaisella kuukausitulolla voisin jäädä eläkkeelle.' });
   }
   if (!talks.length) {
-    talks.push({ html: `Suunnitelmani on laskennallisesti kestävä loppuun asti (onnistumistodennäköisyys <b>${p} %</b>) — haluan varmistaa, että toteutus vastaa sitä.` });
+    talks.push({ html: `Suunnitelmani on laskennallisesti kestävä loppuun asti (onnistumistodennäköisyys <b>${p} %</b>) — haluan varmistaa, että toteutus vastaa sitä.` });
   }
   return talks;
 }
@@ -5129,14 +5141,14 @@ function renderSummary() {
 
   const tiles = [
     { k: 'Nykyinen varallisuus', v: fmtEur(state.startCapital) },
-    { k: 'Kuukausisäästö', v: `${fmtEur(state.monthly)}/kk`, s: state.savingsGrowth > 0 ? `kasvu ${state.savingsGrowth.toLocaleString('fi-FI')} %/v` : '' },
+    { k: 'Kuukausisäästö', v: `${fmtEur(state.monthly)}/kk`, s: state.savingsGrowth > 0 ? `kasvu ${state.savingsGrowth.toLocaleString('fi-FI')} %/v` : '' },
     { k: s.goal === 'age' ? 'Aikaisin eläkeikä' : 'Eläkeikä',
       v: s.retireAge != null ? (s.goal === 'age' && s.solvedRetireAge != null ? fmtAge(s.solvedRetireAge) : `${Math.round(s.retireAge)} v`) : '—',
       s: s.retireAge != null ? yearOf(s.retireAge) : 'ei eläketapahtumaa' },
     { k: 'Kuukausitulo eläkkeellä', v: retire ? `${fmtEur(s.withdrawal)}/kk` : '—',
       s: retire ? (s.pension > 0 ? `sis. työeläke ${fmtEur(s.pension)}/kk` : (s.goal === 'withdrawal' ? 'kestävä tulo — varat loppuun' : 'sijoituksista')) : '' },
     { k: 'Varallisuus eläkkeellä', v: s.wAtRet != null ? fmtEur(s.wAtRet) : '—', cls: 'accent' },
-    { k: 'Onnistumistodennäköisyys', v: p != null ? `${p} %` : '—', cls: p >= 80 ? 'ok' : p >= 55 ? '' : 'bad', s: `${(s.mcPaths || MC_LIVE).toLocaleString('fi-FI')} markkinapolkua` },
+    { k: 'Onnistumistodennäköisyys', v: p != null ? `${p} %` : '—', cls: p >= 80 ? 'ok' : p >= 55 ? '' : 'bad', s: `${(s.mcPaths || MC_LIVE).toLocaleString('fi-FI')} markkinapolkua` },
   ];
 
   const evRows = [...state.events].sort((x, y) => x.age - y.age).map((e) => {
@@ -5155,12 +5167,12 @@ function renderSummary() {
       const down = clamp(e.down || 0, 0, price);
       const pmt = loanPayment(price - down, e.rate || 0, e.years || 10);
       sum = fmtEur(e.amount);
-      fin = `laina: käsiraha ${fmtEur(down)}, erä ${fmtEur(pmt)}/kk · ${Math.round(e.years || 10)} v · ${(e.rate || 0).toLocaleString('fi-FI')} %`;
+      fin = `laina: käsiraha ${fmtEur(down)}, erä ${fmtEur(pmt)}/kk · ${Math.round(e.years || 10)} v · ${(e.rate || 0).toLocaleString('fi-FI')} %`;
     } else {
       sum = (e.amount >= 0 ? '+' : '') + fmtEur(e.amount);
       fin = e.amount < 0 ? 'säästöistä' : 'tulo';
     }
-    if (e.isAsset) note = `omaisuuseräksi, arvonmuutos ${(e.appr || 0).toLocaleString('fi-FI')} %/v`;
+    if (e.isAsset) note = `omaisuuseräksi, arvonmuutos ${(e.appr || 0).toLocaleString('fi-FI')} %/v`;
     if (e.type !== 'retirement' && e.recMonthly) note += `${note ? '; ' : ''}toistuva ${e.recMonthly > 0 ? '+' : ''}${fmtEur(e.recMonthly)}/kk ${Math.round(e.recYears || 0)} v`;
     if (e.sellAge != null && e.isAsset) note += `${note ? '; ' : ''}myynti ${Math.round(e.sellAge)} v iässä${e.sellTaxFree ? ' (verovapaa)' : ''}`;
     return `<tr><td>${def.icon} ${escapeHtml(evLabel(e))}</td>` +
@@ -5188,7 +5200,7 @@ function renderSummary() {
     `<ul class="sum-points">${summaryTalks(s).map(li).join('')}</ul>` +
     (familyOn() ? familySummaryHtml() : '') +
     (state.proOn ? proSummaryHtml(s) : '') +
-    `<p class="sum-assump">Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa${state.savingsGrowth > 0 ? `; säästön kasvu ${state.savingsGrowth.toLocaleString('fi-FI')} %/v` : ''}${state.real ? `; inflaatio ${state.inflation.toLocaleString('fi-FI')} %/v, luvut nykyrahassa` : ''}${state.glide ? '; ikäsidonnainen allokaatio' : ''}${s.pension > 0 ? '; lakisääteinen työeläke huomioitu eläketulona' : ''}${state.tax ? '; myyntivoittovero 30/34 % nostojen voitto-osuudesta' : ''}${state.acct === 'ost' ? '; osakesäästötili (osingot ja myynnit tilillä verotta, nostosta vero voitto-osuudesta)' : state.acct === 'ins' ? `; vakuutuskuori (tuotot kuoressa verotta, nostosta vero voitto-osuudesta${state.wrapFee > 0 ? `, kuoren kulu ${state.wrapFee.toLocaleString('fi-FI')} %/v` : ''})` : ''}${state.feePct > 0 ? `; sijoituskulut ${state.feePct.toLocaleString('fi-FI')} %/v` : ''}${state.acct === 'aot' && state.tax && state.divYield > 0 ? `; suorien osakkeiden osinkotuotto ${state.divYield.toLocaleString('fi-FI')} %/v verotettuna vuosittain` : ''}${(s.saleInfos || []).some((x) => x.tax > 0.5) ? '; omaisuuden myynnissä hankintameno-olettama' : ''}. ` +
+    `<p class="sum-assump">Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa${state.savingsGrowth > 0 ? `; säästön kasvu ${state.savingsGrowth.toLocaleString('fi-FI')} %/v` : ''}${state.real ? `; inflaatio ${state.inflation.toLocaleString('fi-FI')} %/v, luvut nykyrahassa` : ''}${state.glide ? '; ikäsidonnainen allokaatio' : ''}${s.pension > 0 ? '; lakisääteinen työeläke huomioitu eläketulona' : ''}${state.tax ? '; myyntivoittovero 30/34 % nostojen voitto-osuudesta' : ''}${state.acct === 'ost' ? '; osakesäästötili (osingot ja myynnit tilillä verotta, nostosta vero voitto-osuudesta)' : state.acct === 'ins' ? `; vakuutuskuori (tuotot kuoressa verotta, nostosta vero voitto-osuudesta${state.wrapFee > 0 ? `, kuoren kulu ${state.wrapFee.toLocaleString('fi-FI')} %/v` : ''})` : ''}${state.feePct > 0 ? `; sijoituskulut ${state.feePct.toLocaleString('fi-FI')} %/v` : ''}${state.acct === 'aot' && state.tax && state.divYield > 0 ? `; suorien osakkeiden osinkotuotto ${state.divYield.toLocaleString('fi-FI')} %/v verotettuna vuosittain` : ''}${(s.saleInfos || []).some((x) => x.tax > 0.5) ? '; omaisuuden myynnissä hankintameno-olettama' : ''}. ` +
     `Lainat annuiteettilainoina. Onnistumistodennäköisyys perustuu ${(s.mcPaths || MC_LIVE).toLocaleString('fi-FI')} satunnaiseen markkinapolkuun${s.conf ? `; tavoitteet mitoitettu ${Math.round(s.conf * 100)} % onnistumisvarmuudelle` : ''}. Laadittu Varallisuuspolku-työkalulla.</p>` +
     `<p class="sum-disclaimer">Tämä yhteenveto kuvaa laatijansa omia tavoitteita, valintoja ja oletuksia. Se ei ole sijoitusneuvontaa eikä sijoitussuositus — sen voi antaa esimerkiksi varainhoitajalle keskustelun pohjaksi.</p>`;
 }

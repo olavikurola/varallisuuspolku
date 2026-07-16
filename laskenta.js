@@ -1081,13 +1081,13 @@ function tornado(st) {
   const retire = st.events.find((e) => e.type === 'retirement');
   rows.push(bump((c) => { proMuBump(c, 1); }, 'Tuotto-odotus +1 %-yks'));
   rows.push(bump((c) => { proMuBump(c, -1); }, 'Tuotto-odotus −1 %-yks'));
-  rows.push(bump((c) => { c.monthly *= 1.1; }, 'Kuukausisäästö +10 %'));
-  rows.push(bump((c) => { c.monthly *= 0.9; }, 'Kuukausisäästö −10 %'));
+  rows.push(bump((c) => { c.monthly *= 1.1; }, 'Kuukausisäästö +10 %'));
+  rows.push(bump((c) => { c.monthly *= 0.9; }, 'Kuukausisäästö −10 %'));
   if (retire) {
     rows.push(bump((c) => { const r = c.events.find((e) => e.type === 'retirement'); r.age = clamp(r.age + 2, c.ageNow + 1, c.ageEnd); }, 'Eläkeikä +2 v'));
     rows.push(bump((c) => { const r = c.events.find((e) => e.type === 'retirement'); r.age = clamp(r.age - 2, c.ageNow + 1, c.ageEnd); }, 'Eläkeikä −2 v'));
-    rows.push(bump((c) => { const r = c.events.find((e) => e.type === 'retirement'); r.withdrawal *= 1.1; }, 'Kuukausitulo +10 %'));
-    rows.push(bump((c) => { const r = c.events.find((e) => e.type === 'retirement'); r.withdrawal *= 0.9; }, 'Kuukausitulo −10 %'));
+    rows.push(bump((c) => { const r = c.events.find((e) => e.type === 'retirement'); r.withdrawal *= 1.1; }, 'Kuukausitulo +10 %'));
+    rows.push(bump((c) => { const r = c.events.find((e) => e.type === 'retirement'); r.withdrawal *= 0.9; }, 'Kuukausitulo −10 %'));
   }
   if (st.real || (st.proOn && st.pro)) {
     rows.push(bump((c) => { proInflBump(c, 1); }, 'Inflaatio +1 %-yks'));
