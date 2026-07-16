@@ -4,6 +4,7 @@
 
 ```bash
 node testit/laskenta.test.js
+node testit/tulkki-proxy.test.js   # Tulkki-välitys mock-upstreamia vasten (ei oikeita API-kutsuja)
 ```
 
 Kattaa: CRN-determinismi (sama seed → bitilleen sama tulos), bisektion
