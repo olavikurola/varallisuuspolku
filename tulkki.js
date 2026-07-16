@@ -88,7 +88,11 @@
     return html.replace(/(\d[\d   ]*(?:,\d+)?)(\s?(?:%|€|v\b))?/g, (m, numStr, unit) => {
       const val = parseFloat(numStr.replace(/[   ]/g, '').replace(',', '.'));
       if (!isFinite(val)) return m;
-      const ok = nums.some((n) => Math.abs(n - val) <= Math.max(1, Math.abs(n) * 0.015));
+      // vertaa itseisarvoihin: kontekstin −200 000 € vastaa tekstin "200 000 €"
+      const ok = nums.some((n) => {
+        const b = Math.abs(n);
+        return Math.abs(b - val) <= Math.max(1, b * 0.015);
+      });
       if (ok) return `<span class="tk-num">${m}</span>`;
       if (val < 10 && !unit) return m; // "kolme asiaa" -tyyppiset pikkuluvut rauhaan
       return `<span class="tk-num tk-doubt" title="Lukua ei löydy moottorin luvuista — suhtaudu varauksella">${m}</span>`;
@@ -255,6 +259,12 @@
         });
         aEl.appendChild(meta);
         if (parsed.change) renderChangeCard(parsed.change);
+        else if (parsed.rejected && parsed.rejected.length) {
+          const note = document.createElement('div');
+          note.className = 'tk-change';
+          note.innerHTML = `<div class="tk-ch-note">Tulkki yritti muuttaa kohdetta, jota esikatselu ei vielä tue (${esc(parsed.rejected.join(', '))}) — mitään ei muutettu. Tapahtumien ominaisuudet muokataan käsin napauttamalla tapahtumaa aikajanalla.</div>`;
+          log.appendChild(note);
+        }
         if (data.usage) {
           $t('tkCost').textContent = `${data.model} · ${data.usage.in}→${data.usage.out} tok`;
         }
@@ -296,18 +306,24 @@
   function extractChange(raw) {
     const m = raw.match(/\nMUUTOS:\s*(\{[\s\S]*\})\s*$/);
     if (!m) return { text: raw, change: null };
+    // MUUTOS-rivi ei koskaan päädy näkyviin sellaisenaan — hylätyt kentät
+    // raportoidaan erikseen, jotta käyttäjä tietää miksi mitään ei tapahtunut
     const text = raw.slice(0, m.index).trim();
+    const rejected = [];
     try {
       const o = JSON.parse(m[1]);
       const list = [];
       for (const c of (Array.isArray(o.muutokset) ? o.muutokset : []).slice(0, 6)) {
         const f = FIELDS[c && c.kentta];
-        if (!f || typeof c.arvo !== 'number' || !isFinite(c.arvo)) continue;
+        if (!f || typeof c.arvo !== 'number' || !isFinite(c.arvo)) {
+          if (c && c.kentta) rejected.push(String(c.kentta).slice(0, 32));
+          continue;
+        }
         list.push({ kentta: c.kentta, arvo: Math.min(f.max, Math.max(f.min, c.arvo)) });
       }
-      if (!list.length) return { text: raw, change: null };
-      return { text, change: { muutokset: list, selite: String(o.selite || '').slice(0, 200) } };
-    } catch (e) { return { text: raw, change: null }; }
+      if (!list.length) return { text, change: null, rejected };
+      return { text, change: { muutokset: list, selite: String(o.selite || '').slice(0, 200) }, rejected };
+    } catch (e) { return { text, change: null, rejected }; }
   }
 
   // Soveltaa muutokset serialisoituun kopioon; palauttaa rivit näytölle
