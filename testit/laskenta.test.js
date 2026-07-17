@@ -440,6 +440,35 @@ console.log('%-nostostrategia: onnistuminen mittaa tulotarpeen täyttymistä');
   ok(fix.dryKind === 'depleted' && fix.depletionAge != null, 'kiinteä strategia: ehtymissemantiikka ennallaan');
 }
 
+console.log('Porrastettu säästö (savePhases): kaistoittainen kuukausisumma');
+{
+  const base = {
+    ageNow: 30, ageEnd: 65, startCapital: 0, monthly: 500, savingsGrowth: 0,
+    allocStocks: 100, allocBonds: 0, glide: false, real: false, tax: false, events: [],
+  };
+  const m35 = Math.round((35 - 30) * 12), m50 = Math.round((50 - 30) * 12);
+  // Ilman aikataulua: tasainen perussäästö 500 €/kk
+  const c0 = L.prepareSim(base);
+  const f0 = L.runPath(c0, base, 0, null, L.buildMu(c0, base, null).muM, { clamp0: true, collect: true });
+  ok(close(f0.flows.contrib[m35], 500, 0.01) && close(f0.flows.contrib[m50], 500, 0.01), 'ilman aikataulua tasainen 500 €/kk');
+  // Aikataululla: 500 (30-40 v), 1000 (40-65 v) — säästö elää elämänvaiheittain
+  const st = { ...base, savePhases: [{ to: 40, amount: 500 }, { to: 65, amount: 1000 }] };
+  const c1 = L.prepareSim(st);
+  const f1 = L.runPath(c1, st, 0, null, L.buildMu(c1, st, null).muM, { clamp0: true, collect: true });
+  ok(close(f1.flows.contrib[m35], 500, 0.01), 'kaista 1: 500 €/kk (30-40 v)', String(f1.flows.contrib[m35]));
+  ok(close(f1.flows.contrib[m50], 1000, 0.01), 'kaista 2: 1000 €/kk (40-65 v)', String(f1.flows.contrib[m50]));
+  // Säästö voi myös LASKEA kaistalta toiselle (esim. lyhennysvuodet)
+  const dn = { ...base, savePhases: [{ to: 45, amount: 800 }, { to: 65, amount: 300 }] };
+  const c3 = L.prepareSim(dn);
+  const f3 = L.runPath(c3, dn, 0, null, L.buildMu(c3, dn, null).muM, { clamp0: true, collect: true });
+  ok(close(f3.flows.contrib[m35], 800, 0.01) && close(f3.flows.contrib[m50], 300, 0.01), 'säästö voi laskea kaistoittain (800 → 300)');
+  // Kasvu kertautuu aikataulun päälle
+  const stG = { ...st, savingsGrowth: 1.5 };
+  const c2 = L.prepareSim(stG);
+  const f2 = L.runPath(c2, stG, 0, null, L.buildMu(c2, stG, null).muM, { clamp0: true, collect: true });
+  ok(close(f2.flows.contrib[m50], 1000 * Math.pow(1.015, (m50 - 1) / 12), 1), 'säästön kasvu kertautuu aikataulun päälle');
+}
+
 console.log('Varmuustaso-ratkaisu (karkea→tarkka)');
 {
   const st = plan();

@@ -343,6 +343,23 @@ function prepareSim(st) {
   const growth = new Float64Array(months + 1);
   for (let m = 1; m <= months; m++) growth[m] = Math.pow(1 + g, (m - 1) / 12);
 
+  // Porrastettu säästö (valinnainen): ikäkaistoittainen kuukausisumma
+  // st.savePhases = [{to: ikäraja, amount: €/kk}] (nouseva to-järjestys).
+  // saveAbs[m] = kaistan summa; puuttuva → null = tasainen perussäästö.
+  // Säästön vuosikasvu (growth) kertautuu tämän päälle kuten perussäästöön.
+  // Erottautuu: mikään laskuri ei mallinna säästön elämistä elämänvaiheittain
+  // (töihin meno, palkankorotus, lasten muutto) — vakio tai %-kasvu on epätosi.
+  let saveAbs = null;
+  if (Array.isArray(st.savePhases) && st.savePhases.length) {
+    const ph = st.savePhases;
+    saveAbs = new Float64Array(months + 1);
+    for (let m = 1; m <= months; m++) {
+      const age = a0 + m / 12;
+      const row = ph.find((r) => age <= r.to) || ph[ph.length - 1];
+      saveAbs[m] = Math.max(0, (row && row.amount) || 0);
+    }
+  }
+
   // Kertavaikutukset, lainanhoitoerät ja velkasaldo kuukausittain.
   // Omaisuuserän myynti katkaisee lainan: jäljellä oleva saldo maksetaan
   // myyntihinnasta (salePayoff), eikä eriä makseta myynnin jälkeen.
@@ -442,7 +459,7 @@ function prepareSim(st) {
   }
   const hasNet = hasAssets || debt.some((d) => d > 0.5);
 
-  return { a0, a1, months, retire, pension, pensionAge, taxOn, growth, lump, payments, debt, assets, assetCats, saleInfos, hasNet,
+  return { a0, a1, months, retire, pension, pensionAge, taxOn, growth, saveAbs, lump, payments, debt, assets, assetCats, saleInfos, hasNet,
     pro, taxLow, taxHigh, taxBracket, taxAcq, wdMode, wdPctM, wdBand, wdAdj, phaseMul };
 }
 
@@ -495,7 +512,7 @@ function buildMu(ctx, st, retAge) {
 // record(m, w) kirjaa polun MC-matriisiin.
 
 function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave = st.monthly, shockFn = null, collect = false, stopAt = null, record = null } = {}) {
-  const { a0, months, lump, payments, growth, pension, pensionAge, taxOn,
+  const { a0, months, lump, payments, growth, saveAbs, pension, pensionAge, taxOn,
     taxLow, taxHigh, taxBracket, taxAcq, wdMode, wdPctM, wdBand, wdAdj, phaseMul } = ctx;
   let w = st.startCapital;
   let basis = st.startCapital; // salkun hankintahinta myyntivoittoveroa varten
@@ -524,8 +541,10 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
     if (m % 12 === 1) ytdGain = 0;
     w *= 1 + muM[m] + (shockFn ? shockFn(m) : 0); // tuotto ei muuta hankintahintaa
     if (retAge == null || age <= retAge) {
-      // Työuralla lainanhoito vähentää kuukausisäästöä (loput maksetaan palkasta)
-      const contrib = Math.max(0, monthlySave * growth[m] - payments[m]);
+      // Työuralla lainanhoito vähentää kuukausisäästöä (loput maksetaan palkasta).
+      // Porrastettu aikataulu (saveAbs) korvaa tasaisen perussäästön kun asetettu.
+      const base = saveAbs ? saveAbs[m] : monthlySave;
+      const contrib = Math.max(0, base * growth[m] - payments[m]);
       w += contrib; basis += contrib;
       if (fl) fl.contrib[m] = contrib;
     } else {

@@ -45,6 +45,7 @@ const state = {
   startCapital: 20000,
   monthly: 1000,
   savingsGrowth: 1.5, // säästön vuosikasvu % (palkkakehitys)
+  savePhases: null,   // porrastettu säästö [{to, amount}] tai null = tasainen
   allocStocks: 70,
   allocBonds: 20,
   glide: false,
@@ -4678,6 +4679,8 @@ function serialize() {
   }
   if (state.income != null) o.income = state.income;
   if (state.expenses != null) o.expenses = state.expenses;
+  // Porrastettu säästö vain kun asetettu — vanhat linkit ennallaan
+  if (Array.isArray(state.savePhases) && state.savePhases.length) o.savePhases = state.savePhases;
   // Kuori- ja kulukentät vain kun poikkeavat oletuksesta — vanhat linkit ennallaan
   if (state.acct !== 'aot') o.acct = state.acct;
   if (state.feePct > 0) o.feePct = state.feePct;
@@ -4703,6 +4706,17 @@ function applySaved(data) {
   // puuttuu, käytetään neutraalia arvoa (kasvu 0 %, ei veroa), ei uutta oletusta.
   state.savingsGrowth = typeof data.savingsGrowth === 'number' && isFinite(data.savingsGrowth)
     ? clamp(data.savingsGrowth, 0, 15) : 0;
+  // Porrastettu säästö: validoi kaistat [{to, amount}], nouseva to-järjestys.
+  // Puuttuva/viallinen → null = tasainen perussäästö (vanhat linkit ennallaan).
+  if (Array.isArray(data.savePhases) && data.savePhases.length) {
+    const numOk = (v) => typeof v === 'number' && isFinite(v);
+    const ph = data.savePhases
+      .filter((r) => r && numOk(r.to) && numOk(r.amount))
+      .map((r) => ({ to: clamp(Math.round(r.to), 1, 105), amount: clamp(r.amount, 0, 1e6) }))
+      .sort((a, b) => a.to - b.to)
+      .slice(0, 8);
+    state.savePhases = ph.length ? ph : null;
+  } else state.savePhases = null;
   state.tax = !!data.tax;
   // Sijoitustili ja kulut: puuttuva kenttä = neutraali (AOT, 0 kulua)
   state.acct = data.acct === 'ost' || data.acct === 'ins' ? data.acct : 'aot';
