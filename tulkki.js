@@ -262,7 +262,7 @@
         else if (parsed.rejected && parsed.rejected.length) {
           const note = document.createElement('div');
           note.className = 'tk-change';
-          note.innerHTML = `<div class="tk-ch-note">Tulkki yritti muuttaa kohdetta, jota esikatselu ei vielä tue (${esc(parsed.rejected.join(', '))}) — mitään ei muutettu. Tapahtumien ominaisuudet muokataan käsin napauttamalla tapahtumaa aikajanalla.</div>`;
+          note.innerHTML = `<div class="tk-ch-note">Tulkki yritti muuttaa kohdetta, jota esikatselu ei vielä tue (${esc(parsed.rejected.join(', '))}) — mitään ei muutettu. Kokeile sanoa tarkemmin, tai tee muutos käsin napauttamalla tapahtumaa aikajanalla.</div>`;
           log.appendChild(note);
         }
         if (data.usage) {
@@ -300,6 +300,23 @@
     pensionAge:    { nimi: 'Työeläkkeen alkamisikä', min: 18, max: 105, yks: 'v', ret: 'pensionAge' },
   };
 
+  // Tapahtumien muutettavat ominaisuudet — rajat samat kuin popoverin kentissä.
+  // Kohdennus: tyyppi + tarvittaessa tapahtumaIka (useita samaa tyyppiä).
+  const EVENT_NAMES = {
+    home: 'Asunto', car: 'Auto', cottage: 'Mökki', child: 'Lapsi',
+    renovation: 'Remontti', travel: 'Matka', study: 'Opiskelu', wedding: 'Häät',
+    inheritance: 'Perintö', bonus: 'Bonus', sidegig: 'Sivutulo',
+    recurring: 'Kuukausierä', goal: 'Tavoite',
+  };
+  const EVENT_PROPS = {
+    age:    { nimi: 'ikä', min: 0, max: 105, yks: 'v' },
+    amount: { nimi: 'summa', min: -1e9, max: 1e9, yks: '€' },
+    appr:   { nimi: 'arvonnousu', min: -30, max: 15, yks: '%/v' },
+    rate:   { nimi: 'lainan korko', min: 0, max: 25, yks: '%' },
+    years:  { nimi: 'laina-aika', min: 1, max: 40, yks: 'v' },
+    down:   { nimi: 'käsiraha', min: 0, max: 1e9, yks: '€' },
+  };
+
   let previewBefore = null; // serialize()-kopio ennen kokeilua (null = ei aktiivista)
 
   // Irrottaa vastauksen lopusta MUUTOS-rivin; palauttaa {text, change|null}
@@ -314,12 +331,24 @@
       const o = JSON.parse(m[1]);
       const list = [];
       for (const c of (Array.isArray(o.muutokset) ? o.muutokset : []).slice(0, 6)) {
-        const f = FIELDS[c && c.kentta];
-        if (!f || typeof c.arvo !== 'number' || !isFinite(c.arvo)) {
-          if (c && c.kentta) rejected.push(String(c.kentta).slice(0, 32));
+        if (!c || typeof c.arvo !== 'number' || !isFinite(c.arvo)) {
+          if (c && (c.kentta || c.tapahtuma)) rejected.push(String(c.kentta || c.tapahtuma).slice(0, 32));
           continue;
         }
-        list.push({ kentta: c.kentta, arvo: Math.min(f.max, Math.max(f.min, c.arvo)) });
+        const f = FIELDS[c.kentta];
+        const p = EVENT_PROPS[c.ominaisuus];
+        if (f) {
+          list.push({ kentta: c.kentta, arvo: Math.min(f.max, Math.max(f.min, c.arvo)) });
+        } else if (EVENT_NAMES[c.tapahtuma] && p) {
+          list.push({
+            tapahtuma: c.tapahtuma,
+            tapahtumaIka: (typeof c.tapahtumaIka === 'number' && isFinite(c.tapahtumaIka)) ? c.tapahtumaIka : null,
+            ominaisuus: c.ominaisuus,
+            arvo: Math.min(p.max, Math.max(p.min, c.arvo)),
+          });
+        } else {
+          rejected.push(String(c.kentta || (c.tapahtuma ? c.tapahtuma + '.' + c.ominaisuus : 'tuntematon')).slice(0, 40));
+        }
       }
       if (!list.length) return { text, change: null, rejected };
       return { text, change: { muutokset: list, selite: String(o.selite || '').slice(0, 200) }, rejected };
@@ -331,6 +360,32 @@
     const rows = [];
     const ret = (mod.events || []).find((e) => e.type === 'retirement');
     for (const c of list) {
+      // Tapahtuman ominaisuus: kohdenna tyyppiin, tarvittaessa ikään
+      if (c.tapahtuma) {
+        const p = EVENT_PROPS[c.ominaisuus];
+        const label = `${EVENT_NAMES[c.tapahtuma]} · ${p.nimi}`;
+        const cands = (mod.events || []).filter((e) => e.type === c.tapahtuma);
+        if (!cands.length) { rows.push({ nimi: label, ohitettu: 'ei tällaista tapahtumaa' }); continue; }
+        let ev = cands[0];
+        if (cands.length > 1) {
+          if (c.tapahtumaIka == null) { rows.push({ nimi: label, ohitettu: 'useita samaa tyyppiä — täsmennä ikä' }); continue; }
+          ev = cands.reduce((a, b) => Math.abs(a.age - c.tapahtumaIka) <= Math.abs(b.age - c.tapahtumaIka) ? a : b);
+        }
+        if ((c.ominaisuus === 'rate' || c.ominaisuus === 'years' || c.ominaisuus === 'down') && ev.financing !== 'loan') {
+          rows.push({ nimi: label, ohitettu: 'tapahtumassa ei ole lainaa' }); continue;
+        }
+        if (c.ominaisuus === 'appr' && !ev.isAsset) {
+          rows.push({ nimi: label, ohitettu: 'ei omaisuuserä' }); continue;
+        }
+        let arvo = c.arvo;
+        if (c.ominaisuus === 'age') arvo = Math.min(mod.ageEnd, Math.max(mod.ageNow, Math.round(arvo)));
+        // menotapahtuman summa on tilassa negatiivinen — käyttäjä puhuu positiivisina
+        if (c.ominaisuus === 'amount' && typeof ev.amount === 'number' && ev.amount < 0 && arvo > 0) arvo = -arvo;
+        const vanha = ev[c.ominaisuus];
+        ev[c.ominaisuus] = arvo;
+        rows.push({ nimi: `${EVENT_NAMES[c.tapahtuma]} (${ev.age} v) · ${p.nimi}`, vanha, uusi: arvo, yks: p.yks });
+        continue;
+      }
       const f = FIELDS[c.kentta];
       let arvo = c.arvo;
       if (f.ret) {
@@ -373,7 +428,7 @@
     syncInputs();
     renderAll();
 
-    const fmt = (v) => typeof v === 'number' ? v.toLocaleString('fi-FI') : String(v);
+    const fmt = (v) => v == null ? '–' : (typeof v === 'number' ? v.toLocaleString('fi-FI') : String(v));
     card.innerHTML =
       `<div class="tk-ch-lab">Kokeilu käytössä — vertailu haamuna graafissa</div>` +
       (change.selite ? `<div class="tk-ch-sel">${esc(change.selite)}</div>` : '') +
