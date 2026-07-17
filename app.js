@@ -1835,6 +1835,11 @@ function drawDragMove(e2) {
 // Kertymäsegmentti: käyrä on naru — tartuntapiste seuraa osoitinta,
 // bisektio hakee kuukausisäästön, jolla odotuspolku kulkee pisteen kautta
 function dragAcc(d, age, val, noSnap) {
+  // Porrastettu säästö: raahaus ei ratkaise yhtä summaa — ohjaa editoriin
+  if (Array.isArray(state.savePhases) && state.savePhases.length) {
+    return { html: chipWrap(chipRow('Kuukausisäästö', state.monthly, state.monthly, '€/kk'),
+      'Säästö on porrastettu — muokkaa Perustiedoista'), constraint: 'porrastettu' };
+  }
   const s = d.solver;
   const hiAge = sim.retireAge != null ? sim.retireAge : sim.a1;
   const a = clamp(age, sim.a0 + 1 / 12, hiAge);
@@ -4429,6 +4434,81 @@ function bindSaver() {
     updateSaverNote();
     toast(`Kuukausisäästö ${fmtEur(state.monthly)}/kk säästövarasta`);
   });
+
+  // Porrastettu säästö: kytkin, lisäys, poisto
+  $('savePhaseLink').addEventListener('click', (e) => { e.preventDefault(); enableSavePhases(); });
+  $('savePhaseOff').addEventListener('click', disableSavePhases);
+  $('savePhaseAdd').addEventListener('click', () => {
+    const ph = state.savePhases || [];
+    const last = ph[ph.length - 1];
+    ph.push({ to: clamp(last ? last.to : state.ageEnd, 1, 105), amount: last ? last.amount : (state.monthly || 500) });
+    renderSavePhaseRows();
+    renderAll();
+  });
+}
+
+/* ===================== Porrastettu säästö (savePhases) ===================== */
+// Säästö elää elämänvaiheittain ylös ja alas. state.savePhases = [{to, amount}]
+// | null. Kun aktiivinen: tasainen kuukausisäästökenttä piilotetaan ja käyrän
+// kertymä-raahaus ohjataan editoriin (moottori käyttää aikataulua, ei yhtä summaa).
+
+function savePhaseActive() { return Array.isArray(state.savePhases) && state.savePhases.length > 0; }
+
+function renderSavePhaseRows() {
+  const box = $('savePhaseRows');
+  const ph = state.savePhases || [];
+  box.innerHTML = ph.map((p, i) =>
+    `<div class="savephase-row">` +
+    `<span class="sp-lab">alle</span>` +
+    `<span class="input sp-age"><input type="number" class="sp-to" data-i="${i}" min="1" max="105" step="1" value="${p.to}" /><em>v</em></span>` +
+    `<span class="input sp-amt-w"><input type="number" class="sp-amt" data-i="${i}" min="0" step="50" value="${Math.round(p.amount)}" /><em>€/kk</em></span>` +
+    (ph.length > 1 ? `<button type="button" class="sp-del" data-i="${i}" aria-label="Poista vaihe" title="Poista vaihe">✕</button>` : '<span class="sp-del-x"></span>') +
+    `</div>`).join('');
+  box.querySelectorAll('.sp-to').forEach((el) => el.addEventListener('input', (e) => {
+    const i = +e.target.dataset.i, v = parseFloat(e.target.value);
+    if (isFinite(v)) { state.savePhases[i].to = clamp(Math.round(v), 1, 105); renderAll(); }
+  }));
+  box.querySelectorAll('.sp-amt').forEach((el) => el.addEventListener('input', (e) => {
+    const i = +e.target.dataset.i, v = parseFloat(e.target.value);
+    state.savePhases[i].amount = isFinite(v) ? clamp(v, 0, 1e6) : 0;
+    renderAll();
+  }));
+  box.querySelectorAll('.sp-del').forEach((el) => el.addEventListener('click', (e) => {
+    state.savePhases.splice(+e.currentTarget.dataset.i, 1);
+    if (!state.savePhases.length) disableSavePhases();
+    else { renderSavePhaseRows(); renderAll(); }
+  }));
+  const g = state.savingsGrowth || 0;
+  $('savePhaseGrowth').textContent = g > 0
+    ? `Summat kasvavat lisäksi ${pctFmt(g / 100)} vuodessa (palkkakehitys). Aseta säästön vuosikasvu 0 %:iin, jos haluat tarkat summat.`
+    : 'Viimeinen vaihe jatkuu suunnitelman loppuun.';
+}
+
+function syncSavePhaseUI() {
+  const on = savePhaseActive();
+  const box = $('savePhaseBox');
+  if (box) box.hidden = !on;
+  const mf = $('monthlyField'); if (mf) mf.style.display = on ? 'none' : '';
+  const link = $('savePhaseLink'); if (link) link.style.display = on ? 'none' : '';
+  if (on) renderSavePhaseRows();
+}
+
+function enableSavePhases() {
+  pushUndoNow();
+  const m = state.monthly || 500;
+  const mid = clamp(Math.round((state.ageNow + state.ageEnd) / 2), state.ageNow + 1, state.ageEnd - 1);
+  state.savePhases = [{ to: mid, amount: m }, { to: state.ageEnd, amount: m }];
+  syncSavePhaseUI();
+  renderAll();
+}
+
+function disableSavePhases() {
+  pushUndoNow();
+  if (savePhaseActive()) state.monthly = clamp(Math.round(state.savePhases[0].amount), 0, 1e6);
+  state.savePhases = null;
+  syncSavePhaseUI();
+  $('monthly').value = state.monthly;
+  renderAll();
 }
 
 /* ===================== Toast ===================== */
@@ -4862,6 +4942,7 @@ function syncInputs() {
   $('divYield').value = state.divYield;
   updateAcctUI();
   updateSaverNote();
+  syncSavePhaseUI(); // porrastus-editori seuraa tilaa (jakolinkki, undo, esimerkit)
   applyProUI(); // vipu, kortit ja body.pro seuraavat tilaa (myös undo/esimerkit)
 }
 

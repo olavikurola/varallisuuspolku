@@ -351,7 +351,8 @@ function prepareSim(st) {
   // (töihin meno, palkankorotus, lasten muutto) — vakio tai %-kasvu on epätosi.
   let saveAbs = null;
   if (Array.isArray(st.savePhases) && st.savePhases.length) {
-    const ph = st.savePhases;
+    // Puolustava järjestys: editori saa pitää näyttöjärjestyksen vapaana
+    const ph = st.savePhases.slice().sort((a, b) => a.to - b.to);
     saveAbs = new Float64Array(months + 1);
     for (let m = 1; m <= months; m++) {
       const age = a0 + m / 12;

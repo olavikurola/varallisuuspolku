@@ -127,15 +127,27 @@
             <span class="field-label">Varallisuus nyt</span>
             <span class="input"><input id="startCapital" type="number" min="0" step="1000" value="20000" /><em>€</em></span>
           </label>
-          <label class="field">
+          <label class="field" id="monthlyField">
             <span class="field-label">Kuukausisäästö</span>
             <span class="input"><input id="monthly" type="number" min="0" step="50" value="1000" /><em>€/kk</em></span>
           </label>
         </div>
-        <label class="field field-sub">
+        <label class="field field-sub" id="growthField">
           <span class="field-label">Säästön vuosikasvu <small>palkka nousee → säästö kasvaa vuosittain</small></span>
           <span class="input"><input id="savingsGrowth" type="number" min="0" max="15" step="0.5" value="1.5" /><em>%/v</em></span>
         </label>
+        <div class="savephase">
+          <a href="#" id="savePhaseLink">📈 Porrasta säästö elämänvaiheittain <small>eri summa eri ikävuosina</small></a>
+          <div class="savephase-box" id="savePhaseBox" hidden>
+            <p class="note">Säästö elää elämänvaiheittain — töihin meno, palkankorotus, lyhennysvuodet. Anna kullekin ikävaiheelle oma kuukausisumma. Viimeinen vaihe jatkuu suunnitelman loppuun.</p>
+            <div id="savePhaseRows"></div>
+            <div class="savephase-acts">
+              <button type="button" class="btn ghost btn-mini" id="savePhaseAdd">+ Lisää vaihe</button>
+              <button type="button" class="btn ghost btn-mini" id="savePhaseOff">Poista porrastus</button>
+            </div>
+            <p class="note savephase-growth" id="savePhaseGrowth"></p>
+          </div>
+        </div>
         <div class="saver">
           <a href="#" id="saverLink">💡 Säästökyky-apuri <small>tuloista ja menoista säästöksi</small></a>
           <div class="saver-box" id="saverBox" hidden>

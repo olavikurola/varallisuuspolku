@@ -2041,3 +2041,34 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
   .tk-cursor { animation: none; opacity: 0.6; }
   .tk-handle.tk-thinking { animation: none; }
 }
+
+/* Porrastettu säästö -editori */
+.savephase { margin-top: 10px; font-size: 12px; }
+.savephase > a { color: var(--text-faint); text-decoration: none; }
+.savephase > a:hover { color: var(--accent); }
+.savephase > a small { color: var(--text-faint); }
+.savephase-box {
+  margin-top: 8px; padding: 10px 12px;
+  background: rgba(8, 12, 24, 0.4); border: 1px solid var(--border-soft); border-radius: 10px;
+}
+.savephase-box .note { margin: 0 0 8px; }
+.savephase-row { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+.savephase-row .sp-lab { color: var(--text-faint); font-size: 11px; flex: none; }
+.savephase-row .input { display: flex; align-items: baseline; background: rgba(8,12,24,0.55);
+  border: 1px solid var(--border-soft); border-radius: 8px; padding: 5px 8px; }
+.savephase-row .sp-age { width: 76px; }
+.savephase-row .sp-amt-w { flex: 1; }
+.savephase-row .input input { width: 100%; background: none; border: 0; color: var(--text);
+  font: inherit; font-size: 13px; font-variant-numeric: tabular-nums; min-width: 0; }
+.savephase-row .input input:focus { outline: none; }
+/* Natiivi numeronostin syö kapean kentän — piilotetaan, arvo täyttää kentän */
+.savephase-row input[type=number]::-webkit-inner-spin-button,
+.savephase-row input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.savephase-row input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+.savephase-row .input em { font-style: normal; font-size: 10.5px; color: var(--text-faint); margin-left: 4px; }
+.savephase-row .sp-del { background: none; border: 0; color: var(--text-faint); cursor: pointer;
+  font-size: 13px; padding: 2px 5px; flex: none; }
+.savephase-row .sp-del:hover { color: var(--danger); }
+.savephase-row .sp-del-x { width: 23px; flex: none; }
+.savephase-acts { display: flex; gap: 8px; margin-top: 4px; }
+.savephase-growth { margin: 8px 0 0; font-size: 11px; color: var(--text-faint); }
