@@ -139,6 +139,7 @@
       <button type="submit" aria-label="Lähetä kysymys">↑</button>
     </form>
     <div class="tk-foot">
+      <button type="button" class="tk-mini" id="tkLogBtn">Tulkin toimet (0)</button>
       <button type="button" class="tk-mini" id="tkEvalCopy"></button>
       <span class="tk-cost" id="tkCost"></span>
     </div>`;
@@ -277,7 +278,7 @@
         });
         aEl.appendChild(meta);
         if (cmp) renderCompareCard(cmp.compare);
-        else if (parsed.change) renderChangeCard(parsed.change);
+        else if (parsed.change) renderChangeCard(parsed.change, q);
         else if (parsed.rejected && parsed.rejected.length) {
           const note = document.createElement('div');
           note.className = 'tk-change';
@@ -448,7 +449,7 @@
     return rows;
   }
 
-  function renderChangeCard(change) {
+  function renderChangeCard(change, cmdQ) {
     const card = document.createElement('div');
     card.className = 'tk-change';
     if (previewBefore) {
@@ -483,6 +484,14 @@
         <button type="button" class="tk-mini tk-revert" title="Palauttaa tilanteen ennen kokeilua">Palauta</button>
       </div>`;
     card.querySelector('.tk-keep').addEventListener('click', () => {
+      // Kirjaa pidetty muutos paikalliseen lokiin ennen previewBeforen nollausta
+      saveLogEntry({
+        t: new Date().toISOString(),
+        q: cmdQ || change.selite || 'Tulkin muutos',
+        selite: change.selite || '',
+        rows: applied.map((r) => ({ nimi: r.nimi, vanha: r.vanha, uusi: r.uusi, yks: r.yks || '' })),
+        before: previewBefore,
+      });
       previewBefore = null;
       card.querySelector('.tk-ch-lab').textContent = 'Muutos pidetty ✓ — vertailukohta jäi graafiin';
       card.querySelector('.tk-ch-acts').remove();
@@ -567,6 +576,83 @@
     log.appendChild(card);
     log.scrollTop = log.scrollHeight;
   }
+
+  /* ---------- Tulkin toimet: paikallinen muutosloki ---------- */
+  // Kirjaa jokaisen PIDETYN Tulkin muutoksen paikallisesti. EI koskaan lähetetä
+  // mihinkään — käyttäjän oma kirjaus. Ei sääntelyvelvoitetta (paikallinen),
+  // hyötynä läpinäkyvyys, palautus mihin tahansa hetkeen ja vienti tiedostona.
+
+  const LOG_LS = 'vp-tulkki-log';
+  function tkActions() {
+    try { return JSON.parse(localStorage.getItem(LOG_LS) || '[]'); } catch (e) { return []; }
+  }
+  function saveLogEntry(entry) {
+    const list = tkActions();
+    list.push(entry);
+    while (list.length > 60) list.shift(); // katto: vanhin pois
+    try { localStorage.setItem(LOG_LS, JSON.stringify(list)); } catch (e) {}
+    updateLogBtn();
+  }
+  function updateLogBtn() {
+    const b = $t('tkLogBtn');
+    if (b) b.textContent = `Tulkin toimet (${tkActions().length})`;
+  }
+
+  function renderLogView() {
+    const existing = log.querySelector('.tk-actions');
+    if (existing) { existing.remove(); return; } // toggle
+    const list = tkActions();
+    const card = document.createElement('div');
+    card.className = 'tk-actions';
+    let html = `<div class="tk-kats-head"><span>Tulkin toimet</span><button type="button" class="tk-kats-x" aria-label="Sulje">✕</button></div>`;
+    if (!list.length) {
+      html += '<div class="tk-ch-note">Tulkki ei ole vielä muuttanut suunnitelmaasi. Pidetyt muutokset kirjautuvat tähän — vain sinun selaimeesi, ei minnekään muualle.</div>';
+    } else {
+      html += `<div class="tk-act-tools"><button type="button" class="tk-mini tk-act-export">Lataa loki</button><button type="button" class="tk-mini tk-act-clear">Tyhjennä</button></div>`;
+      html += list.slice().reverse().map((e, ri) => {
+        const idx = list.length - 1 - ri;
+        const when = e.t ? e.t.slice(0, 16).replace('T', ' klo ') : '';
+        const chg = (e.rows || []).map((r) =>
+          `${esc(r.nimi)}: ${fmtFi(r.vanha)} → ${fmtFi(r.uusi)} ${esc(r.yks || '')}`).join('; ');
+        return `<div class="tk-act-row"><div class="tk-act-top"><span class="tk-act-when">${esc(when)}</span>` +
+          `<button type="button" class="tk-mini tk-act-revert" data-i="${idx}" title="Palauta suunnitelma tätä muutosta edeltäneeseen tilaan">Palauta tähän</button></div>` +
+          `<div class="tk-act-q">${esc(e.q || '')}</div><div class="tk-act-chg">${chg}</div></div>`;
+      }).join('');
+    }
+    card.innerHTML = html;
+    card.querySelector('.tk-kats-x').addEventListener('click', () => card.remove());
+    const exp = card.querySelector('.tk-act-export');
+    if (exp) exp.addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(tkActions(), null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'tulkin-toimet.json';
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    });
+    const clr = card.querySelector('.tk-act-clear');
+    if (clr) clr.addEventListener('click', () => {
+      try { localStorage.removeItem(LOG_LS); } catch (e) {}
+      updateLogBtn();
+      card.remove();
+    });
+    card.querySelectorAll('.tk-act-revert').forEach((b) => b.addEventListener('click', () => {
+      const e = tkActions()[+b.dataset.i];
+      if (!e || !e.before) return;
+      previewBefore = null; // mahdollinen aktiivinen esikatselu väistyy
+      applySaved(JSON.parse(JSON.stringify(e.before)));
+      syncInputs();
+      renderAll();
+      clearBaseline();
+      b.textContent = 'Palautettu ✓';
+      b.disabled = true;
+    }));
+    log.appendChild(card);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  $t('tkLogBtn').addEventListener('click', renderLogView);
+  updateLogBtn();
 
   /* ---------- Evalien keräys (golden-setti oikeasta käytöstä) ---------- */
 

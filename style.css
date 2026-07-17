@@ -2000,3 +2000,16 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
   font-weight: 600; padding: 1px 8px; cursor: pointer;
 }
 .tk-kats-ask:hover { background: rgba(139, 124, 246, 0.28); }
+
+/* Tulkki: muutosloki (Tulkin toimet — paikallinen, vietävä) */
+.tk-actions {
+  border: 1px solid var(--border); border-radius: 11px;
+  padding: 9px 11px; background: rgba(8, 12, 24, 0.4);
+}
+.tk-act-tools { display: flex; gap: 8px; margin-bottom: 8px; }
+.tk-act-row { padding: 7px 0; border-top: 1px solid var(--border-soft); }
+.tk-act-row:first-of-type { border-top: 0; }
+.tk-act-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tk-act-when { font-size: 10.5px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.tk-act-q { font-size: 12px; color: var(--text-dim); margin: 3px 0 2px; }
+.tk-act-chg { font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
