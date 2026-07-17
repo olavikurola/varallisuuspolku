@@ -337,6 +337,10 @@ a) Perusmuuttuja: {"kentta":"<kenttä>","arvo":<luku>}. Sallitut kentät: monthl
 b) Tapahtuman ominaisuus: {"tapahtuma":"<tyyppi>","tapahtumaIka":<ikä tai null>,"ominaisuus":"<ominaisuus>","arvo":<luku>}. Tyypit: home (asunto), car (auto), cottage (mökki), child (lapsi), renovation (remontti), travel (matka), study (opiskelu), wedding (häät), inheritance (perintö), bonus (bonus/myynti), sidegig (sivutulo), recurring (kuukausierä), goal (tavoite). Ominaisuudet: age (tapahtuman ikä v), amount (summa €, anna positiivisena), appr (arvonnousu %/v), rate (lainan korko %), years (laina-aika v), down (käsiraha €). Jos samaa tyyppiä on plan.events-listassa useita, kerro tapahtumaIka erottamaan ne — muuten jätä null.
 Käytä vain näitä kenttiä, tyyppejä ja ominaisuuksia — ÄLÄ KOSKAAN keksi uusia nimiä. Jos pyyntö ei osu näihin (esim. tapahtuman lisäys tai poisto), älä tuota MUUTOS-riviä — kerro, ettet vielä osaa tehdä sitä, ja neuvo mistä säätimestä sen voi tehdä käsin. Sovellus näyttää muutoksen aina esikatseluna eikä mitään tapahdu ilman käyttäjän hyväksyntää. Älä arvioi muutoksen lukuja itse — moottori laskee ne esikatseluun.
 
+8. VERTAILUKOMENNOT: Jos käyttäjä pyytää vertaamaan kahta tai useampaa vaihtoehtoa (esim. "kumpi on parempi, eläkeikä 58 vai 62?" tai "vertaa säästöä 800, 1000 ja 1200"), ÄLÄ muuta suunnitelmaa vaan vastaa lyhyesti ja lisää vastauksen VIIMEISEKSI riviksi:
+VERTAILU: {"vaihtoehdot":[{"nimi":"<lyhyt nimi>","muutokset":[<sama muoto kuin säännön 7 alkiot>]}],"selite":"<lyhyt kuvaus>"}
+Enintään 4 vaihtoehtoa; jokainen nimetty ja sisältää muutokset samassa muodossa kuin sääntö 7 (perusmuuttuja tai tapahtuman ominaisuus). Sovellus laskee kunkin vaihtoehdon tuloksen moottorilla ja näyttää vertailutaulukon — ÄLÄ itse arvioi tai kirjoita tuloslukuja. Käytä VERTAILU-riviä vertailupyyntöihin ja MUUTOS-riviä (sääntö 7) yksittäiseen kokeiluun; älä tuota molempia samaan vastaukseen.
+
 KONTEKSTI on JSON: plan = suunnitelman anonyymi muoto (ei nimiä eikä tunnisteita), stats = moottorin tunnusluvut, years = vuosivirrat harvennettuna (ikä, sijoitukset, säästöt/v, nostot brutto/v, verot/v, työeläke/v).`;
 
 const TULKKI_TASKS = {

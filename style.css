@@ -1940,3 +1940,27 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
   font: inherit; font-size: 12px; font-weight: 700; padding: 6px 12px; cursor: pointer;
 }
 .tk-keep:hover { filter: brightness(1.08); }
+
+/* Tulkki: vertailutaulukko (lukupohjainen, ei muuta tilaa) */
+.tk-cmp {
+  border: 1px solid rgba(139, 124, 246, 0.4); border-radius: 11px;
+  padding: 10px 12px; background: rgba(139, 124, 246, 0.08);
+}
+.tk-cmp-lab {
+  font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+  color: #a99cf8; font-weight: 700; margin-bottom: 7px;
+}
+.tk-cmp-scroll { overflow-x: auto; }
+.tk-cmp-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tk-cmp-tbl th, .tk-cmp-tbl td {
+  padding: 5px 8px; text-align: right; font-variant-numeric: tabular-nums;
+  white-space: nowrap; border-bottom: 1px solid var(--border-soft);
+}
+.tk-cmp-tbl thead th, .tk-cmp-tbl tbody th { border-bottom: 1px solid rgba(139, 124, 246, 0.25); }
+.tk-cmp-tbl th:first-child, .tk-cmp-tbl tr > th:first-child {
+  text-align: left; color: var(--text-dim); font-weight: 500;
+}
+.tk-cmp-tbl tr:first-child th { color: var(--text); font-weight: 600; text-align: right; }
+.tk-cmp-tbl tr:first-child th:first-child { text-align: left; }
+.tk-cmp-best { color: var(--accent); font-weight: 700; }
+.tk-cmp-note { font-size: 10.5px; color: var(--text-faint); margin-top: 8px; line-height: 1.45; }

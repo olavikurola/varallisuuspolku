@@ -39,6 +39,7 @@
 
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmtFi = (v) => v == null ? '–' : (typeof v === 'number' ? v.toLocaleString('fi-FI') : String(v));
 
   function buildContext() {
     const s = sim || simulate(state);
@@ -174,6 +175,7 @@
     if (s && s.depletionAge != null) sugs.push(`Miksi varat loppuvat ${Math.round(s.depletionAge)} vuoden iässä?`);
     else sugs.push('Mikä suunnitelmassani on suurin epävarmuus?');
     sugs.push('Mistä verot kertyvät?');
+    if (state.events.some((e) => e.type === 'retirement')) sugs.push('Vertaa eläkeikiä 60, 63 ja 65');
     const el = $t('tkSugs');
     el.innerHTML = sugs.map((q) => `<button type="button" class="tk-sug">${esc(q)}</button>`).join('') +
       '<button type="button" class="tk-sug tk-adv">📋 Kysymyslista varainhoitajalle</button>';
@@ -244,9 +246,11 @@
         const nums = [];
         collectNums(ctx, nums);
         aEl.className = 'tk-a';
+        const cmp = extractCompare(data.answer);
         const parsed = extractChange(data.answer);
-        const doubts = renderAnswer(aEl, parsed.text, nums);
-        chat.push({ q, a: parsed.text });
+        const text = cmp ? cmp.text : parsed.text;
+        const doubts = renderAnswer(aEl, text, nums);
+        chat.push({ q, a: text });
         const meta = document.createElement('div');
         meta.className = 'tk-meta';
         meta.innerHTML =
@@ -258,7 +262,8 @@
           ev.target.disabled = true;
         });
         aEl.appendChild(meta);
-        if (parsed.change) renderChangeCard(parsed.change);
+        if (cmp) renderCompareCard(cmp.compare);
+        else if (parsed.change) renderChangeCard(parsed.change);
         else if (parsed.rejected && parsed.rejected.length) {
           const note = document.createElement('div');
           note.className = 'tk-change';
@@ -319,40 +324,64 @@
 
   let previewBefore = null; // serialize()-kopio ennen kokeilua (null = ei aktiivista)
 
+  // Validoi muutosalkioiden lista whitelistiä vasten. Yhteinen sekä MUUTOS-
+  // (yksi kokeilu) että VERTAILU-poluille (usea vaihtoehto rinnakkain).
+  function validateChanges(arr) {
+    const list = [], rejected = [];
+    for (const c of (Array.isArray(arr) ? arr : []).slice(0, 6)) {
+      if (!c || typeof c.arvo !== 'number' || !isFinite(c.arvo)) {
+        if (c && (c.kentta || c.tapahtuma)) rejected.push(String(c.kentta || c.tapahtuma).slice(0, 32));
+        continue;
+      }
+      const f = FIELDS[c.kentta];
+      const p = EVENT_PROPS[c.ominaisuus];
+      if (f) {
+        list.push({ kentta: c.kentta, arvo: Math.min(f.max, Math.max(f.min, c.arvo)) });
+      } else if (EVENT_NAMES[c.tapahtuma] && p) {
+        list.push({
+          tapahtuma: c.tapahtuma,
+          tapahtumaIka: (typeof c.tapahtumaIka === 'number' && isFinite(c.tapahtumaIka)) ? c.tapahtumaIka : null,
+          ominaisuus: c.ominaisuus,
+          arvo: Math.min(p.max, Math.max(p.min, c.arvo)),
+        });
+      } else {
+        rejected.push(String(c.kentta || (c.tapahtuma ? c.tapahtuma + '.' + c.ominaisuus : 'tuntematon')).slice(0, 40));
+      }
+    }
+    return { list, rejected };
+  }
+
   // Irrottaa vastauksen lopusta MUUTOS-rivin; palauttaa {text, change|null}
   function extractChange(raw) {
     const m = raw.match(/\nMUUTOS:\s*(\{[\s\S]*\})\s*$/);
-    if (!m) return { text: raw, change: null };
+    if (!m) return { text: raw, change: null, rejected: [] };
     // MUUTOS-rivi ei koskaan päädy näkyviin sellaisenaan — hylätyt kentät
     // raportoidaan erikseen, jotta käyttäjä tietää miksi mitään ei tapahtunut
     const text = raw.slice(0, m.index).trim();
-    const rejected = [];
     try {
       const o = JSON.parse(m[1]);
-      const list = [];
-      for (const c of (Array.isArray(o.muutokset) ? o.muutokset : []).slice(0, 6)) {
-        if (!c || typeof c.arvo !== 'number' || !isFinite(c.arvo)) {
-          if (c && (c.kentta || c.tapahtuma)) rejected.push(String(c.kentta || c.tapahtuma).slice(0, 32));
-          continue;
-        }
-        const f = FIELDS[c.kentta];
-        const p = EVENT_PROPS[c.ominaisuus];
-        if (f) {
-          list.push({ kentta: c.kentta, arvo: Math.min(f.max, Math.max(f.min, c.arvo)) });
-        } else if (EVENT_NAMES[c.tapahtuma] && p) {
-          list.push({
-            tapahtuma: c.tapahtuma,
-            tapahtumaIka: (typeof c.tapahtumaIka === 'number' && isFinite(c.tapahtumaIka)) ? c.tapahtumaIka : null,
-            ominaisuus: c.ominaisuus,
-            arvo: Math.min(p.max, Math.max(p.min, c.arvo)),
-          });
-        } else {
-          rejected.push(String(c.kentta || (c.tapahtuma ? c.tapahtuma + '.' + c.ominaisuus : 'tuntematon')).slice(0, 40));
-        }
-      }
+      const { list, rejected } = validateChanges(o.muutokset);
       if (!list.length) return { text, change: null, rejected };
       return { text, change: { muutokset: list, selite: String(o.selite || '').slice(0, 200) }, rejected };
-    } catch (e) { return { text, change: null, rejected }; }
+    } catch (e) { return { text, change: null, rejected: [] }; }
+  }
+
+  // Irrottaa VERTAILU-rivin: usea nimetty vaihtoehto rinnakkain. Palauttaa
+  // {text, compare} tai null. Vertailu on LUKUPOHJAINEN — ei kosketa tilaan.
+  function extractCompare(raw) {
+    const m = raw.match(/\nVERTAILU:\s*(\{[\s\S]*\})\s*$/);
+    if (!m) return null;
+    const text = raw.slice(0, m.index).trim();
+    try {
+      const o = JSON.parse(m[1]);
+      const opts = [];
+      for (const v of (Array.isArray(o.vaihtoehdot) ? o.vaihtoehdot : []).slice(0, 4)) {
+        const { list } = validateChanges(v && v.muutokset);
+        if (list.length) opts.push({ nimi: String((v && v.nimi) || 'Vaihtoehto').slice(0, 40), muutokset: list });
+      }
+      if (!opts.length) return null;
+      return { text, compare: { vaihtoehdot: opts, selite: String(o.selite || '').slice(0, 200) } };
+    } catch (e) { return null; }
   }
 
   // Soveltaa muutokset serialisoituun kopioon; palauttaa rivit näytölle
@@ -428,7 +457,7 @@
     syncInputs();
     renderAll();
 
-    const fmt = (v) => v == null ? '–' : (typeof v === 'number' ? v.toLocaleString('fi-FI') : String(v));
+    const fmt = fmtFi;
     card.innerHTML =
       `<div class="tk-ch-lab">Kokeilu käytössä — vertailu haamuna graafissa</div>` +
       (change.selite ? `<div class="tk-ch-sel">${esc(change.selite)}</div>` : '') +
@@ -453,6 +482,74 @@
       card.querySelector('.tk-ch-lab').textContent = 'Palautettu ennalleen';
       card.querySelector('.tk-ch-acts').remove();
     });
+    log.appendChild(card);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  /* ---------- Vertaile: usea vaihtoehto rinnakkain (lukupohjainen) ---------- */
+  // Ajaa moottorin jokaiselle vaihtoehdolle kloonatussa tilassa ja näyttää
+  // vertailutaulukon. EI kosketa oikeaan tilaan — ei esikatselua, ei perumista.
+
+  function metricsOf(planObj) {
+    const s = simulate(planObj);
+    return {
+      succ: s.successProb != null ? Math.round(s.successProb * 100) : null,
+      dep: s.depletionAge != null ? Math.round(s.depletionAge) : null,
+      sust: s.sustainableWd != null ? Math.round(s.sustainableWd) : null,
+      wEnd: Math.round(Math.max(0, s.wEnd || 0)),
+      tax: Math.round(s.taxPaid || 0),
+    };
+  }
+
+  const CMP_ROWS = [
+    { k: 'Onnistuminen', get: (m) => m.succ, fmt: (v) => v == null ? '–' : v + ' %', best: 'max' },
+    { k: 'Varat riittävät', get: (m) => m.dep, fmt: (v) => v == null ? 'loppuun asti' : v + ' v', best: 'maxNull' },
+    { k: 'Kestävä tulo', get: (m) => m.sust, fmt: (v) => v == null ? '–' : fmtFi(v) + ' €/kk', best: 'max' },
+    { k: 'Loppuvarallisuus', get: (m) => m.wEnd, fmt: (v) => fmtFi(v) + ' €', best: 'max' },
+    { k: 'Verot yhteensä', get: (m) => m.tax, fmt: (v) => fmtFi(v) + ' €', best: 'min' },
+  ];
+
+  function bestIndex(vals, mode) {
+    let bi = -1, bv = null;
+    vals.forEach((v, i) => {
+      // "loppuun asti" (null depletion) on paras — käsitellään äärettömänä
+      const x = (mode === 'maxNull') ? (v == null ? Infinity : v) : v;
+      if (x == null) return;
+      if (bv == null || (mode === 'min' ? x < bv : x > bv)) { bv = x; bi = i; }
+    });
+    // jos kaikki samat, ei korosteta mitään
+    const distinct = new Set(vals.map((v) => v == null ? 'x' : v));
+    return distinct.size > 1 ? bi : -1;
+  }
+
+  function renderCompareCard(compare) {
+    const card = document.createElement('div');
+    card.className = 'tk-cmp';
+    let base;
+    try {
+      base = JSON.parse(JSON.stringify(serialize()));
+      const cols = [{ nimi: 'Nykyinen', m: metricsOf(base) }];
+      for (const v of compare.vaihtoehdot) {
+        const mod = JSON.parse(JSON.stringify(base));
+        applyChanges(mod, v.muutokset);
+        cols.push({ nimi: v.nimi, m: metricsOf(mod) });
+      }
+      const head = `<tr><th></th>${cols.map((c) => `<th>${esc(c.nimi)}</th>`).join('')}</tr>`;
+      const body = CMP_ROWS.map((row) => {
+        const vals = cols.map((c) => row.get(c.m));
+        const bi = bestIndex(vals, row.best);
+        const cells = vals.map((v, i) =>
+          `<td class="${i === bi ? 'tk-cmp-best' : ''}">${esc(row.fmt(v))}</td>`).join('');
+        return `<tr><th>${row.k}</th>${cells}</tr>`;
+      }).join('');
+      card.innerHTML =
+        `<div class="tk-cmp-lab">Vertailu — moottori laski jokaisen vaihtoehdon</div>` +
+        (compare.selite ? `<div class="tk-ch-sel">${esc(compare.selite)}</div>` : '') +
+        `<div class="tk-cmp-scroll"><table class="tk-cmp-tbl">${head}${body}</table></div>` +
+        `<div class="tk-cmp-note">Suunnitelmaasi ei muutettu. Ota jokin käyttöön sanomalla esim. “ota käyttöön ${esc(compare.vaihtoehdot[0].nimi)}”.</div>`;
+    } catch (e) {
+      card.innerHTML = '<div class="tk-ch-note">Vertailun laskenta epäonnistui.</div>';
+    }
     log.appendChild(card);
     log.scrollTop = log.scrollHeight;
   }
