@@ -48,6 +48,10 @@
   function buildContext() {
     const s = sim || simulate(state);
     const plan = buildDonationPayload(state, s); // sama anonyymi whitelist kuin vertailudatassa
+    // Porrastettu säästö mukaan kontekstiin (pelkkiä lukuja, ei tunnisteita)
+    if (Array.isArray(state.savePhases) && state.savePhases.length) {
+      plan.savePhases = state.savePhases.map((p) => ({ to: Math.round(p.to), amount: Math.round(p.amount) }));
+    }
     const ret = state.events.find((e) => e.type === 'retirement');
     const stats = {
       verovuosi: TAX_YEAR,
@@ -395,6 +399,16 @@
   function validateChanges(arr) {
     const list = [], rejected = [];
     for (const c of (Array.isArray(arr) ? arr : []).slice(0, 6)) {
+      // Porrastettu säästöaikataulu: koko lista kerralla
+      if (c && Array.isArray(c.aikataulu)) {
+        const ph = c.aikataulu
+          .filter((r) => r && typeof r.to === 'number' && isFinite(r.to) && typeof r.amount === 'number' && isFinite(r.amount))
+          .map((r) => ({ to: Math.min(105, Math.max(1, Math.round(r.to))), amount: Math.min(1e6, Math.max(0, r.amount)) }))
+          .slice(0, 8);
+        if (ph.length) list.push({ aikataulu: ph });
+        else rejected.push('aikataulu');
+        continue;
+      }
       if (!c || typeof c.arvo !== 'number' || !isFinite(c.arvo)) {
         if (c && (c.kentta || c.tapahtuma)) rejected.push(String(c.kentta || c.tapahtuma).slice(0, 32));
         continue;
@@ -455,6 +469,16 @@
     const rows = [];
     const ret = (mod.events || []).find((e) => e.type === 'retirement');
     for (const c of list) {
+      // Porrastettu säästöaikataulu: korvaa koko aikataulun (ja tasaisen säästön)
+      if (c.aikataulu) {
+        mod.savePhases = c.aikataulu.slice().sort((a, b) => a.to - b.to);
+        mod.monthly = mod.savePhases[0].amount; // perussäästö = 1. vaihe (poiston varalta)
+        const n = mod.savePhases.length;
+        const desc = mod.savePhases.map((p, i) =>
+          `${fmtFi(Math.round(p.amount))} €/kk ${i < n - 1 ? '→ ' + p.to + ' v' : '→ loppu'}`).join(', ');
+        rows.push({ nimi: 'Säästöaikataulu', desc });
+        continue;
+      }
       // Tapahtuman ominaisuus: kohdenna tyyppiin, tarvittaessa ikään
       if (c.tapahtuma) {
         const p = EVENT_PROPS[c.ominaisuus];
@@ -529,6 +553,8 @@
       (change.selite ? `<div class="tk-ch-sel">${esc(change.selite)}</div>` : '') +
       rows.map((r) => r.ohitettu
         ? `<div class="tk-ch-row tk-ch-skip">${esc(r.nimi)} · ohitettu (${esc(r.ohitettu)})</div>`
+        : r.desc
+        ? `<div class="tk-ch-row">${esc(r.nimi)}: <b>${esc(r.desc)}</b></div>`
         : `<div class="tk-ch-row">${esc(r.nimi)}: <s>${fmt(r.vanha)}</s> → <b>${fmt(r.uusi)}</b> ${esc(r.yks)}</div>`).join('') +
       `<div class="tk-ch-acts">
         <button type="button" class="tk-keep">Pidä muutos</button>
@@ -540,7 +566,7 @@
         t: new Date().toISOString(),
         q: cmdQ || change.selite || 'Tulkin muutos',
         selite: change.selite || '',
-        rows: applied.map((r) => ({ nimi: r.nimi, vanha: r.vanha, uusi: r.uusi, yks: r.yks || '' })),
+        rows: applied.map((r) => ({ nimi: r.nimi, vanha: r.vanha, uusi: r.uusi, yks: r.yks || '', desc: r.desc })),
         before: previewBefore,
       });
       previewBefore = null;
@@ -664,8 +690,9 @@
       html += list.slice().reverse().map((e, ri) => {
         const idx = list.length - 1 - ri;
         const when = e.t ? e.t.slice(0, 16).replace('T', ' klo ') : '';
-        const chg = (e.rows || []).map((r) =>
-          `${esc(r.nimi)}: ${fmtFi(r.vanha)} → ${fmtFi(r.uusi)} ${esc(r.yks || '')}`).join('; ');
+        const chg = (e.rows || []).map((r) => r.desc
+          ? `${esc(r.nimi)}: ${esc(r.desc)}`
+          : `${esc(r.nimi)}: ${fmtFi(r.vanha)} → ${fmtFi(r.uusi)} ${esc(r.yks || '')}`).join('; ');
         return `<div class="tk-act-row"><div class="tk-act-top"><span class="tk-act-when">${esc(when)}</span>` +
           `<button type="button" class="tk-mini tk-act-revert" data-i="${idx}" title="Palauta suunnitelma tätä muutosta edeltäneeseen tilaan">Palauta tähän</button></div>` +
           `<div class="tk-act-q">${esc(e.q || '')}</div><div class="tk-act-chg">${chg}</div></div>`;
