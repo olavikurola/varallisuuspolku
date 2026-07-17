@@ -346,6 +346,7 @@ KONTEKSTI on JSON: plan = suunnitelman anonyymi muoto (ei nimiä eikä tunnistei
 const TULKKI_TASKS = {
   explain: null, // käyttäjän kysymys sellaisenaan
   advisor: 'TEHTÄVÄ: Laadi tämän suunnitelman pohjalta 5–8 täsmällistä kysymystä, jotka käyttäjän kannattaa esittää varainhoitajalle tai talousneuvojalle tapaamisessa. Kysymysten tulee nousta suunnitelman omista luvuista ja epävarmuuksista (esim. nostotaso, verot, allokaatio, riittävyys). Muotoile numeroituna listana. Älä suosittele tuotteita.',
+  haasta: 'TEHTÄVÄ: Etsi tästä suunnitelmasta 2–3 merkittävintä riskiä tai sokeaa pistettä, jotka juuri tämän suunnitelman luvut paljastavat (esim. lainanhoito jatkuu eläkkeelle, liian suuri kuukausitulon tarve suhteessa salkkuun, matala säästöaste, omaisuuden arvonnousun pysähtyminen, pakotettu varhaiseläke). Kirjoita ensin lyhyt kappale, joka nimeää riskit selkokielellä. Esitä ne sitten VERTAILU-rivinä (sääntö 8): jokainen vaihtoehto on YKSI stressiskenaario, joka tekee suunnitelmasta vaativamman ja jonka voi ilmaista sallituilla muutoksilla — esim. eläkeikä (retAge) aiemmaksi (pakotettu varhaiseläke), kuukausisäästö (monthly) pienemmäksi (työttömyys), kuukausitulon tarve (withdrawal) suuremmaksi (kohonneet kulut), tai omaisuuden arvonnousu (tapahtuman appr) nollaan (arvon pysähtyminen). Nimeä jokainen skenaario selkeästi. Näytä käyttäjälle, mitä riskit tekisivät suunnitelmalle — ÄLÄ suosittele toimenpiteitä etkä väitä olevasi neuvonantaja.',
 };
 
 const tulkkiHits = new Map(); // IP → {count, reset} — vain muistissa
@@ -371,7 +372,7 @@ function tulkkiDailyExceeded() {
 function tulkkiPayload(p) {
   if (!p || typeof p !== 'object') return null;
   if (typeof p.key !== 'string' || !TULKKI_KEYS.includes(p.key)) return { badKey: true };
-  const mode = p.mode === 'advisor' ? 'advisor' : 'explain';
+  const mode = (p.mode === 'advisor' || p.mode === 'haasta') ? p.mode : 'explain';
   const question = typeof p.question === 'string' ? p.question.trim() : '';
   if (mode === 'explain' && (!question || question.length > 600)) return null;
   let ctx = '';

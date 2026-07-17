@@ -128,6 +128,14 @@ const CTX = { plan: { ageNow: 30 }, stats: { onnistumistodennakoisyysPct: 99, ve
     ok(/TEHTÄVÄ: Laadi/.test(lastUpstream.body.messages[0].content), 'advisor-tehtävä palvelimen määräämä');
   }
 
+  console.log('Haasta (stressiskenaariot)');
+  {
+    const r = await post({ key: 'oma-avain', mode: 'haasta', context: CTX });
+    ok(r.status === 200, 'haasta ei vaadi kysymystä');
+    ok(/TEHTÄVÄ: Etsi tästä suunnitelmasta/.test(lastUpstream.body.messages[0].content), 'haasta-tehtävä palvelimen määräämä');
+    ok(lastUpstream.body.messages[0].content.indexOf('stressiskenaario') > -1, 'ohjeistaa stressiskenaarioihin');
+  }
+
   console.log('Päiväkatkaisija');
   {
     // 6 kutsua käytetty yllä (3 onnistunutta + advisor + trimmed = 5... katto laukeaa laskurista)

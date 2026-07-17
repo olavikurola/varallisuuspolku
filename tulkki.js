@@ -187,10 +187,12 @@
     if (state.events.some((e) => e.type === 'retirement')) sugs.push('Vertaa eläkeikiä 60, 63 ja 65');
     const el = $t('tkSugs');
     el.innerHTML = sugs.map((q) => `<button type="button" class="tk-sug">${esc(q)}</button>`).join('') +
+      '<button type="button" class="tk-sug tk-haasta">🔍 Haasta suunnitelmani</button>' +
       '<button type="button" class="tk-sug tk-adv">📋 Kysymyslista varainhoitajalle</button>';
     el.querySelectorAll('.tk-sug').forEach((b) => {
       b.addEventListener('click', () => {
         if (b.classList.contains('tk-adv')) ask('', 'advisor');
+        else if (b.classList.contains('tk-haasta')) ask('', 'haasta');
         else ask(b.textContent, 'explain');
       });
     });
@@ -209,10 +211,13 @@
     unreachable: 'Yhteys Tulkkiin epäonnistui — tarkista verkko.',
   };
 
+  // Tilat, jotka eivät tarvitse käyttäjän kysymystä (palvelin määrää tehtävän)
+  const NOQ = { advisor: 'Kysymyslista varainhoitajalle', haasta: 'Haasta suunnitelmani' };
+
   async function ask(question, mode) {
     if (busy) return;
-    const q = mode === 'advisor' ? 'Kysymyslista varainhoitajalle' : (question || input.value.trim());
-    if (mode !== 'advisor' && !q) return;
+    const q = NOQ[mode] || (question || input.value.trim());
+    if (!NOQ[mode] && !q) return;
     busy = true;
     input.value = '';
     input.disabled = true;
@@ -242,7 +247,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           key: tkKey, mode: mode || 'explain',
-          question: mode === 'advisor' ? undefined : q,
+          question: NOQ[mode] ? undefined : q,
           context: ctx,
           history: chat.slice(-3),
         }),
