@@ -114,6 +114,11 @@
   handle.type = 'button';
   handle.textContent = '✦ Kysy';
   handle.title = 'Tulkki — kysy suunnitelmastasi';
+  // Hiljainen katsastusmerkki: ei sykettä, ei ääntä (kunnioittaa tyyntä ilmettä)
+  const badge = document.createElement('i');
+  badge.className = 'tk-badge';
+  badge.hidden = true;
+  handle.appendChild(badge);
 
   const sheet = document.createElement('aside');
   sheet.className = 'tk-sheet';
@@ -149,11 +154,15 @@
   // ja rikkoisi avaimen sisäänoton replaceState-siivouksen.
   const chat = [];
   let busy = false;
+  let katsastusDismissed = false;
 
   function openSheet(prefill) {
     sheet.hidden = false;
     handle.classList.add('tk-open');
+    badge.hidden = true; // nähty
     renderSugs();
+    // Katsastus näytetään kerran, kun keskustelu on vielä tyhjä — ei nalkuta
+    if (!katsastusDismissed && !log.children.length) renderKatsastus();
     if (prefill) { input.value = prefill; }
     input.focus();
   }
@@ -575,6 +584,80 @@
     });
   });
   updateEvalBtn();
+
+  /* ---------- Katsastus: paikallinen terveystarkistus (ei AI-kutsua) ---------- */
+  // Deterministinen kerros huomaa sokeat pisteet moottorin tilasta; AI-kerros
+  // selittää pyydettäessä. Ei verkkoa, ei kustannusta, ei lokitusta.
+
+  function runKatsastus() {
+    let s;
+    try { s = sim || simulate(state); } catch (e) { return []; }
+    const items = [];
+    const ret = state.events.find((e) => e.type === 'retirement');
+
+    // 1. Lainanhoito jatkuu eläkkeelle → suurentaa alkuvuosien nostoja
+    if (ret) {
+      for (const e of state.events) {
+        if (e.financing === 'loan' && e.years) {
+          const endAge = e.age + e.years;
+          if (endAge > ret.age + 0.5) {
+            const nimi = (EVENT_NAMES[e.type] || 'Laina').toLowerCase();
+            items.push({ sev: 'info',
+              text: `${EVENT_NAMES[e.type] || 'Lainaa'} maksetaan vielä eläkkeellä (n. ${Math.round(endAge)} v asti) — se suurentaa eläkeajan alkuvuosien nostoja.`,
+              q: `Miten ${nimi}n laina eläkkeen alkuvuosina vaikuttaa suunnitelmaani?` });
+          }
+        }
+      }
+    }
+
+    // 2. Varat ehtyvät ennen suunnitelman loppua (tai %-tilassa tulo alittaa tarpeen)
+    if (s.depletionAge != null && s.depletionAge < state.ageEnd - 0.5) {
+      const kind = s.dryKind === 'floor' ? 'tulo alittaa tarpeen' : 'varat ehtyvät';
+      items.push({ sev: 'warn',
+        text: `Suunnitelmassa ${kind} ${Math.round(s.depletionAge)}-vuotiaana, ennen loppua (${state.ageEnd} v).`,
+        q: `Miksi ${kind} ${Math.round(s.depletionAge)}-vuotiaana ja mitä sille voisi tehdä?` });
+    } else if (s.successProb != null && s.successProb < 0.75) {
+      // 3. Matala onnistumistodennäköisyys (vain jos ei jo ehtymisvaroitusta)
+      items.push({ sev: 'warn',
+        text: `Onnistumistodennäköisyys on ${Math.round(s.successProb * 100)} % — markkinariski painaa suunnitelmaa.`,
+        q: `Miksi onnistumistodennäköisyys jää ${Math.round(s.successProb * 100)} %:iin?` });
+    }
+
+    // 4. Ei eläketapahtumaa → lempeä opastus (näkyy vain tyhjennetyssä suunnitelmassa)
+    if (!ret) {
+      items.push({ sev: 'info',
+        text: 'Suunnitelmassa ei ole eläketapahtumaa — lisää se nähdäksesi, riittävätkö varat eläkkeellä.', q: null });
+    }
+
+    return items;
+  }
+
+  function renderKatsastus() {
+    const items = runKatsastus();
+    if (!items.length) return;
+    const card = document.createElement('div');
+    card.className = 'tk-kats';
+    card.innerHTML =
+      `<div class="tk-kats-head"><span>Katsastus</span><button type="button" class="tk-kats-x" aria-label="Piilota katsastus">✕</button></div>` +
+      items.map((it, i) => `<div class="tk-kats-row tk-kats-${it.sev}">${esc(it.text)}` +
+        (it.q ? ` <button type="button" class="tk-kats-ask" data-i="${i}">Selitä</button>` : '') + `</div>`).join('');
+    card.querySelector('.tk-kats-x').addEventListener('click', () => { card.remove(); katsastusDismissed = true; });
+    card.querySelectorAll('.tk-kats-ask').forEach((b) => b.addEventListener('click', () => {
+      const it = items[+b.dataset.i];
+      if (it.q) ask(it.q, 'explain');
+    }));
+    log.appendChild(card);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // Merkki kahvaan latauksessa, jos katsastuksessa on huomioita
+  try {
+    const items = runKatsastus();
+    if (items.length) {
+      badge.hidden = false;
+      if (items.some((it) => it.sev === 'warn')) badge.classList.add('tk-badge-warn');
+    }
+  } catch (e) { /* katsastus on parasta-yritystä, ei saa kaataa Tulkkia */ }
 
   /* ---------- Miksi?-chipit tunnuslukukortteihin ---------- */
   // Ei kosketa app.js:n renderStatsiin: injektoidaan chipit korttien

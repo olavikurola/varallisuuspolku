@@ -1964,3 +1964,39 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
 .tk-cmp-tbl tr:first-child th:first-child { text-align: left; }
 .tk-cmp-best { color: var(--accent); font-weight: 700; }
 .tk-cmp-note { font-size: 10.5px; color: var(--text-faint); margin-top: 8px; line-height: 1.45; }
+
+/* Tulkki: katsastus (paikallinen terveystarkistus) */
+.tk-badge {
+  position: absolute; top: -4px; left: -4px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #8b7cf6; border: 2px solid #0a0e1a;
+}
+.tk-badge-warn { background: #fbbf24; }
+@media (max-width: 560px) {
+  .tk-badge { top: -3px; left: auto; right: -3px; }
+}
+.tk-kats {
+  border: 1px solid rgba(139, 124, 246, 0.34); border-radius: 11px;
+  padding: 9px 11px; background: rgba(139, 124, 246, 0.06);
+}
+.tk-kats-head {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+  color: #a99cf8; font-weight: 700; margin-bottom: 6px;
+}
+.tk-kats-x { background: none; border: 0; color: var(--text-faint); font: inherit; font-size: 13px; cursor: pointer; line-height: 1; }
+.tk-kats-x:hover { color: var(--text); }
+.tk-kats-row {
+  font-size: 12.5px; color: var(--text); padding: 5px 0;
+  border-top: 1px solid var(--border-soft); line-height: 1.5;
+}
+.tk-kats-row:first-of-type { border-top: 0; }
+.tk-kats-warn { border-left: 2px solid #fbbf24; padding-left: 8px; }
+.tk-kats-info { border-left: 2px solid rgba(139, 124, 246, 0.5); padding-left: 8px; }
+.tk-kats-ask {
+  display: inline-block; margin-left: 2px;
+  background: rgba(139, 124, 246, 0.16); border: 1px solid rgba(139, 124, 246, 0.34);
+  border-radius: 999px; color: #a99cf8; font: inherit; font-size: 10.5px;
+  font-weight: 600; padding: 1px 8px; cursor: pointer;
+}
+.tk-kats-ask:hover { background: rgba(139, 124, 246, 0.28); }
