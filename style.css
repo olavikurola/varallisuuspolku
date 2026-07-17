@@ -2024,3 +2024,20 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
 .tk-intro-body ul { margin: 7px 0; padding-left: 18px; }
 .tk-intro-body li { margin: 3px 0; }
 .tk-intro-body li b { color: #a99cf8; }
+
+/* Tulkki: suoratoiston kursori ja kahvan hengitys työn ajan */
+.tk-cursor {
+  display: inline-block; width: 6px; height: 14px; vertical-align: -2px;
+  margin-left: 2px; border-radius: 1px; background: #8b7cf6;
+  animation: tkBlink 1s steps(2, start) infinite;
+}
+.tk-handle.tk-thinking { animation: tkGlow 1.7s ease-in-out infinite; }
+@keyframes tkBlink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+@keyframes tkGlow {
+  0%, 100% { box-shadow: -6px 0 16px -8px rgba(78, 50, 160, 0.6); }
+  50% { box-shadow: -6px 0 24px -4px rgba(139, 124, 246, 0.85); border-color: rgba(139, 124, 246, 0.8); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tk-cursor { animation: none; opacity: 0.6; }
+  .tk-handle.tk-thinking { animation: none; }
+}

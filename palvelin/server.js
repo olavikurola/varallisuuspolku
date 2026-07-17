@@ -408,6 +408,9 @@ async function handleTulkki(req, res, body) {
   });
 
   try {
+    // Suoratoisto: pyydetään mallilta stream ja välitetään teksti asiakkaalle
+    // token kerrallaan yksinkertaisena NDJSON-virtana ({delta} rivit, lopuksi
+    // {done, model, usage}). Ei tallenneta sisältöä — kulkee vain läpi.
     const r = await fetch(`${TULKKI_UPSTREAM}/v1/messages`, {
       method: 'POST',
       headers: {
@@ -418,26 +421,49 @@ async function handleTulkki(req, res, body) {
       body: JSON.stringify({
         model: TULKKI_MODEL,
         max_tokens: 700,
+        stream: true,
         system: [{ type: 'text', text: TULKKI_SYSTEM, cache_control: { type: 'ephemeral' } }],
         messages,
       }),
       signal: AbortSignal.timeout(45000),
     });
-    if (!r.ok) {
-      // Ei sisältöä lokiin — vain tilakoodi vianetsintään
+    if (!r.ok || !r.body) {
       console.log(`tulkki: upstream ${r.status}`);
       return send(res, 502, { error: 'upstream', status: r.status });
     }
-    const data = await r.json();
-    const answer = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim();
-    if (!answer) return send(res, 502, { error: 'empty' });
-    send(res, 200, {
-      answer,
-      model: data.model || TULKKI_MODEL,
-      usage: data.usage ? { in: data.usage.input_tokens, out: data.usage.output_tokens } : null,
-    });
+    res.writeHead(200, { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-cache' });
+    const writeLine = (obj) => { if (!res.writableEnded) res.write(JSON.stringify(obj) + '\n'); };
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '', model = TULKKI_MODEL, usageIn = null, usageOut = null, any = false;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, idx); buf = buf.slice(idx + 1);
+        if (!line.startsWith('data:')) continue;
+        const raw = line.slice(5).trim();
+        if (!raw || raw === '[DONE]') continue;
+        let ev;
+        try { ev = JSON.parse(raw); } catch (e) { continue; }
+        if (ev.type === 'message_start' && ev.message) {
+          model = ev.message.model || model;
+          if (ev.message.usage) usageIn = ev.message.usage.input_tokens;
+        } else if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta') {
+          any = true; writeLine({ delta: ev.delta.text });
+        } else if (ev.type === 'message_delta' && ev.usage) {
+          usageOut = ev.usage.output_tokens;
+        }
+      }
+    }
+    if (!any) writeLine({ error: 'empty' });
+    else writeLine({ done: true, model, usage: (usageIn != null || usageOut != null) ? { in: usageIn, out: usageOut } : null });
+    res.end();
   } catch (e) {
     console.log('tulkki: fetch_failed', e && e.name);
+    if (res.headersSent) { try { if (!res.writableEnded) { res.write(JSON.stringify({ error: 'unreachable' }) + '\n'); res.end(); } } catch (_) {} return; }
     send(res, 502, { error: 'unreachable' });
   }
 }

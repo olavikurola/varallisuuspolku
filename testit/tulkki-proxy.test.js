@@ -27,14 +27,31 @@ const mock = http.createServer((req, res) => {
   req.on('data', (c) => body += c);
   req.on('end', () => {
     lastUpstream = { url: req.url, headers: req.headers, body: JSON.parse(body) };
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      model: 'mock-malli',
-      content: [{ type: 'text', text: 'Onnistumistodennäköisyys on 99 %, koska säästöaika on pitkä.' }],
-      usage: { input_tokens: 1234, output_tokens: 56 },
-    }));
+    // Anthropic-tyylinen SSE-virta (palvelin jäsentää tämän NDJSON:ksi)
+    res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+    const sse = (o) => res.write('data: ' + JSON.stringify(o) + '\n\n');
+    sse({ type: 'message_start', message: { model: 'mock-malli', usage: { input_tokens: 1234 } } });
+    sse({ type: 'content_block_delta', delta: { type: 'text_delta', text: 'Onnistumistodennäköisyys on 99 %, ' } });
+    sse({ type: 'content_block_delta', delta: { type: 'text_delta', text: 'koska säästöaika on pitkä.' } });
+    sse({ type: 'message_delta', usage: { output_tokens: 56 } });
+    sse({ type: 'message_stop' });
+    res.end();
   });
 });
+
+// Lukee palvelimen NDJSON-virran → { answer, model, usage, error }
+async function drain(r) {
+  const text = await r.text();
+  let answer = '', model = null, usage = null, error = null;
+  for (const line of text.split('\n')) {
+    if (!line.trim()) continue;
+    const o = JSON.parse(line);
+    if (o.delta) answer += o.delta;
+    else if (o.done) { model = o.model; usage = o.usage; }
+    else if (o.error) error = o.error;
+  }
+  return { answer, model, usage, error };
+}
 
 function spawnServer(port, extraEnv) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vp-tulkki-'));
@@ -104,9 +121,11 @@ const CTX = { plan: { ageNow: 30 }, stats: { onnistumistodennakoisyysPct: 99, ve
       key: 'oma-avain', question: 'Miksi onnistuminen on 99 %?', context: CTX,
       history: [{ q: 'aiempi kysymys', a: 'aiempi vastaus' }],
     });
-    const data = await r.json();
-    ok(r.status === 200 && /99 %/.test(data.answer), 'vastaus välittyy läpi', JSON.stringify(data));
-    ok(data.model === 'mock-malli' && data.usage.in === 1234, 'malli ja tokenmäärät mukana');
+    ok(r.headers.get('content-type').includes('ndjson'), 'vastaus on NDJSON-virta (suoratoisto)');
+    const data = await drain(r);
+    ok(r.status === 200 && /99 %/.test(data.answer), 'suoratoistettu vastaus koostuu paloista', JSON.stringify(data));
+    ok(data.model === 'mock-malli' && data.usage.in === 1234, 'malli ja tokenmäärät lopussa');
+    ok(lastUpstream.body.stream === true, 'palvelin pyysi mallilta suoratoistoa');
     const up = lastUpstream.body;
     ok(lastUpstream.url === '/v1/messages', 'oikea upstream-polku');
     ok(lastUpstream.headers['x-api-key'] === 'test-avain', 'API-avain vain palvelimelta');

@@ -111,6 +111,19 @@
     return el.querySelectorAll('.tk-doubt').length;
   }
 
+  // Direktiivin (MUUTOS/VERTAILU) häntä ei näy suoratoiston aikana — se
+  // jäsennetään ja renderöidään kortiksi vasta virran valmistuttua.
+  function stripDirectiveTail(text) {
+    const i = text.search(/\n(?:MUUTOS|VERTAILU):/);
+    return i >= 0 ? text.slice(0, i) : text;
+  }
+  function renderStreaming(el, full, nums) {
+    const shown = stripDirectiveTail(full);
+    el.innerHTML = shown.split(/\n{2,}/).map((p) =>
+      `<p>${numSpans(esc(p).replace(/\n/g, '<br>'), nums)}</p>`).join('') +
+      '<span class="tk-cursor" aria-hidden="true"></span>';
+  }
+
   /* ---------- UI ---------- */
 
   const handle = document.createElement('button');
@@ -231,6 +244,7 @@
     busy = true;
     input.value = '';
     input.disabled = true;
+    handle.classList.add('tk-thinking'); // kahva hengittää työn ajan
 
     const qEl = document.createElement('div');
     qEl.className = 'tk-q';
@@ -262,40 +276,67 @@
           history: chat.slice(-3),
         }),
       });
-      const data = await r.json().catch(() => ({}));
       if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
         aEl.className = 'tk-a tk-err';
         aEl.textContent = ERRORS[data.error] || `Tulkki-virhe (${r.status}).`;
       } else {
+        // Suoratoisto: luetaan NDJSON-virta, teksti ilmestyy token kerrallaan.
+        // Direktiivit (MUUTOS/VERTAILU) ja korttien renderöinti vasta lopussa.
         const nums = [];
         collectNums(ctx, nums);
-        aEl.className = 'tk-a';
-        const cmp = extractCompare(data.answer);
-        const parsed = extractChange(data.answer);
-        const text = cmp ? cmp.text : parsed.text;
-        const doubts = renderAnswer(aEl, text, nums);
-        chat.push({ q, a: text });
-        const meta = document.createElement('div');
-        meta.className = 'tk-meta';
-        meta.innerHTML =
-          `<span>✓ luvut moottorista${doubts ? ` · <b class="tk-doubt-n">${doubts} tarkistamatonta</b>` : ''}</span>` +
-          `<button type="button" class="tk-mini">Tallenna evaliksi</button>`;
-        meta.querySelector('button').addEventListener('click', (ev) => {
-          saveEval(q, data.answer, ctx);
-          ev.target.textContent = 'Tallennettu ✓';
-          ev.target.disabled = true;
-        });
-        aEl.appendChild(meta);
-        if (cmp) renderCompareCard(cmp.compare);
-        else if (parsed.change) renderChangeCard(parsed.change, q);
-        else if (parsed.rejected && parsed.rejected.length) {
-          const note = document.createElement('div');
-          note.className = 'tk-change';
-          note.innerHTML = `<div class="tk-ch-note">Tulkki yritti muuttaa kohdetta, jota esikatselu ei vielä tue (${esc(parsed.rejected.join(', '))}) — mitään ei muutettu. Kokeile sanoa tarkemmin, tai tee muutos käsin napauttamalla tapahtumaa aikajanalla.</div>`;
-          log.appendChild(note);
+        const reader = r.body.getReader();
+        const dec = new TextDecoder();
+        let sbuf = '', full = '', meta = null, streamErr = null, started = false;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          sbuf += dec.decode(value, { stream: true });
+          let idx;
+          while ((idx = sbuf.indexOf('\n')) >= 0) {
+            const line = sbuf.slice(0, idx); sbuf = sbuf.slice(idx + 1);
+            if (!line.trim()) continue;
+            let obj; try { obj = JSON.parse(line); } catch (e) { continue; }
+            if (obj.delta) {
+              if (!started) { started = true; aEl.className = 'tk-a'; }
+              full += obj.delta;
+              renderStreaming(aEl, full, nums);
+              log.scrollTop = log.scrollHeight;
+            } else if (obj.done) meta = obj;
+            else if (obj.error) streamErr = obj.error;
+          }
         }
-        if (data.usage) {
-          $t('tkCost').textContent = `${data.model} · ${data.usage.in}→${data.usage.out} tok`;
+        if (!full) {
+          aEl.className = 'tk-a tk-err';
+          aEl.textContent = ERRORS[streamErr] || 'Tulkki ei vastannut — kokeile uudelleen.';
+        } else {
+          const cmp = extractCompare(full);
+          const parsed = extractChange(full);
+          const text = cmp ? cmp.text : parsed.text;
+          const doubts = renderAnswer(aEl, text, nums); // lopullinen: ei kursoria, numSpans
+          chat.push({ q, a: text });
+          const mEl = document.createElement('div');
+          mEl.className = 'tk-meta';
+          mEl.innerHTML =
+            `<span>✓ luvut moottorista${doubts ? ` · <b class="tk-doubt-n">${doubts} tarkistamatonta</b>` : ''}</span>` +
+            `<button type="button" class="tk-mini">Tallenna evaliksi</button>`;
+          mEl.querySelector('button').addEventListener('click', (ev) => {
+            saveEval(q, full, ctx);
+            ev.target.textContent = 'Tallennettu ✓';
+            ev.target.disabled = true;
+          });
+          aEl.appendChild(mEl);
+          if (cmp) renderCompareCard(cmp.compare);
+          else if (parsed.change) renderChangeCard(parsed.change, q);
+          else if (parsed.rejected && parsed.rejected.length) {
+            const note = document.createElement('div');
+            note.className = 'tk-change';
+            note.innerHTML = `<div class="tk-ch-note">Tulkki yritti muuttaa kohdetta, jota esikatselu ei vielä tue (${esc(parsed.rejected.join(', '))}) — mitään ei muutettu. Kokeile sanoa tarkemmin, tai tee muutos käsin napauttamalla tapahtumaa aikajanalla.</div>`;
+            log.appendChild(note);
+          }
+          if (meta && meta.usage) {
+            $t('tkCost').textContent = `${meta.model} · ${meta.usage.in}→${meta.usage.out} tok`;
+          }
         }
       }
     } catch (e) {
@@ -305,6 +346,7 @@
     log.scrollTop = log.scrollHeight;
     busy = false;
     input.disabled = false;
+    handle.classList.remove('tk-thinking');
     input.focus();
   }
 
