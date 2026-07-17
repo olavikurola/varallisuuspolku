@@ -40,6 +40,10 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtFi = (v) => v == null ? '–' : (typeof v === 'number' ? v.toLocaleString('fi-FI') : String(v));
+  // Plausible-telemetria app.js:n apureilla — vain tapahtuman nimi (+ tila),
+  // ei sisältöä, ei tunnisteita. Suppilon mittarointi: avattu → kysymys → pidetty.
+  const tkTrack = (n, p) => { try { if (typeof track === 'function') track(n, p); } catch (e) {} };
+  const tkTrackOnce = (n, p) => { try { if (typeof trackOnce === 'function') trackOnce(n, p); } catch (e) {} };
 
   function buildContext() {
     const s = sim || simulate(state);
@@ -161,9 +165,13 @@
     sheet.hidden = false;
     handle.classList.add('tk-open');
     badge.hidden = true; // nähty
+    tkTrackOnce('Tulkki avattu');
     renderSugs();
-    // Katsastus näytetään kerran, kun keskustelu on vielä tyhjä — ei nalkuta
-    if (!katsastusDismissed && !log.children.length) renderKatsastus();
+    // Tyhjässä keskustelussa: kertaesittely (kerran ikinä) + katsastus (per istunto)
+    if (!log.children.length) {
+      if (!introSeen()) renderIntro();
+      if (!katsastusDismissed) renderKatsastus();
+    }
     if (prefill) { input.value = prefill; }
     input.focus();
   }
@@ -219,6 +227,7 @@
     if (busy) return;
     const q = NOQ[mode] || (question || input.value.trim());
     if (!NOQ[mode] && !q) return;
+    tkTrack('Tulkki kysymys', { mode: mode || 'explain' });
     busy = true;
     input.value = '';
     input.disabled = true;
@@ -493,6 +502,7 @@
         before: previewBefore,
       });
       previewBefore = null;
+      tkTrack('Tulkki muutos pidetty');
       card.querySelector('.tk-ch-lab').textContent = 'Muutos pidetty ✓ — vertailukohta jäi graafiin';
       card.querySelector('.tk-ch-acts').remove();
     });
@@ -676,6 +686,28 @@
   });
   updateEvalBtn();
 
+  /* ---------- Kertaesittely (kerran ikinä, tyhjässä keskustelussa) ---------- */
+
+  const INTRO_LS = 'vp-tulkki-intro';
+  function introSeen() { try { return localStorage.getItem(INTRO_LS) === '1'; } catch (e) { return true; } }
+  function renderIntro() {
+    try { localStorage.setItem(INTRO_LS, '1'); } catch (e) {}
+    const card = document.createElement('div');
+    card.className = 'tk-intro';
+    card.innerHTML =
+      `<div class="tk-kats-head"><span>Tervetuloa — Tulkki</span><button type="button" class="tk-kats-x" aria-label="Sulje">✕</button></div>` +
+      `<div class="tk-intro-body">Selitän suunnitelmasi luvut selkokielellä ja autan kokeilemaan muutoksia. ` +
+      `<b>En anna sijoitusneuvontaa enkä laske itse</b> — moottori laskee, minä tulkkaan. Voit:` +
+      `<ul>` +
+      `<li><b>Kysyä:</b> “miksi rahani riittävät vain 82-vuotiaaksi?”</li>` +
+      `<li><b>Kokeilla:</b> “kokeile eläkeikää 62” — näet muutoksen esikatseluna</li>` +
+      `<li><b>Vertailla:</b> “vertaa säästöä 800, 1000 ja 1200”</li>` +
+      `<li><b>Haastaa:</b> 🔍-napilla etsin suunnitelmasi riskit</li>` +
+      `</ul>Laskelmasi pysyy selaimessasi.</div>`;
+    card.querySelector('.tk-kats-x').addEventListener('click', () => card.remove());
+    log.appendChild(card);
+  }
+
   /* ---------- Katsastus: paikallinen terveystarkistus (ei AI-kutsua) ---------- */
   // Deterministinen kerros huomaa sokeat pisteet moottorin tilasta; AI-kerros
   // selittää pyydettäessä. Ei verkkoa, ei kustannusta, ei lokitusta.
@@ -726,6 +758,7 @@
   function renderKatsastus() {
     const items = runKatsastus();
     if (!items.length) return;
+    tkTrackOnce('Tulkki katsastus');
     const card = document.createElement('div');
     card.className = 'tk-kats';
     card.innerHTML =
