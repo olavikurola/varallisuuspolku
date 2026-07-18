@@ -2644,7 +2644,8 @@ function renderStats() {
   }
 
   if (s.taxPaid > 0.5) {
-    cards.push({ k: 'Myyntivoittovero', v: fmtEur(s.taxPaid), cls: '', s: 'arvio nostoista ja myynneistä',
+    // kaksisanainen otsikko rivittyy kapeassa kortissa sanarajasta, ei kesken sanan
+    cards.push({ k: 'Myyntivoiton vero', v: fmtEur(s.taxPaid), cls: '', s: 'arvio nostoista ja myynneistä',
       d: dRow(s.taxPaid, g && g.taxPaid, fmtCompact, 500, false) });
   }
 

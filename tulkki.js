@@ -614,7 +614,7 @@
   // vertailutaulukon. EI kosketa oikeaan tilaan — ei esikatselua, ei perumista.
 
   function metricsOf(planObj) {
-    const s = simulate(planObj);
+    const s = simulate(planObj, { sustainable: true });
     return {
       succ: s.successProb != null ? Math.round(s.successProb * 100) : null,
       dep: s.depletionAge != null ? Math.round(s.depletionAge) : null,
@@ -626,10 +626,11 @@
 
   const CMP_ROWS = [
     { k: 'Onnistuminen', get: (m) => m.succ, fmt: (v) => v == null ? '–' : v + ' %', best: 'max' },
-    { k: 'Varat riittävät', get: (m) => m.dep, fmt: (v) => v == null ? 'loppuun asti' : v + ' v', best: 'maxNull' },
-    { k: 'Kestävä tulo', get: (m) => m.sust, fmt: (v) => v == null ? '–' : fmtFi(v) + ' €/kk', best: 'max' },
-    { k: 'Loppuvarallisuus', get: (m) => m.wEnd, fmt: (v) => fmtFi(v) + ' €', best: 'max' },
-    { k: 'Verot yhteensä', get: (m) => m.tax, fmt: (v) => fmtFi(v) + ' €', best: 'min' },
+    { k: 'Varat riittävät', get: (m) => m.dep, fmt: (v) => v == null ? '✓' : v + ' v', best: 'maxNull' },
+    { k: 'Kestävä tulo, €/kk', get: (m) => m.sust, fmt: (v) => v == null ? '–' : fmtFi(v), best: 'max' },
+    // tiivis muoto (1,8 M€ / 86 t€): sarakkeet mahtuvat lehteen ilman vaakavieritystä
+    { k: 'Loppuvarallisuus', get: (m) => m.wEnd, fmt: (v) => fmtCompact(v), best: 'max' },
+    { k: 'Verot yhteensä', get: (m) => m.tax, fmt: (v) => fmtCompact(v), best: 'min' },
   ];
 
   function bestIndex(vals, mode) {
@@ -802,15 +803,15 @@
       log.appendChild(card); log.scrollTop = log.scrollHeight;
       return;
     }
-    const head = `<tr><th></th>${cols.map((c) => `<th>${esc(c.nimi)}</th>`).join('')}</tr>`;
-    const rows = [
-      { k: 'Loppuvarallisuus', val: (c) => c.wEnd, fmt: (c) => fmtFi(c.wEnd) + ' €', best: 'max' },
-      { k: 'Varat riittävät', val: (c) => c.dep, fmt: (c) => c.dep == null ? 'loppuun asti' : c.dep + ' v', best: 'maxNull' },
-    ];
-    const body = rows.map((row) => {
-      const bi = bestIndex(cols.map(row.val), row.best);
-      return `<tr><th>${row.k}</th>${cols.map((c, i) => `<td class="${i === bi ? 'tk-cmp-best' : ''}">${esc(row.fmt(c))}</td>`).join('')}</tr>`;
-    }).join('');
+    // Käännetty taulukko: skenaariot riveinä — pitkät nimet mahtuvat kapeaan lehteen
+    const head = `<tr><th></th><th>Loppuvarallisuus</th><th>Varat riittävät</th></tr>`;
+    const biW = bestIndex(cols.map((c) => c.wEnd), 'max');
+    const biD = bestIndex(cols.map((c) => c.dep), 'maxNull');
+    const body = cols.map((c, i) =>
+      `<tr><th>${esc(c.nimi)}</th>` +
+      `<td class="${i === biW ? 'tk-cmp-best' : ''}">${esc(fmtCompact(c.wEnd))}</td>` +
+      `<td class="${i === biD ? 'tk-cmp-best' : ''}">${esc(c.dep == null ? '✓' : c.dep + ' v')}</td></tr>`
+    ).join('');
     card.innerHTML =
       `<div class="tk-cmp-lab">Markkinatesti — moottori ajoi kolme stressiskenaariota</div>` +
       `<div class="tk-ch-sel">Sekvenssiriski: sama suunnitelma, jos markkina käyttäytyy huonosti eläkkeelle jäädessäsi.</div>` +
@@ -953,8 +954,9 @@
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'tk-why';
-        btn.textContent = 'Miksi?';
-        btn.title = 'Tulkki selittää tämän luvun';
+        btn.textContent = '?';
+        btn.title = 'Miksi? Tulkki selittää tämän luvun';
+        btn.setAttribute('aria-label', 'Miksi? Tulkki selittää tämän luvun');
         btn.addEventListener('click', () => {
           openSheet();
           ask(`Miksi "${k.textContent.trim()}" on ${v.textContent.trim().replace(/ /g, ' ')}?`, 'explain');
