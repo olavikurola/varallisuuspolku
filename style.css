@@ -2152,3 +2152,16 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
   body.tk-docked:not(.fs) .stat .k { font-size: 9.5px; letter-spacing: 0.4px; }
   body.tk-docked:not(.fs) .stat .v { font-size: 17.5px; }
 }
+/* Kapea telakkanäkymä: tiiviit arvot (7,1 M€) täysien sijaan → viisi korttia
+   mahtuu yhdelle riville ja graafille jää enemmän korkeutta. Täysi tarkkuus
+   palaa kun lehti suljetaan tai näyttö on ≥1600 px. */
+.stat .v-alt { display: none; }
+@media (min-width: 1100px) and (max-width: 1599px) {
+  body.tk-docked:not(.fs) .stats { grid-template-columns: repeat(auto-fit, minmax(106px, 1fr)); gap: 8px; }
+  body.tk-docked:not(.fs) .stat { padding: 8px 10px; }
+  body.tk-docked:not(.fs) .stat .v { font-size: 16px; }
+  body.tk-docked:not(.fs) .stat .v-full { display: none; }
+  body.tk-docked:not(.fs) .stat .v-alt { display: inline; }
+  body.tk-docked:not(.fs) .tk-why { width: 15px; height: 15px; top: 6px; right: 6px; font-size: 9.5px; }
+  body.tk-docked:not(.fs) .stat:has(.tk-why) .k { padding-right: 12px; }
+}

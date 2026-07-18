@@ -959,7 +959,9 @@
         btn.setAttribute('aria-label', 'Miksi? Tulkki selittää tämän luvun');
         btn.addEventListener('click', () => {
           openSheet();
-          ask(`Miksi "${k.textContent.trim()}" on ${v.textContent.trim().replace(/ /g, ' ')}?`, 'explain');
+          // telakoituna näkyy tiivis arvo (v-alt) — kysymykseen aina täysi (v-full)
+          const vEl = v.querySelector('.v-full') || v;
+          ask(`Miksi "${k.textContent.trim()}" on ${vEl.textContent.trim().replace(/ /g, ' ')}?`, 'explain');
         });
         card.appendChild(btn);
       });

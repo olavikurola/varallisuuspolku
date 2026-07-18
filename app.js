@@ -2565,6 +2565,7 @@ function renderStats() {
   cards.push({
     k: 'Varallisuus eläkkeellä',
     v: s.wAtRet != null ? fmtEur(s.wAtRet) : '–',
+    va: s.wAtRet != null ? fmtCompact(s.wAtRet) : null, // tiivis arvo kapeaan telakkanäkymään
     cls: 'accent',
     s: s.retireAge != null ? `${Math.round(s.retireAge)} v iässä` : 'ei eläketapahtumaa',
     d: dRow(s.wAtRet, g && g.wAtRet, fmtCompact, 500),
@@ -2585,6 +2586,7 @@ function renderStats() {
     cards.push({
       k: `Netto ${Math.round(s.a1)} v iässä`,
       v: fmtEur(s.net[s.months]),
+      va: fmtCompact(s.net[s.months]),
       cls: 'net',
       s: `sis. sijoitukset ${fmtCompact(s.wEnd)} · ${state.real ? 'nykyrahassa' : 'nimellisarvoin'}`,
       d: dRow(s.net[s.months], g && (g.net ? g.net[g.months] : g.wEnd), fmtCompact, 500),
@@ -2593,6 +2595,7 @@ function renderStats() {
     cards.push({
       k: `Sijoitukset ${Math.round(s.a1)} v iässä`,
       v: fmtEur(s.wEnd),
+      va: fmtCompact(s.wEnd),
       cls: '',
       s: state.real ? 'nykyrahassa' : 'nimellisarvoin',
       d: dRow(s.wEnd, g && g.wEnd, fmtCompact, 500),
@@ -2601,6 +2604,7 @@ function renderStats() {
   cards.push({
     k: 'Sijoitettu yhteensä',
     v: fmtEur(s.deposits),
+    va: fmtCompact(s.deposits),
     cls: '',
     s: `${fmtEur(state.monthly)}/kk${state.savingsGrowth > 0 ? ` (+${state.savingsGrowth.toLocaleString('fi-FI')} %/v)` : ''} + alkupääoma`,
   });
@@ -2644,13 +2648,15 @@ function renderStats() {
   }
 
   if (s.taxPaid > 0.5) {
-    // kaksisanainen otsikko rivittyy kapeassa kortissa sanarajasta, ei kesken sanan
-    cards.push({ k: 'Myyntivoiton vero', v: fmtEur(s.taxPaid), cls: '', s: 'arvio nostoista ja myynneistä',
+    // sama nimi kuin Tulkin vertailurivillä; lyhyet sanat rivittyvät siististi
+    cards.push({ k: 'Verot yhteensä', v: fmtEur(s.taxPaid), va: fmtCompact(s.taxPaid), cls: '', s: 'arvio nostoista ja myynneistä',
       d: dRow(s.taxPaid, g && g.taxPaid, fmtCompact, 500, false) });
   }
 
+  // va = tiivis rinnakkaisarvo (esim. 7,1 M€): CSS näyttää sen täyden sijaan
+  // vain kapeassa telakkanäkymässä, jotta viisi korttia mahtuu yhdelle riville
   $('stats').innerHTML = cards.map((c) =>
-    `<div class="stat"><div class="k">${c.k}</div><div class="v ${c.cls}">${c.v}</div><div class="s">${c.s}</div>${c.d || ''}</div>`
+    `<div class="stat"><div class="k">${c.k}</div><div class="v ${c.cls}">${c.va ? `<span class="v-full">${c.v}</span><span class="v-alt">${c.va}</span>` : c.v}</div><div class="s">${c.s}</div>${c.d || ''}</div>`
   ).join('');
   updateCmpPill();
 }
