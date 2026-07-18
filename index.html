@@ -435,6 +435,26 @@
     </div>
   </div>
 
+  <div class="ramp" id="ramp" hidden>
+    <div class="ramp-card" role="dialog" aria-modal="true" aria-label="Aloitus" id="rampCard">
+      <h1 class="ramp-title">Näe, riittävätkö rahasi koko elämäksi</h1>
+      <p class="ramp-sub">Kolme lukua riittää alkuun. Kaikki laskenta tapahtuu selaimessasi — mitään ei lähetetä minnekään.</p>
+      <div class="ramp-fields">
+        <label class="field"><span class="field-label">Ikäsi</span>
+          <span class="input"><input id="rampAge" type="number" min="16" max="80" step="1" inputmode="numeric" placeholder="esim. 34" /><em>v</em></span></label>
+        <label class="field"><span class="field-label">Sijoitukset ja säästöt nyt</span>
+          <span class="input"><input id="rampWealth" type="number" min="0" step="1000" inputmode="numeric" placeholder="esim. 15 000" /><em>€</em></span></label>
+        <label class="field"><span class="field-label">Säästät kuukaudessa</span>
+          <span class="input"><input id="rampMonthly" type="number" min="0" step="50" inputmode="numeric" placeholder="esim. 300" /><em>€/kk</em></span></label>
+      </div>
+      <p class="ramp-err" id="rampErr" hidden>Kerro ikäsi (16–80), niin polku voidaan piirtää.</p>
+      <div class="ramp-acts">
+        <button class="btn" id="rampGo">Näytä polkuni</button>
+      </div>
+      <a href="#" class="ramp-skip" id="rampSkip">Ohita — katso valmista esimerkkiä kierroksen kanssa</a>
+    </div>
+  </div>
+
   <div class="tour" id="tour" hidden aria-live="polite">
     <div class="tour-hole" id="tourHole"></div>
     <div class="tour-card" id="tourCard" role="dialog" aria-label="Esittelykierros"></div>

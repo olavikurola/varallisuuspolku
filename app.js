@@ -5384,13 +5384,97 @@ if (location.hash === '#yhteenveto') {
 // ilman kierrosta. Testit ja generaattorit hiljentävät automaatin
 // avaimella vp-autotour-off.
 if (resetVisit) toast('Aloitettu puhtaalta pöydältä — täytä Perustiedot tai avaa piirtopöytä ⛶');
+
+/* ===================== Aloitusramppi ===================== */
+// Ensivierailun kolme kysymystä: oma käyrä ja otsikkovastaus ennen työtilaa —
+// ensimmäinen käyrä on käyttäjän oma, ei esimerkkielämä. Deterministinen ja
+// ilmainen (ei AI:ta; sanelukerros tulee myöhemmin samaan ramppiin).
+// Eheys kierroksen kanssa: ensivierailija saa rampin AUTOKIERROKSEN SIJAAN;
+// ohitus vie vanhalle polulle (esimerkkisuunnitelma + kierros); tulosnäkymä
+// tarjoaa kierroksen napista. Jakolinkki (shared) ja palaavat: ennallaan.
+// Testihiljennys: sama vp-autotour-off kuin kierroksella.
+
+const RAMP_KEY = 'vp-ramp-done';
+const rampMark = () => { try { localStorage.setItem(RAMP_KEY, '1'); } catch (e) {} };
+
+function rampEsc(e) { if (e.key === 'Escape') { e.stopPropagation(); rampSkip(); } }
+
+function closeRamp() {
+  $('ramp').hidden = true;
+  document.removeEventListener('keydown', rampEsc, true);
+}
+
+function rampSkip() {
+  rampMark();
+  closeRamp();
+  track('Ramppi ohitettu');
+  startTour(); // vanha ensivierailupolku: esimerkkisuunnitelma + kierros
+}
+
+function showRamp() {
+  $('ramp').hidden = false;
+  document.addEventListener('keydown', rampEsc, true);
+  track('Ramppi näytetty');
+  setTimeout(() => { try { $('rampAge').focus(); } catch (e) {} }, 50);
+}
+
+function rampSubmit() {
+  const age = Math.round(parseFloat($('rampAge').value));
+  if (!isFinite(age) || age < 16 || age > 80) { $('rampErr').hidden = false; $('rampAge').focus(); return; }
+  const wealth = clamp(parseFloat($('rampWealth').value) || 0, 0, 1e9);
+  const monthly = clamp(parseFloat($('rampMonthly').value) || 0, 0, 1e6);
+  const retA = Math.max(65, age + 1);
+  state.ageNow = age;
+  state.ageEnd = Math.max(90, retA + 10);
+  state.startCapital = wealth;
+  state.monthly = monthly;
+  // Vain eläketapahtuma — esimerkkielämä (asunto, auto) ei ole käyttäjän elämä.
+  // goal 'withdrawal': moottori mitoittaa kestävän kuukausitulon → rehellinen
+  // otsikkovastaus ilman keksittyjä oletuksia. Työeläke 0: lisätään itse.
+  state.events = [{ id: idSeq++, type: 'retirement', age: retA, withdrawal: 2400, pension: 0, pensionAge: retA, goal: 'withdrawal' }];
+  syncInputs();
+  renderAll();
+  rampMark();
+  track('Ramppi valmis');
+  rampResult(retA);
+}
+
+function rampResult(retA) {
+  const s = sim;
+  const wd = s && s.solvedWithdrawal != null ? Math.round(s.solvedWithdrawal) : null;
+  const wr = s && s.wAtRet != null ? Math.round(s.wAtRet) : null;
+  $('rampCard').innerHTML =
+    `<h1 class="ramp-title">Polkusi on piirretty</h1>` +
+    `<div class="ramp-res">` +
+    `<div class="ramp-stat"><div class="k">Sijoituksesi ${retA} vuoden iässä</div><div class="v">${wr != null ? fmtEur(wr) : '–'}</div><div class="s">odotetulla kehityksellä</div></div>` +
+    `<div class="ramp-stat"><div class="k">Kestävä kuukausitulo eläkkeellä</div><div class="v">${wd != null ? fmtEur(wd) + '/kk' : '–'}</div><div class="s">sijoituksistasi ${retA} v alkaen — ilman työeläkettä</div></div>` +
+    `</div>` +
+    `<p class="ramp-note">Tarkenna kuvaa työtilassa: lisää työeläkkeesi ja elämäsi isot hankinnat, ja kokeile eläkeikää vetämällä käyrästä.</p>` +
+    `<div class="ramp-acts2">` +
+    `<button class="btn" id="rampOpen">Avaa suunnitelmani</button>` +
+    `<button class="btn ghost" id="rampTour">Esittelykierros</button>` +
+    `</div>`;
+  $('rampOpen').addEventListener('click', () => { closeRamp(); toast('Vinkki: Esittelykierros löytyy ☰-valikosta'); });
+  $('rampTour').addEventListener('click', () => { closeRamp(); startTour(); });
+}
+
+$('rampGo').addEventListener('click', rampSubmit);
+$('rampSkip').addEventListener('click', (e) => { e.preventDefault(); rampSkip(); });
+for (const id of ['rampAge', 'rampWealth', 'rampMonthly']) {
+  $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); rampSubmit(); } });
+}
+
 let autoTourOff = false;
 let tourSeen = false;
+let rampSeen = false;
 try {
   autoTourOff = localStorage.getItem('vp-autotour-off') === '1';
   tourSeen = localStorage.getItem(TOUR_KEY) === '1';
+  rampSeen = localStorage.getItem(RAMP_KEY) === '1';
 } catch (e) {}
-if (!autoTourOff && !tourSeen && visitKind !== 'returning' && $('summary').hidden) {
+if (!autoTourOff && visitKind === 'first' && !rampSeen && $('summary').hidden) {
+  setTimeout(() => { if (!fsOn && tourStep < 0 && $('summary').hidden) showRamp(); }, 600);
+} else if (!autoTourOff && !tourSeen && visitKind !== 'returning' && $('summary').hidden) {
   setTimeout(() => { if (!fsOn && tourStep < 0 && $('summary').hidden) startTour(); }, 600);
 }
 
