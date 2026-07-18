@@ -421,7 +421,8 @@ async function handleTulkki(req, res, body) {
       },
       body: JSON.stringify({
         model: TULKKI_MODEL,
-        max_tokens: 700,
+        // Kova katto tilakohtaisesti: selitykset lyhyitä, listat/stressit pidempiä
+        max_tokens: p.mode === 'explain' ? 500 : 800,
         stream: true,
         system: [{ type: 'text', text: TULKKI_SYSTEM, cache_control: { type: 'ephemeral' } }],
         messages,

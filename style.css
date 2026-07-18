@@ -2124,3 +2124,21 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
 @media (max-width: 560px) {
   .tk-privacy { white-space: normal; }
 }
+
+/* Tulkki: viimeistely — avausliuku, ohut vierityspalkki, tiiviimmät kortit telakoituna */
+.tk-sheet:not([hidden]) { animation: tkSlide 0.22s ease; }
+@keyframes tkSlide { from { transform: translateX(28px); opacity: 0.4; } }
+@media (max-width: 560px) {
+  .tk-sheet:not([hidden]) { animation: tkSlideUp 0.22s ease; }
+  @keyframes tkSlideUp { from { transform: translateY(24px); opacity: 0.4; } }
+}
+.tk-log { scrollbar-width: thin; scrollbar-color: rgba(139, 124, 246, 0.35) transparent; }
+.tk-log::-webkit-scrollbar { width: 6px; }
+.tk-log::-webkit-scrollbar-thumb { background: rgba(139, 124, 246, 0.3); border-radius: 99px; }
+.tk-log::-webkit-scrollbar-track { background: transparent; }
+/* Telakoituna tunnuslukukortit tiivistyvät hieman — useampi mahtuu riviin */
+@media (min-width: 1100px) {
+  body.tk-docked:not(.fs) .stats { grid-template-columns: repeat(auto-fit, minmax(138px, 1fr)); }
+  body.tk-docked:not(.fs) .stat { padding: 9px 12px; }
+  body.tk-docked:not(.fs) .stat .v { font-size: 17.5px; }
+}
