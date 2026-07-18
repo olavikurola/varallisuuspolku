@@ -212,14 +212,22 @@
     sugs.push('Mistä verot kertyvät?');
     if (state.events.some((e) => e.type === 'retirement')) sugs.push('Vertaa eläkeikiä 60, 63 ja 65');
     const el = $t('tkSugs');
+    const hasRet = state.events.some((e) => e.type === 'retirement');
     el.innerHTML = sugs.map((q) => `<button type="button" class="tk-sug">${esc(q)}</button>`).join('') +
+      (hasRet ? '<button type="button" class="tk-sug tk-market">📉 Markkinatesti</button>' : '') +
       '<button type="button" class="tk-sug tk-haasta">🔍 Haasta suunnitelmani</button>' +
       '<button type="button" class="tk-sug tk-adv">📋 Kysymyslista varainhoitajalle</button>';
     el.querySelectorAll('.tk-sug').forEach((b) => {
       b.addEventListener('click', () => {
         if (b.classList.contains('tk-adv')) ask('', 'advisor');
         else if (b.classList.contains('tk-haasta')) ask('', 'haasta');
-        else ask(b.textContent, 'explain');
+        else if (b.classList.contains('tk-market')) {
+          tkTrack('Tulkki markkinatesti');
+          const qEl = document.createElement('div');
+          qEl.className = 'tk-q'; qEl.textContent = 'Markkinatesti';
+          log.appendChild(qEl);
+          renderMarketStress();
+        } else ask(b.textContent, 'explain');
       });
     });
   }
@@ -732,6 +740,71 @@
 
   $t('tkLogBtn').addEventListener('click', renderLogView);
   updateLogBtn();
+
+  /* ---------- Markkinatesti: moottorin stressiskenaariot (lukupohjainen) ---------- */
+  // Sekvenssiriski: mitä jos markkina käyttäytyy huonosti juuri eläkkeelle
+  // jäädessä. Moottorin valmiit stressit (karhu heti eläkkeellä, menetetty
+  // vuosikymmen, stagflaatio) ajetaan kloonilla — deterministinen, EI AI-kutsua.
+
+  const STRESS_KEYS = ['bear', 'lost', 'stagf'];
+
+  function runMarketStress() {
+    const base = JSON.parse(JSON.stringify(serialize()));
+    if (!(base.events || []).some((e) => e.type === 'retirement')) return null;
+    const mod = JSON.parse(JSON.stringify(base));
+    if (!mod.proOn || !mod.pro) {
+      mod.proOn = true;
+      mod.pro = { mc: { stress: STRESS_KEYS.slice() } };
+    } else {
+      mod.pro = JSON.parse(JSON.stringify(mod.pro));
+      mod.pro.mc = Object.assign({}, mod.pro.mc, { stress: STRESS_KEYS.slice() });
+    }
+    // Oma inflaatio-oletus mukaan, jotta stressin pohja vastaa suunnitelmaa
+    if (typeof base.inflation === 'number' && base.inflation !== 2) mod.pro.infl = base.inflation;
+    let s;
+    try { s = simulate(mod); } catch (e) { return null; }
+    if (!Array.isArray(s.stress) || !s.stress.length) return null;
+    const cols = [{
+      nimi: 'Nykyinen',
+      wEnd: Math.round(Math.max(0, s.exp[s.months] || 0)),
+      dep: s.depletionAge != null ? Math.round(s.depletionAge) : null,
+    }];
+    for (const st of s.stress) {
+      cols.push({
+        nimi: st.name,
+        wEnd: Math.round(Math.max(0, st.arr[st.arr.length - 1] || 0)),
+        dep: st.depletion != null ? Math.round(st.depletion) : null,
+      });
+    }
+    return cols;
+  }
+
+  function renderMarketStress() {
+    const card = document.createElement('div');
+    card.className = 'tk-cmp';
+    const cols = runMarketStress();
+    if (!cols) {
+      card.innerHTML = '<div class="tk-ch-note">Markkinatesti tarvitsee eläketapahtuman — lisää se ensin, niin näet sekvenssiriskin.</div>';
+      log.appendChild(card); log.scrollTop = log.scrollHeight;
+      return;
+    }
+    const head = `<tr><th></th>${cols.map((c) => `<th>${esc(c.nimi)}</th>`).join('')}</tr>`;
+    const rows = [
+      { k: 'Loppuvarallisuus', val: (c) => c.wEnd, fmt: (c) => fmtFi(c.wEnd) + ' €', best: 'max' },
+      { k: 'Varat riittävät', val: (c) => c.dep, fmt: (c) => c.dep == null ? 'loppuun asti' : c.dep + ' v', best: 'maxNull' },
+    ];
+    const body = rows.map((row) => {
+      const bi = bestIndex(cols.map(row.val), row.best);
+      return `<tr><th>${row.k}</th>${cols.map((c, i) => `<td class="${i === bi ? 'tk-cmp-best' : ''}">${esc(row.fmt(c))}</td>`).join('')}</tr>`;
+    }).join('');
+    card.innerHTML =
+      `<div class="tk-cmp-lab">Markkinatesti — moottori ajoi kolme stressiskenaariota</div>` +
+      `<div class="tk-ch-sel">Sekvenssiriski: sama suunnitelma, jos markkina käyttäytyy huonosti eläkkeelle jäädessäsi.</div>` +
+      `<div class="tk-cmp-scroll"><table class="tk-cmp-tbl">${head}${body}</table></div>` +
+      `<div class="tk-cmp-note">Deterministiset skenaariot, eivät ennuste. Suunnitelmaasi ei muutettu. Kysy “miksi karhumarkkina osuu näin” niin selitän.</div>`;
+    log.appendChild(card);
+    log.scrollTop = log.scrollHeight;
+  }
 
   /* ---------- Evalien keräys (golden-setti oikeasta käytöstä) ---------- */
 
