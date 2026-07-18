@@ -2107,3 +2107,20 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
 .ramp-note { margin: 8px 0 0; font-size: 12px; color: var(--text-dim); line-height: 1.5; }
 .ramp-acts2 { display: flex; gap: 8px; margin-top: 14px; }
 .ramp-acts2 .btn { flex: 1; padding: 10px; }
+
+/* Tulkki: telakointi — leveällä näytöllä sisältö väistyy, ei peity.
+   Kapealla lehti peittää (ei tilaa molemmille); mobiilissa alalehti. */
+:root { --tk-w: 380px; }
+@media (min-width: 1280px) { :root { --tk-w: 420px; } }
+.tk-sheet { width: min(var(--tk-w), 92vw); }
+@media (min-width: 1100px) {
+  /* :not(.fs): piirtopoydan valtaus ei sa peria telakkamarginaalia */
+  body.tk-docked:not(.fs) .layout,
+  body.tk-docked:not(.fs) .topbar { margin-right: calc(var(--tk-w) + 10px); transition: margin-right 0.2s ease; }
+  .layout, .topbar { transition: margin-right 0.2s ease; }
+}
+/* Tiiviimpi tietosuojarivi (yksi rivi, koko teksti title-vihjeenä) */
+.tk-privacy { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help; }
+@media (max-width: 560px) {
+  .tk-privacy { white-space: normal; }
+}

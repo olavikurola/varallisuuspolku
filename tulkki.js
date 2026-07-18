@@ -108,10 +108,14 @@
     });
   }
 
+  // Kevyt muotoilu: mallin **lihavointi** renderöidään (raa'at tähdet olivat
+  // iso osa "täyteisyyttä"), muu Markdown jää tekstiksi. Ajetaan escapen jälkeen.
+  const mdLite = (html) => html.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+
   function renderAnswer(el, text, nums) {
     const paras = text.split(/\n{2,}/);
     el.innerHTML = paras.map((p) =>
-      `<p>${numSpans(esc(p).replace(/\n/g, '<br>'), nums)}</p>`).join('');
+      `<p>${numSpans(mdLite(esc(p)).replace(/\n/g, '<br>'), nums)}</p>`).join('');
     return el.querySelectorAll('.tk-doubt').length;
   }
 
@@ -124,7 +128,7 @@
   function renderStreaming(el, full, nums) {
     const shown = stripDirectiveTail(full);
     el.innerHTML = shown.split(/\n{2,}/).map((p) =>
-      `<p>${numSpans(esc(p).replace(/\n/g, '<br>'), nums)}</p>`).join('') +
+      `<p>${numSpans(mdLite(esc(p)).replace(/\n/g, '<br>'), nums)}</p>`).join('') +
       '<span class="tk-cursor" aria-hidden="true"></span>';
   }
 
@@ -151,7 +155,7 @@
       <b>Tulkki</b><small>selittää — sinä päätät</small>
       <button type="button" class="tk-x" id="tkClose" aria-label="Sulje Tulkki">✕</button>
     </header>
-    <div class="tk-privacy">🔒 Laskelmasi ei lähde selaimestasi — vain suunnitelman anonyymi muoto ja kysymys välitetään selitystä varten. Palvelin ei tallenna mitään.</div>
+    <div class="tk-privacy" title="Vain suunnitelman anonyymi muoto ja kysymys välitetään selitystä varten — ei nimiä eikä tunnisteita.">🔒 Laskelmasi ei lähde selaimestasi — palvelin ei tallenna mitään.</div>
     <div class="tk-log" id="tkLog" aria-live="polite"></div>
     <div class="tk-sugs" id="tkSugs"></div>
     <form class="tk-ask" id="tkForm">
@@ -181,6 +185,7 @@
   function openSheet(prefill) {
     sheet.hidden = false;
     handle.classList.add('tk-open');
+    document.body.classList.add('tk-docked'); // leveällä näytöllä sisältö väistyy, ei peity
     badge.hidden = true; // nähty
     tkTrackOnce('Tulkki avattu');
     renderSugs();
@@ -195,6 +200,7 @@
   function closeSheet() {
     sheet.hidden = true;
     handle.classList.remove('tk-open');
+    document.body.classList.remove('tk-docked');
   }
   handle.addEventListener('click', () => (sheet.hidden ? openSheet() : closeSheet()));
   $t('tkClose').addEventListener('click', closeSheet);
@@ -202,15 +208,19 @@
     if (e.key === 'Escape' && !sheet.hidden) closeSheet();
   });
 
-  /* Ehdotuschipit lasketaan avattaessa moottorin tilasta */
+  /* Ehdotuschipit lasketaan avattaessa moottorin tilasta. Kysymyschipit
+     näytetään vain kun keskustelu on tyhjä (löydettävyys) — sen jälkeen
+     jäljelle jäävät toimintochipit, ettei lehti täyty. */
   function renderSugs() {
     const s = sim;
     const sugs = [];
-    if (s && s.successProb != null) sugs.push(`Miksi onnistumistodennäköisyys on ${Math.round(s.successProb * 100)} %?`);
-    if (s && s.depletionAge != null) sugs.push(`Miksi varat loppuvat ${Math.round(s.depletionAge)} vuoden iässä?`);
-    else sugs.push('Mikä suunnitelmassani on suurin epävarmuus?');
-    sugs.push('Mistä verot kertyvät?');
-    if (state.events.some((e) => e.type === 'retirement')) sugs.push('Vertaa eläkeikiä 60, 63 ja 65');
+    if (!chat.length) {
+      if (s && s.successProb != null) sugs.push(`Miksi onnistumistodennäköisyys on ${Math.round(s.successProb * 100)} %?`);
+      if (s && s.depletionAge != null) sugs.push(`Miksi varat loppuvat ${Math.round(s.depletionAge)} vuoden iässä?`);
+      else sugs.push('Mikä suunnitelmassani on suurin epävarmuus?');
+      sugs.push('Mistä verot kertyvät?');
+      if (state.events.some((e) => e.type === 'retirement')) sugs.push('Vertaa eläkeikiä 60, 63 ja 65');
+    }
     const el = $t('tkSugs');
     const hasRet = state.events.some((e) => e.type === 'retirement');
     el.innerHTML = sugs.map((q) => `<button type="button" class="tk-sug">${esc(q)}</button>`).join('') +
@@ -322,6 +332,9 @@
           aEl.className = 'tk-a tk-err';
           aEl.textContent = ERRORS[streamErr] || 'Tulkki ei vastannut — kokeile uudelleen.';
         } else {
+          // Kysymyschipit pois ensimmäisen vaihdon jälkeen (toimintochipit jäävät)
+          $t('tkSugs').querySelectorAll('.tk-sug:not(.tk-adv):not(.tk-haasta):not(.tk-market)')
+            .forEach((b) => b.remove());
           const cmp = extractCompare(full);
           const parsed = extractChange(full);
           const text = cmp ? cmp.text : parsed.text;
@@ -347,7 +360,8 @@
             log.appendChild(note);
           }
           if (meta && meta.usage) {
-            $t('tkCost').textContent = `${meta.model} · ${meta.usage.in}→${meta.usage.out} tok`;
+            // Päiväliite pois mallinimestä — kehittäjätieto tiiviinä
+            $t('tkCost').textContent = `${String(meta.model || '').replace(/-\d{8}$/, '')} · ${meta.usage.in}→${meta.usage.out} tok`;
           }
         }
       }
