@@ -333,10 +333,12 @@ Säännöt, joista et poikkea:
 7. MUUTOSKOMENNOT: Jos käyttäjä pyytää muuttamaan tai kokeilemaan jotakin arvoa, vastaa yhdellä lyhyellä lauseella (esim. "Kokeillaan — katso esikatselu graafista.") ja lisää vastauksen VIIMEISEKSI riviksi täsmälleen tätä muotoa oleva rivi:
 MUUTOS: {"muutokset":[{"kentta":"<kenttä>","arvo":<luku>}],"selite":"<lyhyt kuvaus>"}
 Muutosrivin alkiot ovat jompaakumpaa muotoa:
-a) Perusmuuttuja: {"kentta":"<kenttä>","arvo":<luku>}. Sallitut kentät: monthly (kuukausisäästö €/kk), startCapital (varallisuus nyt €), savingsGrowth (säästön vuosikasvu %/v), allocStocks (osakepaino %), allocBonds (korkopaino %), retAge (eläkeikä v), withdrawal (kuukausitulon tarve €/kk), pension (työeläke €/kk), pensionAge (työeläkkeen alkamisikä v). Eläkkeen muutokset tehdään AINA näillä kentillä.
+a) Perusmuuttuja: {"kentta":"<kenttä>","arvo":<luku>}. Sallitut kentät: ageNow (ikä nyt v), ageEnd (suunnitelman päättymisikä v), monthly (kuukausisäästö €/kk), startCapital (varallisuus nyt €), savingsGrowth (säästön vuosikasvu %/v), allocStocks (osakepaino %), allocBonds (korkopaino %), retAge (eläkeikä v), withdrawal (kuukausitulon tarve €/kk), pension (työeläke €/kk), pensionAge (työeläkkeen alkamisikä v). Eläkkeen muutokset tehdään AINA näillä kentillä. Jos muutat ageNow-kenttää, anna se listan ensimmäisenä.
 b) Tapahtuman ominaisuus: {"tapahtuma":"<tyyppi>","tapahtumaIka":<ikä tai null>,"ominaisuus":"<ominaisuus>","arvo":<luku>}. Tyypit: home (asunto), car (auto), cottage (mökki), child (lapsi), renovation (remontti), travel (matka), study (opiskelu), wedding (häät), inheritance (perintö), bonus (bonus/myynti), sidegig (sivutulo), recurring (kuukausierä), goal (tavoite). Ominaisuudet: age (tapahtuman ikä v), amount (summa €, anna positiivisena), appr (arvonnousu %/v), rate (lainan korko %), years (laina-aika v), down (käsiraha €). Jos samaa tyyppiä on plan.events-listassa useita, kerro tapahtumaIka erottamaan ne — muuten jätä null.
 c) Porrastettu säästö: {"aikataulu":[{"to":<yläikäraja v>,"amount":<€/kk>}, ...]}. Käytä tätä kun käyttäjä haluaa säästää eri summan eri ikävaiheissa (esim. "säästä 300 alle 40 ja 1500 sen jälkeen" tai "nosta säästö 1500:aan 40-vuotiaasta"). Anna KOKO aikataulu (kaikki vaiheet nousevassa to-järjestyksessä), älä pelkkää muutosta — käytä KONTEKSTIn plan.savePhases-aikataulua pohjana jos sellainen on, muuten plan.monthly nykyisenä perussummana. Viimeisen vaiheen to = suunnitelman päättymisikä (plan.ageEnd), koska se jatkuu loppuun. Enintään 8 vaihetta. Säästö saa myös LASKEA vaiheesta toiseen.
-Käytä vain näitä kenttiä, tyyppejä ja ominaisuuksia — ÄLÄ KOSKAAN keksi uusia nimiä. Jos pyyntö ei osu näihin (esim. tapahtuman lisäys tai poisto), älä tuota MUUTOS-riviä — kerro, ettet vielä osaa tehdä sitä, ja neuvo mistä säätimestä sen voi tehdä käsin. Sovellus näyttää muutoksen aina esikatseluna eikä mitään tapahdu ilman käyttäjän hyväksyntää. Älä arvioi muutoksen lukuja itse — moottori laskee ne esikatseluun.
+d) Uusi tapahtuma: {"uusi":"<tyyppi>","ika":<ikä v>}. Luo tapahtuman b-kohdan tyypeistä sovelluksen oletuksilla (asunto, auto ja mökki saavat oletussumman ja -lainan). Säädä summa ja muut ominaisuudet SAMAN listan b-muodon alkioilla: kohdista samaan tyyppiin ja anna tapahtumaIka = sama ikä. Menosummat positiivisina.
+e) Tapahtuman poisto: {"poista":"<tyyppi>","tapahtumaIka":<ikä tai null>}. Jos samaa tyyppiä on useita, kerro tapahtumaIka. Eläketapahtumaa ei voi luoda eikä poistaa — eläkettä säädetään a-kohdan kentillä.
+Käytä vain näitä kenttiä, tyyppejä ja ominaisuuksia — ÄLÄ KOSKAAN keksi uusia nimiä. Jos pyyntö ei osu näihin, älä tuota MUUTOS-riviä — kerro, ettet osaa tehdä sitä, ja neuvo mistä säätimestä sen voi tehdä käsin. Sovellus näyttää muutoksen aina esikatseluna eikä mitään tapahdu ilman käyttäjän hyväksyntää. Älä arvioi muutoksen lukuja itse — moottori laskee ne esikatseluun.
 
 8. VERTAILUKOMENNOT: Jos käyttäjä pyytää vertaamaan kahta tai useampaa vaihtoehtoa (esim. "kumpi on parempi, eläkeikä 58 vai 62?" tai "vertaa säästöä 800, 1000 ja 1200"), ÄLÄ muuta suunnitelmaa vaan vastaa lyhyesti ja lisää vastauksen VIIMEISEKSI riviksi:
 VERTAILU: {"vaihtoehdot":[{"nimi":"<lyhyt nimi>","muutokset":[<sama muoto kuin säännön 7 alkiot>]}],"selite":"<lyhyt kuvaus>"}
@@ -347,6 +349,7 @@ KONTEKSTI on JSON: plan = suunnitelman anonyymi muoto (ei nimiä eikä tunnistei
 const TULKKI_TASKS = {
   explain: null, // käyttäjän kysymys sellaisenaan
   advisor: 'TEHTÄVÄ: Laadi tämän suunnitelman pohjalta 5–8 täsmällistä kysymystä, jotka käyttäjän kannattaa esittää varainhoitajalle tai talousneuvojalle tapaamisessa. Kysymysten tulee nousta suunnitelman omista luvuista ja epävarmuuksista (esim. nostotaso, verot, allokaatio, riittävyys). Muotoile numeroituna listana. Älä suosittele tuotteita.',
+  ramppi: 'TEHTÄVÄ: Käyttäjä aloittaa palvelun käytön ja kuvaa elämäntilanteensa vapaana tekstinä (KUVAUS alla). KONTEKSTIn plan on tyhjä aloituspohja. Poimi kuvauksesta luvut ja elämäntapahtumat ja rakenna niistä suunnitelma YHTENÄ MUUTOS-rivinä (sääntö 7): perusmuuttujat a-muodolla (ageNow ensimmäisenä; lisäksi monthly, startCapital, retAge, withdrawal, pension ym. vain jos kuvauksessa on niille arvo), elämäntapahtumat d-muodolla ja niiden summat b-muodolla, porrastettu säästö c-muodolla jos käyttäjä kuvaa eri summia eri elämänvaiheisiin. ÄLÄ keksi arvoja, joita kuvauksessa ei ole — jätä ne pois, oletukset hoitaa sovellus. Kirjoita ensin 1–2 lausetta siitä, mitä poimit (älä arvioi tuloslukuja — moottori laskee ne). Jos kuvauksesta ei selviä edes ikää, älä tuota MUUTOS-riviä vaan pyydä ystävällisesti täsmennystä.',
   haasta: 'TEHTÄVÄ: Etsi tästä suunnitelmasta 2–3 merkittävintä riskiä tai sokeaa pistettä, jotka juuri tämän suunnitelman luvut paljastavat (esim. lainanhoito jatkuu eläkkeelle, liian suuri kuukausitulon tarve suhteessa salkkuun, matala säästöaste, omaisuuden arvonnousun pysähtyminen, pakotettu varhaiseläke). Kirjoita ensin lyhyt kappale, joka nimeää riskit selkokielellä. Esitä ne sitten VERTAILU-rivinä (sääntö 8): jokainen vaihtoehto on YKSI stressiskenaario, joka tekee suunnitelmasta vaativamman ja jonka voi ilmaista sallituilla muutoksilla — esim. eläkeikä (retAge) aiemmaksi (pakotettu varhaiseläke), kuukausisäästö (monthly) pienemmäksi (työttömyys), kuukausitulon tarve (withdrawal) suuremmaksi (kohonneet kulut), tai omaisuuden arvonnousu (tapahtuman appr) nollaan (arvon pysähtyminen). Nimeä jokainen skenaario selkeästi. Näytä käyttäjälle, mitä riskit tekisivät suunnitelmalle — ÄLÄ suosittele toimenpiteitä etkä väitä olevasi neuvonantaja.',
 };
 
@@ -373,9 +376,10 @@ function tulkkiDailyExceeded() {
 function tulkkiPayload(p) {
   if (!p || typeof p !== 'object') return null;
   if (typeof p.key !== 'string' || !TULKKI_KEYS.includes(p.key)) return { badKey: true };
-  const mode = (p.mode === 'advisor' || p.mode === 'haasta') ? p.mode : 'explain';
+  const mode = (p.mode === 'advisor' || p.mode === 'haasta' || p.mode === 'ramppi') ? p.mode : 'explain';
   const question = typeof p.question === 'string' ? p.question.trim() : '';
-  if (mode === 'explain' && (!question || question.length > 600)) return null;
+  // ramppi tarvitsee käyttäjän kuvauksen kuten explain kysymyksen
+  if ((mode === 'explain' || mode === 'ramppi') && (!question || question.length > 600)) return null;
   let ctx = '';
   try { ctx = JSON.stringify(p.context); } catch (e) { return null; }
   if (!ctx || ctx === 'null' || ctx.length > 16 * 1024) return null;
@@ -405,7 +409,10 @@ async function handleTulkki(req, res, body) {
   const task = TULKKI_TASKS[p.mode];
   messages.push({
     role: 'user',
-    content: `KONTEKSTI:\n${p.ctx}\n\n${task || 'KYSYMYS: ' + p.question}`,
+    // ramppi: palvelimen tehtävä + käyttäjän vapaa kuvaus; muut ennallaan
+    content: `KONTEKSTI:\n${p.ctx}\n\n` + (p.mode === 'ramppi'
+      ? `${task}\n\nKUVAUS: ${p.question}`
+      : (task || 'KYSYMYS: ' + p.question)),
   });
 
   try {

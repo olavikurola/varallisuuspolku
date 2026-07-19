@@ -386,6 +386,8 @@
   // säätimissä; skeeman ulkopuoliset kentät hylätään.
 
   const FIELDS = {
+    ageNow:        { nimi: 'Ikä nyt', min: 16, max: 100, yks: 'v' },
+    ageEnd:        { nimi: 'Suunnitelma päättyy', min: 40, max: 105, yks: 'v' },
     monthly:       { nimi: 'Kuukausisäästö', min: 0, max: 1e6, yks: '€/kk' },
     startCapital:  { nimi: 'Varallisuus nyt', min: 0, max: 1e9, yks: '€' },
     savingsGrowth: { nimi: 'Säästön vuosikasvu', min: 0, max: 15, yks: '%/v' },
@@ -420,7 +422,25 @@
   // (yksi kokeilu) että VERTAILU-poluille (usea vaihtoehto rinnakkain).
   function validateChanges(arr) {
     const list = [], rejected = [];
-    for (const c of (Array.isArray(arr) ? arr : []).slice(0, 6)) {
+    // katto 12: NL-ramppi tuottaa kenttiä + tapahtumia yhtenä listana
+    for (const c of (Array.isArray(arr) ? arr : []).slice(0, 12)) {
+      // Uusi tapahtuma oletuksilla — summat säädetään saman listan b-alkioilla
+      if (c && typeof c.uusi === 'string') {
+        if (EVENT_NAMES[c.uusi] && typeof c.ika === 'number' && isFinite(c.ika)) {
+          list.push({ uusi: c.uusi, ika: Math.min(105, Math.max(0, Math.round(c.ika))) });
+        } else rejected.push(('uusi ' + c.uusi).slice(0, 40));
+        continue;
+      }
+      // Tapahtuman poisto — sama kohdennus kuin b-muodossa (tyyppi + ikä)
+      if (c && typeof c.poista === 'string') {
+        if (EVENT_NAMES[c.poista]) {
+          list.push({
+            poista: c.poista,
+            tapahtumaIka: (typeof c.tapahtumaIka === 'number' && isFinite(c.tapahtumaIka)) ? c.tapahtumaIka : null,
+          });
+        } else rejected.push(('poista ' + c.poista).slice(0, 40));
+        continue;
+      }
       // Porrastettu säästöaikataulu: koko lista kerralla
       if (c && Array.isArray(c.aikataulu)) {
         const ph = c.aikataulu
@@ -499,6 +519,37 @@
         const desc = mod.savePhases.map((p, i) =>
           `${fmtFi(Math.round(p.amount))} €/kk ${i < n - 1 ? '→ ' + p.to + ' v' : '→ loppu'}`).join(', ');
         rows.push({ nimi: 'Säästöaikataulu', desc });
+        continue;
+      }
+      // Uusi tapahtuma: samat oletukset kuin paletista lisätessä (EVENT_TYPES).
+      // Lainakentät (käsiraha ym.) täyttyvät applySavedissa LOPULLISESTA
+      // summasta — siksi niitä ei aseteta tässä.
+      if (c.uusi) {
+        const def = EVENT_TYPES[c.uusi];
+        const age = Math.min(mod.ageEnd, Math.max(mod.ageNow, c.ika));
+        const ev = { type: c.uusi, age, amount: def.amount };
+        if (!def.metric) {
+          ev.financing = def.defaultFin || 'cash';
+          if (def.asset) { ev.isAsset = true; ev.appr = def.asset.appr; }
+          if (def.rec) { ev.recMonthly = def.rec.monthly; ev.recYears = def.rec.years; }
+        }
+        mod.events = mod.events || [];
+        mod.events.push(ev);
+        rows.push({ nimi: `${EVENT_NAMES[c.uusi]} (uusi)`, desc: `lisätty ikään ${age} v` });
+        continue;
+      }
+      // Tapahtuman poisto: kohdennus kuten ominaisuusmuutoksessa
+      if (c.poista) {
+        const label = `${EVENT_NAMES[c.poista]} · poisto`;
+        const cands = (mod.events || []).filter((e) => e.type === c.poista);
+        if (!cands.length) { rows.push({ nimi: label, ohitettu: 'ei tällaista tapahtumaa' }); continue; }
+        let ev = cands[0];
+        if (cands.length > 1) {
+          if (c.tapahtumaIka == null) { rows.push({ nimi: label, ohitettu: 'useita samaa tyyppiä — täsmennä ikä' }); continue; }
+          ev = cands.reduce((a, b) => Math.abs(a.age - c.tapahtumaIka) <= Math.abs(b.age - c.tapahtumaIka) ? a : b);
+        }
+        mod.events = mod.events.filter((e) => e !== ev);
+        rows.push({ nimi: `${EVENT_NAMES[c.poista]} (${Math.round(ev.age)} v)`, desc: 'poistettu' });
         continue;
       }
       // Tapahtuman ominaisuus: kohdenna tyyppiin, tarvittaessa ikään
@@ -968,5 +1019,96 @@
     };
     new MutationObserver(inject).observe(statsEl, { childList: true });
     inject();
+  }
+
+  /* ---------- NL-ramppi: kerro tilanteesi omin sanoin (beta) ---------- */
+  // Aloitusrampin vaihtoehtoinen polku vain avaimella: vapaa teksti → Tulkki
+  // poimii luvut ja tapahtumat MUUTOS-rivinä → sama validointi ja applyChanges
+  // kuin chatissa → moottori laskee tuloksen. Deterministinen kolmen kysymyksen
+  // polku pysyy ensisijaisena eikä riipu tästä. Epäonnistuminen ei koske tilaan.
+
+  // HUOM: $t hakee vain lehden sisältä — rampin elementit haetaan nl:stä
+  const rampCard = document.getElementById('rampCard');
+  if (rampCard && !document.getElementById('tkNlText')) {
+    const nl = document.createElement('div');
+    nl.className = 'tk-nl';
+    nl.innerHTML =
+      `<label class="tk-nl-lab" for="tkNlText">Tai kerro tilanteesi omin sanoin — Tulkki täyttää luvut puolestasi <em>beta</em></label>` +
+      `<textarea id="tkNlText" rows="3" maxlength="600" placeholder="esim. Olen 38, sijoituksia 80 000 €, säästän 600 €/kk. Asunnossa 150 000 € lainaa jäljellä. Haluaisin eläkkeelle 62-vuotiaana."></textarea>` +
+      `<div class="tk-nl-acts"><button type="button" class="btn ghost" id="tkNlGo">Rakenna suunnitelmani</button><span class="tk-nl-status" id="tkNlStatus" role="status"></span></div>`;
+    rampCard.insertBefore(nl, rampCard.querySelector('.ramp-skip'));
+
+    nl.querySelector('#tkNlGo').addEventListener('click', async () => {
+      const ta = nl.querySelector('#tkNlText'), st = nl.querySelector('#tkNlStatus'), btn = nl.querySelector('#tkNlGo');
+      const text = ta.value.trim();
+      if (text.length < 10) { st.textContent = 'Kerro ainakin ikäsi ja säästötilanteesi.'; ta.focus(); return; }
+      btn.disabled = true; ta.disabled = true;
+      st.textContent = 'Tulkki lukee ja moottori laskee…';
+      tkTrack('Ramppi NL käytetty');
+      // Tyhjä aloituspohja — EI nykytilasta: ohitus ja kolme kysymystä ennallaan,
+      // eikä mihinkään kosketa ennen kuin poiminta onnistuu
+      const base = {
+        ageNow: 30, ageEnd: 90, startCapital: 0, monthly: 0, savingsGrowth: 0,
+        allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true,
+        events: [{ type: 'retirement', age: 65, withdrawal: 2400, pension: 0, pensionAge: 65, goal: 'withdrawal' }],
+      };
+      let raw = null;
+      try {
+        const r = await fetch(API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            key: tkKey, mode: 'ramppi', question: text,
+            context: { plan: base, stats: { verovuosi: new Date().getFullYear() } },
+          }),
+        });
+        if (r.ok) {
+          // Kootaan koko NDJSON-virta — rampissa ei inkrementaalista näyttöä
+          let full = '', streamErr = null;
+          for (const line of (await r.text()).split('\n')) {
+            if (!line.trim()) continue;
+            try {
+              const o = JSON.parse(line);
+              if (o.delta) full += o.delta;
+              else if (o.error) streamErr = o.error;
+            } catch (e) { /* ohita rikkinäinen rivi */ }
+          }
+          raw = full.trim() || null;
+          if (!raw) st.textContent = ERRORS[streamErr] || 'Tulkki ei vastannut — kokeile uudelleen tai täytä kentät yllä.';
+        } else {
+          const data = await r.json().catch(() => ({}));
+          st.textContent = ERRORS[data.error] || `Tulkki-virhe (${r.status}).`;
+        }
+      } catch (e) { st.textContent = ERRORS.unreachable; }
+
+      if (raw) {
+        const parsed = extractChange(raw);
+        const mod = JSON.parse(JSON.stringify(base));
+        const rows = parsed.change ? applyChanges(mod, parsed.change.muutokset) : [];
+        const applied = rows.filter((r) => !r.ohitettu);
+        if (applied.length) {
+          applySaved(mod);
+          syncInputs();
+          renderAll();
+          rampMark();
+          tkTrack('Ramppi NL valmis');
+          const ret = state.events.find((e) => e.type === 'retirement');
+          rampResult(ret ? Math.round(ret.age) : 65); // korvaa kortin tulosnäkymällä
+          const note = document.createElement('div');
+          note.className = 'tk-nl-note';
+          note.innerHTML =
+            `<b>Tulkki:</b> ${esc((parsed.text || parsed.change.selite || '').slice(0, 300))}` +
+            `<div class="tk-nl-rows">${applied.slice(0, 8).map((r) =>
+              esc(r.desc ? `${r.nimi}: ${r.desc}` : `${r.nimi}: ${fmtFi(r.uusi)} ${r.yks || ''}`)).join(' · ')}</div>` +
+            `<div class="tk-nl-hint">Kaikkea voi säätää työtilassa — mikään ei ole lukittu.</div>`;
+          const acts = rampCard.querySelector('.ramp-acts2');
+          if (acts) acts.parentNode.insertBefore(note, acts);
+          return;
+        }
+        st.textContent = 'Tulkki ei saanut kuvauksesta suunnitelmaa kasaan — täytä kolme kenttää yllä, niin tarkennat työtilassa.';
+        tkTrack('Ramppi NL virhe');
+      }
+      btn.disabled = false; ta.disabled = false;
+    });
   }
 })();

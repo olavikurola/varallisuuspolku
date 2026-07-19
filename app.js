@@ -4505,6 +4505,7 @@ function enableSavePhases() {
   const m = state.monthly || 500;
   const mid = clamp(Math.round((state.ageNow + state.ageEnd) / 2), state.ageNow + 1, state.ageEnd - 1);
   state.savePhases = [{ to: mid, amount: m }, { to: state.ageEnd, amount: m }];
+  track('Porrastus käyttöön'); // erottautumisominaisuus — käyttö kiinnostaa
   syncSavePhaseUI();
   renderAll();
 }

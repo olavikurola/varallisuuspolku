@@ -157,6 +157,19 @@ const CTX = { plan: { ageNow: 30 }, stats: { onnistumistodennakoisyysPct: 99, ve
     ok(lastUpstream.body.messages[0].content.indexOf('stressiskenaario') > -1, 'ohjeistaa stressiskenaarioihin');
   }
 
+  console.log('NL-ramppi (mode ramppi)');
+  {
+    const noQ = await post({ key: 'oma-avain', mode: 'ramppi', context: CTX });
+    ok(noQ.status === 400, 'ramppi ilman kuvausta → 400');
+    const r = await post({ key: 'oma-avain', mode: 'ramppi', question: 'Olen 38, säästän 600 €/kk.', context: CTX });
+    ok(r.status === 200, 'ramppi-kuvaus kelpaa');
+    const c = lastUpstream.body.messages[0].content;
+    ok(/TEHTÄVÄ: Käyttäjä aloittaa/.test(c) && /KUVAUS: Olen 38/.test(c), 'ramppi-tehtävä ja kuvaus samassa viestissä');
+    ok(lastUpstream.body.max_tokens === 800, 'ramppi saa pidemmän katon (800)');
+    const sys = lastUpstream.body.system[0].text;
+    ok(/"uusi"/.test(sys) && /"poista"/.test(sys) && /ageNow/.test(sys), 'luonti, poisto ja ageNow kehotteessa');
+  }
+
   console.log('Päiväkatkaisija');
   {
     // 6 kutsua käytetty yllä (3 onnistunutta + advisor + trimmed = 5... katto laukeaa laskurista)
