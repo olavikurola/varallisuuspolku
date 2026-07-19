@@ -610,8 +610,16 @@
     const rows = applyChanges(mod, change.muutokset);
     const applied = rows.filter((r) => !r.ohitettu);
     if (!applied.length) {
-      card.innerHTML = '<div class="tk-ch-note">Muutosta ei voitu soveltaa suunnitelmaan.</div>';
+      // Kerro MIKSI mikään ei mennyt läpi — mykkä virhe ei auta ketään
+      const miksi = rows.length
+        ? rows.map((r) => `<div class="tk-ch-row tk-ch-skip">${esc(r.nimi)} · ${esc(r.ohitettu || '')}</div>`).join('')
+        : '';
+      const vihje = rows.some((r) => r.ohitettu === 'ei tällaista tapahtumaa')
+        ? '<div class="tk-ch-note">Vinkki: pyydä ensin lisäämään tapahtuma (esim. “lisää mökki 65-vuotiaana 150 000 €”), niin luon sen ja säädän summat samalla.</div>'
+        : '';
+      card.innerHTML = '<div class="tk-ch-note">Muutosta ei voitu soveltaa suunnitelmaan:</div>' + miksi + vihje;
       log.appendChild(card);
+      log.scrollTop = log.scrollHeight;
       return;
     }
     previewBefore = before;
