@@ -309,7 +309,8 @@
         collectNums(ctx, nums);
         const reader = r.body.getReader();
         const dec = new TextDecoder();
-        let sbuf = '', full = '', meta = null, streamErr = null, started = false;
+        let sbuf = '', full = '', meta = null, streamErr = null, started = false, toolErr = false;
+        const toolCalls = []; // {tool} = palvelimen jäsentämä työkalukutsu (ensisijainen kanava)
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -324,20 +325,50 @@
               full += obj.delta;
               renderStreaming(aEl, full, nums);
               log.scrollTop = log.scrollHeight;
-            } else if (obj.done) meta = obj;
+            } else if (obj.tool) toolCalls.push(obj.tool);
+            else if (obj.toolError) toolErr = true;
+            else if (obj.done) meta = obj;
             else if (obj.error) streamErr = obj.error;
           }
         }
-        if (!full) {
+        if (!full && !toolCalls.length && !toolErr) {
           aEl.className = 'tk-a tk-err';
           aEl.textContent = ERRORS[streamErr] || 'Tulkki ei vastannut — kokeile uudelleen.';
         } else {
           // Kysymyschipit pois ensimmäisen vaihdon jälkeen (toimintochipit jäävät)
           $t('tkSugs').querySelectorAll('.tk-sug:not(.tk-adv):not(.tk-haasta):not(.tk-market)')
             .forEach((b) => b.remove());
+          // Ensisijainen kanava: palvelimen jäsentämät työkalukutsut. Tekstiin
+          // upotetut rivit jäävät varapoluksi (siirtymävaihe, vanha palvelin).
+          // Sama validateChanges ajetaan molemmille — kanava ei ohita sisältöä.
+          const tChg = toolCalls.find((t) => t.name === 'ehdota_muutos');
+          const tCmpRaw = toolCalls.find((t) => t.name === 'vertaile');
+          let toolChange = null, toolRejected = [];
+          if (tChg && tChg.input) {
+            const v = validateChanges(tChg.input.muutokset);
+            toolRejected = v.rejected;
+            if (v.list.length) toolChange = { muutokset: v.list, selite: String(tChg.input.selite || '').slice(0, 200) };
+          }
+          let toolCompare = null;
+          if (tCmpRaw && tCmpRaw.input) {
+            const opts = [];
+            for (const v of (Array.isArray(tCmpRaw.input.vaihtoehdot) ? tCmpRaw.input.vaihtoehdot : []).slice(0, 4)) {
+              const { list } = validateChanges(v && v.muutokset);
+              if (list.length) opts.push({ nimi: String((v && v.nimi) || 'Vaihtoehto').slice(0, 40), muutokset: list });
+            }
+            if (opts.length) toolCompare = { vaihtoehdot: opts, selite: String(tCmpRaw.input.selite || '').slice(0, 200) };
+          }
           const cmp = extractCompare(full);
           const parsed = extractChange(full);
-          const text = cmp ? cmp.text : parsed.text;
+          const compare = toolCompare || (cmp && cmp.compare) || null;
+          const change = toolChange || parsed.change || null;
+          const rejected = toolRejected.length ? toolRejected : parsed.rejected;
+          const viallinen = toolErr || (!toolCompare && cmp && cmp.viallinen) || (!toolChange && parsed.viallinen);
+          let text = cmp ? cmp.text : parsed.text;
+          if (!text) { // työkalukutsu ilman saatetekstiä — selite kelpaa vastaukseksi
+            text = (change && change.selite) || (compare && compare.selite) || 'Kokeillaan — katso esikatselu.';
+            aEl.className = 'tk-a';
+          }
           const doubts = renderAnswer(aEl, text, nums); // lopullinen: ei kursoria, numSpans
           chat.push({ q, a: text });
           const mEl = document.createElement('div');
@@ -351,9 +382,9 @@
             ev.target.disabled = true;
           });
           aEl.appendChild(mEl);
-          if (cmp && cmp.compare) renderCompareCard(cmp.compare);
-          else if (parsed.change) renderChangeCard(parsed.change, q);
-          else if ((cmp && cmp.viallinen) || parsed.viallinen) {
+          if (compare) renderCompareCard(compare);
+          else if (change) renderChangeCard(change, q);
+          else if (viallinen) {
             const note = document.createElement('div');
             note.className = 'tk-change';
             const rr = (cmp && cmp.raakaRivi) || parsed.raakaRivi || '';
@@ -361,10 +392,10 @@
               (rr ? `<div class="tk-ch-row tk-ch-skip"><code>${esc(rr)}</code></div>` : '');
             log.appendChild(note);
           }
-          else if (parsed.rejected && parsed.rejected.length) {
+          else if (rejected && rejected.length) {
             const note = document.createElement('div');
             note.className = 'tk-change';
-            note.innerHTML = `<div class="tk-ch-note">Tulkki yritti muuttaa kohdetta, jota esikatselu ei vielä tue (${esc(parsed.rejected.join(', '))}) — mitään ei muutettu. Kokeile sanoa tarkemmin, tai tee muutos käsin napauttamalla tapahtumaa aikajanalla.</div>`;
+            note.innerHTML = `<div class="tk-ch-note">Tulkki yritti muuttaa kohdetta, jota esikatselu ei vielä tue (${esc(rejected.join(', '))}) — mitään ei muutettu. Kokeile sanoa tarkemmin, tai tee muutos käsin napauttamalla tapahtumaa aikajanalla.</div>`;
             log.appendChild(note);
           }
           if (meta && meta.usage) {
@@ -1110,7 +1141,7 @@
         allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true,
         events: [{ type: 'retirement', age: 65, withdrawal: 2400, pension: 0, pensionAge: 65, goal: 'withdrawal' }],
       };
-      let raw = null;
+      let raw = null, nlTool = null;
       try {
         const r = await fetch(API, {
           method: 'POST',
@@ -1121,26 +1152,33 @@
           }),
         });
         if (r.ok) {
-          // Kootaan koko NDJSON-virta — rampissa ei inkrementaalista näyttöä
+          // Kootaan koko NDJSON-virta — rampissa ei inkrementaalista näyttöä.
+          // Työkalukutsu ({tool}) on ensisijainen kanava, tekstirivi varapolku.
           let full = '', streamErr = null;
           for (const line of (await r.text()).split('\n')) {
             if (!line.trim()) continue;
             try {
               const o = JSON.parse(line);
               if (o.delta) full += o.delta;
+              else if (o.tool && o.tool.name === 'ehdota_muutos') nlTool = o.tool.input || null;
               else if (o.error) streamErr = o.error;
             } catch (e) { /* ohita rikkinäinen rivi */ }
           }
           raw = full.trim() || null;
-          if (!raw) st.textContent = ERRORS[streamErr] || 'Tulkki ei vastannut — kokeile uudelleen tai täytä kentät yllä.';
+          if (!raw && !nlTool) st.textContent = ERRORS[streamErr] || 'Tulkki ei vastannut — kokeile uudelleen tai täytä kentät yllä.';
         } else {
           const data = await r.json().catch(() => ({}));
           st.textContent = ERRORS[data.error] || `Tulkki-virhe (${r.status}).`;
         }
       } catch (e) { st.textContent = ERRORS.unreachable; }
 
-      if (raw) {
-        const parsed = extractChange(raw);
+      if (raw || nlTool) {
+        const parsed = nlTool
+          ? (() => {
+              const v = validateChanges(nlTool.muutokset);
+              return { text: raw || '', change: v.list.length ? { muutokset: v.list, selite: String(nlTool.selite || '').slice(0, 200) } : null };
+            })()
+          : extractChange(raw);
         const mod = JSON.parse(JSON.stringify(base));
         const rows = parsed.change ? applyChanges(mod, parsed.change.muutokset) : [];
         const applied = rows.filter((r) => !r.ohitettu);

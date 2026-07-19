@@ -27,30 +27,37 @@ const mock = http.createServer((req, res) => {
   req.on('data', (c) => body += c);
   req.on('end', () => {
     lastUpstream = { url: req.url, headers: req.headers, body: JSON.parse(body) };
-    // Anthropic-tyylinen SSE-virta (palvelin jäsentää tämän NDJSON:ksi)
+    // Anthropic-tyylinen SSE-virta (palvelin jäsentää tämän NDJSON:ksi):
+    // tekstiä + tool_use-lohko, jonka input saapuu input_json_delta-paloina
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
     const sse = (o) => res.write('data: ' + JSON.stringify(o) + '\n\n');
     sse({ type: 'message_start', message: { model: 'mock-malli', usage: { input_tokens: 1234 } } });
-    sse({ type: 'content_block_delta', delta: { type: 'text_delta', text: 'Onnistumistodennäköisyys on 99 %, ' } });
-    sse({ type: 'content_block_delta', delta: { type: 'text_delta', text: 'koska säästöaika on pitkä.' } });
+    sse({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Onnistumistodennäköisyys on 99 %, ' } });
+    sse({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'koska säästöaika on pitkä.' } });
+    sse({ type: 'content_block_start', index: 1, content_block: { type: 'tool_use', id: 'tu1', name: 'ehdota_muutos', input: {} } });
+    sse({ type: 'content_block_delta', index: 1, delta: { type: 'input_json_delta', partial_json: '{"muutokset":[{"kentta":"monthly",' } });
+    sse({ type: 'content_block_delta', index: 1, delta: { type: 'input_json_delta', partial_json: '"arvo":1200}],"selite":"Testi"}' } });
+    sse({ type: 'content_block_stop', index: 1 });
     sse({ type: 'message_delta', usage: { output_tokens: 56 } });
     sse({ type: 'message_stop' });
     res.end();
   });
 });
 
-// Lukee palvelimen NDJSON-virran → { answer, model, usage, error }
+// Lukee palvelimen NDJSON-virran → { answer, tools, model, usage, error }
 async function drain(r) {
   const text = await r.text();
   let answer = '', model = null, usage = null, error = null;
+  const tools = [];
   for (const line of text.split('\n')) {
     if (!line.trim()) continue;
     const o = JSON.parse(line);
     if (o.delta) answer += o.delta;
+    else if (o.tool) tools.push(o.tool);
     else if (o.done) { model = o.model; usage = o.usage; }
     else if (o.error) error = o.error;
   }
-  return { answer, model, usage, error };
+  return { answer, tools, model, usage, error };
 }
 
 function spawnServer(port, extraEnv) {
@@ -132,12 +139,17 @@ const CTX = { plan: { ageNow: 30 }, stats: { onnistumistodennakoisyysPct: 99, ve
     ok(up.model === 'claude-haiku-4-5' && up.max_tokens === 500, 'malli ja max_tokens (explain 500) lukittu palvelimella');
     ok(up.system[0].cache_control && up.system[0].cache_control.type === 'ephemeral', 'järjestelmäkehote välimuistimerkitty');
     ok(/ÄLÄ laske itse/.test(up.system[0].text) && /sijoitusneuvontaa/.test(up.system[0].text), 'sävyvartijat kehotteessa');
-    ok(/MUUTOS:/.test(up.system[0].text) && /allocStocks/.test(up.system[0].text) && /esikatseluna/.test(up.system[0].text), 'muutoskomento-ohje ja whitelist kehotteessa');
-    ok(/PAKKO olla vastauksessa/.test(up.system[0].text) && /VIIMEINEN rivi/.test(up.system[0].text), 'sitovuus: lupaus muutoksesta vaatii MUUTOS-rivin viimeisenä');
+    ok(/ehdota_muutos/.test(up.system[0].text) && /allocStocks/.test(up.system[0].text) && /esikatseluna/.test(up.system[0].text), 'muutostyökalun ohje ja whitelist kehotteessa');
+    ok(/PAKKO tehdä/.test(up.system[0].text) && /pelkästään kuvaile/.test(up.system[0].text), 'sitovuus: lupaus muutoksesta vaatii työkalukutsun');
     ok(/ilman välilyöntejä, tuhaterottimia/.test(up.system[0].text), 'lukumuoto-ohje kehotteessa (500000, ei "500 000 €")');
     ok(/tapahtumaIka/.test(up.system[0].text) && /ominaisuus/.test(up.system[0].text) && /arvonnousu/.test(up.system[0].text), 'tapahtumamuutosten muoto kehotteessa');
-    ok(/VERTAILU:/.test(up.system[0].text) && /vaihtoehdot/.test(up.system[0].text), 'vertailukomennon muoto kehotteessa');
+    ok(/vertaile-työkalua/.test(up.system[0].text) && /vaihtoehtoa/.test(up.system[0].text), 'vertailutyökalun ohje kehotteessa');
     ok(/aikataulu/.test(up.system[0].text) && /savePhases/.test(up.system[0].text), 'porrastetun säästön muoto kehotteessa');
+    ok(Array.isArray(up.tools) && up.tools.length === 2 && up.tools[0].name === 'ehdota_muutos' && up.tools[1].name === 'vertaile', 'kaksi työkalua mukana pyynnössä');
+    ok(up.tool_choice && up.tool_choice.type === 'auto', 'tool_choice auto (malli päättää kutsuuko)');
+    const skeema = JSON.stringify(up.tools);
+    ok(skeema.includes('"cottage"') && skeema.includes('"aikataulu"') && skeema.includes('"poista"'), 'skeemassa tapahtumatyypit, aikataulu ja poisto');
+    ok(data.tools.length === 1 && data.tools[0].name === 'ehdota_muutos' && data.tools[0].input.muutokset[0].arvo === 1200, 'työkalukutsu koottu paloista {tool}-riviksi');
     ok(up.messages.length === 3 && up.messages[0].content === 'aiempi kysymys', 'historia kulkee vuoroina');
     const last = up.messages[2].content;
     ok(/KONTEKSTI:/.test(last) && /KYSYMYS: Miksi onnistuminen/.test(last), 'konteksti + kysymys viimeisessä vuorossa');
