@@ -351,8 +351,14 @@
             ev.target.disabled = true;
           });
           aEl.appendChild(mEl);
-          if (cmp) renderCompareCard(cmp.compare);
+          if (cmp && cmp.compare) renderCompareCard(cmp.compare);
           else if (parsed.change) renderChangeCard(parsed.change, q);
+          else if ((cmp && cmp.viallinen) || parsed.viallinen) {
+            const note = document.createElement('div');
+            note.className = 'tk-change';
+            note.innerHTML = '<div class="tk-ch-note">Tulkin komentorivi oli viallinen — mitään ei muutettu. Sano sama hieman toisin, niin yritän uudelleen.</div>';
+            log.appendChild(note);
+          }
           else if (parsed.rejected && parsed.rejected.length) {
             const note = document.createElement('div');
             note.className = 'tk-change';
@@ -473,37 +479,54 @@
     return { list, rejected };
   }
 
-  // Irrottaa vastauksen lopusta MUUTOS-rivin; palauttaa {text, change|null}
+  // Etsii direktiivirivin ("MUUTOS:"/"VERTAILU:"): ensisijaisesti vastauksen
+  // lopusta (JSON saa jatkua usealle riville), varalta mistä tahansa kohdasta
+  // yhtenä rivinä (malli jatkoi joskus tekstiä rivin jälkeen). Rivi ei koskaan
+  // päädy näkyviin sellaisenaan. Palauttaa {payload, text} tai null.
+  function extractDirective(raw, nimi) {
+    const m = raw.match(new RegExp('\\n' + nimi + ':\\s*(\\{[\\s\\S]*\\})\\s*$'));
+    if (m) return { payload: m[1], text: raw.slice(0, m.index).trim() };
+    const lines = raw.split('\n');
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const t = lines[i].trim();
+      if (t.startsWith(nimi + ':')) {
+        return { payload: t.slice(nimi.length + 1).trim(), text: lines.filter((_, j) => j !== i).join('\n').trim() };
+      }
+    }
+    return null;
+  }
+
+  // Irrottaa MUUTOS-rivin; palauttaa {text, change|null, rejected, viallinen?}.
+  // viallinen = rivi oli olemassa mutta JSON ei auennut — käyttäjälle kerrotaan,
+  // ettei mitään tapahtunut (hiljainen nielaisu oli pahin vaihtoehto).
   function extractChange(raw) {
-    const m = raw.match(/\nMUUTOS:\s*(\{[\s\S]*\})\s*$/);
-    if (!m) return { text: raw, change: null, rejected: [] };
-    // MUUTOS-rivi ei koskaan päädy näkyviin sellaisenaan — hylätyt kentät
-    // raportoidaan erikseen, jotta käyttäjä tietää miksi mitään ei tapahtunut
-    const text = raw.slice(0, m.index).trim();
+    const d = extractDirective(raw, 'MUUTOS');
+    if (!d) return { text: raw, change: null, rejected: [] };
     try {
-      const o = JSON.parse(m[1]);
+      const o = JSON.parse(d.payload);
       const { list, rejected } = validateChanges(o.muutokset);
-      if (!list.length) return { text, change: null, rejected };
-      return { text, change: { muutokset: list, selite: String(o.selite || '').slice(0, 200) }, rejected };
-    } catch (e) { return { text, change: null, rejected: [] }; }
+      if (!list.length) return { text: d.text, change: null, rejected };
+      return { text: d.text, change: { muutokset: list, selite: String(o.selite || '').slice(0, 200) }, rejected };
+    } catch (e) { return { text: d.text, change: null, rejected: [], viallinen: true }; }
   }
 
   // Irrottaa VERTAILU-rivin: usea nimetty vaihtoehto rinnakkain. Palauttaa
-  // {text, compare} tai null. Vertailu on LUKUPOHJAINEN — ei kosketa tilaan.
+  // {text, compare|null, viallinen?} tai null jos riviä ei ole lainkaan.
+  // Vertailu on LUKUPOHJAINEN — ei kosketa tilaan. Viallinen rivi riisutaan
+  // näkyvistä ja siitä kerrotaan (ei hiljaista vuotoa vastaustekstiin).
   function extractCompare(raw) {
-    const m = raw.match(/\nVERTAILU:\s*(\{[\s\S]*\})\s*$/);
-    if (!m) return null;
-    const text = raw.slice(0, m.index).trim();
+    const d = extractDirective(raw, 'VERTAILU');
+    if (!d) return null;
     try {
-      const o = JSON.parse(m[1]);
+      const o = JSON.parse(d.payload);
       const opts = [];
       for (const v of (Array.isArray(o.vaihtoehdot) ? o.vaihtoehdot : []).slice(0, 4)) {
         const { list } = validateChanges(v && v.muutokset);
         if (list.length) opts.push({ nimi: String((v && v.nimi) || 'Vaihtoehto').slice(0, 40), muutokset: list });
       }
-      if (!opts.length) return null;
-      return { text, compare: { vaihtoehdot: opts, selite: String(o.selite || '').slice(0, 200) } };
-    } catch (e) { return null; }
+      if (!opts.length) return { text: d.text, compare: null, viallinen: true };
+      return { text: d.text, compare: { vaihtoehdot: opts, selite: String(o.selite || '').slice(0, 200) } };
+    } catch (e) { return { text: d.text, compare: null, viallinen: true }; }
   }
 
   // Soveltaa muutokset serialisoituun kopioon; palauttaa rivit näytölle
