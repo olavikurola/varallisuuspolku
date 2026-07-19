@@ -134,6 +134,7 @@ const CTX = { plan: { ageNow: 30 }, stats: { onnistumistodennakoisyysPct: 99, ve
     ok(/ÄLÄ laske itse/.test(up.system[0].text) && /sijoitusneuvontaa/.test(up.system[0].text), 'sävyvartijat kehotteessa');
     ok(/MUUTOS:/.test(up.system[0].text) && /allocStocks/.test(up.system[0].text) && /esikatseluna/.test(up.system[0].text), 'muutoskomento-ohje ja whitelist kehotteessa');
     ok(/PAKKO olla vastauksessa/.test(up.system[0].text) && /VIIMEINEN rivi/.test(up.system[0].text), 'sitovuus: lupaus muutoksesta vaatii MUUTOS-rivin viimeisenä');
+    ok(/ilman välilyöntejä, tuhaterottimia/.test(up.system[0].text), 'lukumuoto-ohje kehotteessa (500000, ei "500 000 €")');
     ok(/tapahtumaIka/.test(up.system[0].text) && /ominaisuus/.test(up.system[0].text) && /arvonnousu/.test(up.system[0].text), 'tapahtumamuutosten muoto kehotteessa');
     ok(/VERTAILU:/.test(up.system[0].text) && /vaihtoehdot/.test(up.system[0].text), 'vertailukomennon muoto kehotteessa');
     ok(/aikataulu/.test(up.system[0].text) && /savePhases/.test(up.system[0].text), 'porrastetun säästön muoto kehotteessa');

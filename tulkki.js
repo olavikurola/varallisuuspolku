@@ -356,7 +356,9 @@
           else if ((cmp && cmp.viallinen) || parsed.viallinen) {
             const note = document.createElement('div');
             note.className = 'tk-change';
-            note.innerHTML = '<div class="tk-ch-note">Tulkin komentorivi oli viallinen — mitään ei muutettu. Sano sama hieman toisin, niin yritän uudelleen.</div>';
+            const rr = (cmp && cmp.raakaRivi) || parsed.raakaRivi || '';
+            note.innerHTML = '<div class="tk-ch-note">Tulkin komentorivi oli viallinen — mitään ei muutettu. Sano sama hieman toisin, niin yritän uudelleen.</div>' +
+              (rr ? `<div class="tk-ch-row tk-ch-skip"><code>${esc(rr)}</code></div>` : '');
             log.appendChild(note);
           }
           else if (parsed.rejected && parsed.rejected.length) {
@@ -424,6 +426,17 @@
 
   let previewBefore = null; // serialize()-kopio ennen kokeilua (null = ei aktiivista)
 
+  // Salliva luku: numero sellaisenaan; merkkijonosta riisutaan välit, tuhat-
+  // erottimet ja €, pilkku = desimaali ("3,5" → 3.5). Muu → null (hylätään).
+  function luku(v) {
+    if (typeof v === 'number' && isFinite(v)) return v;
+    if (typeof v === 'string' && v.trim() !== '') {
+      const n = Number(v.replace(/[\s  €]/g, '').replace(',', '.'));
+      if (isFinite(n)) return n;
+    }
+    return null;
+  }
+
   // Validoi muutosalkioiden lista whitelistiä vasten. Yhteinen sekä MUUTOS-
   // (yksi kokeilu) että VERTAILU-poluille (usea vaihtoehto rinnakkain).
   function validateChanges(arr) {
@@ -432,45 +445,45 @@
     for (const c of (Array.isArray(arr) ? arr : []).slice(0, 12)) {
       // Uusi tapahtuma oletuksilla — summat säädetään saman listan b-alkioilla
       if (c && typeof c.uusi === 'string') {
-        if (EVENT_NAMES[c.uusi] && typeof c.ika === 'number' && isFinite(c.ika)) {
-          list.push({ uusi: c.uusi, ika: Math.min(105, Math.max(0, Math.round(c.ika))) });
+        const ika = luku(c.ika);
+        if (EVENT_NAMES[c.uusi] && ika != null) {
+          list.push({ uusi: c.uusi, ika: Math.min(105, Math.max(0, Math.round(ika))) });
         } else rejected.push(('uusi ' + c.uusi).slice(0, 40));
         continue;
       }
       // Tapahtuman poisto — sama kohdennus kuin b-muodossa (tyyppi + ikä)
       if (c && typeof c.poista === 'string') {
         if (EVENT_NAMES[c.poista]) {
-          list.push({
-            poista: c.poista,
-            tapahtumaIka: (typeof c.tapahtumaIka === 'number' && isFinite(c.tapahtumaIka)) ? c.tapahtumaIka : null,
-          });
+          list.push({ poista: c.poista, tapahtumaIka: luku(c.tapahtumaIka) });
         } else rejected.push(('poista ' + c.poista).slice(0, 40));
         continue;
       }
       // Porrastettu säästöaikataulu: koko lista kerralla
       if (c && Array.isArray(c.aikataulu)) {
         const ph = c.aikataulu
-          .filter((r) => r && typeof r.to === 'number' && isFinite(r.to) && typeof r.amount === 'number' && isFinite(r.amount))
+          .map((r) => r && { to: luku(r.to), amount: luku(r.amount) })
+          .filter((r) => r && r.to != null && r.amount != null)
           .map((r) => ({ to: Math.min(105, Math.max(1, Math.round(r.to))), amount: Math.min(1e6, Math.max(0, r.amount)) }))
           .slice(0, 8);
         if (ph.length) list.push({ aikataulu: ph });
         else rejected.push('aikataulu');
         continue;
       }
-      if (!c || typeof c.arvo !== 'number' || !isFinite(c.arvo)) {
+      const arvo = c ? luku(c.arvo) : null;
+      if (arvo == null) {
         if (c && (c.kentta || c.tapahtuma)) rejected.push(String(c.kentta || c.tapahtuma).slice(0, 32));
         continue;
       }
       const f = FIELDS[c.kentta];
       const p = EVENT_PROPS[c.ominaisuus];
       if (f) {
-        list.push({ kentta: c.kentta, arvo: Math.min(f.max, Math.max(f.min, c.arvo)) });
+        list.push({ kentta: c.kentta, arvo: Math.min(f.max, Math.max(f.min, arvo)) });
       } else if (EVENT_NAMES[c.tapahtuma] && p) {
         list.push({
           tapahtuma: c.tapahtuma,
-          tapahtumaIka: (typeof c.tapahtumaIka === 'number' && isFinite(c.tapahtumaIka)) ? c.tapahtumaIka : null,
+          tapahtumaIka: luku(c.tapahtumaIka),
           ominaisuus: c.ominaisuus,
-          arvo: Math.min(p.max, Math.max(p.min, c.arvo)),
+          arvo: Math.min(p.max, Math.max(p.min, arvo)),
         });
       } else {
         rejected.push(String(c.kentta || (c.tapahtuma ? c.tapahtuma + '.' + c.ominaisuus : 'tuntematon')).slice(0, 40));
@@ -496,6 +509,20 @@
     return null;
   }
 
+  // Direktiivin JSON: suora jäsennys, epäonnistuessa kevyt korjausyritys —
+  // malli kirjoittaa lukuja suomalaisittain ("500 000 €"), mikä ei ole JSONia.
+  // Korjaukset ovat turvallisia: väli-/tuhaterotinvälit lukujen sisältä,
+  // €-merkki luvun perästä, kaarevat lainausmerkit, roikkuva pilkku.
+  function parseDirectivePayload(payload) {
+    try { return JSON.parse(payload); } catch (e) { /* korjausyritys alla */ }
+    const fixed = payload
+      .replace(/[“”]/g, '"')
+      .replace(/(\d)[   ]+(?=\d)/g, '$1')
+      .replace(/(\d)[   ]*€/g, '$1')
+      .replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(fixed); // heittää edelleen jos ei korjaannu
+  }
+
   // Irrottaa MUUTOS-rivin; palauttaa {text, change|null, rejected, viallinen?}.
   // viallinen = rivi oli olemassa mutta JSON ei auennut — käyttäjälle kerrotaan,
   // ettei mitään tapahtunut (hiljainen nielaisu oli pahin vaihtoehto).
@@ -503,11 +530,11 @@
     const d = extractDirective(raw, 'MUUTOS');
     if (!d) return { text: raw, change: null, rejected: [] };
     try {
-      const o = JSON.parse(d.payload);
+      const o = parseDirectivePayload(d.payload);
       const { list, rejected } = validateChanges(o.muutokset);
       if (!list.length) return { text: d.text, change: null, rejected };
       return { text: d.text, change: { muutokset: list, selite: String(o.selite || '').slice(0, 200) }, rejected };
-    } catch (e) { return { text: d.text, change: null, rejected: [], viallinen: true }; }
+    } catch (e) { return { text: d.text, change: null, rejected: [], viallinen: true, raakaRivi: d.payload.slice(0, 160) }; }
   }
 
   // Irrottaa VERTAILU-rivin: usea nimetty vaihtoehto rinnakkain. Palauttaa
@@ -518,15 +545,15 @@
     const d = extractDirective(raw, 'VERTAILU');
     if (!d) return null;
     try {
-      const o = JSON.parse(d.payload);
+      const o = parseDirectivePayload(d.payload);
       const opts = [];
       for (const v of (Array.isArray(o.vaihtoehdot) ? o.vaihtoehdot : []).slice(0, 4)) {
         const { list } = validateChanges(v && v.muutokset);
         if (list.length) opts.push({ nimi: String((v && v.nimi) || 'Vaihtoehto').slice(0, 40), muutokset: list });
       }
-      if (!opts.length) return { text: d.text, compare: null, viallinen: true };
+      if (!opts.length) return { text: d.text, compare: null, viallinen: true, raakaRivi: d.payload.slice(0, 160) };
       return { text: d.text, compare: { vaihtoehdot: opts, selite: String(o.selite || '').slice(0, 200) } };
-    } catch (e) { return { text: d.text, compare: null, viallinen: true }; }
+    } catch (e) { return { text: d.text, compare: null, viallinen: true, raakaRivi: d.payload.slice(0, 160) }; }
   }
 
   // Soveltaa muutokset serialisoituun kopioon; palauttaa rivit näytölle
