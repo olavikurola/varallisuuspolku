@@ -5447,6 +5447,56 @@ function rampSubmit() {
   rampResult(retA);
 }
 
+// Veto-löydettävyys: raahaus on palvelun ydinele, mutta analytiikan mukaan
+// harva löytää sen itse. Rampin jälkeen ensimmäisellä työtilakerralla
+// eläkemerkki sykkii hetken ja saa ohimenevän vihjeen. Kerran ikinä;
+// ensimmäinen kosketus tai 8 s piilottaa. Reduced-motion: ei sykettä,
+// vihjeteksti näkyy silti (yleissääntö nollaa animaatiot).
+const VETO_HINT_KEY = 'vp-veto-vihje';
+function showVetoHint() {
+  try {
+    if (localStorage.getItem(VETO_HINT_KEY) === '1') return;
+    localStorage.setItem(VETO_HINT_KEY, '1');
+  } catch (e) {}
+  const ret = state.events.find((e) => e.type === 'retirement');
+  if (!ret) return;
+  if (!document.querySelector(`#chart .marker[data-id="${ret.id}"]`)) return;
+  const tip = document.createElement('div');
+  tip.className = 'veto-hint';
+  tip.textContent = 'Tartu merkkiin ja vedä — luvut päivittyvät heti';
+  wrap.appendChild(tip);
+  let alive = true;
+  // Seuraa merkkiä joka ruudunpäivityksellä: MC-workerin valmistuminen
+  // piirtää graafin (ja merkin) uusiksi hetkeä myöhemmin — kiinteä sijainti
+  // jäisi väärään kohtaan ja pyyhitty sykeluokka palautetaan samalla.
+  const place = () => {
+    if (!alive) return;
+    const g = document.querySelector(`#chart .marker[data-id="${ret.id}"]`);
+    if (g) {
+      g.classList.add('veto-pulse');
+      const wr = wrap.getBoundingClientRect();
+      const mr = g.getBoundingClientRect();
+      // pysy piirtoalueen sisällä: vaakaklampit + ylälaidassa vihje merkin alle
+      const cx = clamp(mr.left - wr.left + mr.width / 2, 115, Math.max(115, wr.width - 115));
+      const above = mr.top - wr.top - 8;
+      tip.classList.toggle('below', above < 34);
+      tip.style.top = Math.round(above < 34 ? mr.bottom - wr.top + 8 : above) + 'px';
+      tip.style.left = Math.round(cx) + 'px';
+    }
+    requestAnimationFrame(place);
+  };
+  place();
+  const off = () => {
+    alive = false;
+    tip.remove();
+    const g = document.querySelector(`#chart .marker[data-id="${ret.id}"]`);
+    if (g) g.classList.remove('veto-pulse');
+    document.removeEventListener('pointerdown', off, true);
+  };
+  document.addEventListener('pointerdown', off, true);
+  setTimeout(off, 8000);
+}
+
 function rampResult(retA) {
   const s = sim;
   const wd = s && s.solvedWithdrawal != null ? Math.round(s.solvedWithdrawal) : null;
@@ -5462,7 +5512,7 @@ function rampResult(retA) {
     `<button class="btn" id="rampOpen">Avaa suunnitelmani</button>` +
     `<button class="btn ghost" id="rampTour">Esittelykierros</button>` +
     `</div>`;
-  $('rampOpen').addEventListener('click', () => { closeRamp(); toast('Vinkki: Esittelykierros löytyy ☰-valikosta'); });
+  $('rampOpen').addEventListener('click', () => { closeRamp(); showVetoHint(); toast('Vinkki: Esittelykierros löytyy ☰-valikosta'); });
   $('rampTour').addEventListener('click', () => { closeRamp(); startTour(); });
 }
 

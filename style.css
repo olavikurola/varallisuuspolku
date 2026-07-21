@@ -2191,3 +2191,35 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
 }
 .tk-nl-rows { margin-top: 4px; font-size: 11px; color: var(--text-faint); }
 .tk-nl-hint { margin-top: 4px; font-size: 11px; color: var(--text-faint); }
+
+/* Veto-vihje: eläkemerkin kertaluonteinen syke + ohje rampin jälkeen */
+.marker.veto-pulse .bg {
+  animation: vetoPulse 1.2s ease-in-out 3;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes vetoPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.28); stroke: #2dd4bf; }
+}
+.veto-hint {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  background: rgba(20, 28, 51, 0.97);
+  border: 1px solid rgba(45, 212, 191, 0.5);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 6px 10px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 30;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  animation: vetoHintIn 0.25s ease;
+}
+.veto-hint.below { transform: translate(-50%, 0); }
+@keyframes vetoHintIn { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 560px) {
+  .veto-hint { white-space: normal; max-width: 200px; text-align: center; }
+}
