@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Varallisuuspolku · Wealth Path — visuaalinen varallisuussuunnittelu</title>
-  <meta name="description" content="Piirrä polkusi: tartu elinkaarikäyrään ja raahaa — kone laskee jokaisen vedon hinnan. Elämäntapahtumat, lainat, eläke- ja varallisuustavoitteet sekä Monte Carlo -todennäköisyys yhdellä näkymällä. Ilmainen, ei rekisteröitymistä — kaikki data pysyy omassa selaimessasi." />
+  <meta name="description" content="Piirrä polkusi: tartu elinkaarikäyrään ja raahaa — kone laskee jokaisen vedon hinnan. Elämäntapahtumat, lainat, eläke- ja varallisuustavoitteet sekä Monte Carlo -todennäköisyys yhdellä näkymällä. AI-Tulkki selittää, vertailee ja kokeilee muutoksia puolestasi. Ilmainen, ei rekisteröitymistä — kaikki data pysyy omassa selaimessasi." />
   <meta name="theme-color" content="#0a0e1a" />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="fi_FI" />
@@ -48,6 +48,9 @@
       "Elämäntapahtumat lainoineen: asunto, auto, lapsi, remontti",
       "Perhesuunnittelu: puoliso ja lapset, yhteinen onnistumis-%, leskiturva",
       "Skenaariovertailu haamukäyränä ja euroeroina",
+      "AI-Tulkki: selittää tulokset selkokielellä, vertailee vaihtoehtoja ja kokeilee muutoksia — laskenta aina laskentamoottorista",
+      "Useita suunnitelmia samassa selaimessa: omat ja lähipiirin, rinnakkaisvertailu ja vienti",
+      "Avoin anonyymi vertailudata: miten muut suunnittelevat vaurastumista ikäryhmittäin",
       "Toimii ilman rekisteröitymistä — data pysyy selaimessa"
     ],
     "creator": { "@type": "Person", "name": "Olavi Kurola" }
@@ -66,6 +69,8 @@
         "acceptedAnswer": { "@type": "Answer", "text": "Laskuri mallintaa kaikki kolme suomalaisittain: kuorissa osingot ja myynnit kertyvät verotta ja nostosta verotetaan voiton osuus; arvo-osuustilillä suorien osakkeiden osingoista menee vero vuosittain ja hankintameno-olettama on käytettävissä. Vertailu näyttää eron euroina." } },
       { "@type": "Question", "name": "Voiko koko perheen taloutta suunnitella?",
         "acceptedAnswer": { "@type": "Answer", "text": "Kyllä — jopa neljä henkilöä: puoliso ja lapset omina käyrinään, perheen yhteinen onnistumistodennäköisyys samassa markkinahistoriassa, rahasiirrot, jaetut hankinnat ja leskiturvatarkastelu." } },
+      { "@type": "Question", "name": "Onko palvelussa tekoälyä?",
+        "acceptedAnswer": { "@type": "Answer", "text": "On: Tulkki-apuri (✦ Kysy AI) selittää laskurin tulokset selkokielellä, vertailee vaihtoehtoja, kokeilee muutoksia ja suhteuttaa suunnitelman ikäryhmän anonyymiin vertailudataan. Työnjako on tiukka — laskentamoottori laskee ja AI vain selittää, joten luvut tulevat aina laskennasta, eivät kielimallilta. Kysyessä välitetään vain kysymys ja suunnitelman anonyymi muoto; palvelin ei tallenna mitään. Ilmaiseksi 5 kysymystä päivässä." } },
       { "@type": "Question", "name": "Sopiiko FIRE- ja varhaiseläkesuunnitteluun?",
         "acceptedAnswer": { "@type": "Answer", "text": "Kyllä. Laskuri ratkaisee aikaisimman mahdollisen eläkeiän, kestävän kuukausitulon ja tarvittavan säästön — halutessasi 75, 85 tai 95 prosentin varmuustasolla. Työeläkkeen alkamisen voi asettaa eri ikään kuin töiden lopettamisen." } },
       { "@type": "Question", "name": "Onko tämä sijoitusneuvontaa?",
@@ -474,7 +479,9 @@
       <p>Varallisuuspolku näyttää koko elinkaaresi talouden yhdellä näkymällä: säästämisen, elämän
       suuret hankinnat lainoineen sekä eläkeajan tulot työeläkkeineen ja veroineen. Tavoitetilat
       ratkaisevat puolestasi kestävän kuukausitulon, aikaisimman eläkeiän tai tarvittavan säästön —
-      halutessasi 75–95 %:n varmuudella. <b>Suunnitelmani</b> kokoaa kaiken tulostettavaksi
+      halutessasi 75–95 %:n varmuudella. Mukaan saa koko perheen: puolison ja lasten polut lasketaan
+      yhteen, ja <b>Tulkki</b>-apuri (✦ Kysy AI) selittää tulokset selkokielellä.
+      <b>Suunnitelmani</b> kokoaa kaiken tulostettavaksi
       dokumentiksi, jonka voi antaa vaikka varainhoitajalle keskustelun pohjaksi.</p>
 
       <h2>Vinkit</h2>
@@ -485,11 +492,30 @@
       nostostrategiat ja analyysit.
       <b>Esimerkit</b> (Elämäntapahtumat-kortissa) antaa valmiin pohjan eri elämäntilanteisiin. <b>Vertaile</b>
       (☰-valikossa) tallentaa nykyisen suunnitelman haamukäyräksi, jota vasten näet muutosten vaikutuksen.
+      <b>Perhe</b> (Perustiedot-kortin ＋-napista) tuo puolison ja lapset samaan kuvaan: yhteinen
+      käyrä ja onnistumistodennäköisyys, jaetut hankinnat puoliksi ja siirrot läheisille.
+      <b>Suunnitelmat</b> (Suunnitelmani-sivun yläosa) pitää useat suunnitelmat — omat ja lähipiirin —
+      tallessa samassa selaimessa: vaihda, monista, vertaa rinnakkain ja vie talteen.
       <b>Vuositaulukko</b> (graafin alla) näyttää luvut vuosi vuodelta ja vie ne CSV:nä.
       <b>Ctrl+Z</b> kumoaa viimeisimmän muutoksen, ja tapahtuman voi <b>monistaa</b>
       muokkausikkunasta (esim. toinen lapsi). Suunnitelmani-sivun <b>Kopioi jakolinkki</b> jakaa
       suunnitelman ja toimii myös varmuuskopiona — koko suunnitelma on linkissä. Sovelluksen voi
       asentaa aloitusnäytölle (PWA), jolloin se toimii myös ilman verkkoyhteyttä.</p>
+
+      <h2>Tulkki — kysy AI:lta</h2>
+      <p>Oikean reunan <b>✦ Kysy AI</b> -kielekkeestä aukeaa Tulkki, joka selittää suunnitelmasi
+      luvut selkokielellä ja suhteuttaa ne ikäryhmäsi anonyymiin vertailudataan. Se osaa myös
+      <b>kokeilla</b> muutoksia (&rdquo;kokeile eläkeikää 62&rdquo;) ja <b>vertailla</b> vaihtoehtoja
+      rinnakkain — vaikutukset näytetään ensin euroeroina, eikä suunnitelmaasi kosketa ennen kuin
+      itse otat muutoksen käyttöön. Pikatoiminnot laativat kysymyslistan varainhoitajatapaamiseen
+      tai haastavat suunnitelmasi heikot kohdat, ja avatessa Tulkki nostaa esiin muutaman huomion.</p>
+      <p><b>Työnjako on tiukka: laskentamoottori laskee, AI vain selittää.</b> Vastausten luvut
+      sidotaan suoraan moottorin tuloksiin, joten Tulkin siteeraamat luvut eivät voi olla kielimallin
+      keksimiä. Kysyessäsi palvelimelle välittyy vain kysymyksesi, suunnitelman anonyymi muoto (sama
+      tunnisteeton sisältö kuin vertailudatassa) ja moottorin tunnusluvut — välityspalvelin on
+      tilaton eikä tallenna kysymyksiä tai vastauksia, ja sen koodi on avointa lähdekoodia
+      (kielimallina Anthropicin Claude). Ilman avainkoodia käytössä on 5 kysymystä päivässä.
+      Tulkki ei anna sijoitusneuvontaa.</p>
 
       <h2>Tietosuoja</h2>
       <p><b>Suunnitelmasi ei lähde laitteeltasi mihinkään ilman erillistä, tapauskohtaista lupaasi.</b>
@@ -498,8 +524,10 @@
       fontit tarjoillaan sivuston omalta palvelimelta. Kävijämäärät mitataan
       <a href="https://plausible.io/privacy-focused-web-analytics" rel="noopener">Plausible-analytiikalla</a>,
       joka on evästeetön eikä yksilöi kävijää — se laskee vain sivulatauksia, ei näe suunnitelmasi
-      sisältöä. Ainoa suunnitelmadataa koskeva poikkeus on vapaaehtoinen anonyymi vertailudata
-      (alla), jonka sisällön näet kokonaisuudessaan ennen jakamista.</p>
+      sisältöä. Suunnitelmadataa koskevat poikkeukset ovat vapaaehtoisia ja tapahtuvat vain omasta
+      aloitteestasi: anonyymi vertailudata (alla), jonka sisällön näet kokonaisuudessaan ennen
+      jakamista, sekä Tulkille esittämäsi kysymys, jonka mukana kulkee suunnitelman sama anonyymi,
+      tunnisteeton muoto (ks. Tulkki yllä).</p>
       <p>Huomaa: <b>Jaa linkki</b> pakkaa koko suunnitelmasi verkko-osoitteeseen. Linkin saaja näkee
       suunnitelman sisällön, joten jaa se vain henkilöille, joille haluat sen näyttää.</p>
 
@@ -518,7 +546,10 @@
       <p>Tuotto-oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa. Inflaatiokorjaus 2 %/v
       (valinnainen). Kuukausisäästö voi kasvaa vuosittain (palkkakehitys). Lainat lasketaan
       annuiteettilainoina. Epävarmuushaarukka (P10–P90) ja onnistumistodennäköisyys lasketaan samasta
-      satunnaisten markkinapolkujen joukosta — jopa 5&nbsp;000 polkua taustalaskentana.</p>
+      satunnaisten markkinapolkujen joukosta — jopa 5&nbsp;000 polkua taustalaskentana. Sijoitustilin
+      voi mallintaa arvo-osuustilinä, osakesäästötilinä tai vakuutuskuorena — verokohtelu lasketaan
+      kunkin mukaan. Perhetilassa kaikkien henkilöiden polut simuloidaan samassa markkinamaailmassa,
+      joten perheen yhteinen onnistumistodennäköisyys on aidosti yhteinen.</p>
       <p><b>Eläkeaika ja verot:</b> voit antaa lakisääteisen työeläkkeen arvion kuukausitulona — se
       pienentää sijoituksista tarvittavaa nostoa ja voi alkaa eri iässä kuin eläkkeelle jäänti. Eläkeajan
       nostoista voidaan huomioida Suomen myyntivoittovero (30 % vuotuisiin 30 000 €:n voittoihin asti,
