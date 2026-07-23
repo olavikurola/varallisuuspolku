@@ -240,8 +240,8 @@
   sheet.setAttribute('aria-label', 'Tulkki — kysy suunnitelmastasi');
   sheet.innerHTML =
     `<header class="tk-head">
-      <span class="tk-dot" aria-hidden="true">?</span>
-      <b>Tulkki</b><small>selittää — sinä päätät</small>
+      <span class="tk-dot" aria-hidden="true">✦</span>
+      <b>Tulkki</b><small>kysy, vertaile, kokeile</small>
       <button type="button" class="tk-x" id="tkClose" aria-label="Sulje Tulkki">✕</button>
     </header>
     <div class="tk-privacy" title="Vain suunnitelman anonyymi muoto ja kysymys välitetään selitystä varten — ei nimiä eikä tunnisteita.">🔒 Laskelmasi ei lähde selaimestasi — palvelin ei tallenna mitään.</div>
