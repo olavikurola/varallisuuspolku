@@ -530,8 +530,12 @@ async function handleTulkki(req, res, body, ip) {
       signal: AbortSignal.timeout(45000),
     });
     if (!r.ok || !r.body) {
-      console.log(`tulkki: upstream ${r.status}`);
-      return send(res, 502, { error: 'upstream', status: r.status });
+      // Mallitoimittajan virheruumis mukaan (typistettynä) — ilman tätä
+      // tuotannon 400 jää arvoitukseksi, koska palvelin ei lokita sisältöä
+      let detail = '';
+      try { detail = (await r.text()).slice(0, 300); } catch (e2) {}
+      console.log(`tulkki: upstream ${r.status} ${detail}`);
+      return send(res, 502, { error: 'upstream', status: r.status, detail });
     }
     res.writeHead(200, { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-cache' });
     const writeLine = (obj) => { if (!res.writableEnded) res.write(JSON.stringify(obj) + '\n'); };
