@@ -57,26 +57,27 @@
       </div>
       <div>
         <div class="brand-name">Tilastot</div>
-        <div class="brand-tag">miten muut suunnittelevat vaurastumista</div>
+        <div class="brand-tag">Varallisuuspolun avoin vertailudata</div>
       </div>
     </a>
     <div class="topbar-right">
-      <a class="btn" href="./">Avaa suunnittelutyökalu</a>
+      <a class="btn an-return" href="./">Avaa suunnittelutyökalu</a>
     </div>
   </header>
 
   <main class="an-main">
-    <p class="an-intro">Miten eri ikäiset suunnittelevat talouttaan? Sivu perustuu käyttäjien
-    <b>anonyymisti jakamiin suunnitelmiin</b>. <span id="anUpdated"></span></p>
+    <header class="an-head">
+      <p class="an-intro">Miten eri ikäiset suunnittelevat talouttaan? Kaikki kaaviot perustuvat
+      käyttäjien <b>anonyymisti jakamiin suunnitelmiin</b>. <span id="anUpdated"></span></p>
+      <div class="an-tiles" id="anTiles"></div>
+      <nav class="an-nav" aria-label="Sivun sisältö">
+        <span class="an-nav-lb">Sisältö:</span>
+        <a href="#g-sina">Sinä ja ikätoverisi</a>
+        <a href="#g-elama">Elämän suunnitelmat</a>
+        <a href="#g-data">Data ja menetelmä</a>
+      </nav>
+    </header>
     <div class="an-progress" id="anProgress" hidden></div>
-    <div class="an-tiles" id="anTiles"></div>
-
-    <nav class="an-nav" aria-label="Sivun sisältö">
-      <a href="#g-sina">Sinä ja ikätoverisi</a>
-      <a href="#g-elama">Elämän suunnitelmat</a>
-      <a href="#g-data">Data ja menetelmä</a>
-      <span class="an-legend"><i></i> sinun suunnitelmasi kaavioissa</span>
-    </nav>
 
     <div class="an-gt" id="g-sina">Sinä ja ikätoverisi</div>
 
@@ -143,6 +144,8 @@
         </div>
       </div>
     </section>
+
+    <p class="an-foot"><a class="btn an-return" href="./">Avaa suunnittelutyökalu</a></p>
 
     <p class="disclaimer" style="margin:8px 4px 40px">Suunnitelmadata on suuntaa antavaa eikä kuvaa toteutunutta
     varallisuutta. Sivu ei ole sijoitusneuvontaa. <a href="./">Varallisuuspolku</a> — kaikki suunnittelu

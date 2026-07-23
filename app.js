@@ -4711,10 +4711,10 @@ function openMoreMenu(anchor) {
     });
   add('mi-analytics', 'Tilastot', 'Miten muut suunnittelevat vaurastumista — avoin data',
     () => { location.href = 'analytiikka.html'; });
-  add('mi-info', 'Tietoa palvelusta', 'Oletukset, tietosuoja ja vinkit',
-    () => { $('infoModal').hidden = false; });
   add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti yhdeksällä klikkauksella',
     () => startTour());
+  add('mi-info', 'Tietoa palvelusta', 'Oletukset, tietosuoja ja vinkit',
+    () => { $('infoModal').hidden = false; });
 
   // Nollaus vaatii toisen klikkauksen — valikko pysyy auki vahvistusta varten
   const reset = add('mi-reset', 'Nollaa suunnitelma', 'Poistaa avoinna olevan suunnitelman — muut rivit säilyvät', null, true);

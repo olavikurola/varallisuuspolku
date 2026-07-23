@@ -79,6 +79,8 @@ function readMe() {
 // viewBox-koordinaatit sisällöksi. Resolveri talletetaan svg.__anHover-
 // ominaisuudeksi, jotta suurennettu klooni saa saman vihjeen (kloonaus ei
 // kopioi kuuntelijoita — initZoom sitoo resolverin uudelleen).
+// Resolveri palauttaa joko html-merkkijonon tai { html, x, y1, y2 }, jolloin
+// kaavioon piirtyy pystykatkoviiva kohdistetun sarakkeen kohdalle.
 
 let tipEl = null;
 function tipShow(html, cx, cy) {
@@ -92,16 +94,40 @@ function tipShow(html, cx, cy) {
 function tipHide() { if (tipEl) tipEl.hidden = true; }
 
 function bindHover(svg, resolve) {
+  let line = null; // kohdistusviiva luodaan laiskasti tähän svg:hen (myös klooni saa omansa)
+  const hideLine = () => { if (line) line.setAttribute('visibility', 'hidden'); };
   svg.addEventListener('pointermove', (e) => {
     const r = svg.getBoundingClientRect();
     if (!r.width || !r.height) return;
     const vb = svg.viewBox.baseVal;
     const hit = resolve((e.clientX - r.left) / r.width * vb.width, (e.clientY - r.top) / r.height * vb.height);
-    if (hit) tipShow(hit, e.clientX, e.clientY); else tipHide();
+    if (!hit) { tipHide(); hideLine(); return; }
+    const h = typeof hit === 'string' ? { html: hit } : hit;
+    tipShow(h.html, e.clientX, e.clientY);
+    if (h.x != null) {
+      if (!line) line = el('line', { class: 'an-xline' }, svg);
+      line.setAttribute('x1', h.x); line.setAttribute('x2', h.x);
+      line.setAttribute('y1', h.y1); line.setAttribute('y2', h.y2);
+      line.setAttribute('visibility', 'visible');
+    } else hideLine();
   });
-  svg.addEventListener('pointerleave', tipHide);
+  svg.addEventListener('pointerleave', () => { tipHide(); hideLine(); });
 }
 function attachHover(svg, resolve) { svg.__anHover = resolve; bindHover(svg, resolve); }
+
+/* "sinä"-selite kortin otsikkoon — kaavion viereen, ei irralliseksi.
+   Kutsutaan vain kun oma merkki oikeasti piirtyi; glyyfi vastaa kaavion merkkiä. */
+function markYou(containerId, glyph) {
+  const c = $(containerId);
+  if (!c) return;
+  let h = c.previousElementSibling;
+  while (h && !/^H[23]$/.test(h.tagName)) h = h.previousElementSibling;
+  if (!h || h.querySelector('.an-youchip')) return;
+  const s = document.createElement('span');
+  s.className = 'an-youchip';
+  s.textContent = `${glyph} sinä`;
+  h.appendChild(s);
+}
 
 /* ---------- Kaaviot ---------- */
 
@@ -138,7 +164,7 @@ function renderHero(stats, me) {
   }
   if (me && me.ageNow >= 18 && me.ageNow <= 72) {
     el('circle', { cx: X(me.ageNow), cy: Y(me.startCapital), r: 6, fill: YOU, stroke: '#0a0e1a', 'stroke-width': 2 }, svg);
-    text(svg, X(me.ageNow) + 10, Y(me.startCapital) + 4, 'sinä', 'an-you', 'start');
+    markYou('heroChart', '●');
   }
   attachHover(svg, (x) => {
     let best = null;
@@ -149,7 +175,10 @@ function renderHero(stats, me) {
     if (!best) return null;
     const n = stats.groups[best.p.g] && stats.groups[best.p.g].n;
     const q = best.p.q;
-    return `<b>${best.p.g} v</b>${n ? ` · n = ${n}` : ''}<br>P75 ${fmtCompact(q.p75)}<br>Mediaani <b>${fmtCompact(q.p50)}</b><br>P25 ${fmtCompact(q.p25)}`;
+    return {
+      html: `<b>${best.p.g} v</b>${n ? ` · n = ${n}` : ''}<br>P75 ${fmtCompact(q.p75)}<br>Mediaani <b>${fmtCompact(q.p50)}</b><br>P25 ${fmtCompact(q.p25)}`,
+      x: X(best.p.cx), y1: t, y2: H - b,
+    };
   });
 }
 
@@ -191,6 +220,7 @@ function renderRidgeline(stats, me) {
       const mine = type === 'retirement' ? me.ret : me.events.find((e) => e.type === type);
       if (mine) {
         el('path', { d: `M ${X(mine.age).toFixed(1)} ${base + 2} l 5 8 l -10 0 Z`, fill: YOU }, svg);
+        markYou('ridgeline', '▲');
       }
     }
   });
@@ -201,8 +231,11 @@ function renderRidgeline(stats, me) {
     const tot = d.counts.reduce((s, c) => s + c, 0) || 1;
     for (let k = 0; k < d.counts.length; k++) {
       if (x >= X(d.edges[k]) && x < X(d.edges[k + 1]) && d.counts[k] > 0) {
-        return `${ICONS[type]} <b>${LABELS[type]}</b> · med. ${Math.round(d.p50)} v<br>` +
-          `${d.edges[k]}–${d.edges[k + 1]} v: ${Math.round((d.counts[k] / tot) * 100)} % suunnitelmista`;
+        return {
+          html: `${ICONS[type]} <b>${LABELS[type]}</b> · med. ${Math.round(d.p50)} v<br>` +
+            `${d.edges[k]}–${d.edges[k + 1]} v: ${Math.round((d.counts[k] / tot) * 100)} % suunnitelmista`,
+          x: (X(d.edges[k]) + X(d.edges[k + 1])) / 2, y1: headH, y2: H - 24,
+        };
       }
     }
     return `${ICONS[type]} <b>${LABELS[type]}</b> · mediaani ${Math.round(d.p50)} v`;
@@ -241,7 +274,7 @@ function renderQuartCols(containerId, stats, key, me, meVal, fmt, refFn, vCap) {
     const i = GROUPS.findIndex(([g]) => g === me.group);
     if (i >= 0 && meVal <= vMax) {
       el('path', { d: `M ${(X(i) + 12).toFixed(1)} ${Y(meVal).toFixed(1)} l 8 -5 l 0 10 Z`, fill: YOU }, svg);
-      text(svg, X(i) + 24, Y(meVal) + 4, 'sinä', 'an-you');
+      markYou(containerId, '◂');
     }
   }
   attachHover(svg, (x) => {
@@ -253,7 +286,10 @@ function renderQuartCols(containerId, stats, key, me, meVal, fmt, refFn, vCap) {
     if (!best) return null;
     const n = stats.groups[best.p.g] && stats.groups[best.p.g].n;
     const q = best.p.q;
-    return `<b>${best.p.g} v</b>${n ? ` · n = ${n}` : ''}<br>P75 ${fmt(q.p75)}<br>Mediaani <b>${fmt(q.p50)}</b><br>P25 ${fmt(q.p25)}`;
+    return {
+      html: `<b>${best.p.g} v</b>${n ? ` · n = ${n}` : ''}<br>P75 ${fmt(q.p75)}<br>Mediaani <b>${fmt(q.p50)}</b><br>P25 ${fmt(q.p25)}`,
+      x: X(best.p.i), y1: t, y2: H - b,
+    };
   });
 }
 
@@ -281,13 +317,16 @@ function renderRetireHist(stats, me) {
   }
   if (me && me.ret) {
     el('path', { d: `M ${X(me.ret.age).toFixed(1)} ${t + 2} l 5 8 l -10 0 Z`, fill: YOU }, svg);
-    text(svg, X(me.ret.age) + 8, t + 12, 'sinä', 'an-you');
+    markYou('retireHist', '▲');
   }
   const totalC = h.counts.reduce((s, c) => s + c, 0) || 1;
   attachHover(svg, (x) => {
     for (let i = 0; i < h.counts.length; i++) {
       if (x >= X(h.edges[i]) && x < X(h.edges[i + 1]) && h.counts[i] > 0) {
-        return `<b>Eläkeikä ${h.edges[i]}–${h.edges[i + 1]} v</b><br>${h.counts[i]} suunnitelmaa · ${Math.round((h.counts[i] / totalC) * 100)} %`;
+        return {
+          html: `<b>Eläkeikä ${h.edges[i]}–${h.edges[i + 1]} v</b><br>${h.counts[i]} suunnitelmaa · ${Math.round((h.counts[i] / totalC) * 100)} %`,
+          x: (X(h.edges[i]) + X(h.edges[i + 1])) / 2, y1: t, y2: H - b,
+        };
       }
     }
     return null;
@@ -400,7 +439,10 @@ function renderTimeline(stats) {
   attachHover(svg, (x) => {
     const i = Math.floor((x - l) / bw);
     if (i < 0 || i >= tl.length) return null;
-    return `<b>${tl[i].m}</b> · ${tl[i].n} jaettua suunnitelmaa`;
+    return {
+      html: `<b>${tl[i].m}</b> · ${tl[i].n} jaettua suunnitelmaa`,
+      x: l + i * bw + bw / 2, y1: t, y2: H - b,
+    };
   });
 }
 
@@ -455,6 +497,7 @@ function initZoom() {
       const clone = card.cloneNode(true);
       const zb = clone.querySelector('.an-zoom');
       if (zb) zb.remove();
+      clone.querySelectorAll('.an-xline').forEach((n) => n.remove()); // klooni saa oman kohdistusviivan bindHoverista
       const x = document.createElement('button');
       x.type = 'button';
       x.className = 'an-light-x';
@@ -522,11 +565,10 @@ function takeaways(stats, me) {
 (async () => {
   const me = readMe();
   renderGate(me);
-  // "sinä"-selite on navissa kaavioiden vieressä — näytetään vain kun oma
-  // suunnitelma on olemassa (erillinen banneri poistettu: yläosa rauhoittuu,
-  // yksityisyys on selitetty Data ja menetelmä -lohkossa)
-  const legend = document.querySelector('.an-legend');
-  if (legend && !me) legend.hidden = true;
+  // Paluulinkit: kun oma suunnitelma on olemassa, nappi kertoo että sinne palataan
+  if (me) {
+    document.querySelectorAll('a.an-return').forEach((a) => { a.textContent = '← Palaa suunnitelmaasi'; });
+  }
   $('anStatsLink').href = DATA_API + '/stats.json';
 
   let stats = null;
