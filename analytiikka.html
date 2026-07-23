@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vaurastumisen kartta — Varallisuuspolku-analytiikka</title>
-  <meta name="description" content="Avoin analytiikka siitä, miten eri ikäiset suunnittelevat talouttaan ja etenevät vaurastumisen matkalla — käyttäjien anonyymisti jakamista suunnitelmista." />
+  <title>Tilastot — miten muut suunnittelevat vaurastumista | Varallisuuspolku</title>
+  <meta name="description" content="Avoimet tilastot siitä, miten muut suunnittelevat vaurastumista: varallisuus, säästäminen ja eläkehaaveet ikäryhmittäin — käyttäjien anonyymisti jakamista suunnitelmista." />
   <meta name="theme-color" content="#0a0e1a" />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="fi_FI" />
   <meta property="og:site_name" content="Varallisuuspolku" />
-  <meta property="og:title" content="Vaurastumisen kartta — miten eri ikäiset suunnittelevat talouttaan" />
+  <meta property="og:title" content="Tilastot — miten muut suunnittelevat vaurastumista" />
   <meta property="og:description" content="Avoin, anonyymi data suomalaisten taloussuunnitelmista: varallisuus, säästäminen, elämän suuret hankinnat ja eläkehaaveet ikäryhmittäin." />
   <meta property="og:url" content="https://varallisuuspolku.com/analytiikka.html" />
   <meta property="og:image" content="https://varallisuuspolku.com/og.png" />
@@ -25,7 +25,7 @@
   {
     "@context": "https://schema.org",
     "@type": "Dataset",
-    "name": "Vaurastumisen kartta — anonyymi vertailudata suomalaisten taloussuunnitelmista",
+    "name": "Tilastot — anonyymi vertailudata suomalaisten taloussuunnitelmista",
     "description": "Avoin, anonyymi ja k-anonymisoitu (k=30) aggregaattidata Varallisuuspolku-palvelun käyttäjien vapaaehtoisesti jakamista taloussuunnitelmista: varallisuus, kuukausisäästö, osakepaino, eläkeikä ja elämän suuret hankinnat ikäryhmittäin.",
     "url": "https://varallisuuspolku.com/analytiikka.html",
     "isAccessibleForFree": true,
@@ -56,8 +56,8 @@
         </svg>
       </div>
       <div>
-        <div class="brand-name">Vaurastumisen kartta</div>
-        <div class="brand-tag">Varallisuuspolun avoin analytiikka</div>
+        <div class="brand-name">Tilastot</div>
+        <div class="brand-tag">miten muut suunnittelevat vaurastumista</div>
       </div>
     </a>
     <div class="topbar-right">
@@ -74,14 +74,18 @@
     <div class="an-progress" id="anProgress" hidden></div>
     <div class="an-tiles" id="anTiles"></div>
 
+    <nav class="an-nav" aria-label="Sivun sisältö">
+      <a href="#g-sina">Sinä ja ikätoverisi</a>
+      <a href="#g-elama">Elämän suunnitelmat</a>
+      <a href="#g-data">Data ja menetelmä</a>
+      <span class="an-legend"><i></i> sinun suunnitelmasi kaavioissa</span>
+    </nav>
+
+    <div class="an-gt" id="g-sina">Sinä ja ikätoverisi</div>
+
     <section class="an-card">
       <h2>Missä muut ovat sinun iässäsi? <small>varallisuus nyt, ikäryhmittäin</small></h2>
       <div class="an-chart" id="heroChart"></div>
-    </section>
-
-    <section class="an-card">
-      <h2>Elämän kartta <small>minkä ikäisenä elämän suuret tapahtumat suunnitellaan</small></h2>
-      <div id="ridgeline"></div>
     </section>
 
     <div class="an-grid2">
@@ -95,6 +99,13 @@
       </section>
     </div>
 
+    <div class="an-gt" id="g-elama">Elämän suunnitelmat</div>
+
+    <section class="an-card">
+      <h2>Elämän kartta <small>minkä ikäisenä elämän suuret tapahtumat suunnitellaan</small></h2>
+      <div id="ridgeline"></div>
+    </section>
+
     <section class="an-card">
       <h2>Eläkehaaveet</h2>
       <div class="an-grid2">
@@ -107,16 +118,17 @@
       </div>
     </section>
 
-    <div class="an-grid2">
-      <section class="an-card">
-        <h2>Asuntolaina suunnitelmissa</h2>
-        <div id="homeLoan"></div>
-      </section>
-      <section class="an-card">
-        <h2>Realismi <small>oletusten käyttö ja onnistumis-%</small></h2>
-        <div id="realism"></div>
-      </section>
-    </div>
+    <section class="an-card">
+      <h2>Asuntolaina suunnitelmissa</h2>
+      <div id="homeLoan"></div>
+    </section>
+
+    <div class="an-gt" id="g-data">Data ja menetelmä</div>
+
+    <section class="an-card">
+      <h2>Realismi <small>oletusten käyttö ja onnistumis-%</small></h2>
+      <div id="realism"></div>
+    </section>
 
     <section class="an-card an-method">
       <h2>Avoin data ja menetelmä</h2>

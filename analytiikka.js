@@ -1,6 +1,6 @@
 'use strict';
 
-/* Vaurastumisen kartta — avoin analytiikka Varallisuuspolun anonyymistä
+/* Tilastot (ent. Vaurastumisen kartta) — avoin analytiikka Varallisuuspolun anonyymistä
    vertailudatasta. Kaikki kaaviot käsintehtyä SVG:tä, ei riippuvuuksia.
    "Sinä kartalla": oma suunnitelma luetaan VAIN localStoragesta — mitään
    ei lähetetä minnekään tältä sivulta. */
@@ -330,19 +330,98 @@ function renderGate(me) {
   lock.className = 'an-lock';
   lock.innerHTML = me
     ? `<div class="an-lock-card"><div class="ic">🗺️</div><h2>Melkein valmista</h2>
-       <p>Sinulla on jo oma suunnitelma. Vaurastumisen kartta aukeaa, kun jaat sen
+       <p>Sinulla on jo oma suunnitelma. Tilastot aukeavat, kun jaat sen
        <b>anonyymisti</b> — näet ensin täsmälleen mitä jaetaan, eikä se velvoita mihinkään.</p>
        <a class="btn" href="./#yhteenveto">Avaa Suunnitelmani ja jaa →</a>
        <p class="small">Ei tunnisteita · summat pyöristetään · jakaumat julkaistaan vasta
        ≥ 30 suunnitelman ryhmistä · aggregaatit ovat avointa dataa:
        <a href="${DATA_API}/stats.json" target="_blank" rel="noopener">stats.json</a></p></div>`
-    : `<div class="an-lock-card"><div class="ic">🗺️</div><h2>Vaurastumisen kartta</h2>
+    : `<div class="an-lock-card"><div class="ic">📊</div><h2>Tilastot — miten muut suunnittelevat vaurastumista</h2>
        <p>Tämä näkymä kertoo, miten eri ikäiset suunnittelevat talouttaan ja etenevät
-       vaurastumisen matkalla. Kartta aukeaa, kun sinullakin on <b>oma suunnitelma</b>.</p>
+       vaurastumisen matkalla. Tilastot aukeavat, kun sinullakin on <b>oma suunnitelma</b>.</p>
        <a class="btn" href="./">Tee oma suunnitelma →</a>
        <p class="small">Vie pari minuuttia — suunnitelmasi pysyy omassa selaimessasi.</p></div>`;
   document.body.appendChild(lock);
   return true;
+}
+
+/* ---------- Suurennus: kaavio koko ruudun kehykseen ---------- */
+// SVG:t piirretään viewBoxiin ja skaalautuvat vektoreina — suurennos on
+// kortin klooni isossa kehyksessä, terävänä ilman uudelleenpiirtoa.
+// Esc, ✕ tai taustan klikkaus sulkee.
+
+function initZoom() {
+  document.querySelectorAll('.an-card').forEach((card) => {
+    if (card.classList.contains('an-method')) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'an-zoom';
+    btn.title = 'Suurenna';
+    btn.setAttribute('aria-label', 'Suurenna kaavio');
+    btn.textContent = '⛶';
+    btn.addEventListener('click', () => {
+      const light = document.createElement('div');
+      light.className = 'an-light';
+      const clone = card.cloneNode(true);
+      const zb = clone.querySelector('.an-zoom');
+      if (zb) zb.remove();
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'an-light-x';
+      x.setAttribute('aria-label', 'Sulje');
+      x.textContent = '✕';
+      clone.appendChild(x);
+      light.appendChild(clone);
+      const close = () => { light.remove(); document.removeEventListener('keydown', onEsc); };
+      const onEsc = (e) => { if (e.key === 'Escape') close(); };
+      light.addEventListener('click', (e) => { if (e.target === light || e.target === x) close(); });
+      document.addEventListener('keydown', onEsc);
+      document.body.appendChild(light);
+    });
+    card.appendChild(btn);
+  });
+}
+
+/* ---------- Poimintalauseet: kaavio näyttää, lause kertoo ---------- */
+// Rehellinen kvartiilikieli: sijainti kerrotaan neljänneksinä, ei tarkkoina
+// prosenttipisteinä (dataa on vain kvartiileina). Lause lisätään vain kun
+// ryhmän jakauma on julkaistu ja oma arvo on olemassa.
+
+function quartPos(v, q) {
+  if (v >= q.p75) return 'ylimmässä neljänneksessä';
+  if (v >= q.p50) return 'mediaanin yläpuolella';
+  if (v >= q.p25) return 'mediaanin alapuolella';
+  return 'alimmassa neljänneksessä';
+}
+
+function addTake(chartId, html) {
+  const c = $(chartId);
+  if (!c || c.querySelector('.an-empty') || !html) return;
+  const p = document.createElement('p');
+  p.className = 'an-take';
+  p.innerHTML = html;
+  c.insertAdjacentElement('afterend', p);
+}
+
+function takeaways(stats, me) {
+  const g = me && me.group && stats.groups[me.group];
+  const n = g && g.n ? ` <span class="an-take-n">n = ${g.n}</span>` : '';
+  if (g && g.startCapital && me.startCapital != null) {
+    addTake('heroChart', `Ikäryhmäsi ${me.group} mediaanivarallisuus on <b>${fmtCompact(g.startCapital.p50)}</b> — sinun ${fmtCompact(me.startCapital)} on ${quartPos(me.startCapital, g.startCapital)}.${n}`);
+  }
+  if (g && g.monthly && me.monthly != null) {
+    addTake('savingsChart', `Ikäryhmäsi mediaanisäästö on <b>${Math.round(g.monthly.p50).toLocaleString('fi-FI')} €/kk</b> — sinun ${Math.round(me.monthly).toLocaleString('fi-FI')} €/kk on ${quartPos(me.monthly, g.monthly)}.${n}`);
+  }
+  if (g && g.stocks && me.stocks != null) {
+    addTake('stocksChart', `Ikäryhmäsi mediaaniosakepaino on <b>${Math.round(g.stocks.p50)} %</b> — sinulla ${Math.round(me.stocks)} %.${n}`);
+  }
+  const rg = (g && g.retireAge) ? g : stats.groups.all;
+  if (rg && rg.retireAge && me && me.ret) {
+    const med = Math.round(rg.retireAge.p50);
+    const d = Math.round(me.ret.age) - med;
+    const rTxt = d === 0 ? 'sama kuin mediaani' : d < 0 ? `${-d} v mediaania aiemmin` : `${d} v mediaania myöhemmin`;
+    addTake('retireHist', `Mediaani eläkeikätavoite${rg === stats.groups.all ? '' : ' ikäryhmässäsi'} on <b>${med} v</b> — sinun ${Math.round(me.ret.age)} v on ${rTxt}.`);
+  }
 }
 
 /* ---------- Sivun kokoaminen ---------- */
@@ -434,6 +513,8 @@ function renderGate(me) {
   renderHomeLoan(stats, me);
   renderRealism(stats, me);
   renderTimeline(stats);
+  takeaways(stats, me);
+  initZoom();
 
   // Menetelmä: n per ikäryhmä
   $('methodChips').innerHTML = GROUPS.map(([g]) => {

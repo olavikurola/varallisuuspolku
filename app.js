@@ -3239,7 +3239,7 @@ const TOUR_STEPS = [
   { t: 'Suunnitelmani', s: '#summaryBtn',
     x: 'Suunnitelmasi tulostettavana dokumenttina — vaikka varainhoitajalle. Jakolinkki kopioi koko suunnitelman talteen tai kaverille. Täältä näet myös, miten ikätoverisi suunnittelevat talouttaan.' },
   { t: 'Valikko', s: '#moreBtn',
-    x: 'Vertailu tallentaa nykyisen suunnitelman haamukäyräksi muutosten taakse. Täältä löytyvät myös Vaurastumisen kartta ja palvelun tiedot.' },
+    x: 'Vertailu tallentaa nykyisen suunnitelman haamukäyräksi muutosten taakse. Täältä löytyvät myös Tilastot ja palvelun tiedot.' },
 ];
 
 function tourShow(i) {
@@ -4709,7 +4709,7 @@ function openMoreMenu(anchor) {
       if (baseline) { clearBaseline(); toast('Vertailu poistettu'); }
       else { setBaseline(); toast('Vertailukohta tallennettu — erot näkyvät, kun muutat suunnitelmaa'); }
     });
-  add('mi-analytics', 'Vaurastumisen kartta', 'Miten eri ikäiset suunnittelevat — avoin analytiikka',
+  add('mi-analytics', 'Tilastot', 'Miten muut suunnittelevat vaurastumista — avoin data',
     () => { location.href = 'analytiikka.html'; });
   add('mi-info', 'Tietoa palvelusta', 'Oletukset, tietosuoja ja vinkit',
     () => { $('infoModal').hidden = false; });
