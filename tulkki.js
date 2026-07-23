@@ -350,8 +350,10 @@
     '.tk-mailto{display:inline-block;margin-top:7px;padding:4px 12px;border:1px solid rgba(139,124,246,.45);' +
       'border-radius:999px;color:#b9aefc;text-decoration:none;font-size:12px}' +
     '.tk-mailto:hover{background:rgba(139,124,246,.15);color:#d9d2fd}' +
-    // Mobiili: kehittäjätieto (malli · tokenit) pois — tila on kortteja varten
-    '@media (max-width:560px){.tk-cost{display:none}}';
+    // Mobiili: kehittäjätieto (malli · tokenit) pois — tila on kortteja varten.
+    // Syötekentän fontti ≥16px: alle sen iOS Safari zoomaa sivua fokusoidessa
+    // (juurisyy "Tulkki leviää sivuttain" -ilmiölle), 16px estää zoomin.
+    '@media (max-width:560px){.tk-cost{display:none}.tk-ask input{font-size:16px}}';
   document.head.appendChild(tkCss);
 
   const $t = (id) => sheet.querySelector('#' + id);
