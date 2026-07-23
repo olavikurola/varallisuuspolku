@@ -11,7 +11,7 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 
 const SERVER = path.join(__dirname, '..', 'palvelin', 'server.js');
-const MOCK_PORT = 8790, MAIN_PORT = 8791, OFF_PORT = 8792;
+const MOCK_PORT = 8790, MAIN_PORT = 8791, OFF_PORT = 8792, PUB_PORT = 8793, PRIV_PORT = 8794;
 const API = `http://127.0.0.1:${MAIN_PORT}`;
 
 let failed = 0;
@@ -96,8 +96,26 @@ const CTX = { plan: { ageNow: 30 }, stats: { onnistumistodennakoisyysPct: 99, ve
     TULKKI_DAILY_MAX: '6',
   });
   const off = spawnServer(OFF_PORT, {}); // ei env-muuttujia → 503
+  // Julkisen tason instanssi: pieni anonyymi IP-kiintiö testattavaksi, väljä
+  // globaali katto (etteivät laskurit sekoitu pääinstanssin testeihin)
+  const pub = spawnServer(PUB_PORT, {
+    ANTHROPIC_API_KEY: 'test-avain',
+    TULKKI_KEYS: 'oma-avain',
+    TULKKI_UPSTREAM: `http://127.0.0.1:${MOCK_PORT}`,
+    TULKKI_ANON_DAILY: '2',
+    TULKKI_DAILY_MAX: '50',
+  });
+  // Suljettu julkinen taso: avaimeton hylätään
+  const priv = spawnServer(PRIV_PORT, {
+    ANTHROPIC_API_KEY: 'test-avain',
+    TULKKI_KEYS: 'oma-avain',
+    TULKKI_UPSTREAM: `http://127.0.0.1:${MOCK_PORT}`,
+    TULKKI_PUBLIC: '0',
+  });
   await waitUp(MAIN_PORT);
   await waitUp(OFF_PORT);
+  await waitUp(PUB_PORT);
+  await waitUp(PRIV_PORT);
 
   console.log('Portti ja avain');
   {
@@ -184,6 +202,37 @@ const CTX = { plan: { ageNow: 30 }, stats: { onnistumistodennakoisyysPct: 99, ve
     ok(/"uusi"/.test(sys) && /"poista"/.test(sys) && /ageNow/.test(sys), 'luonti, poisto ja ageNow kehotteessa');
   }
 
+  console.log('Julkinen taso (avaimeton + kiintiöt)');
+  {
+    const postTo = (port, payload) => fetch(`http://127.0.0.1:${port}/tulkki`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const a = await postTo(PUB_PORT, { question: 'moi', context: CTX });
+    ok(a.status === 200, 'avaimeton kysely kelpaa julkisella tasolla');
+    const da = await drain(a);
+    ok(da.answer.length > 0, 'avaimeton saa vastauksen');
+    const b = await postTo(PUB_PORT, { question: 'toinen', context: CTX });
+    ok(b.status === 200, 'toinen kysely mahtuu IP-kiintiöön');
+    await drain(b);
+    const c = await postTo(PUB_PORT, { question: 'kolmas', context: CTX });
+    const cc = await c.json().catch(() => ({}));
+    ok(c.status === 429 && cc.error === 'quota', 'IP-päiväkiintiö katkaisee (429 quota)', c.status + ' ' + JSON.stringify(cc));
+    const k = await postTo(PUB_PORT, { key: 'oma-avain', question: 'avaimella', context: CTX });
+    ok(k.status === 200, 'avain ohittaa anonyymin kiintiön');
+    await drain(k);
+    const w = await postTo(PUB_PORT, { key: 'väärä', question: 'moi', context: CTX });
+    ok(w.status === 401, 'väärä avain → 401 myös julkisella tasolla');
+    const p0 = await postTo(PRIV_PORT, { question: 'moi', context: CTX });
+    ok(p0.status === 401, 'TULKKI_PUBLIC=0 → avaimeton hylätään (401)');
+    const p1 = await postTo(PRIV_PORT, { key: 'oma-avain', question: 'moi', context: CTX });
+    ok(p1.status === 200, 'TULKKI_PUBLIC=0 → avain toimii yhä');
+    await drain(p1);
+    const sys = lastUpstream.body.system[0].text;
+    ok(/LUKUSIDONNAT/.test(sys) && /\[\[polku\]\]/.test(sys), 'lukusidontojen ohje kehotteessa');
+    ok(/RIKASTA/.test(sys) && /yksi vertailu per vastaus/.test(sys), 'spontaani vertailurikastus kehotteessa');
+  }
+
   console.log('Päiväkatkaisija');
   {
     // 6 kutsua käytetty yllä (3 onnistunutta + advisor + trimmed = 5... katto laukeaa laskurista)
@@ -214,6 +263,8 @@ const CTX = { plan: { ageNow: 30 }, stats: { onnistumistodennakoisyysPct: 99, ve
 
   main.kill();
   off.kill();
+  pub.kill();
+  priv.kill();
   mock.close();
   console.log(failed ? `\n${failed} TESTIÄ EPÄONNISTUI` : '\nKaikki Tulkki-testit läpi.');
   process.exit(failed ? 1 : 0);

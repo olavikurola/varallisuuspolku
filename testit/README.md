@@ -11,6 +11,26 @@ Kattaa: CRN-determinismi (sama seed → bitilleen sama tulos), bisektion
 monotonisuus ja osuvuus, runPathin stopAt, tavoitepisteiden tiukin-sitoo,
 kevyen raahausframen jäädytys, varmuustasoratkaisu, snap/karkeistusapurit.
 
+## Tulkin golden-evalit (oikea malli, maksaa senttejä)
+
+```bash
+ANTHROPIC_API_KEY=sk-... node testit/evalit.js            # koko setti (~10 tapausta, muutama sentti)
+ANTHROPIC_API_KEY=sk-... node testit/evalit.js muutos-elakeika   # yksi tapaus nimellä
+```
+
+Mitä tämä on: `evalit-golden.json` sisältää oikeita käyttötilanteita
+(kysymys + konteksti) ja niiden **odotteet** — kutsuiko mallin vastaus oikeaa
+työkalua oikeilla kentillä, pysyivätkö luvut kontekstissa (numerokuri),
+pysyikö neuvontakielto (ei tuotesuosituksia, ei injektiolle periksi).
+Ajuri käynnistää oikean palvelinkoodin (sama kehote ja työkaluskeema kuin
+tuotannossa) ja raportoi ✓/✗ + tokenit + kustannusarvion.
+
+**Milloin ajetaan:** aina ennen kehotemuutoksen puskemista ja mallin-
+vaihdon jälkeen. **Mistä uudet tapaukset tulevat:** käyttöliittymän
+👎-palaute avainkäytössä tallentaa vaihdon paikalliseen evallistaan
+(Kopioi evalit -nappi) — poimi sieltä epäonnistunut vastaus ja kirjaa
+golden-settiin odote, joka olisi tehnyt siitä hyvän.
+
 ## Selaintestit (Playwright)
 
 Asenna Playwright erilliseen työkansioon (ei tähän repoon — repo pysyy

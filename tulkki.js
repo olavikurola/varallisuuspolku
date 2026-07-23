@@ -1,15 +1,17 @@
 'use strict';
 
-/* Varallisuuspolku — Tulkki (vaihe 1: omistaja-avaimen takana).
+/* Varallisuuspolku — Tulkki (julkinen taso + avainkoodi).
    AI-selittäjä, joka tulkkaa moottorin lukuja selkokielelle. Periaatteet:
    - Moottori (laskenta.js) on totuuden lähde: Tulkki ei laske, vain selittää.
-     Pehmeä validointi vertaa vastauksen lukuja kontekstin lukuihin ja liputtaa
-     poikkeamat (kovat sidonnat tulevat ennen julkista avausta).
+     Lukusidonnat: malli viittaa kontekstin lukuihin [[polku]]-tokeneilla ja UI
+     renderöi arvon moottorin tuloksesta — sidottu luku ei voi olla väärin.
+     Pehmeä numerovalidointi liputtaa loput (tavallisina kirjoitetut luvut).
    - Tietosuoja: verkon yli kulkee vain suunnitelman anonyymi whitelist-muoto
      (sama buildDonationPayload kuin vertailudatassa), moottorin tunnusluvut
      ja kysymys. Palvelin (palvelin/server.js) on tilaton eikä lokita sisältöä.
-   - Ilman localStorage-avainta tämä tiedosto ei lisää käyttöliittymään mitään.
-     Avain: avaa kerran osoite  <sivu>#tulkki=KOODI  (poisto: #tulkki=pois).
+   - Julkinen taso: ilman avainta 5 kysymystä/pv (asiakaslaskuri; palvelimella
+     oma IP-takaraja). Avainkoodi ohittaa kiintiön ja avaa beta-/omistajakyvyt
+     (NL-ramppi, evalityökalut): <sivu>#tulkki=KOODI  (poisto: #tulkki=pois).
    Ladataan classic-skriptinä app.js:n jälkeen — state/sim/yearRows/
    buildDonationPayload/simulate ovat globaaleja. */
 
@@ -32,8 +34,30 @@
 
   let tkKey = null;
   try { tkKey = localStorage.getItem(KEY_LS); } catch (e) {}
-  if (!tkKey) return; // ei avainta → ei Tulkkia
+  // Julkinen taso: Tulkki näkyy kaikille — avain vain ohittaa kiintiön ja
+  // avaa beta-kyvyt. localStorage-esto → ei Tulkkia (kiintiötä ei voi laskea).
+  try { localStorage.getItem(KEY_LS); } catch (e) { return; }
   if (typeof buildDonationPayload !== 'function' || typeof yearRows !== 'function') return;
+
+  /* ---------- Julkinen päiväkiintiö (5 kysymystä / selain / pv) ---------- */
+  // Asiakaspään laskuri on käyttöliittymän totuus; palvelimella on oma
+  // IP-takaraja väärinkäytöksiä vastaan. Avain ohittaa molemmat.
+
+  const QUOTA_LS = 'vp-tulkki-kiintio';
+  const QUOTA_MAX = 5;
+  const quotaDay = () => new Date().toISOString().slice(0, 10);
+  function quotaUsed() {
+    try {
+      const q = JSON.parse(localStorage.getItem(QUOTA_LS)) || {};
+      return q.d === quotaDay() ? (q.n || 0) : 0;
+    } catch (e) { return 0; }
+  }
+  function quotaBump() {
+    if (tkKey) return;
+    try { localStorage.setItem(QUOTA_LS, JSON.stringify({ d: quotaDay(), n: quotaUsed() + 1 })); } catch (e) {}
+    updateQuotaUi();
+  }
+  const quotaLeft = () => tkKey ? Infinity : Math.max(0, QUOTA_MAX - quotaUsed());
 
   /* ---------- Konteksti moottorista ---------- */
 
@@ -201,10 +225,52 @@
   // iso osa "täyteisyyttä"), muu Markdown jää tekstiksi. Ajetaan escapen jälkeen.
   const mdLite = (html) => html.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
 
-  function renderAnswer(el, text, nums) {
-    const paras = text.split(/\n{2,}/);
-    el.innerHTML = paras.map((p) =>
-      `<p>${numSpans(mdLite(esc(p)).replace(/\n/g, '<br>'), nums)}</p>`).join('');
+  /* Lukusidonnat: malli kirjoittaa [[stats.polku]] ja UI renderöi arvon
+     MOOTTORIN kontekstista — sidottu luku ei voi olla väärin, koska se ei
+     koskaan tule mallin tekstistä. Litistetty polku→arvo-kartta rakennetaan
+     stats- ja vertailu-osioista (samat, joihin kehote ohjaa viittaamaan). */
+
+  function bindMap(ctx) {
+    const map = {};
+    const walk = (v, p) => {
+      if (typeof v === 'number' && isFinite(v)) map[p] = v;
+      else if (v && typeof v === 'object' && !Array.isArray(v)) {
+        for (const k in v) walk(v[k], p ? p + '.' + k : k);
+      }
+    };
+    walk({ stats: ctx.stats, vertailu: ctx.vertailu }, '');
+    return map;
+  }
+
+  // Tekstimuotoinen korvaus (ramppi ym. paikat ilman HTML-renderöintiä)
+  const plainBinds = (t, map) => String(t).replace(/\[\[([\w.]+)\]\]/g, (m, p) =>
+    (map && typeof map[p] === 'number') ? map[p].toLocaleString('fi-FI') : '?');
+
+  // Yhteinen renderöijä: escape → **b** → sidontatokenit talteen (PUA-merkein,
+  // etteivät polkujen numerot osu numSpansiin) → numSpans → tokenit spaneiksi.
+  function richHtml(text, nums, bmap) {
+    return text.split(/\n{2,}/).map((p) => {
+      const marks = [];
+      let s = mdLite(esc(p)).replace(/\n/g, '<br>');
+      s = s.replace(/\[\[([\w.]+)\]\]/g, (m, path) => {
+        if (marks.length >= 96) return m; // varmuuskatto
+        marks.push(path);
+        return String.fromCharCode(0xE000 + marks.length - 1);
+      });
+      s = numSpans(s, nums);
+      s = s.replace(/[\uE000-\uE05F]/g, (ch) => {
+        const path = marks[ch.charCodeAt(0) - 0xE000];
+        const v = bmap ? bmap[path] : undefined;
+        return (typeof v === 'number')
+          ? `<span class="tk-num tk-bound" title="Moottorin luku (${esc(path)})">${v.toLocaleString('fi-FI')}</span>`
+          : `<span class="tk-num tk-doubt" title="Viittausta (${esc(path)}) ei löydy moottorin luvuista">?</span>`;
+      });
+      return `<p>${s}</p>`;
+    }).join('');
+  }
+
+  function renderAnswer(el, text, nums, bmap) {
+    el.innerHTML = richHtml(text, nums, bmap);
     return el.querySelectorAll('.tk-doubt').length;
   }
 
@@ -214,10 +280,10 @@
     const i = text.search(/\n(?:MUUTOS|VERTAILU):/);
     return i >= 0 ? text.slice(0, i) : text;
   }
-  function renderStreaming(el, full, nums) {
-    const shown = stripDirectiveTail(full);
-    el.innerHTML = shown.split(/\n{2,}/).map((p) =>
-      `<p>${numSpans(mdLite(esc(p)).replace(/\n/g, '<br>'), nums)}</p>`).join('') +
+  function renderStreaming(el, full, nums, bmap) {
+    // Keskeneräinen sidontatoken piilotetaan virran hännästä ("[[stats.lop")
+    const shown = stripDirectiveTail(full).replace(/\[{1,2}[\w.]*$/, '');
+    el.innerHTML = richHtml(shown, nums, bmap) +
       '<span class="tk-cursor" aria-hidden="true"></span>';
   }
 
@@ -255,11 +321,22 @@
     <div class="tk-foot">
       <button type="button" class="tk-mini" id="tkLogBtn">Tulkin toimet (0)</button>
       <button type="button" class="tk-mini" id="tkEvalCopy"></button>
+      <span class="tk-quota" id="tkQuota" title="Ilmaiskäytön päiväkiintiö — nollautuu keskiyöllä"></span>
       <span class="tk-cost" id="tkCost"></span>
     </div>`;
 
   document.body.appendChild(handle);
   document.body.appendChild(sheet);
+
+  // Julkisen tason pikkutyylit injektoidaan tästä tiedostosta (tulkki.js on
+  // itsenäinen kerros — style.css:ään ei kosketa tässä erässä)
+  const tkCss = document.createElement('style');
+  tkCss.textContent =
+    '.tk-bound{border-bottom:1px dotted rgba(45,212,191,.55)}' +
+    '.tk-fb{display:inline-flex;gap:4px}' +
+    '.tk-fb-b{padding:1px 6px;line-height:1.2}' +
+    '.tk-quota{font-size:10.5px;color:var(--text-faint);font-variant-numeric:tabular-nums}';
+  document.head.appendChild(tkCss);
 
   const $t = (id) => sheet.querySelector('#' + id);
   const log = $t('tkLog');
@@ -277,18 +354,17 @@
     document.body.classList.add('tk-docked'); // leveällä näytöllä sisältö väistyy, ei peity
     badge.hidden = true; // nähty
     tkTrackOnce('Tulkki avattu');
-    // Vertailudata haetaan ensimmäisellä avauksella; chipit päivittyvät kun
-    // data saapuu (vain jos keskustelu on yhä tyhjä eikä lehteä ole suljettu)
+    // Kertaesittely heti (kerran ikinä); vertailudata haetaan ensimmäisellä
+    // avauksella ja kun se saapuu, chipit päivittyvät ja katsastus renderöityy
+    // (näin katsastus voi sisältää myös vertailuhuomion — viive on ~sekunnin)
+    renderSugs();
+    if (!log.children.length && !introSeen()) renderIntro();
     const hadStats = !!vStats;
     loadStats().then(() => {
-      if (!hadStats && vStats && !chat.length && !sheet.hidden) renderSugs();
+      if (sheet.hidden) return;
+      if (!hadStats && vStats && !chat.length) renderSugs();
+      if (!katsastusDismissed && !chat.length && !log.querySelector('.tk-kats')) renderKatsastus();
     });
-    renderSugs();
-    // Tyhjässä keskustelussa: kertaesittely (kerran ikinä) + katsastus (per istunto)
-    if (!log.children.length) {
-      if (!introSeen()) renderIntro();
-      if (!katsastusDismissed) renderKatsastus();
-    }
     if (prefill) { input.value = prefill; }
     input.focus();
   }
@@ -349,6 +425,7 @@
     bad_key: 'Avainkoodi ei kelpaa. Poista se avaamalla osoite #tulkki=pois ja syötä uusi.',
     rate_limit: 'Kysymyksiä tuli hetkeen liian monta — kokeile tunnin päästä.',
     daily_cap: 'Tulkin päiväraja on täynnä — se lepää huomiseen.',
+    quota: 'Päivän ilmaiset kysymykset on käytetty — Tulkki jatkaa huomenna.',
     disabled: 'Tulkki ei ole vielä käytössä palvelimella (ympäristömuuttujat puuttuvat).',
     upstream: 'Tulkin malli ei vastannut — kokeile hetken päästä uudelleen.',
     unreachable: 'Yhteys Tulkkiin epäonnistui — tarkista verkko.',
@@ -357,8 +434,38 @@
   // Tilat, jotka eivät tarvitse käyttäjän kysymystä (palvelin määrää tehtävän)
   const NOQ = { advisor: 'Kysymyslista varainhoitajalle', haasta: 'Haasta suunnitelmani' };
 
+  /* ---------- Kiintiön näyttö ja kiinnostuskortti (julkinen taso) ---------- */
+
+  function updateQuotaUi() {
+    const el = $t('tkQuota');
+    if (!el) return;
+    if (tkKey) { el.hidden = true; return; }
+    el.hidden = false;
+    el.textContent = `${Math.min(QUOTA_MAX, quotaUsed())}/${QUOTA_MAX} tänään`;
+  }
+
+  // Kun päiväkiintiö täyttyy: kerrotaan tilanne ja tarjotaan kiinnostuksen
+  // ilmaisu — pelkkä Plausible-tapahtuma, ei lomaketta eikä tunnisteita.
+  function renderQuotaCard() {
+    if (log.querySelector('.tk-quota-card')) { log.scrollTop = log.scrollHeight; return; }
+    const card = document.createElement('div');
+    card.className = 'tk-change tk-quota-card';
+    card.innerHTML =
+      `<div class="tk-ch-lab">Päivän ${QUOTA_MAX} ilmaista kysymystä on käytetty</div>` +
+      `<div class="tk-ch-note">Tulkki jatkaa huomenna — laskuri ja muut työkalut (markkinatesti, katsastus, vertailu) toimivat normaalisti ilman rajaa. Laajempi maksullinen versio on suunnitteilla: kiinnostuksen ilmaisu auttaa mitoittamaan sen.</div>` +
+      `<div class="tk-ch-acts"><button type="button" class="tk-keep tk-interest">Olen kiinnostunut laajemmasta käytöstä</button></div>`;
+    card.querySelector('.tk-interest').addEventListener('click', (ev) => {
+      tkTrack('Tukija kiinnostus');
+      ev.target.textContent = 'Kiitos — kiinnostus kirjattu ✓';
+      ev.target.disabled = true;
+    });
+    log.appendChild(card);
+    log.scrollTop = log.scrollHeight;
+  }
+
   async function ask(question, mode) {
     if (busy) return;
+    if (quotaLeft() <= 0) { renderQuotaCard(); return; }
     const q = NOQ[mode] || (question || input.value.trim());
     if (!NOQ[mode] && !q) return;
     tkTrack('Tulkki kysymys', { mode: mode || 'explain' });
@@ -404,11 +511,19 @@
         const data = await r.json().catch(() => ({}));
         aEl.className = 'tk-a tk-err';
         aEl.textContent = ERRORS[data.error] || `Tulkki-virhe (${r.status}).`;
+        if (data.error === 'quota') {
+          // Palvelimen IP-takaraja täyttyi ennen paikallista laskuria (esim.
+          // useampi selain samasta verkosta) — synkkaa laskuri ja kerro polku.
+          try { localStorage.setItem(QUOTA_LS, JSON.stringify({ d: quotaDay(), n: QUOTA_MAX })); } catch (e) {}
+          updateQuotaUi();
+          renderQuotaCard();
+        }
       } else {
         // Suoratoisto: luetaan NDJSON-virta, teksti ilmestyy token kerrallaan.
         // Direktiivit (MUUTOS/VERTAILU) ja korttien renderöinti vasta lopussa.
         const nums = [];
         collectNums(ctx, nums);
+        const bmap = bindMap(ctx); // lukusidonnat: [[polku]] → moottorin arvo
         const reader = r.body.getReader();
         const dec = new TextDecoder();
         let sbuf = '', full = '', meta = null, streamErr = null, started = false, toolErr = false;
@@ -425,7 +540,7 @@
             if (obj.delta) {
               if (!started) { started = true; aEl.className = 'tk-a'; }
               full += obj.delta;
-              renderStreaming(aEl, full, nums);
+              renderStreaming(aEl, full, nums, bmap);
               log.scrollTop = log.scrollHeight;
             } else if (obj.tool) toolCalls.push(obj.tool);
             else if (obj.toolError) toolErr = true;
@@ -471,14 +586,27 @@
             text = (change && change.selite) || (compare && compare.selite) || 'Kokeillaan — katso esikatselu.';
             aEl.className = 'tk-a';
           }
-          const doubts = renderAnswer(aEl, text, nums); // lopullinen: ei kursoria, numSpans
+          const doubts = renderAnswer(aEl, text, nums, bmap); // lopullinen: ei kursoria
+          quotaBump(); // onnistunut vastaus kuluttaa julkisen kiintiön
           chat.push({ q, a: text });
+          const bound = aEl.querySelectorAll('.tk-bound').length;
           const mEl = document.createElement('div');
           mEl.className = 'tk-meta';
           mEl.innerHTML =
-            `<span>✓ luvut moottorista${doubts ? ` · <b class="tk-doubt-n">${doubts} tarkistamatonta</b>` : ''}</span>` +
-            `<button type="button" class="tk-mini">Tallenna evaliksi</button>`;
-          mEl.querySelector('button').addEventListener('click', (ev) => {
+            `<span>✓ luvut moottorista${bound ? ` · ${bound} sidottu` : ''}${doubts ? ` · <b class="tk-doubt-n">${doubts} tarkistamatonta</b>` : ''}</span>` +
+            // Palaute: vain arvio Plausibleen (ylos/alas) — EI sisältöä, ei
+            // tunnisteita. Avaimella arvio tallentuu myös paikalliseen evaliin.
+            `<span class="tk-fb"><button type="button" class="tk-mini tk-fb-b" data-arvio="ylos" title="Hyvä vastaus" aria-label="Hyvä vastaus">👍</button>` +
+            `<button type="button" class="tk-mini tk-fb-b" data-arvio="alas" title="Huono tai epäselvä vastaus" aria-label="Huono tai epäselvä vastaus">👎</button></span>` +
+            (tkKey ? `<button type="button" class="tk-mini tk-eval-b">Tallenna evaliksi</button>` : '');
+          mEl.querySelectorAll('.tk-fb-b').forEach((b) => b.addEventListener('click', () => {
+            tkTrack('Tulkki palaute', { arvio: b.dataset.arvio });
+            if (tkKey) saveEval(q, full, ctx, b.dataset.arvio);
+            mEl.querySelectorAll('.tk-fb-b').forEach((x) => { x.disabled = true; });
+            b.textContent += ' ✓';
+          }));
+          const evalBtn = mEl.querySelector('.tk-eval-b');
+          if (evalBtn) evalBtn.addEventListener('click', (ev) => {
             saveEval(q, full, ctx);
             ev.target.textContent = 'Tallennettu ✓';
             ev.target.disabled = true;
@@ -997,6 +1125,7 @@
 
   $t('tkLogBtn').addEventListener('click', renderLogView);
   updateLogBtn();
+  updateQuotaUi();
 
   /* ---------- Markkinatesti: moottorin stressiskenaariot (lukupohjainen) ---------- */
   // Sekvenssiriski: mitä jos markkina käyttäytyy huonosti juuri eläkkeelle
@@ -1068,14 +1197,20 @@
   function evals() {
     try { return JSON.parse(localStorage.getItem(EVALS_LS) || '[]'); } catch (e) { return []; }
   }
-  function saveEval(q, a, ctx) {
+  // arvio ('ylos'/'alas') tulee peukkupalautteesta — golden-settiä kootessa
+  // alas-arviot ovat arvokkaimpia (regressiotapaus: näin EI saa vastata)
+  function saveEval(q, a, ctx, arvio) {
     const list = evals();
-    list.push({ t: new Date().toISOString(), q, a, context: ctx });
-    try { localStorage.setItem(EVALS_LS, JSON.stringify(list)); } catch (e) {}
+    const e = { t: new Date().toISOString(), q, a, context: ctx };
+    if (arvio) e.arvio = arvio;
+    list.push(e);
+    try { localStorage.setItem(EVALS_LS, JSON.stringify(list)); } catch (e2) {}
     updateEvalBtn();
   }
   function updateEvalBtn() {
-    $t('tkEvalCopy').textContent = `Kopioi evalit (${evals().length})`;
+    const b = $t('tkEvalCopy');
+    if (!tkKey) { b.hidden = true; return; } // kehittäjätyökalu — vain avaimella
+    b.textContent = `Kopioi evalit (${evals().length})`;
   }
   $t('tkEvalCopy').addEventListener('click', () => {
     navigator.clipboard.writeText(JSON.stringify(evals(), null, 2)).then(() => {
@@ -1102,7 +1237,8 @@
       `<li><b>Kokeilla:</b> “kokeile eläkeikää 62” — näet muutoksen esikatseluna</li>` +
       `<li><b>Vertailla:</b> “vertaa säästöä 800, 1000 ja 1200”</li>` +
       `<li><b>Haastaa:</b> 🔍-napilla etsin suunnitelmasi riskit</li>` +
-      `</ul>Laskelmasi pysyy selaimessasi.</div>`;
+      `</ul>Laskelmasi pysyy selaimessasi.` +
+      (tkKey ? '' : ` Ilmaiskäytössä ${QUOTA_MAX} kysymystä päivässä.`) + `</div>`;
     card.querySelector('.tk-kats-x').addEventListener('click', () => card.remove());
     log.appendChild(card);
   }
@@ -1149,6 +1285,20 @@
     if (!ret) {
       items.push({ sev: 'info',
         text: 'Suunnitelmassa ei ole eläketapahtumaa — lisää se nähdäksesi, riittävätkö varat eläkkeellä.', q: null });
+    }
+
+    // 5. Vertailuhuomio jaetusta datasta (jos ehtinyt latautua): oma kk-säästö
+    // suhteessa muiden suunnitelmiin — tietoa, ei normi eikä kehotus.
+    if (vStats && state.monthly > 0 && !state.savePhases) {
+      const gN = tkGroupOf(state.ageNow);
+      const g = (gN && vStats.groups[gN] && vStats.groups[gN].monthly)
+        ? vStats.groups[gN] : vStats.groups.all;
+      const mq = g && g.monthly;
+      if (mq && state.monthly < mq.p25) {
+        items.push({ sev: 'info',
+          text: `Kuukausisäästösi ${fmtFi(state.monthly)} € on jaettujen suunnitelmien alakvartiilissa (mediaani ${fmtFi(Math.round(mq.p50))} €/kk). Ei normi — mutta hyvä tiedostaa.`,
+          q: 'Miten kuukausisäästöni vertautuu muiden suunnitelmiin ja mitä se tarkoittaa omalleni?' });
+      }
     }
 
     return items;
@@ -1218,9 +1368,13 @@
   // kuin chatissa → moottori laskee tuloksen. Deterministinen kolmen kysymyksen
   // polku pysyy ensisijaisena eikä riipu tästä. Epäonnistuminen ei koske tilaan.
 
-  // HUOM: $t hakee vain lehden sisältä — rampin elementit haetaan nl:stä
-  const rampCard = document.getElementById('rampCard');
-  if (rampCard && !document.getElementById('tkNlText')) {
+  // HUOM: $t hakee vain lehden sisältä — rampin elementit haetaan nl:stä.
+  // Funktiona, koska Suunnitelmat-koti avaa rampin uudelleen (uusi rivi omin
+  // sanoin) — silloin lomake on rakennettu uusiksi ja NL-osio pitää injektoida
+  // uudelleen ('vp-ramppi-auki'-tapahtuma app.js:stä).
+  const injectNlRamp = () => {
+    const rampCard = document.getElementById('rampCard');
+    if (!rampCard || document.getElementById('tkNlText')) return;
     const nl = document.createElement('div');
     nl.className = 'tk-nl';
     nl.innerHTML =
@@ -1295,7 +1449,7 @@
           const note = document.createElement('div');
           note.className = 'tk-nl-note';
           note.innerHTML =
-            `<b>Tulkki:</b> ${esc((parsed.text || parsed.change.selite || '').slice(0, 300))}` +
+            `<b>Tulkki:</b> ${esc(plainBinds((parsed.text || parsed.change.selite || ''), null).slice(0, 300))}` +
             `<div class="tk-nl-rows">${applied.slice(0, 8).map((r) =>
               esc(r.desc ? `${r.nimi}: ${r.desc}` : `${r.nimi}: ${fmtFi(r.uusi)} ${r.yks || ''}`)).join(' · ')}</div>` +
             `<div class="tk-nl-hint">Kaikkea voi säätää työtilassa — mikään ei ole lukittu.</div>`;
@@ -1308,5 +1462,11 @@
       }
       btn.disabled = false; ta.disabled = false;
     });
+  };
+  // NL-ramppi on beta ja jää avainkoodin taakse myös julkisella tasolla
+  // (ramppikutsu maksaa kysymyksen verran — kiintiö palaisi huomaamatta).
+  if (tkKey) {
+    injectNlRamp();
+    document.addEventListener('vp-ramppi-auki', injectNlRamp);
   }
 })();

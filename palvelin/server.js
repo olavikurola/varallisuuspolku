@@ -318,7 +318,12 @@ const TULKKI_KEYS = (process.env.TULKKI_KEYS || '').split(',').map((s) => s.trim
 const TULKKI_MODEL = process.env.TULKKI_MODEL || 'claude-haiku-4-5';
 const TULKKI_DAILY_MAX = parseInt(process.env.TULKKI_DAILY_MAX || '300', 10);
 const TULKKI_UPSTREAM = process.env.TULKKI_UPSTREAM || 'https://api.anthropic.com';
-const TULKKI_ON = !!(process.env.ANTHROPIC_API_KEY && TULKKI_KEYS.length && typeof fetch === 'function');
+// Julkinen taso: avaimeton kysely sallitaan pienellä IP-päiväkiintiöllä.
+// Oletuksena PÄÄLLÄ (lanseeraus) — TULKKI_PUBLIC=0 sulkee takaisin avainportiksi.
+// Kustannuskatto kerroksittain: IP-kiintiö/pv + 40/IP/h + globaali TULKKI_DAILY_MAX.
+const TULKKI_PUBLIC = process.env.TULKKI_PUBLIC !== '0';
+const TULKKI_ANON_DAILY = parseInt(process.env.TULKKI_ANON_DAILY || '10', 10);
+const TULKKI_ON = !!(process.env.ANTHROPIC_API_KEY && (TULKKI_KEYS.length || TULKKI_PUBLIC) && typeof fetch === 'function');
 
 // Julkinen järjestelmäkehote — sävyvartijat: selittää, ei laske, ei suosittele.
 const TULKKI_SYSTEM = `Olet Tulkki, Varallisuuspolku-palvelun selittäjä. Tulkkaat deterministisen laskentamoottorin tuloksia selkokielelle. Et ole neuvonantaja.
@@ -340,7 +345,9 @@ Käytä vain näitä kenttiä, tyyppejä ja ominaisuuksia — ÄLÄ KOSKAAN keks
 
 8. VERTAILUKOMENNOT: Jos käyttäjä pyytää vertaamaan kahta tai useampaa vaihtoehtoa (esim. "kumpi on parempi, eläkeikä 58 vai 62?" tai "vertaa säästöä 800, 1000 ja 1200"), ÄLÄ muuta suunnitelmaa vaan vastaa lyhyesti ja kutsu vertaile-työkalua. Enintään 4 vaihtoehtoa; jokainen nimetty ja sisältää muutokset säännön 7 muodoissa. Sovellus laskee kunkin vaihtoehdon tuloksen moottorilla ja näyttää vertailutaulukon — ÄLÄ itse arvioi tai kirjoita tuloslukuja. Käytä vertaile-työkalua vertailupyyntöihin ja ehdota_muutos-työkalua (sääntö 7) yksittäiseen kokeiluun; älä kutsu molempia samassa vastauksessa.
 
-9. VERTAILUDATA MUIHIN KÄYTTÄJIIN: Kontekstin vertailu-osio sisältää palvelun käyttäjien anonyymisti jakamien SUUNNITELMIEN aggregaatteja (mediaani p50, kvartiilit p25/p75), yleensä käyttäjän omasta ikäryhmästä (vertailu.ryhma kertoo mistä). Kun käyttäjä kysyy, miten hän vertautuu muihin, käytä näitä lukuja ja tee kaksi asiaa selväksi: kyse on tämän palvelun käyttäjien suunnitelmista (ei väestötilastosta eikä toteutuneesta varallisuudesta), ja mediaani ei ole tavoite eikä normi — ÄLÄ kehota muuttamaan suunnitelmaa siksi, että muut tekevät toisin. Muihinkin vastauksiin saat poimia YHDEN vertailuluvun, jos se aidosti auttaa suhteuttamaan omaa lukua. Jos vertailu-osiota ei ole tai kysytty luku puuttuu, sano suoraan ettei vertailudataa ole vielä kertynyt riittävästi — sitä kertyy, kun käyttäjät jakavat suunnitelmansa anonyymisti. Jos vertailu.kayttajaOnJakanutOman on false ja käyttäjä kysyy vertailusta, voit mainita YHDELLÄ lauseella, että oman suunnitelman voi jakaa anonyymisti Suunnitelmani-sivulta ja se kartuttaa kaikkien vertailudataa — älä toistele tätä.
+9. VERTAILUDATA MUIHIN KÄYTTÄJIIN: Kontekstin vertailu-osio sisältää palvelun käyttäjien anonyymisti jakamien SUUNNITELMIEN aggregaatteja (mediaani p50, kvartiilit p25/p75), yleensä käyttäjän omasta ikäryhmästä (vertailu.ryhma kertoo mistä). Kun käyttäjä kysyy, miten hän vertautuu muihin, käytä näitä lukuja ja tee kaksi asiaa selväksi: kyse on tämän palvelun käyttäjien suunnitelmista (ei väestötilastosta eikä toteutuneesta varallisuudesta), ja mediaani ei ole tavoite eikä normi — ÄLÄ kehota muuttamaan suunnitelmaa siksi, että muut tekevät toisin. RIKASTA myös muita vastauksia yhdellä vertailuluvulla aina, kun se aidosti auttaa suhteuttamaan käyttäjän omaa lukua (esim. kuukausisäästö suhteessa ikäryhmän mediaaniin) — enintään yksi vertailu per vastaus, ettei vastaus muutu tilastoraportiksi. Jos vertailu-osiota ei ole tai kysytty luku puuttuu, sano suoraan ettei vertailudataa ole vielä kertynyt riittävästi — sitä kertyy, kun käyttäjät jakavat suunnitelmansa anonyymisti. Jos vertailu.kayttajaOnJakanutOman on false ja käyttäjä kysyy vertailusta, voit mainita YHDELLÄ lauseella, että oman suunnitelman voi jakaa anonyymisti Suunnitelmani-sivulta ja se kartuttaa kaikkien vertailudataa — älä toistele tätä.
+
+10. LUKUSIDONNAT: Kun mainitset vastaustekstissä luvun KONTEKSTIN stats- tai vertailu-osiosta, kirjoita luvun paikalle viittaus muodossa [[polku]], esim. "loppuvarallisuutesi on [[stats.loppuvarallisuusEur]] €" tai "ikäryhmäsi mediaanisäästö on [[vertailu.kkSaastoEurKk.p50]] €/kk". Sovellus korvaa viittauksen moottorin tarkalla luvulla — näin luku ei voi koskaan olla väärin. Kirjoita yksikkö (€, %, v) normaalisti viittauksen perään. Käytä VAIN polkuja, jotka todella ovat kontekstissa — älä keksi polkuja. Muut luvut (plan- ja years-osista poimitut, välisummat, vuosiluvut, käyttäjän omat luvut) kirjoitat tavallisina lukuina kuten ennenkin. Viittauksia käytetään vain vastaustekstissä — EI työkalukutsujen sisällä.
 
 KONTEKSTI on JSON: plan = suunnitelman anonyymi muoto (ei nimiä eikä tunnisteita; plan.savePhases = porrastettu säästöaikataulu jos käytössä), stats = moottorin tunnusluvut, years = vuosivirrat harvennettuna (ikä, sijoitukset, säästöt/v, nostot brutto/v, verot/v, työeläke/v), vertailu = muiden käyttäjien jakamien suunnitelmien aggregaatit (voi puuttua — sääntö 9).`;
 
@@ -425,6 +432,23 @@ function tulkkiRateLimited(ip) {
   return h.count > 40; // 40 kutsua / IP / tunti
 }
 
+// Avaimettoman käytön päiväkiintiö per IP — vain muistissa, ei levylle.
+// Asiakaspää näyttää oman 5/pv-laskurinsa; tämä on palvelimen takaraja
+// (sama IP voi olla usea selain, siksi hieman suurempi).
+const anonDaily = new Map(); // IP → {day, count}
+setInterval(() => {
+  const today = new Date().toISOString().slice(0, 10);
+  for (const [k, v] of anonDaily) if (v.day !== today) anonDaily.delete(k);
+}, 60 * 60 * 1000).unref();
+
+function anonQuotaExceeded(ip) {
+  const today = new Date().toISOString().slice(0, 10);
+  const h = anonDaily.get(ip);
+  if (!h || h.day !== today) { anonDaily.set(ip, { day: today, count: 1 }); return false; }
+  h.count++;
+  return h.count > TULKKI_ANON_DAILY;
+}
+
 function tulkkiDailyExceeded() {
   const today = new Date().toISOString().slice(0, 10);
   if (today !== tulkkiDay) { tulkkiDay = today; tulkkiDayCount = 0; }
@@ -435,7 +459,13 @@ function tulkkiDailyExceeded() {
 // Rakentaa validoidun pyynnön tai null. Vain tunnetut kentät kulkevat läpi.
 function tulkkiPayload(p) {
   if (!p || typeof p !== 'object') return null;
-  if (typeof p.key !== 'string' || !TULKKI_KEYS.includes(p.key)) return { badKey: true };
+  // Avain → rajaton; väärä avain kerrotaan (bad_key); ei avainta → julkinen
+  // taso kiintiöllä (jos päällä), muuten kuin ennen.
+  const hasKey = typeof p.key === 'string' && TULKKI_KEYS.includes(p.key);
+  if (!hasKey) {
+    if (typeof p.key === 'string' && p.key.trim()) return { badKey: true };
+    if (!TULKKI_PUBLIC) return { badKey: true };
+  }
   const mode = (p.mode === 'advisor' || p.mode === 'haasta' || p.mode === 'ramppi') ? p.mode : 'explain';
   const question = typeof p.question === 'string' ? p.question.trim() : '';
   // ramppi tarvitsee käyttäjän kuvauksen kuten explain kysymyksen
@@ -450,15 +480,16 @@ function tulkkiPayload(p) {
       history.push({ q: h.q.slice(0, 600), a: h.a.slice(0, 2000) });
     }
   }
-  return { mode, question, ctx, history };
+  return { mode, question, ctx, history, anon: !hasKey };
 }
 
-async function handleTulkki(req, res, body) {
+async function handleTulkki(req, res, body, ip) {
   let parsed = null;
   try { parsed = JSON.parse(body); } catch (e) { /* alla */ }
   const p = tulkkiPayload(parsed);
   if (p && p.badKey) return send(res, 401, { error: 'bad_key' });
   if (!p) return send(res, 400, { error: 'invalid' });
+  if (p.anon && anonQuotaExceeded(ip)) return send(res, 429, { error: 'quota' });
   if (tulkkiDailyExceeded()) return send(res, 429, { error: 'daily_cap' });
 
   const messages = [];
@@ -621,7 +652,7 @@ const server = http.createServer((req, res) => {
     });
     req.on('end', () => {
       if (res.writableEnded) return;
-      handleTulkki(req, res, body);
+      handleTulkki(req, res, body, ip);
     });
     return;
   }
