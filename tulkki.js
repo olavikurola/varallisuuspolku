@@ -326,7 +326,7 @@
     <div class="tk-sugs" id="tkSugs"></div>
     <form class="tk-ask" id="tkForm">
       <input id="tkInput" type="text" maxlength="600" autocomplete="off"
-        placeholder="Kysy suunnitelmastasi…" aria-label="Kysymys Tulkille" />
+        placeholder="Kysy tai kokeile: ”kokeile eläkeikää 62”" aria-label="Kysymys Tulkille" />
       <button type="submit" aria-label="Lähetä kysymys">↑</button>
     </form>
     <div class="tk-foot">
@@ -349,7 +349,9 @@
     '.tk-quota{font-size:10.5px;color:var(--text-faint);font-variant-numeric:tabular-nums}' +
     '.tk-mailto{display:inline-block;margin-top:7px;padding:4px 12px;border:1px solid rgba(139,124,246,.45);' +
       'border-radius:999px;color:#b9aefc;text-decoration:none;font-size:12px}' +
-    '.tk-mailto:hover{background:rgba(139,124,246,.15);color:#d9d2fd}';
+    '.tk-mailto:hover{background:rgba(139,124,246,.15);color:#d9d2fd}' +
+    // Mobiili: kehittäjätieto (malli · tokenit) pois — tila on kortteja varten
+    '@media (max-width:560px){.tk-cost{display:none}}';
   document.head.appendChild(tkCss);
 
   const $t = (id) => sheet.querySelector('#' + id);
@@ -393,29 +395,37 @@
     if (e.key === 'Escape' && !sheet.hidden) closeSheet();
   });
 
-  /* Ehdotuschipit lasketaan avattaessa moottorin tilasta. Kysymyschipit
-     näytetään vain kun keskustelu on tyhjä (löydettävyys) — sen jälkeen
-     jäljelle jäävät toimintochipit, ettei lehti täyty. */
+  /* Ehdotuschipit lasketaan avattaessa moottorin tilasta. Ensiavauksella
+     enintään kolme (mobiilissa kaksi): kysymykset, jotka EIVÄT toista
+     Huomioita, ja yksi toimintochippi. Työkalut (markkinatesti, kysymys-
+     lista) ilmestyvät vasta ensimmäisen vastauksen jälkeen — käyttäjä on
+     silloin jo sisällä, eikä ensinäkymä täyty. */
+  const tkNarrow = () => { try { return matchMedia('(max-width: 560px)').matches; } catch (e) { return false; } };
+
   function renderSugs() {
     const s = sim;
-    const sugs = [];
+    const el = $t('tkSugs');
+    const hasRet = state.events.some((e) => e.type === 'retirement');
+    let html = '';
     if (!chat.length) {
-      if (s && s.successProb != null) sugs.push(`Miksi onnistumistodennäköisyys on ${Math.round(s.successProb * 100)} %?`);
-      if (s && s.depletionAge != null) sugs.push(`Miksi varat loppuvat ${Math.round(s.depletionAge)} vuoden iässä?`);
-      else sugs.push('Mikä suunnitelmassani on suurin epävarmuus?');
+      const sugs = [];
+      // Sama asia näkyy Huomioissa Selitä-nappina — ei duplikaattia chippinä
+      const huomioissa = s && (s.depletionAge != null || (s.successProb != null && s.successProb < 0.75));
+      if (!huomioissa && s && s.successProb != null) sugs.push(`Miksi onnistumistodennäköisyys on ${Math.round(s.successProb * 100)} %?`);
       // Vertailuchippi vasta kun aggregaattidataa on oikeasti julkaistu
       if (vStats && ((vStats.groups[tkGroupOf(state.ageNow)] || {}).monthly || (vStats.groups.all || {}).monthly)) {
         sugs.push('Miten suunnitelmani vertautuu muihin?');
       }
+      sugs.push('Mikä suunnitelmassani on suurin epävarmuus?');
       sugs.push('Mistä verot kertyvät?');
-      if (state.events.some((e) => e.type === 'retirement')) sugs.push('Vertaa eläkeikiä 60, 63 ja 65');
+      html = sugs.slice(0, tkNarrow() ? 1 : 2).map((q) => `<button type="button" class="tk-sug">${esc(q)}</button>`).join('') +
+        '<button type="button" class="tk-sug tk-haasta">🔍 Haasta suunnitelmani</button>';
+    } else {
+      html = (hasRet ? '<button type="button" class="tk-sug tk-market">📉 Markkinatesti</button>' : '') +
+        '<button type="button" class="tk-sug tk-haasta">🔍 Haasta suunnitelmani</button>' +
+        '<button type="button" class="tk-sug tk-adv">📋 Kysymyslista varainhoitajalle</button>';
     }
-    const el = $t('tkSugs');
-    const hasRet = state.events.some((e) => e.type === 'retirement');
-    el.innerHTML = sugs.map((q) => `<button type="button" class="tk-sug">${esc(q)}</button>`).join('') +
-      (hasRet ? '<button type="button" class="tk-sug tk-market">📉 Markkinatesti</button>' : '') +
-      '<button type="button" class="tk-sug tk-haasta">🔍 Haasta suunnitelmani</button>' +
-      '<button type="button" class="tk-sug tk-adv">📋 Kysymyslista varainhoitajalle</button>';
+    el.innerHTML = html;
     el.querySelectorAll('.tk-sug').forEach((b) => {
       b.addEventListener('click', () => {
         if (b.classList.contains('tk-adv')) ask('', 'advisor');
@@ -574,9 +584,6 @@
           aEl.className = 'tk-a tk-err';
           aEl.textContent = ERRORS[streamErr] || 'Tulkki ei vastannut — kokeile uudelleen.';
         } else {
-          // Kysymyschipit pois ensimmäisen vaihdon jälkeen (toimintochipit jäävät)
-          $t('tkSugs').querySelectorAll('.tk-sug:not(.tk-adv):not(.tk-haasta):not(.tk-market)')
-            .forEach((b) => b.remove());
           // Ensisijainen kanava: palvelimen jäsentämät työkalukutsut. Tekstiin
           // upotetut rivit jäävät varapoluksi (siirtymävaihe, vanha palvelin).
           // Sama validateChanges ajetaan molemmille — kanava ei ohita sisältöä.
@@ -611,6 +618,7 @@
           const doubts = renderAnswer(aEl, text, nums, bmap); // lopullinen: ei kursoria
           quotaBump(); // onnistunut vastaus kuluttaa julkisen kiintiön
           chat.push({ q, a: text });
+          renderSugs(); // kysymyschipit väistyvät, työkalut esiin
           const bound = aEl.querySelectorAll('.tk-bound').length;
           const mEl = document.createElement('div');
           mEl.className = 'tk-meta';
@@ -1250,16 +1258,12 @@
     try { localStorage.setItem(INTRO_LS, '1'); } catch (e) {}
     const card = document.createElement('div');
     card.className = 'tk-intro';
+    // Yksi lause riittää: chipit ja syötekentän vihje näyttävät kyvyt
+    // esimerkein, ja tietosuoja lukee jo lukkorivillä — ei toistoa.
     card.innerHTML =
       `<div class="tk-kats-head"><span>Tervetuloa — Tulkki</span><button type="button" class="tk-kats-x" aria-label="Sulje">✕</button></div>` +
-      `<div class="tk-intro-body">Selitän suunnitelmasi luvut selkokielellä ja autan kokeilemaan muutoksia. ` +
-      `<b>En anna sijoitusneuvontaa enkä laske itse</b> — moottori laskee, minä tulkkaan. Voit:` +
-      `<ul>` +
-      `<li><b>Kysyä:</b> “miksi rahani riittävät vain 82-vuotiaaksi?”</li>` +
-      `<li><b>Kokeilla:</b> “kokeile eläkeikää 62” — näet muutoksen esikatseluna</li>` +
-      `<li><b>Vertailla:</b> “vertaa säästöä 800, 1000 ja 1200”</li>` +
-      `<li><b>Haastaa:</b> 🔍-napilla etsin suunnitelmasi riskit</li>` +
-      `</ul>Laskelmasi pysyy selaimessasi.` +
+      `<div class="tk-intro-body">Selitän suunnitelmasi luvut selkokielellä ja autan kokeilemaan muutoksia — ` +
+      `<b>en anna sijoitusneuvontaa</b>: moottori laskee, minä tulkkaan.` +
       (tkKey ? '' : ` Ilmaiskäytössä ${QUOTA_MAX} kysymystä päivässä.`) + `</div>`;
     card.querySelector('.tk-kats-x').addEventListener('click', () => card.remove());
     log.appendChild(card);
@@ -1327,13 +1331,15 @@
   }
 
   function renderKatsastus() {
-    const items = runKatsastus();
+    let items = runKatsastus();
     if (!items.length) return;
-    tkTrackOnce('Tulkki katsastus');
+    // Mobiilissa tiiviimpi: vakavimmat ensin, enintään kaksi huomiota
+    if (tkNarrow()) items = items.slice().sort((a, b) => (b.sev === 'warn') - (a.sev === 'warn')).slice(0, 2);
+    tkTrackOnce('Tulkki katsastus'); // tapahtuman nimi säilyy (mittarijatkuvuus)
     const card = document.createElement('div');
     card.className = 'tk-kats';
     card.innerHTML =
-      `<div class="tk-kats-head"><span>Katsastus</span><button type="button" class="tk-kats-x" aria-label="Piilota katsastus">✕</button></div>` +
+      `<div class="tk-kats-head"><span>Huomiot</span><button type="button" class="tk-kats-x" aria-label="Piilota huomiot">✕</button></div>` +
       items.map((it, i) => `<div class="tk-kats-row tk-kats-${it.sev}">${esc(it.text)}` +
         (it.q ? ` <button type="button" class="tk-kats-ask" data-i="${i}">Selitä</button>` : '') + `</div>`).join('');
     card.querySelector('.tk-kats-x').addEventListener('click', () => { card.remove(); katsastusDismissed = true; });
