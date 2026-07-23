@@ -3232,6 +3232,9 @@ const TOUR_STEPS = [
     x: 'Viiva on odotettu kehitys ja vyöhyke markkinoiden vaihteluväli tuhansista satunnaisista poluista. Liikuta kohdistinta, niin näet luvut missä tahansa iässä.' },
   { t: 'Tunnusluvut', s: '#stats',
     x: 'Seuraukset yhdellä rivillä — tärkeimpänä onnistumistodennäköisyys: kuinka suuri osa markkinapoluista riittää suunnitelman loppuun asti.' },
+  // opt: askel ohitetaan, jos kohdetta ei ole (tulkki.js ei latautunut)
+  { t: 'Kysy AI — Tulkki', s: '.tk-handle', opt: true,
+    x: 'Tulkki selittää lukusi selkokielellä ja kokeilee muutoksia puolestasi — sano vaikka ”kokeile eläkeikää 62”, niin näet vaikutuksen esikatseluna ennen kuin mikään muuttuu. Moottori laskee, Tulkki tulkkaa: sijoitusneuvoja se ei anna. Ilmaiskäytössä 5 kysymystä päivässä.' },
   { t: 'Pro-tila', s: '#proSwitch',
     x: 'Kytkin avaa ammattilaissäädöt: omat tuotto-oletukset ja korrelaatiot, kulut, nostostrategiat ja syvemmät analyysit. Perusversio riittää pitkälle — Pro odottaa, kun tarvitset sitä.' },
   { t: 'Piirtopöytä', s: '#fsOpen',
@@ -3243,8 +3246,12 @@ const TOUR_STEPS = [
 ];
 
 function tourShow(i) {
-  tourStep = i;
+  if (i >= TOUR_STEPS.length) return endTour();
   const st = TOUR_STEPS[i];
+  // Valinnainen askel ohitetaan, jos kohde puuttuu — kierros kulkee vain
+  // eteenpäin, joten hyppy seuraavaan on turvallinen
+  if (st.opt && st.s && !document.querySelector(st.s)) return tourShow(i + 1);
+  tourStep = i;
   const tour = $('tour'), hole = $('tourHole'), card = $('tourCard');
   tour.hidden = false;
   const target = st.s ? document.querySelector(st.s) : null;
