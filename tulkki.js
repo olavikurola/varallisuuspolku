@@ -37,6 +37,8 @@
 
   /* ---------- Konteksti moottorista ---------- */
 
+  const API_BASE = (typeof DATA_API === 'string' ? DATA_API : 'https://varallisuuspolku-data.up.railway.app');
+
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtFi = (v) => v == null ? '–' : (typeof v === 'number' ? v.toLocaleString('fi-FI') : String(v));
@@ -44,6 +46,88 @@
   // ei sisältöä, ei tunnisteita. Suppilon mittarointi: avattu → kysymys → pidetty.
   const tkTrack = (n, p) => { try { if (typeof track === 'function') track(n, p); } catch (e) {} };
   const tkTrackOnce = (n, p) => { try { if (typeof trackOnce === 'function') trackOnce(n, p); } catch (e) {} };
+
+  /* ---------- Vertailudata: Vaurastumisen kartan aggregaatit ---------- */
+  // Tulkki tuntee saman avoimen vertailudatan kuin analytiikkasivu: stats.json
+  // haetaan kerran ja tiivistetään kontekstiin käyttäjän ikäryhmän avain-
+  // luvuiksi. Data on palvelimella k-anonymisoitua julkista aggregaattia —
+  // tässä ei lähde mitään, vain tuodaan. Haun epäonnistuminen ei estä Tulkkia:
+  // vertailu-osio jää pois ja malli sanoo, ettei vertailulukua ole.
+
+  const TK_GROUPS = [
+    ['18-24', 18, 24], ['25-29', 25, 29], ['30-34', 30, 34], ['35-39', 35, 39],
+    ['40-44', 40, 44], ['45-49', 45, 49], ['50-54', 50, 54], ['55-59', 55, 59],
+    ['60-64', 60, 64], ['65+', 65, 120],
+  ];
+  const tkGroupOf = (age) => (TK_GROUPS.find(([, lo, hi]) => age >= lo && age <= hi) || [null])[0];
+
+  let vStats = null;   // stats.json sisältö (tai null: ei haettu / ei dataa)
+  let vStatsP = null;  // yksi haku per sivulataus — ask() odottaa tätä lyhyesti
+
+  function loadStats() {
+    if (!vStatsP) {
+      vStatsP = fetch(API_BASE + '/stats.json')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => { vStats = (j && j.groups) ? j : null; return vStats; })
+        .catch(() => null);
+    }
+    return vStatsP;
+  }
+
+  function hasSharedPlan() {
+    try { return !!(JSON.parse(localStorage.getItem('vp-donate-v1')) || {}).donatedHash; } catch (e) { return false; }
+  }
+
+  // Kvartiilit pyöristettynä — kontekstin luvut päätyvät myös numerovalidointiin
+  const q3 = (q, f) => q ? { p25: f(q.p25), p50: f(q.p50), p75: f(q.p75) } : undefined;
+
+  function buildVertailu() {
+    if (!vStats) return null;
+    const rnd = Math.round;
+    const gName = tkGroupOf(state.ageNow);
+    let g = gName && vStats.groups[gName];
+    let ryhma = gName ? 'ikäryhmä ' + gName : null;
+    if (!g || !g.monthly) { g = vStats.groups.all; ryhma = 'kaikki ikäryhmät'; }
+    if (!g || !g.monthly) {
+      return {
+        jaettujaYhteensa: vStats.total,
+        huom: `Vertailudataa ei ole vielä kertynyt riittävästi — jakaumat julkaistaan vasta ${vStats.kAnon} suunnitelman ryhmistä.`,
+        kayttajaOnJakanutOman: hasSharedPlan(),
+      };
+    }
+    const v = {
+      selite: 'Palvelun käyttäjien anonyymisti jakamien SUUNNITELMIEN vertailuluvut (mediaani p50, kvartiilit p25/p75). Suunnitelmia, ei toteutunutta varallisuutta — ei normi eikä suositus.',
+      ryhma, suunnitelmiaRyhmassa: g.n, jaettujaYhteensa: vStats.total,
+      kkSaastoEurKk: q3(g.monthly, rnd),
+      varallisuusNytEur: q3(g.startCapital, rnd),
+      osakepainoPct: q3(g.stocks, rnd),
+    };
+    if (g.retireAge) v.elakeikaTavoiteV = q3(g.retireAge, rnd);
+    if (g.withdrawal) v.kuukausituloTarveEurKk = q3(g.withdrawal, rnd);
+    if (g.penShare) v.tyoelakkeenOsuusTulostaPct = rnd(g.penShare.p50 * 100);
+    if (g.successProb) v.onnistumistodennakoisyysPct = q3(g.successProb, (x) => rnd(x * 100));
+    // Tapahtumien mediaani-iät vain käyttäjän omille tapahtumatyypeille
+    if (vStats.eventAges) {
+      const ages = {};
+      for (const e of state.events) {
+        const d = vStats.eventAges[e.type];
+        if (d && ages[e.type] == null) ages[e.type] = rnd(d.p50);
+      }
+      if (Object.keys(ages).length) v.tapahtumienMediaaniIkaV = ages;
+    }
+    // Asuntolainan tunnusluvut vain jos omassa suunnitelmassa on asuntolaina
+    const hl = vStats.homeLoan;
+    if (hl && state.events.some((e) => e.type === 'home' && e.financing === 'loan')) {
+      v.asuntolainaMediaanit = {
+        hintaEur: rnd(hl.price.p50),
+        kasirahaOsuusPct: hl.downShare ? rnd(hl.downShare.p50 * 100) : undefined,
+        lainaAikaV: hl.years ? rnd(hl.years.p50) : undefined,
+        korkoPct: hl.rate ? rnd(hl.rate.p50 * 10) / 10 : undefined,
+      };
+    }
+    v.kayttajaOnJakanutOman = hasSharedPlan();
+    return v;
+  }
 
   function buildContext() {
     const s = sim || simulate(state);
@@ -77,10 +161,15 @@
           Math.round(r.gross), Math.round(r.tax), Math.round(r.pen)]);
       }
     });
-    return {
+    const ctx = {
       plan, stats,
       years: { selite: '[ikä, sijoitukset €, säästöt €/v, nostot brutto €/v, verot €/v, työeläke €/v]', rivit: years },
     };
+    try {
+      const vertailu = buildVertailu();
+      if (vertailu) ctx.vertailu = vertailu;
+    } catch (e) { /* vertailu on rikaste — ei saa estää vastausta */ }
+    return ctx;
   }
 
   /* ---------- Pehmeä numerovalidointi ---------- */
@@ -188,6 +277,12 @@
     document.body.classList.add('tk-docked'); // leveällä näytöllä sisältö väistyy, ei peity
     badge.hidden = true; // nähty
     tkTrackOnce('Tulkki avattu');
+    // Vertailudata haetaan ensimmäisellä avauksella; chipit päivittyvät kun
+    // data saapuu (vain jos keskustelu on yhä tyhjä eikä lehteä ole suljettu)
+    const hadStats = !!vStats;
+    loadStats().then(() => {
+      if (!hadStats && vStats && !chat.length && !sheet.hidden) renderSugs();
+    });
     renderSugs();
     // Tyhjässä keskustelussa: kertaesittely (kerran ikinä) + katsastus (per istunto)
     if (!log.children.length) {
@@ -218,6 +313,10 @@
       if (s && s.successProb != null) sugs.push(`Miksi onnistumistodennäköisyys on ${Math.round(s.successProb * 100)} %?`);
       if (s && s.depletionAge != null) sugs.push(`Miksi varat loppuvat ${Math.round(s.depletionAge)} vuoden iässä?`);
       else sugs.push('Mikä suunnitelmassani on suurin epävarmuus?');
+      // Vertailuchippi vasta kun aggregaattidataa on oikeasti julkaistu
+      if (vStats && ((vStats.groups[tkGroupOf(state.ageNow)] || {}).monthly || (vStats.groups.all || {}).monthly)) {
+        sugs.push('Miten suunnitelmani vertautuu muihin?');
+      }
       sugs.push('Mistä verot kertyvät?');
       if (state.events.some((e) => e.type === 'retirement')) sugs.push('Vertaa eläkeikiä 60, 63 ja 65');
     }
@@ -244,7 +343,7 @@
 
   /* ---------- Kysely ---------- */
 
-  const API = (typeof DATA_API === 'string' ? DATA_API : 'https://varallisuuspolku-data.up.railway.app') + '/tulkki';
+  const API = API_BASE + '/tulkki';
 
   const ERRORS = {
     bad_key: 'Avainkoodi ei kelpaa. Poista se avaamalla osoite #tulkki=pois ja syötä uusi.',
@@ -277,6 +376,9 @@
     aEl.textContent = 'Tulkki miettii…';
     log.appendChild(aEl);
     log.scrollTop = log.scrollHeight;
+
+    // Vertailudata mukaan jos se ehtii — katto 1,2 s, ettei vastaus odota verkkoa
+    try { await Promise.race([loadStats(), new Promise((r) => setTimeout(r, 1200))]); } catch (e) {}
 
     let ctx = null;
     try { ctx = buildContext(); } catch (e) { /* alla */ }
