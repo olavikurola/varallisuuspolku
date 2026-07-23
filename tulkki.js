@@ -453,7 +453,10 @@
     card.innerHTML =
       `<div class="tk-ch-lab">Päivän ${QUOTA_MAX} ilmaista kysymystä on käytetty</div>` +
       `<div class="tk-ch-note">Tulkki jatkaa huomenna — laskuri ja muut työkalut (markkinatesti, katsastus, vertailu) toimivat normaalisti ilman rajaa. Laajempi maksullinen versio on suunnitteilla: kiinnostuksen ilmaisu auttaa mitoittamaan sen.</div>` +
-      `<div class="tk-ch-acts"><button type="button" class="tk-keep tk-interest">Olen kiinnostunut laajemmasta käytöstä</button></div>`;
+      `<div class="tk-ch-acts"><button type="button" class="tk-keep tk-interest">Olen kiinnostunut laajemmasta käytöstä</button></div>` +
+      // Yhteyskanava: nappi kirjaa vain anonyymin määrän — sähköposti on ainoa
+      // tapa tavoittaa kiinnostunut takaisin (vapaaehtoinen, käyttäjän aloite)
+      `<div class="tk-ch-note">Voit myös kertoa toiveistasi suoraan: <a href="mailto:info@varallisuuspolku.com?subject=Tukija-kiinnostus">info@varallisuuspolku.com</a></div>`;
     card.querySelector('.tk-interest').addEventListener('click', (ev) => {
       tkTrack('Tukija kiinnostus');
       ev.target.textContent = 'Kiitos — kiinnostus kirjattu ✓';
