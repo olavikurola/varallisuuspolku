@@ -4717,9 +4717,17 @@ function openMoreMenu(anchor) {
     () => startTour());
 
   // Nollaus vaatii toisen klikkauksen — valikko pysyy auki vahvistusta varten
-  const reset = add('mi-reset', 'Nollaa suunnitelma', 'Aloita puhtaalta pöydältä', null, true);
+  const reset = add('mi-reset', 'Nollaa suunnitelma', 'Poistaa avoinna olevan suunnitelman — muut rivit säilyvät', null, true);
   reset.addEventListener('click', () => {
     if (reset.dataset.armed) {
+      try {
+        // Nollaus koskee vain aktiivista suunnitelmariviä — muut säilyvät ja
+        // seuraava rivi aktivoituu latauksessa (initPlans palauttaa sen tilaan)
+        if (plans) {
+          localStorage.setItem(PLANS_KEY, JSON.stringify(plans.filter((p) => p.id !== planActiveId)));
+          localStorage.removeItem(PLAN_ACTIVE_KEY);
+        }
+      } catch (e) {}
       try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(BASELINE_KEY); localStorage.removeItem(FAMILY_KEY); localStorage.removeItem(SCEN_KEY); } catch (e) {}
       // Nollaaja ei ole ensivierailija: paluu dashboardille, ei piirtopöydälle
       try { sessionStorage.setItem('vp-reset', '1'); } catch (e) {}
@@ -4877,6 +4885,7 @@ function applySaved(data) {
 function saveState() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(serialize())); } catch (e) { /* yksityistila tms. */ }
   if (family) { reconcileTransfers(); saveActiveIntoFamily(); persistFamily(); }
+  syncActivePlan(); // aktiivinen suunnitelmarivi seuraa työtilaa automaattisesti
   pushUndoDebounced();
 }
 
@@ -5310,6 +5319,7 @@ function renderSummary() {
 
 function openSummary() {
   trackOnce('Suunnitelmani avattu');
+  renderPlans(); // suunnitelmakoti dokumentin yläpuolelle
   renderSummary();
   renderDonateSlot();
   $('summary').hidden = false;
@@ -5317,8 +5327,658 @@ function openSummary() {
 }
 
 function closeSummary() {
+  closePlanMenu();
   $('summary').hidden = true;
   document.body.classList.remove('summary-open');
+}
+
+/* ===================== Suunnitelmat (profiilit) ===================== */
+// Suunnitelmani-näkymän yläosa on koti kaikille suunnitelmille: omat skenaariot
+// ja lähipiirin suunnitelmat riveinä, yksi rivi per suunnitelma. Aktiivinen
+// suunnitelma ON työtilan tila — STORAGE_KEY säilyy sen peilinä (vanha polku
+// ja kaikki vanhat asiakkaat ennallaan), vp-plans kantaa rivit ja vp-active
+// osoittaa aktiivisen. Perhetila kulkee rivin sisällä (family-kenttä).
+// Jakolinkki EI enää korvaa omaa suunnitelmaa vaan tallentuu omaksi rivikseen.
+
+const PLANS_KEY = 'vp-plans';
+const PLAN_ACTIVE_KEY = 'vp-active';
+const PLAN_MAX = 20;
+
+// Oletustila talteen ennen loadStatea — "Tyhjä pohja" ja rampin uusi rivi
+const DEFAULT_PLAN_JSON = JSON.stringify(serialize());
+// Rampin lomake talteen ennen kuin tulosnäkymä korvaa sen (tulkki.js lisää
+// NL-osionsa vasta tämän jälkeen, joten kaappaus on puhdas)
+const RAMP_FORM_HTML = $('rampCard') ? $('rampCard').innerHTML : '';
+
+const PLAN_SRC_LABELS = {
+  oma: 'oma', ramppi: 'kolmella kysymyksellä', nl: 'omin sanoin kuvattu',
+  kopio: 'kopio', tyhja: 'tyhjästä pohjasta', linkki: 'tuotu jakolinkistä', tiedosto: 'tuotu tiedostosta',
+};
+
+let plans = null;
+let planActiveId = null;
+let plansPersistT = null;
+let planCmpSel = [];   // vertailuun ruksitut rivit (max 2, istunnon mittainen)
+let planMenuEl = null;
+let plansFillToken = 0;
+const planSimCache = new Map(); // id -> { json, sim } — rivi lasketaan vain muuttuessaan
+
+const planNow = () => Date.now();
+const planClone = (o) => (o == null ? null : JSON.parse(JSON.stringify(o)));
+function planId() { return 'p' + planNow().toString(36) + Math.random().toString(36).slice(2, 7); }
+function activePlan() { return plans ? plans.find((p) => p.id === planActiveId) || null : null; }
+
+function persistPlans(now) {
+  clearTimeout(plansPersistT);
+  const write = () => {
+    try {
+      localStorage.setItem(PLANS_KEY, JSON.stringify(plans));
+      if (planActiveId) localStorage.setItem(PLAN_ACTIVE_KEY, planActiveId);
+    } catch (e) { /* yksityistila tms. */ }
+  };
+  if (now) write(); else plansPersistT = setTimeout(write, 400);
+}
+
+// saveState kutsuu joka muutoksella — rivi päivittyy muistissa heti,
+// levylle debouncella (raahaus ei kirjoita jokaista framea)
+function syncActivePlan() {
+  if (!plans) return;
+  const p = activePlan();
+  if (!p) return;
+  p.data = planClone(serialize());
+  p.family = planClone(family);
+  p.muokattu = planNow();
+  persistPlans();
+}
+
+function planUniqueName(base) {
+  let n = base, i = 2;
+  while (plans.some((p) => p.nimi === n)) n = `${base} ${i++}`;
+  return n;
+}
+
+function planRowFromCurrent(nimi, alkupera) {
+  return {
+    id: planId(), nimi, data: planClone(serialize()), family: planClone(family),
+    luotu: planNow(), muokattu: planNow(), alkupera: alkupera || 'oma',
+  };
+}
+
+function addPlanRow(data, fam, nimi, alkupera) {
+  if (plans.length >= PLAN_MAX) { toast(`Enintään ${PLAN_MAX} suunnitelmaa — poista jokin ensin`); return null; }
+  const row = { id: planId(), nimi, data, family: fam || null, luotu: planNow(), muokattu: planNow(), alkupera: alkupera || 'oma' };
+  plans.push(row);
+  persistPlans(true);
+  track('Suunnitelma luotu', { tapa: row.alkupera });
+  return row;
+}
+
+function initPlans() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PLANS_KEY));
+    if (Array.isArray(raw)) plans = raw.filter((p) => p && p.id && p.nimi && p.data && Array.isArray(p.data.events));
+  } catch (e) { /* viallinen — aloitetaan puhtaalta */ }
+  if (!Array.isArray(plans)) plans = [];
+  const hadStored = plans.length > 0;
+  try { planActiveId = localStorage.getItem(PLAN_ACTIVE_KEY); } catch (e) {}
+
+  if (visitKind === 'shared' && hadStored) {
+    // Jakolinkki ei korvaa mitään olemassa olevaa — linkin sisältö omaksi
+    // rivikseen (tarvittaessa katon yli: käyttäjä siivoaa itse)
+    const row = planRowFromCurrent(planUniqueName('Tuotu suunnitelma'), 'linkki');
+    plans.push(row);
+    planActiveId = row.id;
+  } else if (!plans.length) {
+    // Migraatio ja ensivierailu: nykyinen tila ensimmäiseksi riviksi äänettömästi
+    const row = planRowFromCurrent(visitKind === 'shared' ? 'Tuotu suunnitelma' : 'Oma suunnitelma',
+      visitKind === 'shared' ? 'linkki' : 'oma');
+    plans = [row];
+    planActiveId = row.id;
+  } else if (!activePlan()) {
+    planActiveId = plans[0].id;
+  }
+
+  // Peili (STORAGE_KEY) puuttuu mutta rivejä on tallella — esim. nollauksen
+  // jälkeen: seuraava rivi aktivoituu eikä käyttäjä näytä ensivierailijalta
+  let mirror = null;
+  try { mirror = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+  if (hadStored && !mirror && visitKind !== 'shared') {
+    const p = activePlan();
+    family = planClone(p.family);
+    if (family) migrateFamily();
+    persistFamily();
+    applySaved(planClone(p.data));
+    visitKind = 'returning';
+  }
+
+  persistPlans(true);
+  bindPlansHome();
+  // Pysyvä tallennustila: selain ei siivoa localStoragea yhtä herkästi
+  // (Safari voi muuten poistaa ~7 pv käyttämättömyyden jälkeen)
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
+}
+
+/* --- Suunnitelman vaihto --- */
+
+function activatePlan(id, opts = {}) {
+  const p = plans.find((x) => x.id === id);
+  if (!p) return;
+  if (p.id !== planActiveId) {
+    syncActivePlan(); // nykyinen talteen ennen vaihtoa
+    planActiveId = p.id;
+    family = planClone(p.family);
+    if (family) migrateFamily();
+    persistFamily();
+    famSimCache.clear();
+    jointMc = null;
+    undoSuppress = true;
+    try {
+      applySaved(planClone(p.data));
+      closePopover();
+      syncInputs();
+      renderFamilyChips();
+      renderAll();
+    } finally { undoSuppress = false; }
+    // Kumoamishistoria ei saa vuotaa suunnitelmasta toiseen
+    undoStack.length = 0;
+    pushUndoNow();
+    persistPlans(true);
+    track('Suunnitelma avattu');
+  }
+  if (opts.stay) { renderPlans(); renderSummary(); }
+  else closeSummary();
+}
+
+function deletePlan(id) {
+  const wasActive = id === planActiveId;
+  plans = plans.filter((x) => x.id !== id);
+  planCmpSel = planCmpSel.filter((x) => x !== id);
+  planSimCache.delete(id);
+  if (!plans.length) {
+    plans = [{ id: planId(), nimi: 'Oma suunnitelma', data: JSON.parse(DEFAULT_PLAN_JSON), family: null, luotu: planNow(), muokattu: planNow(), alkupera: 'oma' }];
+  }
+  if (wasActive) {
+    planActiveId = null;
+    activatePlan(plans[0].id, { stay: true });
+  } else {
+    persistPlans(true);
+    renderPlans();
+  }
+  toast('Suunnitelma poistettu');
+}
+
+/* --- Rivien tunnusluvut --- */
+
+function planSim(p) {
+  const j = JSON.stringify(p.data);
+  const c = planSimCache.get(p.id);
+  if (c && c.json === j) return c.sim;
+  let s = null;
+  try { s = simulate(JSON.parse(j), { sustainable: true }); } catch (e) { /* viallinen rivi — näytetään viivat */ }
+  planSimCache.set(p.id, { json: j, sim: s });
+  return s;
+}
+
+// Riittävyys odotetulla polulla: ✓ loppuikään tai ~ikä jossa varat ehtyvät
+function planAdequacy(p, s) {
+  if (!s || !s.exp || !(p.data.events || []).some((e) => e.type === 'retirement')) return null;
+  const a0 = p.data.ageNow;
+  const retAge = s.retireAge != null ? s.retireAge : null;
+  if (retAge == null) return null;
+  const m0 = Math.max(0, Math.round((retAge - a0) * 12));
+  for (let m = m0; m < s.exp.length; m++) {
+    if (s.exp[m] <= 0.5) return { ok: false, age: a0 + m / 12 };
+  }
+  return { ok: true, age: s.a1 != null ? s.a1 : p.data.ageEnd };
+}
+
+function planSparkSvg(p, s, adq) {
+  const exp = s && s.exp;
+  if (!exp || exp.length < 2) return '';
+  const n = exp.length, N = 22;
+  let max = 1;
+  for (let i = 0; i < n; i++) if (exp[i] > max) max = exp[i];
+  const X = (m) => 2 + 84 * m / (n - 1);
+  const Y = (m) => 24 - Math.max(0, exp[m]) / max * 20;
+  const pts = [];
+  for (let k = 0; k < N; k++) {
+    const m = Math.round(k * (n - 1) / (N - 1));
+    pts.push(X(m).toFixed(1) + ',' + Y(m).toFixed(1));
+  }
+  const warn = adq && !adq.ok;
+  const col = warn ? '#fbbf24' : '#2dd4bf';
+  const fill = warn ? 'rgba(251,191,36,0.1)' : 'rgba(45,212,191,0.12)';
+  let dot = '';
+  if (s.retireAge != null) {
+    const m = clamp(Math.round((s.retireAge - p.data.ageNow) * 12), 0, n - 1);
+    dot = `<circle cx="${X(m).toFixed(1)}" cy="${Y(m).toFixed(1)}" r="2.4" fill="#8b7cf6"/>`;
+  }
+  const line = pts.join(' ');
+  return `<svg width="88" height="26" viewBox="0 0 88 26" aria-hidden="true">` +
+    `<polygon points="${line} 86,26 2,26" fill="${fill}"/>` +
+    `<polyline points="${line}" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round"/>${dot}</svg>`;
+}
+
+function fillPlanRow(p, rowEl) {
+  const s = planSim(p);
+  const set = (sel, html) => { const el = rowEl.querySelector(sel); if (el) el.innerHTML = html; };
+  if (!s) { set('.m-wret', '—'); set('.m-wd', '—'); set('.m-p', '—'); set('.m-adq', '—'); return; }
+  const ret = (p.data.events || []).find((e) => e.type === 'retirement');
+  if (s.goal === 'age' && s.solvedRetireAge != null) set('.m-ret', fmtAge(s.solvedRetireAge));
+  set('.m-wret', s.wAtRet != null ? `<b>${fmtCompact(s.wAtRet)}</b>` : '—');
+  const wd = s.sustainableWd != null ? s.sustainableWd : (ret ? s.withdrawal : null);
+  set('.m-wd', wd != null ? fmtEur(wd) + '/kk' : '—');
+  const pr = s.successProb != null ? Math.round(s.successProb * 100) : null;
+  const pEl = rowEl.querySelector('.m-p');
+  if (pEl) { pEl.textContent = pr != null ? pr + ' %' : '—'; pEl.classList.toggle('warn', pr != null && pr < 55); }
+  const adq = planAdequacy(p, s);
+  const aEl = rowEl.querySelector('.m-adq');
+  if (aEl) {
+    if (!adq) aEl.textContent = '—';
+    else {
+      aEl.textContent = adq.ok ? `✓ ${Math.round(adq.age)} v` : `~${Math.floor(adq.age)} v`;
+      aEl.classList.add(adq.ok ? 'ok' : 'warn');
+    }
+  }
+  set('.m-spark', planSparkSvg(p, s, adq));
+}
+
+/* --- Suunnitelmakodin renderöinti --- */
+
+function renderPlans() {
+  const host = $('plansHome');
+  if (!host || !plans) return;
+  closePlanMenu();
+  const token = ++plansFillToken;
+  let hasTulkki = false;
+  try { hasTulkki = !!localStorage.getItem('vp-tulkki-key'); } catch (e) {}
+
+  let cmpbar = '';
+  if (planCmpSel.length === 2) {
+    const [a, b] = planCmpSel.map((id) => plans.find((x) => x.id === id));
+    if (a && b) {
+      cmpbar = `<div class="ph-cmpbar">⚖️ Vertailuun valittu: <b>${escapeHtml(a.nimi)}</b> ja <b>${escapeHtml(b.nimi)}</b>` +
+        `<button type="button" class="btn ph-cmp-open" title="${escapeHtml(a.nimi)} avautuu työtilaan ja ${escapeHtml(b.nimi)} piirtyy haamukäyräksi — erot euroina tunnusluvuissa">Avaa rinnakkain →</button></div>`;
+    }
+  }
+
+  const rows = plans.map((p) => {
+    const active = p.id === planActiveId;
+    const checked = planCmpSel.includes(p.id);
+    const famBadge = p.family && p.family.persons && p.family.persons.length > 1
+      ? `<span class="src" title="Perhesuunnitelma · ${p.family.persons.length} henkilöä">👥</span>` : '';
+    const srcBadge = p.alkupera === 'linkki' || p.alkupera === 'tiedosto'
+      ? `<span class="src" title="${p.alkupera === 'linkki' ? 'Tuotu jakolinkistä' : 'Tuotu tiedostosta'}">⇣</span>` : '';
+    const ret = (p.data.events || []).find((e) => e.type === 'retirement');
+    return `<div class="ph-row${active ? ' active' : ''}" data-id="${p.id}">` +
+      `<label class="ph-check" title="Valitse vertailuun"><input type="checkbox"${checked ? ' checked' : ''}></label>` +
+      `<div class="ph-name">${active ? '<span class="dot" title="Auki työtilassa"></span>' : ''}<span class="nm">${escapeHtml(p.nimi)}</span>${famBadge}${srcBadge}<button type="button" class="p-edit" title="Nimeä uudelleen">✎</button></div>` +
+      `<div class="num c-ika">${Math.round(p.data.ageNow)} v</div>` +
+      `<div class="num m-ret">${ret ? Math.round(ret.age) + ' v' : '—'}</div>` +
+      `<div class="num c-saasto"${p.data.savePhases ? ' title="porrastettu säästö — summa elää elämänvaiheittain"' : ''}>${fmtEur(p.data.monthly)}${p.data.savePhases ? '*' : ''}</div>` +
+      `<div class="num accent c-wret m-wret">…</div>` +
+      `<div class="num violet c-kestava m-wd">…</div>` +
+      `<div class="num c-onn m-p">…</div>` +
+      `<div class="num m-adq">…</div>` +
+      `<div class="ph-spark c-spark m-spark"></div>` +
+      `<div class="ph-acts"><button type="button" class="ph-act ph-open"${active ? ' title="Tämä suunnitelma on auki työtilassa"' : ''}>Avaa</button><button type="button" class="ph-more" title="Lisää toimintoja">⋯</button></div>` +
+      `</div>`;
+  }).join('');
+
+  const thead = `<div class="ph-thead"><span></span><span>Suunnitelma</span>` +
+    `<span class="num c-ika">Ikä</span><span class="num">Eläkeikä</span><span class="num c-saasto">Säästö/kk</span>` +
+    `<span class="num c-wret">Eläkkeellä</span><span class="num c-kestava">Tulo/kk</span><span class="num c-onn">Onnist.</span>` +
+    `<span class="num">Riittävyys</span><span class="num c-spark">Kehitys</span><span></span></div>`;
+
+  const newSec = `<div class="ph-new"><h3>➕ Uusi suunnitelma</h3><div class="ph-opts">` +
+    `<button type="button" class="ph-opt" data-act="ramppi"><b>Kolme kysymystä</b><span>Sama tuttu aloitus — ikä, varallisuus, säästö. Sopii läheisen suunnitelman pohjaksi.</span></button>` +
+    (hasTulkki ? `<button type="button" class="ph-opt" data-act="nl"><b>Kerro omin sanoin <em class="beta">BETA</em></b><span>Kuvaile tilanne vapaasti — Tulkki täyttää luvut ja tapahtumat puolestasi.</span></button>` : '') +
+    `<button type="button" class="ph-opt" data-act="kopio"><b>Kopio nykyisestä</b><span>Skenaariokokeiluun: sama suunnitelma, eri valinnat rinnakkain.</span></button>` +
+    `<button type="button" class="ph-opt" data-act="tyhja"><b>Tyhjä pohja</b><span>Aloita puhtaalta pöydältä oletuspohjalla.</span></button>` +
+    `</div><div class="ph-io">` +
+    `<input type="text" id="phLinkIn" placeholder="Liitä jakolinkki tähän — suunnitelma tallentuu omaksi rivikseen…">` +
+    `<button type="button" class="btn ghost" data-act="tuolinkki">Tuo linkistä</button>` +
+    `<button type="button" class="btn ghost" data-act="tuotiedosto">Tuo tiedostosta…</button>` +
+    `<button type="button" class="btn ghost" data-act="vie">Vie kaikki varmuuskopioksi</button>` +
+    `</div></div>`;
+
+  let bytes = 0;
+  try { bytes = JSON.stringify(plans).length; } catch (e) {}
+  const foot = `<div class="ph-foot">` +
+    `<span><b>${plans.length} suunnitelma${plans.length === 1 ? '' : 'a'}</b> · ~${Math.max(1, Math.round(bytes / 1024))} kt · selaimen omassa muistissa</span>` +
+    `<span>Yksityisselaimessa tiedot katoavat ikkunan sulkeutuessa — ota varmuuskopio</span>` +
+    `<span>Jakolinkki kantaa koko suunnitelman: linkki toiselle laitteelle = siirto</span></div>`;
+
+  host.innerHTML =
+    `<div class="ph-head"><h2>Suunnitelmat</h2><p>Omat ja lähipiirin suunnitelmat — kaikki tallessa <b>vain tässä selaimessa</b>. ` +
+    `Ruksi kaksi riviä vertailuun, <b>Avaa</b> ottaa suunnitelman työtilaan.</p></div>` +
+    cmpbar + `<div class="ph-grid">${thead}${rows}</div>` + newSec + foot;
+
+  // Tunnusluvut täytetään rivi kerrallaan — iso lista ei jumita avausta
+  const fillNext = (i) => {
+    if (token !== plansFillToken || i >= plans.length) return;
+    const p = plans[i];
+    const rowEl = host.querySelector(`.ph-row[data-id="${p.id}"]`);
+    if (rowEl) fillPlanRow(p, rowEl);
+    setTimeout(() => fillNext(i + 1), 0);
+  };
+  setTimeout(() => fillNext(0), 0);
+}
+
+let plansHomeBound = false;
+function bindPlansHome() {
+  const host = $('plansHome');
+  if (!host || plansHomeBound) return;
+  plansHomeBound = true;
+  host.addEventListener('click', (e) => {
+    const opt = e.target.closest('[data-act]');
+    if (opt) { handlePlanAct(opt.dataset.act); return; }
+    if (e.target.closest('.ph-cmp-open')) { openPlanCompare(); return; }
+    const rowEl = e.target.closest('.ph-row');
+    if (!rowEl) return;
+    const p = plans.find((x) => x.id === rowEl.dataset.id);
+    if (!p) return;
+    if (e.target.closest('.ph-open')) activatePlan(p.id);
+    else if (e.target.closest('.ph-more')) openPlanMenu(e.target.closest('.ph-more'), p, rowEl);
+    else if (e.target.closest('.p-edit')) startPlanRename(rowEl, p);
+  });
+  host.addEventListener('change', (e) => {
+    const cb = e.target.closest('.ph-check input');
+    if (!cb) return;
+    const rowEl = e.target.closest('.ph-row');
+    if (rowEl) togglePlanCmp(rowEl.dataset.id, cb.checked);
+  });
+  host.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.id === 'phLinkIn') { e.preventDefault(); importPlanLink(e.target.value); }
+  });
+}
+
+function togglePlanCmp(id, on) {
+  planCmpSel = planCmpSel.filter((x) => x !== id);
+  if (on) {
+    planCmpSel.push(id);
+    if (planCmpSel.length > 2) planCmpSel.shift();
+  }
+  renderPlans();
+}
+
+function openPlanCompare() {
+  const [aId, bId] = planCmpSel;
+  const a = plans.find((x) => x.id === aId), b = plans.find((x) => x.id === bId);
+  if (!a || !b) return;
+  activatePlan(a.id); // sulkee yhteenvedon
+  baseline = planClone(b.data);
+  baseline.cmpName = b.nimi;
+  ghostDirty = true;
+  try { localStorage.setItem(BASELINE_KEY, JSON.stringify(baseline)); } catch (e) {}
+  renderChart();
+  renderStats();
+  track('Suunnitelmavertailu');
+  toast(`Vertailussa: ${b.nimi} — erot näkyvät käyrällä ja tunnusluvuissa`);
+}
+
+function handlePlanAct(act) {
+  if (act === 'ramppi') newPlanViaRamp(false);
+  else if (act === 'nl') newPlanViaRamp(true);
+  else if (act === 'kopio') {
+    syncActivePlan();
+    const a = activePlan();
+    if (!a) return;
+    const c = addPlanRow(planClone(a.data), planClone(a.family), planUniqueName('Kopio: ' + a.nimi).slice(0, 40), 'kopio');
+    if (c) { activatePlan(c.id); toast('Kopio avattu työtilaan — kokeile eri valintoja, alkuperäinen on tallessa'); }
+  } else if (act === 'tyhja') {
+    const c = addPlanRow(JSON.parse(DEFAULT_PLAN_JSON), null, planUniqueName('Uusi suunnitelma'), 'tyhja');
+    if (c) { activatePlan(c.id); toast('Uusi suunnitelma avattu työtilaan'); }
+  } else if (act === 'tuolinkki') {
+    const inEl = $('phLinkIn');
+    importPlanLink(inEl ? inEl.value : '');
+  } else if (act === 'tuotiedosto') pickPlanFile();
+  else if (act === 'vie') exportAllPlans();
+}
+
+/* --- Nimeäminen ja ⋯-valikko --- */
+
+function startPlanRename(rowEl, p) {
+  closePlanMenu();
+  const nameEl = rowEl.querySelector('.ph-name');
+  if (!nameEl || nameEl.classList.contains('name-edit')) return;
+  nameEl.classList.add('name-edit');
+  nameEl.innerHTML = `<input type="text" maxlength="40" title="Enter tallentaa · Esc peruu">`;
+  const inp = nameEl.querySelector('input');
+  inp.value = p.nimi;
+  inp.focus();
+  inp.select();
+  let done = false;
+  const finish = (save) => {
+    if (done) return;
+    done = true;
+    if (save) {
+      const v = inp.value.trim().slice(0, 40);
+      if (v && v !== p.nimi) { p.nimi = v; p.muokattu = planNow(); persistPlans(true); }
+    }
+    renderPlans();
+  };
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape') { e.stopPropagation(); finish(false); }
+  });
+  inp.addEventListener('blur', () => finish(true));
+}
+
+function closePlanMenu() {
+  if (!planMenuEl) return;
+  planMenuEl.remove();
+  planMenuEl = null;
+  document.removeEventListener('pointerdown', onPlanMenuDown, true);
+}
+function onPlanMenuDown(e) {
+  if (planMenuEl && !planMenuEl.contains(e.target) && !e.target.closest('.ph-more')) closePlanMenu();
+}
+
+function openPlanMenu(btn, p, rowEl) {
+  if (planMenuEl) {
+    const same = planMenuEl.dataset.pid === p.id;
+    closePlanMenu();
+    if (same) return;
+  }
+  const menu = document.createElement('div');
+  menu.className = 'ph-menu';
+  menu.dataset.pid = p.id;
+  const d = new Date(p.muokattu || p.luotu || planNow());
+  menu.innerHTML = `<div class="info">${escapeHtml(p.nimi)} · ${PLAN_SRC_LABELS[p.alkupera] || 'oma'} · muokattu ${d.getDate()}.${d.getMonth() + 1}.</div>`;
+  const add = (label, fn, cls) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    if (cls) b.className = cls;
+    b.textContent = label;
+    b.addEventListener('click', () => { closePlanMenu(); fn(); });
+    menu.appendChild(b);
+  };
+  add('Raportti / PDF', () => {
+    activatePlan(p.id, { stay: true });
+    const sh = $('sumSheet');
+    if (sh) sh.scrollIntoView({ behavior: 'smooth' });
+  });
+  add('Jaa linkkinä', async () => {
+    const url = planShareUrl(p);
+    try { await navigator.clipboard.writeText(url); toast('Linkki kopioitu — koko suunnitelma kulkee linkissä'); }
+    catch (e) { window.prompt('Kopioi linkki', url); }
+    track('Jakolinkki luotu', { tyyppi: p.family && p.family.persons && p.family.persons.length > 1 ? 'perhe' : 'oma' });
+  });
+  add('Kopioi skenaarioksi', () => {
+    const c = addPlanRow(planClone(p.data), planClone(p.family), planUniqueName('Kopio: ' + p.nimi).slice(0, 40), 'kopio');
+    if (c) { renderPlans(); toast('Kopio luotu — Avaa ottaa sen työtilaan'); }
+  });
+  add('Lataa tiedostona', () => {
+    downloadJson(planFileName(p), { vp: 'suunnitelma', v: 1, nimi: p.nimi, data: p.data, family: p.family || undefined });
+  });
+  add('Nimeä uudelleen', () => startPlanRename(rowEl, p));
+  const sep = document.createElement('div');
+  sep.className = 'sep';
+  menu.appendChild(sep);
+  add('Poista…', () => confirmDeletePlan(p, rowEl), 'danger');
+  rowEl.querySelector('.ph-acts').appendChild(menu);
+  planMenuEl = menu;
+  document.addEventListener('pointerdown', onPlanMenuDown, true);
+}
+
+function confirmDeletePlan(p, rowEl) {
+  closePlanMenu();
+  const menu = document.createElement('div');
+  menu.className = 'ph-menu confirm';
+  menu.dataset.pid = p.id;
+  menu.innerHTML = `<div class="q">Poistetaanko <b>${escapeHtml(p.nimi)}</b>? Tietoja ei voi palauttaa.</div><div class="row"></div>`;
+  const row = menu.querySelector('.row');
+  const mk = (label, cls, fn) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = cls;
+    b.textContent = label;
+    b.addEventListener('click', fn);
+    row.appendChild(b);
+  };
+  mk('Poista', 'btn danger-btn', () => { closePlanMenu(); deletePlan(p.id); });
+  mk('Peruuta', 'btn ghost', closePlanMenu);
+  rowEl.querySelector('.ph-acts').appendChild(menu);
+  planMenuEl = menu;
+  document.addEventListener('pointerdown', onPlanMenuDown, true);
+}
+
+/* --- Jakaminen, tuonti ja vienti --- */
+
+function planShareUrl(p) {
+  if (p.family && p.family.persons && p.family.persons.length > 1) {
+    return location.origin + location.pathname + '#f=' + btoa(unescape(encodeURIComponent(JSON.stringify(p.family))));
+  }
+  return location.origin + location.pathname + '#s=' + btoa(unescape(encodeURIComponent(JSON.stringify(p.data))));
+}
+
+function planFileName(p) {
+  const slug = p.nimi.toLowerCase().replace(/[^a-z0-9äöå]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 30) || 'suunnitelma';
+  return `varallisuuspolku-${slug}.json`;
+}
+
+function downloadJson(name, obj) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+// Tuodun datan validointi täydellä applySaved-siivouksella ilman että työtila
+// muuttuu: kierrätetään tila sen läpi ja palautetaan heti ennalleen
+function sanitizePlanData(o) {
+  if (!o || typeof o !== 'object' || !Array.isArray(o.events)) return null;
+  const cur = JSON.stringify(serialize());
+  let out = null;
+  try { if (applySaved(o)) out = planClone(serialize()); } catch (e) { out = null; }
+  applySaved(JSON.parse(cur));
+  return out;
+}
+
+function importPlanLink(txt) {
+  const m = String(txt || '').match(/#(s|f)=([A-Za-z0-9+/=]+)/);
+  if (!m) { toast('Linkistä ei löytynyt suunnitelmaa — liitä koko jakolinkki'); return; }
+  try {
+    const o = JSON.parse(decodeURIComponent(escape(atob(m[2]))));
+    let row = null;
+    if (m[1] === 'f') {
+      if (!(validFamily(o) && o.persons.length >= 2)) throw new Error('fam');
+      const fam = {
+        persons: o.persons.map((q) => ({ pid: q.pid, name: String(q.name || 'Henkilö').slice(0, 16), role: q.role, child: !!q.child, data: q.data })),
+        active: clamp(Math.round(o.active || 0), 0, o.persons.length - 1),
+      };
+      row = addPlanRow(planClone(fam.persons[fam.active].data), fam, planUniqueName('Tuotu suunnitelma'), 'linkki');
+    } else {
+      const clean = sanitizePlanData(o);
+      if (!clean) throw new Error('data');
+      row = addPlanRow(clean, null, planUniqueName('Tuotu suunnitelma'), 'linkki');
+    }
+    if (row) {
+      const inEl = $('phLinkIn');
+      if (inEl) inEl.value = '';
+      renderPlans();
+      toast('Suunnitelma tuotu omaksi rivikseen');
+    }
+  } catch (e) { toast('Linkin sisältöä ei voitu lukea'); }
+}
+
+function pickPlanFile() {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.json,application/json';
+  inp.addEventListener('change', () => {
+    const f = inp.files && inp.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const o = JSON.parse(String(r.result));
+        let n = 0;
+        const addOne = (data, fam, nimi) => {
+          const clean = sanitizePlanData(data);
+          if (!clean) return false;
+          const okFam = fam && validFamily(fam) ? planClone(fam) : null;
+          return !!addPlanRow(clean, okFam, planUniqueName(String(nimi || 'Tuotu suunnitelma').slice(0, 40)), 'tiedosto');
+        };
+        if (o && o.vp === 'varmuuskopio' && Array.isArray(o.plans)) {
+          for (const q of o.plans) {
+            if (!q || !q.data) continue;
+            if (addOne(q.data, q.family, q.nimi)) n++;
+            else if (plans.length >= PLAN_MAX) break;
+          }
+        } else if (o && o.vp === 'suunnitelma' && o.data) {
+          if (addOne(o.data, o.family, o.nimi)) n = 1;
+        } else if (o && Array.isArray(o.events)) {
+          if (addOne(o, null, null)) n = 1;
+        }
+        if (n) { renderPlans(); toast(n === 1 ? 'Suunnitelma tuotu' : `${n} suunnitelmaa tuotu`); }
+        else toast('Tiedostosta ei löytynyt suunnitelmaa');
+      } catch (e) { toast('Tiedostoa ei voitu lukea'); }
+    };
+    r.readAsText(f);
+  });
+  inp.click();
+}
+
+function exportAllPlans() {
+  syncActivePlan();
+  const d = new Date();
+  const pad = (x) => String(x).padStart(2, '0');
+  downloadJson(`varallisuuspolku-varmuuskopio-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`,
+    { vp: 'varmuuskopio', v: 1, viety: d.toISOString(), plans });
+  toast('Varmuuskopio ladattu — tuo se toisella laitteella "Tuo tiedostosta…"');
+  track('Suunnitelmat viety');
+}
+
+/* --- Uusi suunnitelma rampin kautta (kolme kysymystä / omin sanoin) --- */
+// Uusi rivi luodaan ja aktivoidaan ENNEN rampin avaamista, jotta rampSubmit
+// ja Tulkin NL-polku kirjoittavat sen tilaan (ei nykyisen päälle). Peruutus
+// poistaa väliaikaisen rivin ja palauttaa edellisen suunnitelman.
+
+let rampFromPlans = false;
+let rampPlanPrevId = null;
+let rampPlanTempId = null;
+
+function newPlanViaRamp(focusNl) {
+  const row = addPlanRow(JSON.parse(DEFAULT_PLAN_JSON), null, planUniqueName('Uusi suunnitelma'), focusNl ? 'nl' : 'ramppi');
+  if (!row) return;
+  rampPlanPrevId = planActiveId;
+  rampPlanTempId = row.id;
+  activatePlan(row.id); // sulkee yhteenvedon
+  rampFromPlans = true;
+  $('rampCard').innerHTML = RAMP_FORM_HTML;
+  bindRampForm();
+  const skip = $('rampSkip');
+  if (skip) skip.textContent = 'Peruuta — takaisin suunnitelmiin';
+  // Tulkki injektoi "kerro omin sanoin" -osion uudelleen (vain avaimella)
+  document.dispatchEvent(new CustomEvent('vp-ramppi-auki'));
+  showRamp();
+  if (focusNl) setTimeout(() => { const t = document.getElementById('tkNlText'); if (t) t.focus(); }, 90);
 }
 
 /* ===================== Paneelin taittuvat kortit ===================== */
@@ -5358,6 +6018,7 @@ buildPalette();
 initMcWorker();
 loadFamily();
 loadState();
+initPlans(); // suunnitelmarivit: migraatio, jakolinkki omaksi riviksi, peilin palautus
 loadBaseline();
 syncInputs();
 bindInputs();
@@ -5415,6 +6076,18 @@ function closeRamp() {
 function rampSkip() {
   rampMark();
   closeRamp();
+  if (rampFromPlans) {
+    // Suunnitelmakodista avattu: peruutus poistaa väliaikaisen rivin ja
+    // palauttaa edellisen suunnitelman — ei kierrosta, ei suppilotelemetriaa
+    rampFromPlans = false;
+    plans = plans.filter((p) => p.id !== rampPlanTempId);
+    planSimCache.delete(rampPlanTempId);
+    persistPlans(true);
+    if (rampPlanPrevId && plans.some((p) => p.id === rampPlanPrevId)) activatePlan(rampPlanPrevId);
+    rampPlanTempId = rampPlanPrevId = null;
+    openSummary();
+    return;
+  }
   track('Ramppi ohitettu');
   startTour(); // vanha ensivierailupolku: esimerkkisuunnitelma + kierros
 }
@@ -5422,7 +6095,7 @@ function rampSkip() {
 function showRamp() {
   $('ramp').hidden = false;
   document.addEventListener('keydown', rampEsc, true);
-  track('Ramppi näytetty');
+  if (!rampFromPlans) track('Ramppi näytetty');
   setTimeout(() => { try { $('rampAge').focus(); } catch (e) {} }, 50);
 }
 
@@ -5443,7 +6116,9 @@ function rampSubmit() {
   syncInputs();
   renderAll();
   rampMark();
-  track('Ramppi valmis');
+  if (!rampFromPlans) track('Ramppi valmis'); // suunnitelmakodin uusinnat eivät kuulu suppiloon
+  rampFromPlans = false;
+  rampPlanTempId = rampPlanPrevId = null;
   rampResult(retA);
 }
 
@@ -5516,11 +6191,16 @@ function rampResult(retA) {
   $('rampTour').addEventListener('click', () => { closeRamp(); startTour(); });
 }
 
-$('rampGo').addEventListener('click', rampSubmit);
-$('rampSkip').addEventListener('click', (e) => { e.preventDefault(); rampSkip(); });
-for (const id of ['rampAge', 'rampWealth', 'rampMonthly']) {
-  $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); rampSubmit(); } });
+// Sidonnat funktiona: suunnitelmakoti rakentaa lomakkeen uudelleen (uusi rivi
+// kolmella kysymyksellä) ja tarvitsee samat kuuntelijat tuoreisiin elementteihin
+function bindRampForm() {
+  if ($('rampGo')) $('rampGo').addEventListener('click', rampSubmit);
+  if ($('rampSkip')) $('rampSkip').addEventListener('click', (e) => { e.preventDefault(); rampSkip(); });
+  for (const id of ['rampAge', 'rampWealth', 'rampMonthly']) {
+    if ($(id)) $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); rampSubmit(); } });
+  }
 }
+bindRampForm();
 
 let autoTourOff = false;
 let tourSeen = false;

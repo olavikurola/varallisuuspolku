@@ -14,7 +14,7 @@ const { chromium } = require('playwright');
   const ok = (c, n, d = '') => { if (c) console.log('  ✓ ' + n); else { failed++; console.error('  ✗ ' + n + (d ? ' — ' + d : '')); } };
 
   await page.goto('http://localhost:8123/', { waitUntil: 'networkidle' });
-  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-tour-done', '1'); localStorage.setItem('vp-pro-seen', '1'); });
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-tour-done', '1'); localStorage.setItem('vp-autotour-off', '1'); localStorage.setItem('vp-pro-seen', '1'); });
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(500);
   await page.keyboard.press('Escape');

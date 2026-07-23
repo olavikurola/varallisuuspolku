@@ -11,10 +11,14 @@ const { chromium } = require('playwright');
   // --- Mobiili ---
   const mob = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   await mob.goto('http://localhost:8123/', { waitUntil: 'networkidle' });
-  await mob.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-tour-done', '1'); });
+  await mob.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-tour-done', '1'); localStorage.setItem('vp-autotour-off', '1'); });
   await mob.reload({ waitUntil: 'networkidle' });
   await mob.waitForTimeout(800);
-  ok(await mob.evaluate(() => document.body.classList.contains('fs')), 'mobiili: ensivierailu avaa piirtopöydän');
+  // 13.7. alkaen kaikki laskeutuvat kojelaudalle — piirtopöytä avataan itse ⛶:stä
+  ok(await mob.evaluate(() => !document.body.classList.contains('fs')), 'mobiili: laskeutuminen kojelaudalle');
+  await mob.tap('#fsOpen');
+  await mob.waitForTimeout(600);
+  ok(await mob.evaluate(() => document.body.classList.contains('fs')), 'mobiili: piirtopöytä aukeaa ⛶:stä');
   const hudBox = await mob.locator('#hud').boundingBox();
   ok(hudBox && hudBox.height < 70, 'mobiili: HUD yhtenä kompaktina rivinä', JSON.stringify(hudBox));
   const chartBox = await mob.locator('#chartWrap').boundingBox();
@@ -32,7 +36,7 @@ const { chromium } = require('playwright');
   // --- Suorituskyky: raahauksen framet ---
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page.goto('http://localhost:8123/', { waitUntil: 'networkidle' });
-  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-tour-done', '1'); }); // kierros testataan erikseen
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-tour-done', '1'); localStorage.setItem('vp-autotour-off', '1'); }); // kierros testataan erikseen
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(800);
   await page.waitForFunction(() => sim && sim.mcPaths === 5000, null, { timeout: 6000 }).catch(() => {});

@@ -92,9 +92,10 @@ const { chromium } = require('playwright');
   const og = await page.evaluate(() => document.querySelector('meta[property="og:title"]').content);
   ok(og.includes('Wealth Path'), 'og:title päivitetty', og);
 
-  // 5) Esittelykierros: käynnistyy automaattisesti kojelaudalla joka
-  // latauksella, kulkee 8 askelta ja päättyy piirtopöytään
-  await page.evaluate(() => localStorage.clear());
+  // 5) Esittelykierros: kulkee 8 askelta ja päättyy Perustietoihin.
+  // HUOM: 18.7. alkaen ensivierailu saa RAMPIN — kierros käynnistyy
+  // automaattisesti vain kun ramppi on jo nähty (vp-ramp-done).
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-ramp-done', '1'); });
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(1000); // autokäynnistyksen viive (600 ms)
   ok(await page.evaluate(() => !document.body.classList.contains('fs')), 'laskeutuminen kojelaudalle');
