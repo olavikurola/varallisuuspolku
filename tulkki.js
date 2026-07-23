@@ -239,6 +239,17 @@
       }
     };
     walk({ stats: ctx.stats, vertailu: ctx.vertailu }, '');
+    // Salliva alias: malli pudottaa joskus etuliitteen (livenä nähty
+    // [[verotYhteensaEur]] po. [[stats.verotYhteensaEur]]) — polun häntä
+    // kelpaa, jos se on yksikäsitteinen. Ristiriita eri arvoilla → ei aliasta.
+    const alias = {};
+    for (const p in map) {
+      const short = p.replace(/^(?:stats|vertailu)\./, '');
+      if (short === p || short in map) continue;
+      if (short in alias && alias[short] !== map[p]) alias[short] = null;
+      else if (!(short in alias)) alias[short] = map[p];
+    }
+    for (const k in alias) if (alias[k] != null) map[k] = alias[k];
     return map;
   }
 
