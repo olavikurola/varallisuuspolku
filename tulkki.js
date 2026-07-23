@@ -303,7 +303,7 @@
   const handle = document.createElement('button');
   handle.className = 'tk-handle';
   handle.type = 'button';
-  handle.textContent = '✦ Kysy';
+  handle.textContent = '✦ Kysy AI';
   handle.title = 'Tulkki — kysy suunnitelmastasi';
   // Hiljainen katsastusmerkki: ei sykettä, ei ääntä (kunnioittaa tyyntä ilmettä)
   const badge = document.createElement('i');
@@ -382,7 +382,9 @@
       if (!katsastusDismissed && !chat.length && !log.querySelector('.tk-kats')) renderKatsastus();
     });
     if (prefill) { input.value = prefill; }
-    input.focus();
+    // Mobiilissa EI autofokusta: iOS zoomaa fokusoituun kenttään (→ koko
+    // sivu levenee sivuttain pannattavaksi) ja näppäimistö peittäisi lehden
+    if (!tkNarrow()) input.focus();
   }
   function closeSheet() {
     sheet.hidden = true;
@@ -672,7 +674,7 @@
     busy = false;
     input.disabled = false;
     handle.classList.remove('tk-thinking');
-    input.focus();
+    if (!tkNarrow()) input.focus(); // mobiilissa näppäimistö ei ponnahda vastauksen päälle
   }
 
   $t('tkForm').addEventListener('submit', (e) => { e.preventDefault(); ask(); });
