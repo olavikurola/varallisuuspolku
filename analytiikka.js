@@ -74,6 +74,35 @@ function readMe() {
   } catch (e) { return null; }
 }
 
+/* ---------- Hover: arvot osoittimen alle ---------- */
+// Yksi jaettu vihjelaatikko; kukin kaavio antaa resolverin, joka kääntää
+// viewBox-koordinaatit sisällöksi. Resolveri talletetaan svg.__anHover-
+// ominaisuudeksi, jotta suurennettu klooni saa saman vihjeen (kloonaus ei
+// kopioi kuuntelijoita — initZoom sitoo resolverin uudelleen).
+
+let tipEl = null;
+function tipShow(html, cx, cy) {
+  if (!tipEl) { tipEl = document.createElement('div'); tipEl.className = 'an-tip'; document.body.appendChild(tipEl); }
+  tipEl.innerHTML = html;
+  tipEl.hidden = false;
+  const left = Math.min(window.innerWidth - tipEl.offsetWidth - 10, cx + 14);
+  tipEl.style.left = Math.max(8, left) + 'px';
+  tipEl.style.top = Math.max(8, cy - tipEl.offsetHeight - 12) + 'px';
+}
+function tipHide() { if (tipEl) tipEl.hidden = true; }
+
+function bindHover(svg, resolve) {
+  svg.addEventListener('pointermove', (e) => {
+    const r = svg.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const vb = svg.viewBox.baseVal;
+    const hit = resolve((e.clientX - r.left) / r.width * vb.width, (e.clientY - r.top) / r.height * vb.height);
+    if (hit) tipShow(hit, e.clientX, e.clientY); else tipHide();
+  });
+  svg.addEventListener('pointerleave', tipHide);
+}
+function attachHover(svg, resolve) { svg.__anHover = resolve; bindHover(svg, resolve); }
+
 /* ---------- Kaaviot ---------- */
 
 // Hero: varallisuusvyöhyke ikäryhmien yli (sqrt-asteikko — varallisuus kasvaa moninkertaisesti)
@@ -111,6 +140,17 @@ function renderHero(stats, me) {
     el('circle', { cx: X(me.ageNow), cy: Y(me.startCapital), r: 6, fill: YOU, stroke: '#0a0e1a', 'stroke-width': 2 }, svg);
     text(svg, X(me.ageNow) + 10, Y(me.startCapital) + 4, 'sinä', 'an-you', 'start');
   }
+  attachHover(svg, (x) => {
+    let best = null;
+    for (const p of pts) {
+      const d = Math.abs(X(p.cx) - x);
+      if (d < 44 && (!best || d < best.d)) best = { p, d };
+    }
+    if (!best) return null;
+    const n = stats.groups[best.p.g] && stats.groups[best.p.g].n;
+    const q = best.p.q;
+    return `<b>${best.p.g} v</b>${n ? ` · n = ${n}` : ''}<br>P75 ${fmtCompact(q.p75)}<br>Mediaani <b>${fmtCompact(q.p50)}</b><br>P25 ${fmtCompact(q.p25)}`;
+  });
 }
 
 // Elämän kartta: ridgeline tapahtumien suunnitelluista i'istä
@@ -154,6 +194,19 @@ function renderRidgeline(stats, me) {
       }
     }
   });
+  attachHover(svg, (x, y) => {
+    const i = Math.floor((y - headH) / rowH);
+    if (i < 0 || i >= rows.length) return null;
+    const type = rows[i], d = stats.eventAges[type];
+    const tot = d.counts.reduce((s, c) => s + c, 0) || 1;
+    for (let k = 0; k < d.counts.length; k++) {
+      if (x >= X(d.edges[k]) && x < X(d.edges[k + 1]) && d.counts[k] > 0) {
+        return `${ICONS[type]} <b>${LABELS[type]}</b> · med. ${Math.round(d.p50)} v<br>` +
+          `${d.edges[k]}–${d.edges[k + 1]} v: ${Math.round((d.counts[k] / tot) * 100)} % suunnitelmista`;
+      }
+    }
+    return `${ICONS[type]} <b>${LABELS[type]}</b> · mediaani ${Math.round(d.p50)} v`;
+  });
 }
 
 // Kvartiilipylväät ikäryhmittäin (kk-säästö, osakepaino)
@@ -191,6 +244,17 @@ function renderQuartCols(containerId, stats, key, me, meVal, fmt, refFn, vCap) {
       text(svg, X(i) + 24, Y(meVal) + 4, 'sinä', 'an-you');
     }
   }
+  attachHover(svg, (x) => {
+    let best = null;
+    for (const p of pts) {
+      const d = Math.abs(X(p.i) - x);
+      if (d < 26 && (!best || d < best.d)) best = { p, d };
+    }
+    if (!best) return null;
+    const n = stats.groups[best.p.g] && stats.groups[best.p.g].n;
+    const q = best.p.q;
+    return `<b>${best.p.g} v</b>${n ? ` · n = ${n}` : ''}<br>P75 ${fmt(q.p75)}<br>Mediaani <b>${fmt(q.p50)}</b><br>P25 ${fmt(q.p25)}`;
+  });
 }
 
 // Eläkeikähistogrammi + lakisääteinen alue + oma tavoite
@@ -219,6 +283,15 @@ function renderRetireHist(stats, me) {
     el('path', { d: `M ${X(me.ret.age).toFixed(1)} ${t + 2} l 5 8 l -10 0 Z`, fill: YOU }, svg);
     text(svg, X(me.ret.age) + 8, t + 12, 'sinä', 'an-you');
   }
+  const totalC = h.counts.reduce((s, c) => s + c, 0) || 1;
+  attachHover(svg, (x) => {
+    for (let i = 0; i < h.counts.length; i++) {
+      if (x >= X(h.edges[i]) && x < X(h.edges[i + 1]) && h.counts[i] > 0) {
+        return `<b>Eläkeikä ${h.edges[i]}–${h.edges[i + 1]} v</b><br>${h.counts[i]} suunnitelmaa · ${Math.round((h.counts[i] / totalC) * 100)} %`;
+      }
+    }
+    return null;
+  });
 }
 
 // Työeläkkeen kateosuus: pinopalkit ikäryhmittäin
@@ -260,6 +333,18 @@ function renderDonut(containerId, slicesIn, note) {
     text(svg, 176, 32 + i * 26, `${s.l} ${Math.round((s.v / total) * 100)} %`, 'an-tick-strong');
   });
   if (note) text(svg, cx, cy + 4, note, 'an-tick', 'middle');
+  // kulma → siivu (ei elementtikohtaisia kuuntelijoita — klooni perii resolverin)
+  const arcs = [];
+  let acc = -Math.PI / 2;
+  for (const s of slices) { const a1 = acc + (s.v / total) * Math.PI * 2; arcs.push({ s, a0: acc, a1 }); acc = a1; }
+  attachHover(svg, (x, y) => {
+    const dist = Math.hypot(x - cx, y - cy);
+    if (dist < r0 - 4 || dist > r1 + 4) return null;
+    let ang = Math.atan2(y - cy, x - cx);
+    if (ang < -Math.PI / 2) ang += Math.PI * 2; // normalisoi alkamaan kello 12:sta
+    const hit = arcs.find((a) => ang >= a.a0 && ang < a.a1);
+    return hit ? `<b>${hit.s.l}</b> · ${Math.round((hit.s.v / total) * 100)} %` : null;
+  });
 }
 
 // Asuntolaina: tunnuslukurivit
@@ -312,6 +397,11 @@ function renderTimeline(stats) {
     if (i === 0 || i === tl.length - 1) text(svg, l + i * bw + bw / 2, H - 8, x.m, 'an-tick', 'middle');
   });
   text(svg, W - r, t + 6, `yht. ${stats.total}`, 'an-tick-strong', 'end');
+  attachHover(svg, (x) => {
+    const i = Math.floor((x - l) / bw);
+    if (i < 0 || i >= tl.length) return null;
+    return `<b>${tl[i].m}</b> · ${tl[i].n} jaettua suunnitelmaa`;
+  });
 }
 
 /* ---------- Portti: kartta aukeaa omalla suunnitelmalla ja jaolla ---------- */
@@ -372,7 +462,10 @@ function initZoom() {
       x.textContent = '✕';
       clone.appendChild(x);
       light.appendChild(clone);
-      const close = () => { light.remove(); document.removeEventListener('keydown', onEsc); };
+      // hover toimii myös suurennoksessa: sido alkuperäisten resolverit klooniin
+      const osv = card.querySelectorAll('svg'), csv = clone.querySelectorAll('svg');
+      osv.forEach((o, i) => { if (o.__anHover && csv[i]) bindHover(csv[i], o.__anHover); });
+      const close = () => { light.remove(); tipHide(); document.removeEventListener('keydown', onEsc); };
       const onEsc = (e) => { if (e.key === 'Escape') close(); };
       light.addEventListener('click', (e) => { if (e.target === light || e.target === x) close(); });
       document.addEventListener('keydown', onEsc);
@@ -429,12 +522,11 @@ function takeaways(stats, me) {
 (async () => {
   const me = readMe();
   renderGate(me);
-  const banner = $('youBanner');
-  if (me) {
-    banner.innerHTML = `<div class="an-you-banner"><span class="dot"></span> Kaavioissa näkyy myös <b>sinun suunnitelmasi</b> (keltainen) — se luetaan vain tämän selaimen muistista, mitään ei lähetetä.</div>`;
-  } else {
-    banner.innerHTML = `<div class="an-you-banner faint">Vinkki: kun teet oman suunnitelman <a href="./">Varallisuuspolussa</a>, näet tällä sivulla oman sijaintisi jokaisessa kaaviossa.</div>`;
-  }
+  // "sinä"-selite on navissa kaavioiden vieressä — näytetään vain kun oma
+  // suunnitelma on olemassa (erillinen banneri poistettu: yläosa rauhoittuu,
+  // yksityisyys on selitetty Data ja menetelmä -lohkossa)
+  const legend = document.querySelector('.an-legend');
+  if (legend && !me) legend.hidden = true;
   $('anStatsLink').href = DATA_API + '/stats.json';
 
   let stats = null;
