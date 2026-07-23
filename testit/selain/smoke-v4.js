@@ -86,13 +86,15 @@ const { chromium } = require('playwright');
   ok(await page2.evaluate(() => !document.getElementById('tour').hidden), 'opastus käynnistyy myös jakolinkistä');
   await page2.close();
 
-  // 4) Copy: title molemmilla nimillä
+  // 4) Copy: title kantaa kategoria-avainsanat, og-kortti kansainvälisen nimen
   const title = await page.title();
-  ok(title.includes('Varallisuuspolku') && title.includes('Wealth Path'), 'title: Varallisuuspolku · Wealth Path', title);
+  ok(title.includes('Varallisuuspolku') && title.includes('elinkaarilaskuri'), 'title: brändi + elinkaarilaskuri', title);
   const og = await page.evaluate(() => document.querySelector('meta[property="og:title"]').content);
-  ok(og.includes('Wealth Path'), 'og:title päivitetty', og);
+  ok(og.includes('Wealth Path'), 'og:title kantaa Wealth Path -nimen', og);
 
-  // 5) Esittelykierros: kulkee 8 askelta ja päättyy Perustietoihin.
+  // 5) Esittelykierros: kulkee askeleet loppuun (Valikko) ja päättyy
+  // Perustietoihin. Askelmäärä EI ole kiinteä (esim. Tulkki-askel ohitetaan
+  // ilman kahvaa) — siksi klikataan kunnes viimeinen askel näkyy.
   // HUOM: 18.7. alkaen ensivierailu saa RAMPIN — kierros käynnistyy
   // automaattisesti vain kun ramppi on jo nähty (vp-ramp-done).
   await page.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-ramp-done', '1'); });
@@ -101,7 +103,10 @@ const { chromium } = require('playwright');
   ok(await page.evaluate(() => !document.body.classList.contains('fs')), 'laskeutuminen kojelaudalle');
   ok(await page.evaluate(() => !document.getElementById('tour').hidden), 'kierros käynnistyy automaattisesti');
   ok(await page.evaluate(() => document.getElementById('tourCard').textContent.includes('Tervetuloa')), 'aloituskortti näkyy');
-  for (let i = 0; i < 8; i++) { await page.click('#tourNext'); await page.waitForTimeout(180); }
+  for (let i = 0; i < 12; i++) {
+    if (await page.evaluate(() => document.getElementById('tourCard').textContent.includes('Valikko'))) break;
+    await page.click('#tourNext'); await page.waitForTimeout(180);
+  }
   ok(await page.evaluate(() => document.getElementById('tourCard').textContent.includes('Valikko')), 'viimeinen askel: Valikko');
   await page.waitForTimeout(450); // valokeilan siirtymäanimaatio loppuun
   const spot = await page.evaluate(() => {
