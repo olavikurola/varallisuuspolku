@@ -346,7 +346,10 @@
     '.tk-bound{border-bottom:1px dotted rgba(45,212,191,.55)}' +
     '.tk-fb{display:inline-flex;gap:4px}' +
     '.tk-fb-b{padding:1px 6px;line-height:1.2}' +
-    '.tk-quota{font-size:10.5px;color:var(--text-faint);font-variant-numeric:tabular-nums}';
+    '.tk-quota{font-size:10.5px;color:var(--text-faint);font-variant-numeric:tabular-nums}' +
+    '.tk-mailto{display:inline-block;margin-top:7px;padding:4px 12px;border:1px solid rgba(139,124,246,.45);' +
+      'border-radius:999px;color:#b9aefc;text-decoration:none;font-size:12px}' +
+    '.tk-mailto:hover{background:rgba(139,124,246,.15);color:#d9d2fd}';
   document.head.appendChild(tkCss);
 
   const $t = (id) => sheet.querySelector('#' + id);
@@ -464,14 +467,19 @@
     card.innerHTML =
       `<div class="tk-ch-lab">Päivän ${QUOTA_MAX} ilmaista kysymystä on käytetty</div>` +
       `<div class="tk-ch-note">Tulkki jatkaa huomenna — laskuri ja muut työkalut (markkinatesti, katsastus, vertailu) toimivat normaalisti ilman rajaa. Laajempi maksullinen versio on suunnitteilla: kiinnostuksen ilmaisu auttaa mitoittamaan sen.</div>` +
-      `<div class="tk-ch-acts"><button type="button" class="tk-keep tk-interest">Olen kiinnostunut laajemmasta käytöstä</button></div>` +
-      // Yhteyskanava: nappi kirjaa vain anonyymin määrän — sähköposti on ainoa
-      // tapa tavoittaa kiinnostunut takaisin (vapaaehtoinen, käyttäjän aloite)
-      `<div class="tk-ch-note">Voit myös kertoa toiveistasi suoraan: <a href="mailto:info@varallisuuspolku.com?subject=Tukija-kiinnostus">info@varallisuuspolku.com</a></div>`;
+      `<div class="tk-ch-acts"><button type="button" class="tk-keep tk-interest">Olen kiinnostunut laajemmasta käytöstä</button></div>`;
     card.querySelector('.tk-interest').addEventListener('click', (ev) => {
       tkTrack('Tukija kiinnostus');
       ev.target.textContent = 'Kiitos — kiinnostus kirjattu ✓';
       ev.target.disabled = true;
+      // Sähköposti paljastuu vasta kiinnostuksen jälkeen: yksi ele ensin,
+      // syvempi kanava sitä haluavalle — ei kahta kilpailevaa kehotetta
+      const more = document.createElement('div');
+      more.className = 'tk-ch-note';
+      more.innerHTML = 'Halutessasi voit myös kertoa toiveistasi — se auttaa muotoilemaan laajemman version oikein:<br>' +
+        '<a class="tk-mailto" href="mailto:info@varallisuuspolku.com?subject=Tukija-kiinnostus">✉ info@varallisuuspolku.com</a>';
+      card.appendChild(more);
+      log.scrollTop = log.scrollHeight;
     });
     log.appendChild(card);
     log.scrollTop = log.scrollHeight;
