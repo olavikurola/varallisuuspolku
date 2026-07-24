@@ -1328,7 +1328,24 @@ function openPopover(id) {
     const principal = Math.max(0, price - clamp(ev.down || 0, 0, price));
     const pmt = loanPayment(principal, ev.rate || 0, ev.years || 10);
     const interest = pmt * Math.round((ev.years || 10) * 12) - principal;
-    note.innerHTML = `Laina <b>${fmtEur(principal)}</b> · maksuerä <b>${fmtEur(pmt)}/kk</b> · korkoa yhteensä <b>${fmtEur(interest)}</b>`;
+    // Erät maksetaan säästövirrasta (laskenta.js runPath) — kerro se tässä,
+    // ettei käyttäjä syötä kuukausisäästöksi vain rahasto-osuutta. Eläkkeellä
+    // erät katetaan nostoista, joten vihje koskee vain työuralle osuvaa lainaa.
+    const retire = state.events.find((x) => x.type === 'retirement');
+    let saveHint = '';
+    if (!retire || ev.age < retire.age) {
+      let base = state.monthly;
+      if (Array.isArray(state.savePhases) && state.savePhases.length) {
+        const ph = state.savePhases.slice().sort((a, b) => a.to - b.to);
+        const row = ph.find((r) => ev.age <= r.to) || ph[ph.length - 1];
+        base = Math.max(0, (row && row.amount) || 0);
+      }
+      const save = base * Math.pow(1 + (state.savingsGrowth || 0) / 100, Math.max(0, ev.age - state.ageNow));
+      saveHint = pmt > save + 0.5
+        ? `<br><small>Erä ylittää kuukausisäästösi (~${fmtEur(save)}/kk) — ylittävä osa myydään sijoituksista. Jos maksat lainaa palkasta kulutusta karsimalla, korota kuukausisäästöä laina-ajaksi.</small>`
+        : '<br><small>Erä maksetaan kuukausisäästöstä — mitoita säästö niin, että se kattaa myös lainanhoidon.</small>';
+    }
+    note.innerHTML = `Laina <b>${fmtEur(principal)}</b> · maksuerä <b>${fmtEur(pmt)}/kk</b> · korkoa yhteensä <b>${fmtEur(interest)}</b>` + saveHint;
   };
   updateLoanNote();
 

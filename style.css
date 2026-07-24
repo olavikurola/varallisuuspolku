@@ -1067,7 +1067,7 @@ input[type="range"]::-moz-range-thumb {
   font-variant-numeric: tabular-nums;
 }
 .an-chip.ok { color: var(--ok); border-color: rgba(52, 211, 153, 0.35); background: rgba(52, 211, 153, 0.06); }
-.topbar-right a.btn { text-decoration: none; }
+a.btn { text-decoration: none; }
 @media (max-width: 760px) {
   .an-grid2 { grid-template-columns: 1fr; }
   .an-main { padding: 16px 12px; }
@@ -2238,6 +2238,9 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
 .an-nav a:hover { color: var(--accent); border-color: var(--accent); }
 /* "sinä"-selite kortin otsikossa — glyyfi vastaa kaavion keltaista merkkiä */
 .an-youchip { float: right; font-size: 11px; font-weight: 700; color: #fbbf24; white-space: nowrap; margin-left: 10px; }
+/* Kortin ylälaidan otsikossa chip väistää absoluuttisesti asemoitua ⛶-nappia
+   (nappi ulottuu 38 px:iin kortin reunasta, otsikon sisältö alkaa 22 px:stä) */
+.an-card > h2:first-child .an-youchip, .an-card > h3:first-child .an-youchip { margin-right: 26px; }
 /* Hoverin kohdistusviiva */
 .an-xline { stroke: rgba(148, 168, 220, 0.55); stroke-width: 1; stroke-dasharray: 3 4; pointer-events: none; }
 /* Paluulinkki sivun lopussa */
