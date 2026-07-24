@@ -1054,16 +1054,19 @@ function simulate(st, opts = {}) {
   // Sama nettologiikka kuin runPathissa: erien ylite vähentää sijoitettua pääomaa.
   const invested = [st.startCapital];
   let cum = st.startCapital;
+  let paySum = 0; // työuran lainanhoito yhteensä — kortti erittelee vähennyksen
   for (let m = 1; m <= months; m++) {
     const age = a0 + m / 12;
     if (retireAge == null || age <= retireAge) {
       const base = ctx.saveAbs ? ctx.saveAbs[m] : st.monthly;
       cum += base * ctx.growth[m] - ctx.payments[m];
+      paySum += ctx.payments[m];
     }
     invested.push(cum);
   }
   out.invested = invested;
   out.deposits = cum;
+  out.investedPay = paySum;
   out.depletionAge = depletionAge;
 
   const retM = retireAge != null ? clamp(Math.round((retireAge - a0) * 12), 0, months) : null;

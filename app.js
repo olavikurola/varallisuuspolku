@@ -2623,7 +2623,7 @@ function renderStats() {
     v: fmtEur(s.deposits),
     va: fmtCompact(s.deposits),
     cls: '',
-    s: `${fmtEur(state.monthly)}/kk${state.savingsGrowth > 0 ? ` (+${state.savingsGrowth.toLocaleString('fi-FI')} %/v)` : ''} + alkupääoma`,
+    s: `${fmtEur(state.monthly)}/kk${state.savingsGrowth > 0 ? ` (+${state.savingsGrowth.toLocaleString('fi-FI')} %/v)` : ''} + alkupääoma${s.investedPay > 0.5 ? ` − lainanhoito ${fmtCompact(s.investedPay)}` : ''}`,
   });
   const confTxt = s.conf ? `${Math.round(s.conf * 100)} % varmuudella` : null;
   const p = s.successProb != null ? Math.round(s.successProb * 100) : null;
