@@ -542,12 +542,17 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
     if (m % 12 === 1) ytdGain = 0;
     w *= 1 + muM[m] + (shockFn ? shockFn(m) : 0); // tuotto ei muuta hankintahintaa
     if (retAge == null || age <= retAge) {
-      // Työuralla lainanhoito vähentää kuukausisäästöä (loput maksetaan palkasta).
+      // Työuralla lainanhoito vähentää kuukausisäästöä. Jos erät ylittävät
+      // säästön, EROTUS MYYDÄÄN SALKUSTA (kertaerän tapaan verotta) — aiempi
+      // "loput maksetaan palkasta" -oletus teki isosta lainasta lyhyellä
+      // maksuajalla lähes ilmaisen ja laina voitti käteisoston miljoonilla
+      // (X-palaute @ArjenArvonnousu 24.7.2026: remontti 130 k€/1 v vs 2 v).
       // Porrastettu aikataulu (saveAbs) korvaa tasaisen perussäästön kun asetettu.
       const base = saveAbs ? saveAbs[m] : monthlySave;
-      const contrib = Math.max(0, base * growth[m] - payments[m]);
-      w += contrib; basis += contrib;
-      if (fl) fl.contrib[m] = contrib;
+      const net = base * growth[m] - payments[m];
+      if (net >= 0) { w += net; basis += net; }
+      else sell(-net);
+      if (fl) fl.contrib[m] = net;
     } else {
       // Eläkkeellä: kuukausitulo strategian mukaan + lainanhoito, josta
       // työeläke kattaa osan; kulutuksen vaiheistus skaalaa tulotarpeen
@@ -1045,12 +1050,16 @@ function simulate(st, opts = {}) {
     out.pctHi = mc.pctHi;
   }
 
-  // Sijoitettu pääoma kumulatiivisesti (alkusijoitus + kk-sijoitukset työuralla)
+  // Sijoitettu pääoma kumulatiivisesti (alkusijoitus + kk-sijoitukset työuralla).
+  // Sama nettologiikka kuin runPathissa: erien ylite vähentää sijoitettua pääomaa.
   const invested = [st.startCapital];
   let cum = st.startCapital;
   for (let m = 1; m <= months; m++) {
     const age = a0 + m / 12;
-    if (retireAge == null || age <= retireAge) cum += Math.max(0, st.monthly * ctx.growth[m] - ctx.payments[m]);
+    if (retireAge == null || age <= retireAge) {
+      const base = ctx.saveAbs ? ctx.saveAbs[m] : st.monthly;
+      cum += base * ctx.growth[m] - ctx.payments[m];
+    }
     invested.push(cum);
   }
   out.invested = invested;

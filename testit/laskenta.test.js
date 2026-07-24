@@ -469,6 +469,25 @@ console.log('Porrastettu säästö (savePhases): kaistoittainen kuukausisumma');
   ok(close(f2.flows.contrib[m50], 1000 * Math.pow(1.015, (m50 - 1) / 12), 1), 'säästön kasvu kertautuu aikataulun päälle');
 }
 
+console.log('Lainanhoito yli säästökyvyn (X-palaute 24.7.2026)');
+{
+  // 130 k€ remontti: lyhyt laina ≈ käteisosto (ero vain korko ja ajoitus).
+  // Vanha malli jätti säästön ylittävän erän maksamatta ("loput palkasta")
+  // → laina 1 v voitti käteisen ~1,8 M€:lla. Nyt erotus myydään salkusta.
+  const mk = (fin) => {
+    const st = { ageNow: 30, ageEnd: 90, startCapital: 20000, monthly: 1000, savingsGrowth: 1.5,
+      allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true,
+      events: [{ id: 1, type: 'retirement', age: 65, withdrawal: 2400, pension: 1500, pensionAge: 65 },
+        { id: 2, type: 'renovation', age: 40, amount: -130000, ...fin }] };
+    return L.simulate(st).wEnd;
+  };
+  const cash = mk({});
+  const loan1 = mk({ financing: 'loan', down: 0, rate: 3, years: 1 });
+  const loan10 = mk({ financing: 'loan', down: 0, rate: 3, years: 10 });
+  ok(Math.abs(loan1 - cash) / cash < 0.03, 'laina 1 v ≈ käteisosto (ero < 3 %)', `${Math.round(loan1)} vs ${Math.round(cash)}`);
+  ok(loan10 > loan1 && (loan10 - loan1) / cash < 0.10, 'pidempi laina = maltillinen vipuhyöty, ei ilmaista rahaa', `${Math.round(loan10)} vs ${Math.round(loan1)}`);
+}
+
 console.log('Varmuustaso-ratkaisu (karkea→tarkka)');
 {
   const st = plan();

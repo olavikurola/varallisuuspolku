@@ -3210,6 +3210,16 @@ function bindInputs() {
   });
   $('tax').addEventListener('change', (e) => { state.tax = e.target.checked; renderAll(); });
   num('inflation', 'inflation', 0, 15);
+  // Yksi inflaatiototuus: Pro-tilassa peruskenttä kirjoittaa myös pro.infl:iin.
+  // Muuten Pro-oletus ohittaisi kentän hiljaa — "inflaatiolla ei ole vaikutusta"
+  // (X-palaute @ArjenArvonnousu 24.7.2026).
+  $('inflation').addEventListener('input', (e) => {
+    if (!state.pro) return;
+    const v = parseFloat(e.target.value);
+    if (isNaN(v) || v < 0 || v > 15) return;
+    state.pro.infl = clamp(v, 0, 10);
+    if (state.proOn) renderProCards(); // Pro-kortin kenttä seuraa heti
+  });
 }
 
 /* ===================== Esittelykierros ===================== */
@@ -3375,9 +3385,11 @@ function markProSeen() {
   try { localStorage.setItem(PRO_SEEN_KEY, '1'); } catch (e) {}
 }
 
-// Täydennä puuttuvat kentät oletuksilla — data-pp-polut osuvat aina
+// Täydennä puuttuvat kentät oletuksilla — data-pp-polut osuvat aina.
+// Inflaatio peritään Allokaatio-kortin kentästä (yksi totuus, ei hiljaista 2 %:a).
 function ensureProShape() {
   const d = defaultPro();
+  if (typeof state.inflation === 'number' && isFinite(state.inflation)) d.infl = clamp(state.inflation, 0, 10);
   if (!state.pro) { state.pro = d; return; }
   const fill = (t, s) => {
     for (const k in s) {
@@ -3418,6 +3430,12 @@ function setProPath(path, v) {
   let o = state.pro;
   for (let i = 0; i < segs.length - 1; i++) o = o[segs[i]];
   o[segs[segs.length - 1]] = v;
+  // Yksi inflaatiototuus toiseen suuntaan: Pro-kenttä päivittää peruskentän
+  if (path === 'infl' && typeof v === 'number' && isFinite(v)) {
+    state.inflation = clamp(v, 0, 15);
+    const el = $('inflation');
+    if (el) el.value = state.inflation;
+  }
 }
 
 const proCustomSum = () => (state.pro && Array.isArray(state.pro.assets)
@@ -3777,7 +3795,7 @@ function renderProAna() {
     box.innerHTML = rows.map((r) => {
       const pct = Math.round(Math.abs(r.delta) / maxD * 100);
       const pos = r.delta >= 0;
-      return `<div class="tor-row"><span class="tor-l">${r.label}</span>`
+      return `<div class="tor-row"><span class="tor-l" title="${escapeHtml(r.label)}">${r.label}</span>`
         + `<span class="tor-bar"><i class="${pos ? 'pos' : 'neg'}" style="width:${pct}%"></i></span>`
         + `<span class="tor-v ${pos ? 'pos' : 'neg'}">${pos ? '+' : '−'}${fmtCompact(Math.abs(r.delta))}</span></div>`;
     }).join('');
@@ -4803,6 +4821,12 @@ function applySaved(data) {
   // Pro: raakadata talteen — proOf normalisoi ja kiristää rajat käytössä
   state.proOn = !!data.proOn;
   state.pro = data.pro && typeof data.pro === 'object' ? data.pro : null;
+  // Pro päällä: moottori käyttää pro.infl:iä — peruskenttä näyttää saman arvon
+  // eikä valehtele (yksi inflaatiototuus; vain proOn-tallenteille, jottei
+  // passiivinen pro-objekti muuta perustilan käytöstä)
+  if (state.proOn && state.pro && typeof state.pro.infl === 'number' && isFinite(state.pro.infl)) {
+    state.inflation = clamp(state.pro.infl, 0, 15);
+  }
   state.income = typeof data.income === 'number' && isFinite(data.income) ? clamp(data.income, 0, 1e6) : null;
   state.expenses = typeof data.expenses === 'number' && isFinite(data.expenses) ? clamp(data.expenses, 0, 1e6) : null;
   // Uudet kentät: vanhat tallennukset/linkit eivät saa muuttua — jos kenttä
@@ -6027,6 +6051,26 @@ loadFamily();
 loadState();
 initPlans(); // suunnitelmarivit: migraatio, jakolinkki omaksi riviksi, peilin palautus
 loadBaseline();
+
+// Paneelin leveys muistetaan: leventäminen palvelee Pro-analyysien pitkiä
+// rivejä (X-palaute 24.7.2026). Talteen vain leveällä asettelulla — mobiilin
+// automaattileveys ei saa tallentua kiinteäksi.
+(() => {
+  const panel = document.querySelector('.panel');
+  if (!panel) return;
+  try {
+    const w = parseInt(localStorage.getItem('vp-panel-w'), 10);
+    if (w >= 300 && w <= 600) panel.style.width = w + 'px';
+  } catch (e) {}
+  let t = null;
+  new ResizeObserver(() => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      if (!window.matchMedia('(min-width: 981px)').matches) return;
+      try { localStorage.setItem('vp-panel-w', String(Math.round(panel.getBoundingClientRect().width))); } catch (e) {}
+    }, 300);
+  }).observe(panel);
+})();
 syncInputs();
 bindInputs();
 bindActions();

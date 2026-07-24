@@ -64,7 +64,7 @@
           <tr><td>Tuotto-oletukset</td><td>Osakkeet 7&nbsp;%, korot 3&nbsp;%, käteinen 1,5&nbsp;% vuodessa (nimellisinä). Pro-tilassa muokattavissa.</td></tr>
           <tr><td>Inflaatio-oletus</td><td>2&nbsp;%/v (muokattavissa). Inflaatiokorjaus tarkalla Fisher-kaavalla (1+r)/(1+i).</td></tr>
           <tr><td>Monte Carlo</td><td>5&nbsp;000 polkua, kiinteät polkukohtaiset siemenet (CRN) — sama tulos joka ajolla, deltat vertailukelpoisia.</td></tr>
-          <tr><td>Tarkistettu</td><td>14.7.2026 — verosäännöt ja oletukset tarkistetaan vähintään verovuosittain.</td></tr>
+          <tr><td>Tarkistettu</td><td>24.7.2026 — verosäännöt ja oletukset tarkistetaan vähintään verovuosittain. Muutos 24.7.2026: säästön ylittävä lainanhoito rahoitetaan sijoituksista (aiemmin malli oletti erotuksen tulevan mallin ulkopuolelta, mikä aliarvioi ison lainan kustannuksen).</td></tr>
           <tr><td>Lähdekoodi</td><td><a href="https://github.com/olavikurola/varallisuuspolku/blob/main/laskenta.js" rel="noopener">laskenta.js</a> (moottori) · <a href="https://github.com/olavikurola/varallisuuspolku/tree/main/testit" rel="noopener">testit/</a> (automaattiset tarkistukset)</td></tr>
         </tbody>
       </table>
@@ -158,6 +158,8 @@
           <tr><td>Tappioiden vähennysoikeus</td><td>Ei mallinneta — vain voittoja verotetaan, tappiovuosien vähennyksiä ei hyvitetä.</td></tr>
           <tr><td>Hankintameno-olettama nostoissa</td><td>Pro-tilan olettama eläkeajan kuukausinostoissa arvioi omistusajan suunnitelman alusta, ei eräkohtaisesti.</td></tr>
           <tr><td>Kertaerien rahoitus</td><td>Sijoituksista rahoitetut kertamenot (esim. remontti) eivät realisoi myyntivoittoveroa — vero lasketaan vain eläkeajan nostoista ja omaisuuden myynneistä.</td></tr>
+          <tr><td>Lainanhoito yli säästökyvyn</td><td>Kun lainanhoitoerät ylittävät kuukausisäästön, erotus rahoitetaan sijoituksista (kertaerien tapaan verotta). Malli ei siis oleta lisätuloja mistään — kuukausisäästö on ainoa mallinnettu tulovirta työuralla.</td></tr>
+          <tr><td>Odotettu polku vs. mediaani</td><td>Graafin päälinja on tuoton <b>odotusarvopolku</b> (aritmeettinen keskiarvo). Kun tuotto heiluu, tyypillinen eli mediaanilopputulos jää tätä matalammaksi (ns. volatility drag, σ²/2 ≈ 1–2&nbsp;%-yks/v osakepainolla). Ero on tarkoituksella näkyvissä eikä piilossa: epävarmuusviuhka (P10–P90) ja onnistumistodennäköisyys lasketaan Monte&nbsp;Carlo -jakaumasta, jossa drag on täysimääräisesti mukana — mediaanin näet viuhkan keskeltä, ja tavoitteet voi mitoittaa 75–95&nbsp;%:n varmuustasolle pelkän odotusarvon sijaan.</td></tr>
           <tr><td>Työeläke</td><td>Käyttäjän oma arvio kuukausitulona — ei ETK:n laskelma. Työeläkkeen ansiotuloverotusta, kansaneläkettä ja takuueläkettä ei mallinneta.</td></tr>
           <tr><td>Omaisuusluokkien korrelaatio</td><td>Perusversion epävarmuusviuhka olettaa täyskorrelaation (konservatiivinen yksinkertaistus — todellinen hajautushyöty on suurempi). Pro-tilassa korrelaatiot voi asettaa itse.</td></tr>
           <tr><td>Tuottojen jakauma</td><td>Kuukausituotot normaalijakaumasta ilman autokorrelaatiota (Pro: paksuhäntäinen Studentin&nbsp;t). Todelliset markkinat voivat poiketa tästä.</td></tr>
