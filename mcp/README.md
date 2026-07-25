@@ -61,13 +61,15 @@ kertoo sille kaikki kentät ja tapahtumatyypit.
 | `ratkaise_elakeika` | Aikaisin mahdollinen eläkeikä annetulla kuukausitulolla, halutessa Monte Carlo -varmuustasolla |
 | `ratkaise_saasto` | Tarvittava kuukausisäästö annetulla eläkeiällä ja tulotarpeella |
 | `vertaa_suunnitelmia` | 2–4 vaihtoehdon vertailutaulukko, paras arvo merkittynä |
+| `simuloi_perhe` | Koko kotitalous (enintään 4 henkilöä) perhelinkistä: henkilökohtaiset metriikat + perheen yhteinen onnistumis-% koherentilla Monte Carlolla |
 | `suunnitelman_skeema` | Suunnitelma-JSON:n kenttädokumentaatio ja esimerkit agentille |
 
 ## Rajaukset
 
 - **Ei sijoitusneuvontaa**: työkalut laskevat ja vertailevat, eivät suosittele tuotteita tai
   toimia. Jokainen vastaus kantaa tämän muistutuksen.
-- Perhesuunnitelmat (`#f=`-linkit) eivät ole vielä tuettuja.
+- Perhelinkit (`#f=`) käsittelee `simuloi_perhe`; ratkaisijat ja vertailu toimivat
+  yhden henkilön suunnitelmilla.
 - Oletukset ja tunnetut yksinkertaistukset: [validointi.html](https://varallisuuspolku.com/validointi.html).
   Paketti kantaa julkaisuhetken moottorin (verovuoden parametrit vastauksen `moottori`-kentässä) —
   päivitä paketti isojen sivustopäivitysten jälkeen (`npx` tekee tämän automaattisesti).

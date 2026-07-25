@@ -10,7 +10,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { lueSuunnitelma, EVENT_TYPES, SuunnitelmaVirhe, EVENTS_MAX } = require('./sanitoi.js');
+const { lueSuunnitelma, luePerhe, EVENT_TYPES, SuunnitelmaVirhe, EVENTS_MAX, PERHE_MAX } = require('./sanitoi.js');
 
 // Julkaistussa paketissa laskenta.js on kopioitu viereen (prepack);
 // repossa ajettaessa käytetään suoraan juuren tiedostoa — yksi totuus.
@@ -348,6 +348,60 @@ const TYOKALUT = [
     },
   },
 
+  {
+    name: 'simuloi_perhe',
+    title: 'Simuloi perhe',
+    description: `Laskee koko kotitalouden (enintään ${PERHE_MAX} henkilöä): jokaisen henkilön oma elinkaari + perheen yhteinen onnistumistodennäköisyys KOHERENTILLA Monte Carlolla — sama markkinahistoria osuu kaikkiin samaan kalenteriaikaan, joten yhteinen luku ei ole itsenäisten todennäköisyyksien tulo. Syöte: perhelinkki (varallisuuspolku.com#f=…) tai perhe-JSON. Laskee, ei suosittele.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        perhe: {
+          description: 'Perhelinkki (#f=…) tai perhe-JSON {persons:[{name, role, data}, …]} — kunkin henkilön data on sama suunnitelmamuoto kuin yksilötyökaluissa.',
+          anyOf: [{ type: 'string' }, { type: 'object' }],
+        },
+        polkuja: POLKUJA_SCHEMA,
+      },
+      required: ['perhe'],
+    },
+    run(args) {
+      const henkilot = luePerhe(args.perhe);
+      const polut = polutOf(args);
+      const simit = henkilot.map((h) => L.simulate(h.st, { paths: polut, sustainable: true }));
+      // Koherentti kotitalous-MC: kaikki polut jakavat henkilön 1 shokkijonon —
+      // sama moottorifunktio jota sivuston perhetila käyttää
+      const joint = L.mcHousehold(henkilot.map((h) => h.st), { paths: polut });
+      const yhteis = L.householdExp(simit);
+      const rakenne = {
+        polkuja: polut,
+        perheenOnnistumisTodennakoisyysPct: r1(joint.successProb * 100),
+        yhteisvarallisuusLopussaEur: Math.round(yhteis[joint.months]),
+        henkilot: henkilot.map((h, i) => ({
+          nimi: h.nimi,
+          rooli: h.rooli,
+          metriikat: metriikat(simit[i]),
+        })),
+        huomiot: [
+          'Perheen onnistuminen = KAIKKI henkilöt selviävät samassa markkinahistoriassa (koherentti MC).',
+          ...henkilot.flatMap((h, i) => huomiot(simit[i], h.st)
+            .filter((t) => !t.startsWith('Luvut ovat'))
+            .map((t) => `${h.nimi}: ${t}`)),
+          henkilot[0].st.real ? 'Luvut ovat reaalieuroja (inflaatiokorjattu).' : 'Luvut ovat nimellisiä euroja.',
+        ],
+      };
+      const rivit = [
+        `Perhe (${henkilot.length} henkilöä, ${polut} polkua): yhteinen onnistumistodennäköisyys ${rakenne.perheenOnnistumisTodennakoisyysPct} % — kaikki selviävät samassa markkinahistoriassa.`,
+        `Yhteisvarallisuus suunnitelmien lopussa: ${eur(rakenne.yhteisvarallisuusLopussaEur)}.`,
+        ...rakenne.henkilot.map((h) => {
+          const m = h.metriikat;
+          return `${h.nimi}${h.rooli === 'child' ? ' (lapsi)' : ''}: onnistuminen ${m.onnistumisTodennakoisyysPct} %` +
+            (m.elakeika != null ? `, eläkkeelle ${m.elakeika} v` : '') +
+            (m.kestavaKuukausituloEur != null ? `, kestävä tulo ${eur(m.kestavaKuukausituloEur)}/kk` : '') +
+            `, loppuvarallisuus ${eur(m.loppuvarallisuusEur)}.`;
+        }),
+      ];
+      return kehys(rakenne, rivit.join('\n'));
+    },
+  },
   {
     name: 'suunnitelman_skeema',
     title: 'Suunnitelman skeema',

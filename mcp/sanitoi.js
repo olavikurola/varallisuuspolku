@@ -58,7 +58,7 @@ function puraSuunnitelma(input) {
   }
   const s = input.trim();
   if (s.includes('#f=')) {
-    virhe('Perhelinkit (#f=) eivät ole vielä tuettuja — anna yhden henkilön jakolinkki (#s=) tai suunnitelma-JSON.');
+    virhe('Tämä on perhelinkki (#f=) — käytä simuloi_perhe-työkalua, joka laskee koko kotitalouden.');
   }
   let b64 = null;
   const hash = s.indexOf('#s=');
@@ -215,4 +215,55 @@ function lueSuunnitelma(input) {
   return sanitoiSuunnitelma(puraSuunnitelma(input));
 }
 
-module.exports = { puraSuunnitelma, sanitoiSuunnitelma, lueSuunnitelma, EVENT_TYPES, SuunnitelmaVirhe, EVENTS_MAX };
+/* Perhelinkin purku ja validointi: #f= kantaa {persons:[{pid,name,role,child,
+   data}], active} — kunkin henkilön data on sama serialize()-muoto kuin
+   yksilösuunnitelmassa, joten se kulkee saman sanitoijan läpi. */
+const PERHE_MAX = 4;
+function puraPerhe(input) {
+  if (input && typeof input === 'object') return input;
+  if (typeof input !== 'string' || !input.trim()) {
+    virhe('perhe puuttuu: anna perhelinkki (varallisuuspolku.com#f=…) tai perhe-JSON-objekti.');
+  }
+  const s = input.trim();
+  let b64 = null;
+  const hash = s.indexOf('#f=');
+  const single = s.indexOf('#s=');
+  if (single >= 0 && hash < 0) {
+    virhe('Tämä on yhden henkilön jakolinkki (#s=) — käytä simuloi_suunnitelma-työkalua, tai anna perhelinkki (#f=).');
+  }
+  if (hash >= 0) b64 = s.slice(hash + 3);
+  else if (s.startsWith('{')) {
+    try { return JSON.parse(s); }
+    catch (e) { virhe('Perhe-JSON ei jäsenny: ' + e.message); }
+  } else b64 = s;
+  let json;
+  try { json = Buffer.from(b64, 'base64').toString('utf8'); }
+  catch (e) { virhe('Perhelinkin base64-osa ei purkaudu.'); }
+  try { return JSON.parse(json); }
+  catch (e) { virhe('Perhelinkki ei sisällä kelvollista perhettä (JSON ei jäsenny). Tarkista että linkki kopioitui kokonaan.'); }
+}
+
+function luePerhe(input) {
+  const raw = puraPerhe(input);
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.persons)) {
+    virhe('perheen pitää olla objekti jossa persons-taulukko: {persons:[{name, data}, …]}.');
+  }
+  if (raw.persons.length < 1) virhe('perheessä pitää olla vähintään yksi henkilö.');
+  if (raw.persons.length > PERHE_MAX) virhe(`perheessä voi olla enintään ${PERHE_MAX} henkilöä.`);
+  return raw.persons.map((p, i) => {
+    if (!p || typeof p !== 'object') virhe(`henkilö ${i + 1} ei ole objekti.`);
+    let st;
+    try { st = sanitoiSuunnitelma(p.data); }
+    catch (e) {
+      if (e instanceof SuunnitelmaVirhe) virhe(`henkilö ${i + 1} (${p.name || 'nimetön'}): ${e.message}`);
+      throw e;
+    }
+    return {
+      nimi: typeof p.name === 'string' && p.name.trim() ? p.name.trim().slice(0, 16) : `Henkilö ${i + 1}`,
+      rooli: p.role === 'spouse' || p.role === 'child' ? p.role : (i === 0 ? 'me' : (st.ageNow < 18 ? 'child' : 'spouse')),
+      st,
+    };
+  });
+}
+
+module.exports = { puraSuunnitelma, sanitoiSuunnitelma, lueSuunnitelma, puraPerhe, luePerhe, EVENT_TYPES, SuunnitelmaVirhe, EVENTS_MAX, PERHE_MAX };

@@ -68,7 +68,7 @@ console.log('Sanitoija: virheet ovat selkokielisiä');
   ok(heittaa({ ageNow: 30 }, 'ageEnd'), 'puuttuva pakollinen kenttä nimetään');
   ok(heittaa({ ...PLAN(), events: undefined }, 'events'), 'puuttuva events kerrotaan');
   ok(heittaa({ ...PLAN(), events: [{ type: 'yacht', age: 40 }] }, 'yacht'), 'tuntematon tapahtumatyyppi nimetään');
-  ok(heittaa('#f=' + Buffer.from('{}').toString('base64'), 'Perhelinkit'), 'perhelinkki → kohtelias virhe');
+  ok(heittaa('#f=' + Buffer.from('{}').toString('base64'), 'simuloi_perhe'), 'perhelinkki yksilöpurussa → ohjaus simuloi_perheeseen');
   ok(heittaa('https://varallisuuspolku.com#s=roska!!!', 'kelvollista'), 'roskabase64 → selkeä virhe');
   ok(heittaa({ ...PLAN(), events: [PLAN().events[2], PLAN().events[2]] }, 'vain yksi'), 'kaksi eläketapahtumaa torjutaan');
 }
@@ -114,7 +114,7 @@ const kutsu = (name, args) => rpc('tools/call', { name, arguments: args });
     const ping = await rpc('ping', {});
     ok(ping.result && Object.keys(ping.result).length === 0, 'ping vastaa');
     const lista = await rpc('tools/list', {});
-    ok(lista.result.tools.length === 5, 'tools/list: 5 työkalua');
+    ok(lista.result.tools.length === 6, 'tools/list: 6 työkalua');
     ok(lista.result.tools.every((t) => t.description.toLowerCase().includes('ei suosittele') || t.name === 'suunnitelman_skeema'), 'ei-neuvonta-linja työkalukuvauksissa');
   }
 
@@ -199,6 +199,41 @@ const kutsu = (name, args) => rpc('tools/call', { name, arguments: args });
     const esim2 = await kutsu('simuloi_suunnitelma', { suunnitelma: sc.esimerkit.tapahtumarikas });
     ok(!esim2.result.isError, 'tapahtumarikas esimerkki simuloituu (omistus+lapsi+mökki+conf-tavoite)');
     ok(esim2.result.structuredContent.ratkaistu && esim2.result.structuredContent.ratkaistu.tavoite === 'withdrawal', 'esimerkin tavoitetila ratkaistaan');
+  }
+
+  console.log('simuloi_perhe — koherentti kotitalous-MC');
+  {
+    const puoliso = PLAN();
+    puoliso.ageNow = 32; puoliso.monthly = 700;
+    puoliso.events.find((e) => e.type === 'retirement').age = 63;
+    const perhe = {
+      persons: [
+        { pid: 'p0', name: 'Minä', role: 'me', data: PLAN() },
+        { pid: 'p1', name: 'Puoliso', role: 'spouse', data: puoliso },
+      ],
+      active: 0,
+    };
+    const linkki = 'https://varallisuuspolku.com#f=' + Buffer.from(JSON.stringify(perhe), 'utf8').toString('base64');
+    const r = await kutsu('simuloi_perhe', { perhe: linkki });
+    ok(!r.result.isError, 'perhelinkki purkautuu ja laskenta onnistuu');
+    const sc = r.result.structuredContent;
+    ok(sc.henkilot.length === 2 && sc.henkilot[1].nimi === 'Puoliso' && sc.henkilot[1].rooli === 'spouse', 'molemmat henkilöt rooleineen mukana');
+    const suora = L.mcHousehold(S.luePerhe(perhe).map((h) => h.st), { paths: 300 });
+    ok(sc.perheenOnnistumisTodennakoisyysPct === r1(suora.successProb * 100), 'perheen onnistumis-% bitilleen moottorin mcHouseholdista', `${sc.perheenOnnistumisTodennakoisyysPct} vs ${r1(suora.successProb * 100)}`);
+    const yksin = await kutsu('simuloi_suunnitelma', { suunnitelma: PLAN() });
+    ok(sc.henkilot[0].metriikat.onnistumisTodennakoisyysPct === yksin.result.structuredContent.metriikat.onnistumisTodennakoisyysPct, 'henkilön oma metriikka sama kuin yksilötyökalussa');
+    // Koherenssitodistus: identtiset henkilöt jakavat saman markkinahistorian →
+    // yhteinen onnistuminen on p, EI p² (sama todistus kuin sivuston testeissä)
+    const kaksois = L.mcHousehold([S.lueSuunnitelma(PLAN()), S.lueSuunnitelma(PLAN())], { paths: 300 });
+    const yksi = L.mcHousehold([S.lueSuunnitelma(PLAN())], { paths: 300 });
+    ok(kaksois.successProb === yksi.successProb, 'koherenssi: identtiset henkilöt → sama onnistumis-% (p, ei p²)');
+    // Ristiinohjaus: väärä linkkityyppi opastaa oikeaan työkaluun
+    const vaara1 = await kutsu('simuloi_suunnitelma', { suunnitelma: linkki });
+    ok(vaara1.result.isError && vaara1.result.content[0].text.includes('simuloi_perhe'), '#f= yksilötyökalussa → opastus simuloi_perheeseen');
+    const vaara2 = await kutsu('simuloi_perhe', { perhe: linkiksi(PLAN()) });
+    ok(vaara2.result.isError && vaara2.result.content[0].text.includes('simuloi_suunnitelma'), '#s= perhetyökalussa → opastus simuloi_suunnitelmaan');
+    const liikaa = await kutsu('simuloi_perhe', { perhe: { persons: [1, 2, 3, 4, 5].map(() => ({ name: 'X', data: PLAN() })) } });
+    ok(liikaa.result.isError && liikaa.result.content[0].text.includes('enintään'), 'yli 4 henkilöä torjutaan');
   }
 
   console.log('Protokollavirheet');
