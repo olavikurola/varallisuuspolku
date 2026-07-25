@@ -1627,7 +1627,7 @@ body.pro .pro-switch { border-color: rgba(139, 124, 246, 0.55); }
 
 /* ---------- Perhevirta: henkilöchipit ja yhteiskäyrä ---------- */
 .fam-chips { display: inline-flex; gap: 5px; margin-left: 10px; vertical-align: 1px; }
-.fam-add, .fam-chip, .fam-del {
+.fam-add, .fam-chip {
   font: inherit;
   font-size: 11px;
   font-weight: 600;
@@ -1649,8 +1649,11 @@ body.pro .pro-switch { border-color: rgba(139, 124, 246, 0.55); }
   border-color: rgba(45, 212, 191, 0.5);
   background: rgba(45, 212, 191, 0.08);
 }
-.fam-del { padding: 2px 7px; opacity: 0.6; }
-.fam-del:hover, .fam-del.armed { color: var(--danger); border-color: rgba(248, 113, 113, 0.5); opacity: 1; }
+/* Poistorasti aktiivisen chipin sisällä — erillisenä nappina se valui
+   kortin reunan yli kolmella henkilöllä */
+.fam-del { display: inline-block; margin-left: 6px; padding: 0 2px; opacity: 0.55; font-size: 10px; line-height: 1; cursor: pointer; border-radius: 6px; }
+.fam-del:hover, .fam-del:focus-visible, .fam-del.armed { color: var(--danger); opacity: 1; outline: none; }
+.fam-del.armed { text-shadow: 0 0 6px rgba(248, 113, 113, 0.6); }
 /* Tietoa ja usein kysyttyä: indeksoitava sisältö paneelin hännillä */
 .about-body p { margin: 0 0 10px; font-size: 12.5px; line-height: 1.6; color: var(--text-dim); }
 .about-body strong { color: var(--text); }

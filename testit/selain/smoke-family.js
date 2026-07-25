@@ -210,6 +210,27 @@ const { chromium } = require('playwright');
   await page.keyboard.press('Escape');
   await page.waitForTimeout(400);
 
+  // ✕ pysyy näkyvissä myös kolmella henkilöllä (regressio: erillisenä rivin
+  // viimeisenä nappina rasti valui kortin reunan yli eikä koskaan näkynyt)
+  await page.click('#familyChips .fam-add');
+  await page.waitForTimeout(300);
+  await page.click('.menu button:has-text("Lapsi")');
+  await page.waitForTimeout(600);
+  ok(await page.evaluate(() => family.persons.length === 3 && family.active === 2), 'lapsi lisätty (3 henkilöä)');
+  ok(await page.evaluate(() => {
+    const del = document.querySelector('#familyChips .fam-del');
+    if (!del) return false;
+    const chip = del.closest('.fam-chip');
+    const row = del.closest('h2') || del.closest('#familyChips').parentElement;
+    const dr = del.getBoundingClientRect();
+    return !!chip && dr.width > 0 && dr.right <= row.getBoundingClientRect().left + row.clientWidth + 1;
+  }), '✕ aktiivisen chipin sisällä ja näkyvissä');
+  await page.click('#familyChips .fam-del');
+  await page.waitForTimeout(200);
+  await page.click('#familyChips .fam-del');
+  await page.waitForTimeout(400);
+  ok(await page.evaluate(() => familyOn() && family.persons.length === 2 && family.active === 0), 'lapsen poisto palauttaa kahteen henkeen');
+
   // poisto: kaksi napautusta, paluu yksin-tilaan — ✕ näkyy vain puolison ollessa aktiivinen
   if (await page.evaluate(() => family.active === 0)) {
     await page.click('#familyChips .fam-chip:nth-child(2)');

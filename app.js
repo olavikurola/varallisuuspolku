@@ -4300,10 +4300,14 @@ function renderFamilyChips() {
   box.innerHTML = family.persons.map((p, ci) => {
     const kidIdx = family.persons.slice(0, ci).filter((x) => x.child).length;
     const style = p.child ? ` style="--kid:${kidColor(kidIdx)}"` : '';
-    return `<button class="fam-chip${ci === family.active ? ' on' : ''}${p.child ? ' kid' : ''}" data-fam="p${ci}"${style} title="${ci === family.active ? 'Kaksoisnapautus nimeää' : 'Vaihda: ' + escapeHtml(p.name)}">${escapeHtml(p.name)}</button>`;
+    // Poistorasti asuu aktiivisen chipin sisällä — rivin viimeisenä nappina se
+    // valui kortin reunan yli kolmella henkilöllä eikä koskaan näkynyt
+    const del = ci === family.active && ci > 0
+      ? `<span class="fam-del${famRemoveArm ? ' armed' : ''}" data-fam="del" role="button" tabindex="0" aria-label="Poista ${escapeHtml(p.name)}" title="Poista ${escapeHtml(p.name)}">✕</span>`
+      : '';
+    return `<button class="fam-chip${ci === family.active ? ' on' : ''}${p.child ? ' kid' : ''}" data-fam="p${ci}"${style} title="${ci === family.active ? 'Kaksoisnapautus nimeää' : 'Vaihda: ' + escapeHtml(p.name)}">${escapeHtml(p.name)}${del}</button>`;
   }).join('')
-    + (family.persons.length < FAM_MAX ? '<button class="fam-add" data-fam="add" title="Lisää puoliso tai lapsi">＋</button>' : '')
-    + (family.active > 0 ? `<button class="fam-del${famRemoveArm ? ' armed' : ''}" data-fam="del" title="Poista ${escapeHtml(currentName())}">✕</button>` : '');
+    + (family.persons.length < FAM_MAX ? '<button class="fam-add" data-fam="add" title="Lisää puoliso tai lapsi">＋</button>' : '');
 }
 
 function bindFamily() {
@@ -4320,6 +4324,15 @@ function bindFamily() {
       const i = +k.slice(1);
       if (i !== family.active) switchPerson(i);
     }
+  });
+  // Poistorasti on span chipin sisällä — Enter/välilyönti ei laukea natiivisti
+  box.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const b = e.target.closest && e.target.closest('[data-fam="del"]');
+    if (!b) return;
+    e.preventDefault();
+    e.stopPropagation();
+    removePerson();
   });
   $('famMountainBtn').addEventListener('click', openMountain);
   $('mountainClose').addEventListener('click', () => { $('mountainModal').hidden = true; });
