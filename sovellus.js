@@ -419,8 +419,6 @@ function openMoreMenu(anchor) {
       if (baseline) { clearBaseline(); toast('Vertailu poistettu'); }
       else { setBaseline(); toast('Vertailukohta tallennettu — erot näkyvät, kun muutat suunnitelmaa'); }
     });
-  add('mi-share-img', 'Jaa tuloskuva', 'Kuva suunnitelmasi päätuloksista someen tai kaverille',
-    () => shareResultImage('valikko'));
   add('mi-analytics', 'Tilastot', 'Miten muut suunnittelevat vaurastumista — avoin data',
     () => { location.href = 'analytiikka.html'; });
   add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti yhdeksällä klikkauksella',
@@ -1557,6 +1555,12 @@ function openPlanMenu(btn, p, rowEl) {
     try { await navigator.clipboard.writeText(url); toast('Linkki kopioitu — koko suunnitelma kulkee linkissä'); }
     catch (e) { window.prompt('Kopioi linkki', url); }
     track('Jakolinkki luotu', { tyyppi: p.family && p.family.persons && p.family.persons.length > 1 ? 'perhe' : 'oma' });
+  });
+  add('Jaa tuloskuvana', () => {
+    // Kuva piirtyy aktiivisesta simulaatiosta — aktivoidaan rivi ensin
+    // (sama malli kuin Raportissa; stay pitää käyttäjän suunnitelmakodissa)
+    activatePlan(p.id, { stay: true });
+    shareResultImage('suunnitelmat');
   });
   add('Kopioi skenaarioksi', () => {
     const c = addPlanRow(planClone(p.data), planClone(p.family), planUniqueName('Kopio: ' + p.nimi).slice(0, 40), 'kopio');
