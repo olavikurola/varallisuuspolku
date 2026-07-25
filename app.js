@@ -17,6 +17,11 @@ const EVENT_TYPES = {
   recurring:   { icon: '💳', label: 'Kuukausimeno',        amount: 0,       loan: CONSUMER_LOAN, defaultFin: 'cash', rec: { monthly: -200, years: 10 } },
   sidegig:     { icon: '💼', label: 'Sivutulo',            amount: 0,       loan: CONSUMER_LOAN, defaultFin: 'cash', rec: { monthly: 300, years: 10 } },
   cottage:     { icon: '🏡', label: 'Mökki / vene',        amount: -120000, loan: { share: 0.25, rate: 4.0, years: 15 }, defaultFin: 'loan', asset: { appr: 2.0 } },
+  // Omistukset: nykytila alkuehtona — ei ostohetken kassavirtaa, vain jäljellä
+  // oleva laina hoitoerineen (OMISTUKSET.md). own = lainaoletukset, amount = −nykyarvo.
+  ownHome:     { icon: '🔑', label: 'Oma asunto',          amount: -250000, owned: true, asset: { appr: 2.0 }, own: { loanLeft: 120000, rate: 3.5, years: 18 } },
+  ownFlat:     { icon: '🏢', label: 'Sijoitusasunto',      amount: -180000, owned: true, asset: { appr: 2.0 }, own: { loanLeft: 100000, rate: 3.5, years: 15 }, rec: { monthly: 650, years: 30 } },
+  ownCottage:  { icon: '🌲', label: 'Oma mökki / vene',    amount: -120000, owned: true, asset: { appr: 2.0 }, own: { loanLeft: 40000, rate: 4.0, years: 10 } },
   inheritance: { icon: '💎', label: 'Perintö / lahja',     amount: 60000 },
   bonus:       { icon: '💰', label: 'Bonus / myyntivoitto', amount: 20000 },
   // Tavoitepiste on mittari, ei kassavirta (metric): simulaattori ohittaa sen,
@@ -135,6 +140,15 @@ function buildDonationPayload(st, s) {
         ev.isAsset = true;
         if (e.appr != null) ev.appr = Math.round(e.appr * 10) / 10;
         if (e.sellAge != null) { ev.sellAge = Math.round(e.sellAge); ev.sellTaxFree = !!e.sellTaxFree; }
+      }
+      // Omistus: nykytila-kentät (ei ostovuotta — ei tarpeen aggregaateille)
+      if (e.owned) {
+        ev.owned = true;
+        if ((e.loanLeft || 0) > 0) {
+          ev.loanLeft = round2sig(e.loanLeft);
+          if (e.rate != null) ev.rate = Math.round(e.rate * 10) / 10;
+          if (e.years != null) ev.years = Math.round(e.years);
+        }
       }
       if (e.recMonthly) {
         ev.recMonthly = round2sig(e.recMonthly);
@@ -560,7 +574,8 @@ function renderChart(reuse = false) {
   for (const ev of sorted) {
     if (ev.type === 'goal') continue;
     const def = EVENT_TYPES[ev.type];
-    const age = clamp(ev.age, a0, a1);
+    // Omistus ankkuroituu nykyhetkeen (vasen reuna) tallennetusta iästä riippumatta
+    const age = ev.owned ? a0 : clamp(ev.age, a0, a1);
     const m = clamp(Math.round((age - a0) * 12), 0, months);
     const x = scaleX(age);
     const cy = scaleY(sim.exp[m]);
@@ -596,6 +611,10 @@ function renderChart(reuse = false) {
       const wd = g === 'withdrawal' && sim.solvedWithdrawal != null ? sim.solvedWithdrawal : ev.withdrawal;
       const penTxt = ev.pension > 0 ? ` · työeläke ${fmtEur(ev.pension)}/kk` : '';
       tdesc = fmtEur(wd) + '/kk tuloa' + penTxt + (g === 'withdrawal' ? ' (kestävä)' : g === 'age' ? ' (aikaisin eläkeikä)' : '');
+    } else if (ev.owned) {
+      const left = Math.max(0, ev.loanLeft || 0);
+      tdesc = `arvo ${fmtEur(-ev.amount)}` +
+        (left > 0 ? ` · lainaa ${fmtEur(left)} (${fmtEur(loanPayment(left, ev.rate || 0, Math.max(1, ev.years || 10)))}/kk)` : '');
     } else if (ev.amount < 0 && ev.financing === 'loan') {
       const pmt = loanPayment(Math.max(0, -ev.amount - (ev.down || 0)), ev.rate || 0, ev.years || 10);
       tdesc = `${fmtEur(ev.amount)} · lainalla ${fmtEur(pmt)}/kk`;
@@ -607,7 +626,7 @@ function renderChart(reuse = false) {
       if (ev.isAsset && ev.sellAge != null) tdesc += ` · myynti ${Math.round(ev.sellAge)} v`;
       if (ev.shared) tdesc += ' · jaettu puoliksi (oma osuus)';
     }
-    title.textContent = `${evLabel(ev)} · ${Math.round(ev.age)} v · ${tdesc}`;
+    title.textContent = `${evLabel(ev)} · ${ev.owned ? 'omistan nyt' : Math.round(ev.age) + ' v'} · ${tdesc}`;
 
     g.addEventListener('pointerdown', (e) => {
       // Piirtotilassa valintamalli: napautus valitsee, veto valitusta säätää.
@@ -860,6 +879,7 @@ function startMarkerDrag(e, ev) {
   const onMove = (e2) => {
     if (Math.abs(e2.clientX - startPX) > 4) moved = true;
     if (!moved) return;
+    if (ev.owned) return; // omistus ankkuroituu nykyhetkeen — ei ikävetoa
     const rect = svg.getBoundingClientRect();
     const age = Math.round(invX(clamp(e2.clientX - rect.left, plot.l, plot.l + plot.w)));
     if (age !== ev.age) {
@@ -991,6 +1011,17 @@ function addEvent(type, age) {
       ev.age = clamp(Math.round(age), state.ageNow + 1, state.ageEnd);
       const m = sim ? clamp(Math.round((ev.age - sim.a0) * 12), 0, sim.months) : null;
       ev.amount = Math.max(5000, snapTo(m != null ? sim.exp[m] : def.amount, 5000));
+    } else if (def.owned) {
+      // Omistus: nykytilan alkuehto — ikä aina nykyhetki, ei rahoitusvalintaa
+      ev.age = state.ageNow;
+      ev.owned = true;
+      ev.amount = def.amount;
+      ev.isAsset = true;
+      ev.appr = def.asset.appr;
+      ev.loanLeft = def.own.loanLeft;
+      ev.rate = def.own.rate;
+      ev.years = def.own.years;
+      if (def.rec) { ev.recMonthly = def.rec.monthly; ev.recYears = def.rec.years; }
     } else {
       ev.amount = def.amount;
       ev.financing = def.defaultFin || 'cash';
@@ -1085,6 +1116,60 @@ function openPopover(id) {
         ? `<label class="field"><span class="field-label">${out ? 'Saaja' : 'Antaja'}</span>` +
           `<span class="input"><select id="pv-peer">${peers.map((x) => `<option value="${x.p.pid}"${x.i === ti ? ' selected' : ''}>${escapeHtml(x.p.name)}</option>`).join('')}</select></span></label>`
         : `<p class="note">${out ? 'Saaja' : 'Antaja'}: <b>${escapeHtml(family.persons[ti] ? family.persons[ti].name : '?')}</b></p>`);
+  } else if (ev.owned) {
+    // Omistus: nykytila kolmella luvulla — ei ikää (aina nyt), ei rahoitusta.
+    // pv-appr/pv-sell/pv-sellage/pv-selltf/pv-rec uusiokäyttävät yleiset listenerit.
+    const hasLoan = (ev.loanLeft || 0) > 0;
+    const selling = ev.sellAge != null;
+    fields =
+      `<p class="note">Omistat jo — arvo lasketaan varallisuuteen ja lainanhoito kassavirtaan nykyhetkestä alkaen. Luvut löytyvät verkkopankista.</p>` +
+      `<div class="row2">` +
+      `<label class="field"><span class="field-label">Nykyarvo</span>` +
+      `<span class="input"><input id="pv-own-val" type="number" min="0" step="5000" value="${Math.round(-ev.amount)}" /><em>€</em></span></label>` +
+      `<label class="field"><span class="field-label">Arvonmuutos</span>` +
+      `<span class="input"><input id="pv-appr" type="number" min="-30" max="15" step="0.5" value="${ev.appr != null ? ev.appr : 2}" /><em>%/v</em></span></label>` +
+      `</div>` +
+      `<label class="field"><span class="field-label">Lainaa jäljellä</span>` +
+      `<span class="input"><input id="pv-own-loan" type="number" min="0" step="5000" value="${Math.round(ev.loanLeft || 0)}" /><em>€</em></span></label>`;
+    if (hasLoan) {
+      fields +=
+        `<div class="row2">` +
+        `<label class="field"><span class="field-label">Korko</span>` +
+        `<span class="input"><input id="pv-rate" type="number" min="0" max="25" step="0.1" value="${ev.rate != null ? ev.rate : 3.5}" /><em>%/v</em></span></label>` +
+        `<label class="field"><span class="field-label">Vuosia jäljellä</span>` +
+        `<span class="input"><input id="pv-years" type="number" min="1" max="40" step="1" value="${ev.years != null ? ev.years : 10}" /><em>v</em></span></label>` +
+        `</div>` +
+        `<p class="note loan-note" id="pv-loan-note"></p>`;
+    }
+    fields +=
+      `<label class="toggle" style="margin-top:10px"><input id="pv-sell" type="checkbox" ${selling ? 'checked' : ''} /><span class="switch"></span>` +
+      `<span>Myyn kohteen <small>arvo sijoituksiin, laina pois, vero voitosta</small></span></label>`;
+    if (selling) {
+      fields +=
+        `<label class="field" style="margin-top:10px"><span class="field-label">Myynti-ikä</span>` +
+        `<span class="input"><input id="pv-sellage" type="number" min="${Math.ceil(ev.age) + 1}" max="${state.ageEnd}" step="1" value="${Math.round(ev.sellAge)}" /><em>v</em></span></label>` +
+        `<label class="toggle"><input id="pv-selltf" type="checkbox" ${ev.sellTaxFree ? 'checked' : ''} /><span class="switch"></span>` +
+        `<span>Verovapaa myynti <small>esim. oma asunto, asuttu ≥ 2 v</small></span></label>` +
+        (!ev.sellTaxFree
+          ? `<label class="field" style="margin-top:10px"><span class="field-label">Ostovuosi <small>hankintameno-olettamaan</small></span>` +
+            `<span class="input"><input id="pv-own-year" type="number" min="1950" max="${new Date().getFullYear()}" step="1" value="${ev.boughtYear || ''}" placeholder="esim. 2019" /></span></label>`
+          : '') +
+        `<p class="note sale-note" id="pv-sale-note"></p>`;
+    }
+    // Vuokratulo tms. toistuva erä — sama lohko kuin hankinnoilla
+    const hasRecO = ev.recMonthly != null;
+    fields +=
+      `<label class="toggle" style="margin-top:10px"><input id="pv-rec" type="checkbox" ${hasRecO ? 'checked' : ''} /><span class="switch"></span>` +
+      `<span>Toistuva kuukausierä <small>esim. vuokratulo tai vastike</small></span></label>`;
+    if (hasRecO) {
+      fields +=
+        `<div class="row2" style="margin-top:10px">` +
+        `<label class="field"><span class="field-label">Erä (− meno, + tulo)</span>` +
+        `<span class="input"><input id="pv-recm" type="number" step="50" value="${ev.recMonthly}" /><em>€/kk</em></span></label>` +
+        `<label class="field"><span class="field-label">Kesto</span>` +
+        `<span class="input"><input id="pv-recy" type="number" min="1" max="60" step="1" value="${Math.round(ev.recYears != null ? ev.recYears : 10)}" /><em>v</em></span></label>` +
+        `</div>`;
+    }
   } else {
     fields =
       `<label class="field"><span class="field-label">Ikä</span>` +
@@ -1195,26 +1280,29 @@ function openPopover(id) {
     // Monista tapahtuma vuotta myöhemmäksi (esim. toinen lapsi tai auto)
     const copy = JSON.parse(JSON.stringify(ev));
     copy.id = idSeq++;
-    copy.age = clamp(Math.round(ev.age) + 1, state.ageNow, state.ageEnd);
+    copy.age = copy.owned ? state.ageNow : clamp(Math.round(ev.age) + 1, state.ageNow, state.ageEnd);
     if (copy.sellAge != null) copy.sellAge = clamp(copy.sellAge + 1, copy.age + 1, state.ageEnd);
     state.events.push(copy);
     renderAll();
     openPopover(copy.id);
   });
-  $('pv-age').addEventListener('input', (e) => {
-    const v = parseFloat(e.target.value);
-    // Keskeneräinen syöte (esim. "6" matkalla lukuun 65) ei muuta tilaa
-    if (isNaN(v) || v < state.ageNow || v > state.ageEnd) return;
-    ev.age = v;
-    renderAllKeepPopover();
-  });
-  $('pv-age').addEventListener('change', (e) => {
-    const v = parseFloat(e.target.value);
-    if (!isNaN(v)) ev.age = clamp(v, state.ageNow, state.ageEnd);
-    if (ev.sellAge != null && ev.sellAge <= ev.age) ev.sellAge = ev.age + 1;
-    e.target.value = Math.round(ev.age * 10) / 10;
-    renderAllKeepPopover();
-  });
+  const ageI = $('pv-age'); // omistuksilla ei ikäkenttää (aina nykyhetki)
+  if (ageI) {
+    ageI.addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value);
+      // Keskeneräinen syöte (esim. "6" matkalla lukuun 65) ei muuta tilaa
+      if (isNaN(v) || v < state.ageNow || v > state.ageEnd) return;
+      ev.age = v;
+      renderAllKeepPopover();
+    });
+    ageI.addEventListener('change', (e) => {
+      const v = parseFloat(e.target.value);
+      if (!isNaN(v)) ev.age = clamp(v, state.ageNow, state.ageEnd);
+      if (ev.sellAge != null && ev.sellAge <= ev.age) ev.sellAge = ev.age + 1;
+      e.target.value = Math.round(ev.age * 10) / 10;
+      renderAllKeepPopover();
+    });
+  }
   const am = $('pv-amount');
   if (am) am.addEventListener('input', (e) => {
     const v = parseFloat(e.target.value);
@@ -1232,6 +1320,31 @@ function openPopover(id) {
     e.target.value = ev.amount;
     renderAllKeepPopover();
   });
+  // Omistuksen kentät: nykyarvo, lainaa jäljellä, ostovuosi
+  const ownVal = $('pv-own-val');
+  if (ownVal) ownVal.addEventListener('input', (e) => {
+    const v = parseFloat(e.target.value);
+    if (!isNaN(v)) { ev.amount = -clamp(v, 0, 1e9); updateSaleNote(); renderAllKeepPopover(); }
+  });
+  const ownLoan = $('pv-own-loan');
+  if (ownLoan) {
+    ownLoan.addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value);
+      if (!isNaN(v)) { ev.loanLeft = clamp(v, 0, 1e9); updateLoanNote(); renderAllKeepPopover(); }
+    });
+    // 0 ↔ >0: korko- ja aikakentät ilmestyvät tai poistuvat
+    ownLoan.addEventListener('change', () => openPopover(id));
+  }
+  const ownYear = $('pv-own-year');
+  if (ownYear) ownYear.addEventListener('change', (e) => {
+    const v = parseInt(e.target.value, 10);
+    const yNow = new Date().getFullYear();
+    if (!isNaN(v) && v >= 1950 && v <= yNow) { ev.boughtYear = v; ev.ownYears = clamp(yNow - v, 0, 90); }
+    else { delete ev.boughtYear; ev.ownYears = 0; e.target.value = ''; }
+    renderAllKeepPopover();
+    updateSaleNote();
+  });
+
   const sh = $('pv-shared');
   if (sh) sh.addEventListener('change', (e) => {
     if (e.target.checked) {
@@ -1324,8 +1437,11 @@ function openPopover(id) {
   const updateLoanNote = () => {
     const note = $('pv-loan-note');
     if (!note) return;
+    // Omistukselle pääoma on jäljellä oleva laina, ostolle hinta − käsiraha
     const price = Math.max(0, -ev.amount);
-    const principal = Math.max(0, price - clamp(ev.down || 0, 0, price));
+    const principal = ev.owned
+      ? Math.max(0, ev.loanLeft || 0)
+      : Math.max(0, price - clamp(ev.down || 0, 0, price));
     const pmt = loanPayment(principal, ev.rate || 0, ev.years || 10);
     const interest = pmt * Math.round((ev.years || 10) * 12) - principal;
     // Erät maksetaan säästövirrasta (laskenta.js runPath) — kerro se tässä,
@@ -1409,7 +1525,7 @@ function openPopover(id) {
   if (sellToggle) sellToggle.addEventListener('change', (e) => {
     if (e.target.checked) {
       ev.sellAge = clamp(Math.round(ev.age) + 10, ev.age + 1, state.ageEnd);
-      ev.sellTaxFree = ev.type === 'home';
+      ev.sellTaxFree = ev.type === 'home' || ev.type === 'ownHome';
     } else {
       delete ev.sellAge; delete ev.sellTaxFree;
     }
@@ -1437,6 +1553,7 @@ function openPopover(id) {
   if (sellTf) sellTf.addEventListener('change', (e) => {
     ev.sellTaxFree = e.target.checked;
     renderAllKeepPopover();
+    if (ev.owned) { openPopover(id); return; } // Ostovuosi-kenttä näkyviin/piiloon
     updateSaleNote();
   });
   updateSaleNote();
@@ -1939,18 +2056,26 @@ function dragEvent(d, age, py, noSnap) {
   if (!ev) return null;
   let a = noSnap ? Math.round(age * 12) / 12 : Math.round(age);
   let constraint = null;
-  if (a < state.ageNow) { a = state.ageNow; constraint = 'Menneisyyteen ei pääse'; }
-  if (a > state.ageEnd) { a = state.ageEnd; constraint = 'Suunnitelma päättyy tähän ikään'; }
+  if (ev.owned) {
+    a = state.ageNow; // omistus ankkuroituu nykyhetkeen — vain arvo joustaa
+  } else {
+    if (a < state.ageNow) { a = state.ageNow; constraint = 'Menneisyyteen ei pääse'; }
+    if (a > state.ageEnd) { a = state.ageEnd; constraint = 'Suunnitelma päättyy tähän ikään'; }
+  }
   ev.age = a;
   if (ev.sellAge != null && ev.sellAge <= ev.age) ev.sellAge = ev.age + 1;
-  let rows = chipRow('Ikä', d.startAge, a, 'v');
+  let rows = ev.owned ? '' : chipRow('Ikä', d.startAge, a, 'v');
   if (ev.amount != null) {
     const dv = invY(py) - invY(d.startPy);
-    let amt = d.startAmount + dv;
-    amt = clamp(noSnap ? Math.round(amt) : snapTo(amt, 1000), -1e9, 1e9);
+    // Omistuksella pystyveto säätää nykyarvoa (ylös = arvokkaampi)
+    let amt = d.startAmount + (ev.owned ? -dv : dv);
+    amt = clamp(noSnap ? Math.round(amt) : snapTo(amt, 1000), -1e9, ev.owned ? 0 : 1e9);
     if (ev.financing === 'loan') ev.down = clamp(ev.down || 0, 0, Math.max(0, -amt));
     ev.amount = amt;
-    rows = chipRow(escapeHtml(evLabel(ev)) + ' · ikä', d.startAge, a, 'v') + chipRow('Summa', d.startAmount, amt, '€');
+    rows = ev.owned
+      ? chipRow(escapeHtml(evLabel(ev)) + ' · nykyarvo', -d.startAmount, -amt, '€')
+      : chipRow(escapeHtml(evLabel(ev)) + ' · ikä', d.startAge, a, 'v') + chipRow('Summa', d.startAmount, amt, '€');
+    if (ev.owned && !constraint) constraint = 'Omistus on nykyhetkessä — pystyveto säätää arvoa';
   }
   return { html: chipWrap(rows, constraint), constraint };
 }
@@ -2143,6 +2268,7 @@ function drawNudge(axis, dir, big) {
   if (axis === 'x') {
     if (s.kind !== 'event' && s.kind !== 'goal' && s.kind !== 'retline') return;
     if (!ev) return;
+    if (ev.owned) { announce('Omistus on nykyhetkessä — arvoa säädät ylös- ja alas-nuolilla'); return; }
     if (s.kind === 'retline' && retGoal(ev) === 'age') ev.goal = 'manual';
     const lo = s.kind === 'event' ? state.ageNow : state.ageNow + 1;
     ev.age = clamp(Math.round(ev.age) + dir * mult, lo, state.ageEnd);
@@ -2176,9 +2302,15 @@ function drawNudge(axis, dir, big) {
     ev.amount = clamp(snapTo(ev.amount + dir * 5000 * mult, 5000), 0, 1e9);
     text = `Tavoite ${fmtNum(ev.amount)} euroa`;
   } else if (s.kind === 'event' && ev && ev.amount != null) {
-    ev.amount = clamp(snapTo(ev.amount + dir * 1000 * mult, 1000), -1e9, 1e9);
-    if (ev.financing === 'loan') ev.down = clamp(ev.down || 0, 0, Math.max(0, -ev.amount));
-    text = `${evLabel(ev)} summa ${fmtNum(ev.amount)} euroa`;
+    if (ev.owned) {
+      // Ylös = arvokkaampi: nuolet säätävät nykyarvoa, eivät kulusummaa
+      ev.amount = -clamp(snapTo(-ev.amount + dir * 1000 * mult, 1000), 0, 1e9);
+      text = `${evLabel(ev)} nykyarvo ${fmtNum(-ev.amount)} euroa`;
+    } else {
+      ev.amount = clamp(snapTo(ev.amount + dir * 1000 * mult, 1000), -1e9, 1e9);
+      if (ev.financing === 'loan') ev.down = clamp(ev.down || 0, 0, Math.max(0, -ev.amount));
+      text = `${evLabel(ev)} summa ${fmtNum(ev.amount)} euroa`;
+    }
   } else return;
   nudgeCommit(text);
 }
@@ -2535,6 +2667,7 @@ function openFsAddMenu(anchor) {
   add('🎯', 'Varallisuustavoite', () => addFromFs('goal')).classList.add('wide');
   for (const [type, def] of Object.entries(EVENT_TYPES)) {
     if (type === 'goal') continue;
+    if (def.owned) continue; // nykytilan syöttö kuuluu kojelaudalle, ei tulevaisuuspintaan
     if (def.familyOnly && !familyOn()) continue; // siirrot vain perhetilassa
     if (def.unique && state.events.some((e) => e.type === type)) continue; // esim. eläke jo graafilla
     add(def.icon, def.label, () => addFromFs(type));
@@ -3104,7 +3237,13 @@ function renderEventList() {
       amount = ev.recMonthly;
       amStr = `${fmtCompact(ev.recMonthly)}/kk`;
     }
+    if (ev.owned) {
+      // Omistus on varallisuutta, ei kulua — summa positiivisena
+      amount = -ev.amount;
+      amStr = fmtCompact(-ev.amount);
+    }
     let loanBadge = ev.amount < 0 && ev.financing === 'loan' ? '<span class="loan-badge">laina</span>' : '';
+    if (ev.owned) loanBadge += `<span class="loan-badge">omistan${(ev.loanLeft || 0) > 0 ? ` · lainaa ${fmtCompact(ev.loanLeft)}` : ''}</span>`;
     if (ev.shared) loanBadge += '<span class="loan-badge share-badge">½ jaettu</span>';
     if (ev.type !== 'retirement' && ev.recMonthly) loanBadge += '<span class="loan-badge rec-badge">toistuva</span>';
     if (ev.isAsset && ev.sellAge != null) loanBadge += `<span class="loan-badge sale-badge">myynti ${Math.round(ev.sellAge)} v</span>`;
@@ -3114,7 +3253,7 @@ function renderEventList() {
     row.innerHTML =
       `<span class="ic">${def.icon}</span><span class="nm" title="${escapeHtml(evLabel(ev))}">${escapeHtml(evLabel(ev))}</span>` +
       loanBadge +
-      `<span class="ag">${Math.round(ev.age)} v</span>` +
+      `<span class="ag">${ev.owned ? 'nyt' : Math.round(ev.age) + ' v'}</span>` +
       `<span class="am ${amount >= 0 ? 'pos' : 'neg'}">${amStr}</span>` +
       `<button class="rm" title="Poista">✕</button>`;
     row.tabIndex = 0;
@@ -4204,7 +4343,8 @@ const SHARE_FIELDS = ['financing', 'down', 'rate', 'years', 'recMonthly', 'recYe
 const SHARE_PRESET = new Set(['home', 'car', 'cottage', 'renovation', 'wedding']); // dialogin esivalinta
 const shareable = (e) => {
   const def = EVENT_TYPES[e.type];
-  return !!def && !def.familyOnly && !def.metric && e.type !== 'retirement';
+  // Omistuksia ei jaeta v1:ssä — halveShared ei osaa puolittaa loanLeftiä
+  return !!def && !def.familyOnly && !def.metric && !def.owned && e.type !== 'retirement';
 };
 const isPaired = (e) => !!e.linkId && (e.shared || (EVENT_TYPES[e.type] && EVENT_TYPES[e.type].familyOnly));
 const adultPeerIdx = () => family.persons.findIndex((p, i) => i !== family.active && !p.child);
@@ -4800,6 +4940,9 @@ function openMoreMenu(anchor) {
 const STORAGE_KEY = 'varallisuuspolku-v1';
 
 function serialize() {
+  // Omistukset ankkuroituvat nykyhetkeen — tallenteen ikä pidetään ajan tasalla,
+  // vaikka ageNow olisi muuttunut lisäyksen jälkeen
+  for (const e of state.events) if (e.owned) e.age = state.ageNow;
   const o = {
     ageNow: state.ageNow, ageEnd: state.ageEnd,
     startCapital: state.startCapital, monthly: state.monthly,
@@ -4923,6 +5066,28 @@ function applySaved(data) {
       if (e.isAsset == null && adef && typeof e.amount === 'number' && e.amount < 0) {
         e.isAsset = true;
         e.appr = adef.appr;
+      }
+      // Omistukset: owned-lippu VAIN own*-tyypeille — käsin muokattu linkki ei
+      // saa kytkeä ostotapahtumaa nollakassavirtaiseksi (owned ohittaa lumpin)
+      const odef = EVENT_TYPES[e.type];
+      if (odef.owned) {
+        e.owned = true;
+        e.age = state.ageNow; // ankkuroituu aina nykyhetkeen
+        delete e.financing; delete e.down;
+        if (!numOk(e.amount) || e.amount > 0) e.amount = odef.amount;
+        e.isAsset = true;
+        if (!numOk(e.appr)) e.appr = odef.asset.appr;
+        e.loanLeft = numOk(e.loanLeft) ? clamp(e.loanLeft, 0, 1e9) : 0;
+        if (e.loanLeft > 0) {
+          e.rate = numOk(e.rate) ? clamp(e.rate, 0, 25) : odef.own.rate;
+          e.years = numOk(e.years) ? clamp(e.years, 1, 40) : odef.own.years;
+        }
+        const yNow = new Date().getFullYear();
+        if (!numOk(e.boughtYear) || e.boughtYear < 1950 || e.boughtYear > yNow) delete e.boughtYear;
+        e.ownYears = e.boughtYear != null ? clamp(yNow - e.boughtYear, 0, 90) : 0;
+        if (e.sellAge != null && e.sellAge <= state.ageNow) { delete e.sellAge; delete e.sellTaxFree; }
+      } else {
+        delete e.owned; delete e.loanLeft; delete e.boughtYear; delete e.ownYears;
       }
     }
     idSeq = maxId + 1;
@@ -5322,6 +5487,12 @@ function renderSummary() {
       sum = fmtEur(e.amount);
       fin = 'tavoitepiste';
       note = 'mittari — ei kassavirtaa';
+    } else if (e.owned) {
+      const left = Math.max(0, e.loanLeft || 0);
+      sum = fmtEur(-e.amount);
+      fin = left > 0
+        ? `omistan — lainaa ${fmtEur(left)}, erä ${fmtEur(loanPayment(left, e.rate || 0, Math.max(1, e.years || 10)))}/kk · ${Math.round(e.years || 10)} v · ${(e.rate || 0).toLocaleString('fi-FI')} %`
+        : 'omistan velattomana';
     } else if (e.amount < 0 && e.financing === 'loan') {
       const price = -e.amount;
       const down = clamp(e.down || 0, 0, price);
@@ -5336,7 +5507,7 @@ function renderSummary() {
     if (e.type !== 'retirement' && e.recMonthly) note += `${note ? '; ' : ''}toistuva ${e.recMonthly > 0 ? '+' : ''}${fmtEur(e.recMonthly)}/kk ${Math.round(e.recYears || 0)} v`;
     if (e.sellAge != null && e.isAsset) note += `${note ? '; ' : ''}myynti ${Math.round(e.sellAge)} v iässä${e.sellTaxFree ? ' (verovapaa)' : ''}`;
     return `<tr><td>${def.icon} ${escapeHtml(evLabel(e))}</td>` +
-      `<td class="num">${Math.round(e.age)} v · ${yearOf(e.age).slice(1)}</td>` +
+      `<td class="num">${e.owned ? 'nyt' : Math.round(e.age) + ' v · ' + yearOf(e.age).slice(1)}</td>` +
       `<td class="num">${sum}</td><td>${fin}</td><td>${note}</td></tr>`;
   }).join('');
 

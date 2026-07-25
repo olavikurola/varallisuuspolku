@@ -371,32 +371,40 @@ function prepareSim(st) {
   const salePayoff = new Map();
   const sellMonthOf = (e) => e.isAsset && e.sellAge != null && e.sellAge > e.age
     ? Math.round((e.sellAge - a0) * 12) : null;
+  // Annuiteettilainan erät ja velkasaldo kuukausittain — jaettu ostetuille
+  // (pääoma = hinta − käsiraha) ja omistuksille (pääoma = jäljellä oleva laina)
+  const amort = (e, m0, principal, rate, years) => {
+    const n = Math.round(years * 12);
+    const pmt = loanPayment(principal, rate, years);
+    const rm = rate / 100 / 12;
+    const mSell = sellMonthOf(e);
+    let bal = principal;
+    debt[m0] += bal;
+    for (let k = 1; k <= n; k++) {
+      const m = m0 + k;
+      if (mSell != null && m >= mSell) { salePayoff.set(e.id, bal); break; }
+      if (m > months) break;
+      payments[m] += pmt;
+      bal = Math.max(0, bal * (1 + rm) - pmt);
+      debt[m] += bal;
+    }
+  };
   for (const e of st.events) {
     if (e.type === 'retirement' || e.type === 'goal') continue;
-    const m0 = Math.round((e.age - a0) * 12);
+    // Omistus (owned): nykytilan alkuehto kuukaudessa 0 — tallennettuun ikään
+    // ei luoteta (ageNow on voinut muuttua tallennuksen jälkeen)
+    const m0 = e.owned ? 0 : Math.round((e.age - a0) * 12);
     if (m0 < 0 || m0 > months) continue;
 
-    if (e.amount < 0 && e.financing === 'loan') {
+    if (e.owned) {
+      // Ei ostohetken kassavirtaa eikä käsirahaa — vain jäljellä oleva laina
+      const left = Math.max(0, e.loanLeft || 0);
+      if (left > 0) amort(e, 0, left, Math.max(0, e.rate || 0), Math.max(1, e.years || 10));
+    } else if (e.amount < 0 && e.financing === 'loan') {
       const price = -e.amount;
       const down = clamp(e.down || 0, 0, price);
       lump.set(m0, (lump.get(m0) || 0) - down);
-      const principal = price - down;
-      const rate = Math.max(0, e.rate || 0);
-      const years = Math.max(1, e.years || 10);
-      const n = Math.round(years * 12);
-      const pmt = loanPayment(principal, rate, years);
-      const rm = rate / 100 / 12;
-      const mSell = sellMonthOf(e);
-      let bal = principal;
-      debt[m0] += bal;
-      for (let k = 1; k <= n; k++) {
-        const m = m0 + k;
-        if (mSell != null && m >= mSell) { salePayoff.set(e.id, bal); break; }
-        if (m > months) break;
-        payments[m] += pmt;
-        bal = Math.max(0, bal * (1 + rm) - pmt);
-        debt[m] += bal;
-      }
+      amort(e, m0, price - down, Math.max(0, e.rate || 0), Math.max(1, e.years || 10));
     } else {
       lump.set(m0, (lump.get(m0) || 0) + e.amount);
     }
@@ -423,10 +431,10 @@ function prepareSim(st) {
   const saleInfos = [];
   for (const e of st.events) {
     if (e.type === 'retirement' || e.type === 'goal' || e.amount >= 0 || !e.isAsset) continue;
-    const m0 = Math.round((e.age - a0) * 12);
+    const m0 = e.owned ? 0 : Math.round((e.age - a0) * 12);
     if (m0 < 0 || m0 > months) continue;
     hasAssets = true;
-    const cat = e.type === 'home' || e.type === 'cottage' ? assetCats.realEstate
+    const cat = e.type === 'home' || e.type === 'cottage' || e.owned ? assetCats.realEstate
       : e.type === 'car' ? assetCats.vehicles
       : assetCats.other;
     const yearly = (1 + (e.appr || 0) / 100) / (st.real ? 1 + inflO : 1);
@@ -447,9 +455,12 @@ function prepareSim(st) {
       const payoff = salePayoff.get(e.id) || 0;
       let saleTax = 0;
       if (taxOn && !e.sellTaxFree) {
-        const gain = Math.max(0, saleValue - (-e.amount));
-        const heldY = (mSell - m0) / 12;
-        const taxable = Math.min(gain, (heldY >= 10 ? 0.6 : 0.8) * saleValue);
+        // Omistukselle ostohintaa ei kysytä → verotettava on suoraan
+        // hankintameno-olettamaosuus myyntihinnasta; pitoaikaan lasketaan
+        // jo omistetut vuodet (ownYears, johdettu ostovuodesta)
+        const heldY = (mSell - m0) / 12 + (e.owned ? Math.max(0, e.ownYears || 0) : 0);
+        const cap = (heldY >= 10 ? 0.6 : 0.8) * saleValue;
+        const taxable = e.owned ? cap : Math.min(Math.max(0, saleValue - (-e.amount)), cap);
         saleTax = taxable <= taxBracket
           ? taxable * taxLow
           : taxBracket * taxLow + (taxable - taxBracket) * taxHigh;

@@ -500,5 +500,62 @@ console.log('Varmuustaso-ratkaisu (karkea→tarkka)');
   ok(share >= 0.84, 'vähintään ~85 % poluista ylittää pisteen', String(share));
 }
 
+console.log('Omistukset (owned): nykytila alkuehtona');
+{
+  // Identiteetti: ilman owned-lippua ostotapahtuma käyttäytyy bitilleen ennallaan
+  const a = L.simulate(plan()), b = L.simulate(plan());
+  ok(a.exp.every((v, i) => v === b.exp[i]), 'ei owned-tapahtumia → polku bitilleen ennallaan');
+
+  // Velaton omistus: näkyy varallisuutena, ei kosketa sijoituspolkuun
+  const st = plan();
+  st.events.push({ id: 9, type: 'ownCottage', owned: true, age: 30, amount: -100000, isAsset: true, appr: 0, loanLeft: 0 });
+  const ctx = L.prepareSim(st);
+  ok(close(ctx.assets[0], 100000, 1), 'omistus varallisuutena kuukaudesta 0', String(ctx.assets[0]));
+  ok(close(ctx.lump.get(0) || 0, 0, 1e-9), 'ei ostohetken kassavirtaa');
+  ok(ctx.debt[0] === 0, 'velaton: ei velkasaldoa');
+  const s0 = L.simulate(plan()), s1 = L.simulate(st);
+  ok(s1.exp.every((v, i) => v === s0.exp[i]), 'velaton omistus ei muuta sijoituspolkua');
+
+  // Laina: velka alkaa jäljellä olevasta, annuiteetti juoksee, loppuu ajallaan
+  // (pohja ilman osto-lainoja, jotta payments/lump ovat pelkän omistuksen)
+  const bare = () => { const s = plan(); s.events = s.events.filter((e) => e.type === 'retirement'); return s; };
+  const st2 = bare();
+  st2.events.push({ id: 9, type: 'ownHome', owned: true, age: 30, amount: -250000, isAsset: true, appr: 0, loanLeft: 120000, rate: 3.0, years: 10 });
+  const c2 = L.prepareSim(st2);
+  const pmt = L.loanPayment(120000, 3.0, 10);
+  ok(close(c2.debt[0], 120000, 0.01), 'velka alkaa jäljellä olevasta');
+  ok(close(c2.payments[1], pmt, 0.01), 'kk-erä = annuiteetti jäljellä olevasta', String(c2.payments[1]));
+  ok(c2.debt[120] < 1 && close(c2.payments[120], pmt, 0.01) && c2.payments[121] === 0, 'laina päättyy täsmälleen 10 vuodessa');
+
+  // Tallennettuun ikään ei luoteta: sama tulos vaikka age olisi jäänyt vanhaksi
+  const st2b = JSON.parse(JSON.stringify(st2));
+  st2b.events.find((e) => e.owned).age = 27; // ageNow muuttunut tallennuksen jälkeen
+  const c2b = L.prepareSim(st2b);
+  ok(close(c2b.debt[0], 120000, 0.01) && close(c2b.assets[0], 250000, 1), 'owned ankkuroituu aina kuukauteen 0');
+
+  // Verovapaa myynti: arvo − jäljellä oleva laina sijoituksiin
+  const st3 = JSON.parse(JSON.stringify(st2));
+  const oh = st3.events.find((e) => e.owned);
+  oh.sellAge = 35; oh.sellTaxFree = true;
+  const c3 = L.prepareSim(st3);
+  const mS = (35 - 30) * 12;
+  const info = c3.saleInfos.find((x) => x.id === 9);
+  ok(info && info.tax === 0 && close(info.value, 250000, 1), 'verovapaa myynti: arvo ilman veroa (appr 0)', JSON.stringify(info));
+  ok(close((c3.lump.get(mS) || 0), info.value - info.payoff, 0.01), 'myyntierä = arvo − lainan poismaksu');
+  ok(info.payoff > 0 && info.payoff < 120000, 'poismaksu = lyhennetty saldo');
+
+  // Verollinen myynti: hankintameno-olettama; ownYears siirtää 10 v -rajan yli
+  const mk = (ownYears) => {
+    const s = plan();
+    s.events.push({ id: 9, type: 'ownFlat', owned: true, age: 30, amount: -200000, isAsset: true, appr: 0, loanLeft: 0, ownYears, sellAge: 35, sellTaxFree: false });
+    const i = L.prepareSim(s).saleInfos.find((x) => x.id === 9);
+    return i.tax;
+  };
+  const taxShort = mk(0);   // pito 5 v → olettama 20 % → verotettava 80 %
+  const taxLong = mk(12);   // pito 5+12 v ≥ 10 → olettama 40 % → verotettava 60 %
+  ok(close(taxShort, 0.8 * 200000 * 0.30 + Math.max(0, 0.8 * 200000 - 30000) * 0.04, 2000), 'olettama 20 % alle 10 v pidolla', String(taxShort));
+  ok(taxLong < taxShort && close(taxLong / taxShort, 0.6 / 0.8, 0.05), 'ownYears vie 40 % olettamaan', `${taxLong} vs ${taxShort}`);
+}
+
 console.log(failed ? `\n${failed} TESTIÄ EPÄONNISTUI` : '\nKaikki testit läpi.');
 process.exit(failed ? 1 : 0);

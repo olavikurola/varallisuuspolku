@@ -46,7 +46,9 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 /* ---------- Validointi: tiukka whitelist ---------- */
 
 const EVENT_TYPES = ['study', 'home', 'car', 'wedding', 'child', 'renovation',
-  'travel', 'recurring', 'sidegig', 'cottage', 'inheritance', 'bonus', 'goal', 'retirement'];
+  'travel', 'recurring', 'sidegig', 'cottage', 'inheritance', 'bonus', 'goal', 'retirement',
+  'ownHome', 'ownFlat', 'ownCottage']; // omistukset (nykytila), 25.7.2026
+const OWNED_TYPES = ['ownHome', 'ownFlat', 'ownCottage'];
 const GOALS = ['manual', 'withdrawal', 'age', 'saving'];
 
 const num = (v, lo, hi) => typeof v === 'number' && isFinite(v) && v >= lo && v <= hi;
@@ -110,6 +112,18 @@ function sanitize(p) {
         if (e.appr !== undefined) ev.appr = e.appr;
         if (!opt(e.sellAge, (v) => int(v, 0, 105))) return null;
         if (e.sellAge !== undefined) { ev.sellAge = e.sellAge; ev.sellTaxFree = !!e.sellTaxFree; }
+      }
+      // Omistukset (nykytila alkuehtona): jäljellä oleva laina ehtoineen
+      if (OWNED_TYPES.includes(e.type)) {
+        ev.owned = true;
+        if (!opt(e.loanLeft, (v) => num(v, 0, 1e9))) return null;
+        if (e.loanLeft !== undefined) {
+          ev.loanLeft = e.loanLeft;
+          if (!opt(e.rate, (v) => num(v, 0, 25))) return null;
+          if (!opt(e.years, (v) => num(v, 1, 40))) return null;
+          if (e.rate !== undefined) ev.rate = e.rate;
+          if (e.years !== undefined) ev.years = e.years;
+        }
       }
       if (!opt(e.recMonthly, (v) => num(v, -1e5, 1e5))) return null;
       if (e.recMonthly !== undefined) {
