@@ -4905,6 +4905,206 @@ function closeMoreMenu() {
   if (moreMenuEl) { moreMenuEl.remove(); moreMenuEl = null; }
 }
 
+/* ===================== Jaettava tuloskuva ===================== */
+// Somekuva (1200×630) suunnitelman päätuloksista: canvas-piirto ilman
+// riippuvuuksia. Aina tumma brändi-ilme teemasta riippumatta — kuva elää
+// syötteissä omillaan eikä peri sivun teemaa.
+
+function buildShareImage() {
+  if (!sim || !sim.exp || sim.months == null) return null;
+  const W = 1200, H = 630;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  const F = '"Inter", system-ui, sans-serif';
+
+  const bg = x.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#0e1424');
+  bg.addColorStop(1, '#0a0e1a');
+  x.fillStyle = bg;
+  x.fillRect(0, 0, W, H);
+
+  // Käyräalue alaosaan: odotuspolku + P10–P90-viuhka samasta simistä kuin graafi
+  const L = 70, R = W - 70, T = 250, B = 566;
+  const n = sim.months;
+  const hi = Math.max(...sim.exp, ...(sim.opt ? [sim.opt[n] || 0] : [0]), 1);
+  const px = (m) => L + (m / n) * (R - L);
+  const py = (v) => B - Math.min(1, Math.max(0, v / hi)) * (B - T);
+  if (sim.pess && sim.opt) {
+    x.beginPath();
+    for (let m = 0; m <= n; m++) x[m ? 'lineTo' : 'moveTo'](px(m), py(sim.opt[m]));
+    for (let m = n; m >= 0; m--) x.lineTo(px(m), py(sim.pess[m]));
+    x.closePath();
+    x.fillStyle = 'rgba(45, 212, 191, 0.09)';
+    x.fill();
+  }
+  const area = x.createLinearGradient(0, T, 0, B);
+  area.addColorStop(0, 'rgba(45, 212, 191, 0.28)');
+  area.addColorStop(1, 'rgba(45, 212, 191, 0.02)');
+  x.beginPath();
+  x.moveTo(L, B);
+  for (let m = 0; m <= n; m++) x.lineTo(px(m), py(sim.exp[m]));
+  x.lineTo(R, B);
+  x.closePath();
+  x.fillStyle = area;
+  x.fill();
+  x.beginPath();
+  for (let m = 0; m <= n; m++) x[m ? 'lineTo' : 'moveTo'](px(m), py(sim.exp[m]));
+  x.strokeStyle = '#2dd4bf';
+  x.lineWidth = 5;
+  x.lineJoin = 'round';
+  x.stroke();
+
+  // Eläkeikäviiva — sama violetti virstanpylväskieli kuin graafissa
+  if (sim.retireAge != null) {
+    const rx = px((sim.retireAge - sim.a0) * 12);
+    x.setLineDash([7, 7]);
+    x.strokeStyle = 'rgba(139, 124, 246, 0.75)';
+    x.lineWidth = 2.5;
+    x.beginPath(); x.moveTo(rx, T - 26); x.lineTo(rx, B); x.stroke();
+    x.setLineDash([]);
+    x.fillStyle = '#b9aefa';
+    x.font = `600 20px ${F}`;
+    x.textAlign = rx > W / 2 ? 'right' : 'left';
+    x.fillText(`Eläkkeelle ${Math.round(sim.retireAge)} v`, rx + (rx > W / 2 ? -10 : 10), T - 6);
+  }
+  x.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+  x.lineWidth = 1;
+  x.beginPath(); x.moveTo(L, B); x.lineTo(R, B); x.stroke();
+  // Ikämerkinnät piirtoalueen sisään — alalaidassa ne ahtautuisivat footeriin
+  x.fillStyle = '#66738f';
+  x.font = `500 18px ${F}`;
+  x.textAlign = 'left';
+  x.fillText(`${state.ageNow} v`, L + 2, B - 10);
+  x.textAlign = 'right';
+  x.fillText(`${state.ageEnd} v`, R - 2, B - 10);
+
+  // Brändi: merkki (käyrä + piste) liukuvärilaatalla + nimi
+  const mg = x.createLinearGradient(40, 36, 92, 88);
+  mg.addColorStop(0, '#2dd4bf');
+  mg.addColorStop(1, '#8b7cf6');
+  x.fillStyle = mg;
+  if (x.roundRect) { x.beginPath(); x.roundRect(40, 36, 52, 52, 13); x.fill(); }
+  else x.fillRect(40, 36, 52, 52);
+  x.strokeStyle = '#fff';
+  x.lineWidth = 3.4;
+  x.lineCap = 'round';
+  x.beginPath();
+  x.moveTo(52, 74);
+  x.bezierCurveTo(62, 73, 67, 59, 80, 51);
+  x.stroke();
+  x.beginPath(); x.arc(80, 51, 4.3, 0, 7); x.fillStyle = '#fff'; x.fill();
+  x.fillStyle = '#e8edf8';
+  x.font = `600 30px ${F}`;
+  x.textAlign = 'left';
+  x.fillText('Varallisuuspolku', 108, 71);
+
+  // Pääluku seuraa suunnitelman tavoitetta — kestävän tulon ratkaisussa
+  // onnistumis-% on määritelmällisesti ~50 % (raha loppuu juuri lopussa),
+  // joten se olisi otsikkona harhaanjohtava (sama oppi kuin og-kuvassa)
+  const ret = state.events.find((e) => e.type === 'retirement');
+  const eur0 = (v) => fmtEur(Math.round(v));
+  const age1 = (v) => (Math.round(v * 10) / 10).toLocaleString('fi-FI');
+  const succRow = ['Onnistumistodennäköisyys', sim.successProb != null ? `${Math.round(sim.successProb * 100)} %` : '–'];
+  let label, big, rows;
+  if (ret && sim.goal === 'withdrawal' && sim.solvedWithdrawal != null) {
+    label = sim.conf ? `Kestävä kuukausitulo (varmuus ${Math.round(sim.conf * 100)} %)` : 'Kestävä kuukausitulo eläkkeellä';
+    big = `${eur0(sim.solvedWithdrawal)}/kk`;
+    rows = [
+      ['Eläkkeelle', `${age1(sim.retireAge)} v`],
+      ['Sijoitukset eläkeiässä', sim.wAtRet != null ? fmtCompact(sim.wAtRet) : '–'],
+      ['Kuukausisäästö nyt', `${eur0(state.monthly)}/kk`],
+    ];
+    if (sim.conf) rows[0] = succRow;
+  } else if (ret && sim.goal === 'age' && sim.solvedRetireAge != null) {
+    label = 'Aikaisin eläkeikä';
+    big = `${age1(sim.solvedRetireAge)} v`;
+    rows = [
+      ['Kuukausitulo eläkkeellä', `${eur0(ret.withdrawal)}/kk`],
+      ['Sijoitukset eläkeiässä', sim.wAtRet != null ? fmtCompact(sim.wAtRet) : '–'],
+      ['Kuukausisäästö nyt', `${eur0(state.monthly)}/kk`],
+    ];
+  } else if (ret && sim.goal === 'saving' && sim.requiredMonthly != null) {
+    label = 'Tarvittava kuukausisäästö';
+    big = `${eur0(sim.requiredMonthly)}/kk`;
+    rows = [
+      ['Eläkkeelle', `${age1(sim.retireAge)} v`],
+      ['Kuukausitulo eläkkeellä', `${eur0(ret.withdrawal)}/kk`],
+      sim.conf ? succRow : ['Sijoitukset eläkeiässä', sim.wAtRet != null ? fmtCompact(sim.wAtRet) : '–'],
+    ];
+  } else if (ret && sim.successProb != null) {
+    label = 'Onnistumistodennäköisyys';
+    big = `${Math.round(sim.successProb * 100)} %`;
+    rows = [
+      ['Kuukausitulo eläkkeellä', `${eur0(ret.withdrawal)}/kk`],
+      ['Sijoitukset eläkeiässä', sim.wAtRet != null ? fmtCompact(sim.wAtRet) : '–'],
+      ['Kuukausisäästö nyt', `${eur0(state.monthly)}/kk`],
+    ];
+  } else {
+    label = `Sijoitusvarallisuus ${state.ageEnd} vuoden iässä`;
+    big = fmtCompact(sim.wEnd);
+    rows = [];
+  }
+  x.textAlign = 'left';
+  x.fillStyle = '#9aa7c4';
+  x.font = `500 24px ${F}`;
+  x.fillText(label, 70, 145);
+  const pg = x.createLinearGradient(70, 150, 520, 220);
+  pg.addColorStop(0, '#2dd4bf');
+  pg.addColorStop(1, '#8b7cf6');
+  x.fillStyle = pg;
+  x.font = `700 80px ${F}`;
+  x.fillText(big, 66, 222);
+  let ry = 138;
+  for (const [k, v] of rows) {
+    x.fillStyle = '#9aa7c4'; x.font = `500 22px ${F}`; x.fillText(k, 640, ry);
+    x.fillStyle = '#e8edf8'; x.font = `600 26px ${F}`; x.fillText(v, 950, ry);
+    ry += 40;
+  }
+  if (state.real) {
+    x.fillStyle = '#66738f';
+    x.font = `500 18px ${F}`;
+    x.fillText('reaalieuroina (inflaatiokorjattu)', 70, 176);
+  }
+
+  x.fillStyle = '#2dd4bf';
+  x.font = `600 22px ${F}`;
+  x.textAlign = 'left';
+  x.fillText('Piirrä oma polkusi — varallisuuspolku.com', 70, H - 18);
+  x.fillStyle = '#66738f';
+  x.font = `500 16px ${F}`;
+  x.textAlign = 'right';
+  x.fillText('Havainnollistus, ei sijoitusneuvontaa', W - 70, H - 18);
+  return c;
+}
+
+async function shareResultImage(lahde) {
+  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
+  const c = buildShareImage();
+  if (!c) { toast('Ei vielä laskettua suunnitelmaa'); return; }
+  track('Tuloskuva', { lahde });
+  c.toBlob(async (blob) => {
+    if (!blob) return;
+    const file = new File([blob], 'varallisuuspolku-tulos.png', { type: 'image/png' });
+    // Mobiilissa natiivi jakoarkki; muuten lataus — molemmat ilman palvelinta
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'Varallisuuspolku', text: 'Minun polkuni — varallisuuspolku.com' });
+        return;
+      } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'varallisuuspolku-tulos.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast('Tuloskuva ladattu — jaa se mistä haluat');
+  }, 'image/png');
+}
+
 /* ===================== Teema ===================== */
 // Vaalea teema = html.light-luokka; headin inline-skripti lukee saman avaimen
 // ennen ensimmäistä maalausta, joten valinta ei välähdä latauksessa.
@@ -4942,6 +5142,8 @@ function openMoreMenu(anchor) {
       if (baseline) { clearBaseline(); toast('Vertailu poistettu'); }
       else { setBaseline(); toast('Vertailukohta tallennettu — erot näkyvät, kun muutat suunnitelmaa'); }
     });
+  add('mi-share-img', 'Jaa tuloskuva', 'Kuva suunnitelmasi päätuloksista someen tai kaverille',
+    () => shareResultImage('valikko'));
   add('mi-analytics', 'Tilastot', 'Miten muut suunnittelevat vaurastumista — avoin data',
     () => { location.href = 'analytiikka.html'; });
   add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti yhdeksällä klikkauksella',
@@ -6480,9 +6682,12 @@ function rampResult(retA) {
     `<div class="ramp-acts2">` +
     `<button class="btn" id="rampOpen">Avaa suunnitelmani</button>` +
     `<button class="btn ghost" id="rampOwn">🔑 Omistan jo asunnon</button>` +
+    `<button class="btn ghost" id="rampShare">📸 Jaa tuloskuva</button>` +
     `<button class="btn ghost" id="rampTour">Esittelykierros</button>` +
     `</div>`;
   $('rampOpen').addEventListener('click', () => { closeRamp(); showVetoHint(); toast('Vinkki: Esittelykierros löytyy ☰-valikosta'); });
+  // Jakonappi ei sulje ramppia — jakoarkki avautuu päälle ja käyttäjä jatkaa siitä
+  $('rampShare').addEventListener('click', () => shareResultImage('ramppi'));
   // Omistuksen sisäänkäynti: jo omistettu asunto lainoineen puuttuu muuten
   // helposti kokonaan — polku vie suoraan popoveriin täyttämään nykyarvot
   $('rampOwn').addEventListener('click', () => {
