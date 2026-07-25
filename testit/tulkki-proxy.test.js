@@ -169,7 +169,9 @@ const CTX = { plan: { ageNow: 30 }, stats: { onnistumistodennakoisyysPct: 99, ve
     ok(up.tool_choice && up.tool_choice.type === 'auto', 'tool_choice auto (malli päättää kutsuuko)');
     const skeema = JSON.stringify(up.tools);
     ok(skeema.includes('"cottage"') && skeema.includes('"aikataulu"') && skeema.includes('"poista"'), 'skeemassa tapahtumatyypit, aikataulu ja poisto');
-    ok(up.tools.every((t) => t.strict === true), 'strict tool use molemmissa työkaluissa');
+    // Strict vain ehdota_muutoksessa: API sallii enintään 16 union-parametria
+    // per pyyntö — molemmat strictinä ylitti rajan (live-verifioitu 400)
+    ok(up.tools[0].strict === true && up.tools[1].strict !== true, 'strict tool use ehdota_muutoksessa (vertaile ei — 16 unionin raja)');
     // Strict-vaatimusten vartija: jokaisessa objektissa additionalProperties:false
     // ja KAIKKI avaimet required-listassa; ei oneOf:ia (vain anyOf käy)
     const strictOk = (node) => {

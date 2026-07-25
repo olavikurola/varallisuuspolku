@@ -445,7 +445,10 @@ const TULKKI_TOOLS = [
   {
     name: 'vertaile',
     description: 'Laske 2–4 nimettyä vaihtoehtoa rinnakkain moottorilla (sääntö 8). EI muuta suunnitelmaa — sovellus näyttää vertailutaulukon. Älä arvioi tuloslukuja itse.',
-    strict: true,
+    // EI strict-lippua: API:n raja on 16 union-tyyppistä parametria per pyyntö
+    // (MUUTOS_ALKIOn 9 null-unionia × 2 työkalua ylitti sen — live-verifioitu
+    // 400). Strict on sitovassa ehdota_muutoksessa, jossa enum-takuu on
+    // arvokkain; lukupohjainen vertailu validoituu asiakaspäässä kuten ennen.
     input_schema: {
       type: 'object',
       additionalProperties: false,
