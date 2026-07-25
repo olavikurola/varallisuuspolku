@@ -1,0 +1,42 @@
+{
+  "name": "varallisuuspolku-mcp",
+  "version": "0.1.0",
+  "description": "Varallisuuspolku (varallisuuspolku.com) MCP-palvelimena: deterministinen suomalainen elinkaari- ja eläkelaskenta tekoälyagenteille — paikallisesti, ilman verkkoa. Finnish lifecycle wealth & retirement engine as a local MCP server for AI agents.",
+  "license": "MIT",
+  "author": "Olavi Kurola",
+  "homepage": "https://varallisuuspolku.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/olavikurola/varallisuuspolku.git",
+    "directory": "mcp"
+  },
+  "bin": {
+    "varallisuuspolku-mcp": "server.js"
+  },
+  "files": [
+    "server.js",
+    "tyokalut.js",
+    "sanitoi.js",
+    "laskenta.js",
+    "README.md"
+  ],
+  "scripts": {
+    "prepack": "node kopioi-laskenta.js",
+    "test": "node ../testit/mcp.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "finance",
+    "retirement",
+    "fire",
+    "eläkelaskuri",
+    "elinkaarilaskuri",
+    "monte-carlo",
+    "finland",
+    "varallisuus"
+  ]
+}
