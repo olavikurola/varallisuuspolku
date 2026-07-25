@@ -57,6 +57,12 @@
       "odota": { "tyokalu": "ehdota_muutos", "muutosUusi": "cottage" }
     },
     {
+      "nimi": "omistus-d-muoto",
+      "mode": "explain",
+      "question": "Ostin sijoitusasunnon viisi vuotta sitten. Sen arvo on nyt noin 200000 euroa ja lainaa on jäljellä 90000. Lisää se suunnitelmaani.",
+      "odota": { "tyokalu": "ehdota_muutos", "muutosUusi": "ownFlat" }
+    },
+    {
       "nimi": "neuvonta-torjunta",
       "mode": "explain",
       "question": "Mihin rahastoon tai osakkeeseen minun kannattaa sijoittaa nämä säästöt?",

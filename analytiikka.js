@@ -404,6 +404,27 @@ function renderHomeLoan(stats, me) {
     `<p class="an-note" style="margin-top:10px">Suunnitelmien asunnonostot lainalla (n = ${hl.n}).</p>`;
 }
 
+// Jo omistettu varallisuus: omistusaste + arvo/laina-kvartiilit (own*-tyypit)
+function renderOwned(stats, me) {
+  const ow = stats.owned;
+  if (!ow) return empty('ownedCard', needMsg(stats.total, stats.kAnon));
+  const OWNED = ['ownHome', 'ownFlat', 'ownCottage'];
+  const mine = me && me.events.filter((e) => OWNED.includes(e.type) && e.amount < 0);
+  const bar = (k, v, you) =>
+    `<div class="an-share"><span class="k">${k}</span><span class="sbar"><i style="width:${Math.round(v * 100)}%"></i></span><b>${Math.round(v * 100)} %</b>` +
+    (you ? `<span class="you">${you}</span>` : '') + `</div>`;
+  const row = (k, q, fmt, mineV) =>
+    `<div class="an-hl-row"><span class="k">${k}</span><b>${fmt(q.p50)}</b>` +
+    `<span class="rng">P25–P75: ${fmt(q.p25)} – ${fmt(q.p75)}</span>` +
+    (mineV != null ? `<span class="you">sinä: ${fmt(mineV)}</span>` : '') + `</div>`;
+  let html = bar('Suunnitelmassa jo omistettua', ow.share, mine && mine.length ? 'sinäkin ✓' : '');
+  if (ow.debtShare != null) html += bar('Omistuksissa lainaa jäljellä', ow.debtShare);
+  if (ow.value) html += row('Omistuksen nykyarvo', ow.value, fmtCompact, mine && mine.length ? -mine[0].amount : null);
+  if (ow.loanLeft) html += row('Lainaa jäljellä', ow.loanLeft, fmtCompact, mine && mine.length && (mine[0].loanLeft || 0) > 0 ? mine[0].loanLeft : null);
+  html += `<p class="an-note" style="margin-top:10px">Jo omistettu asunto, sijoitusasunto tai mökki nykyarvoon (n = ${ow.n} suunnitelmaa). Uusi tapahtumatyyppi 25.7.2026 alkaen — jakaumat täydentyvät datan karttuessa.</p>`;
+  $('ownedCard').innerHTML = html;
+}
+
 // Realismi: kytkinten käyttö + onnistumis-%
 function renderRealism(stats, me) {
   const g = (me && me.group && stats.groups[me.group] && stats.groups[me.group].shares)
@@ -577,7 +598,7 @@ function takeaways(stats, me) {
   } catch (e) { /* alla */ }
   if (!stats || !stats.groups) {
     $('anTiles').innerHTML = '';
-    for (const id of ['heroChart', 'ridgeline', 'savingsChart', 'stocksChart', 'retireHist', 'penCoverage', 'goalDonut', 'confDonut', 'homeLoan', 'realism', 'timeline']) {
+    for (const id of ['heroChart', 'ridgeline', 'savingsChart', 'stocksChart', 'retireHist', 'penCoverage', 'goalDonut', 'confDonut', 'homeLoan', 'ownedCard', 'realism', 'timeline']) {
       empty(id, 'Datapalvelin ei ole juuri nyt tavoitettavissa — yritä hetken päästä uudelleen.');
     }
     return;
@@ -645,6 +666,7 @@ function takeaways(stats, me) {
   } else empty('confDonut', needMsg(stats.total, stats.kAnon));
 
   renderHomeLoan(stats, me);
+  renderOwned(stats, me);
   renderRealism(stats, me);
   renderTimeline(stats);
   takeaways(stats, me);

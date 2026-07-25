@@ -1044,6 +1044,22 @@ function addEvent(type, age) {
 
 /* ===================== Popover ===================== */
 
+// Jaettu puolison kanssa -kytkin: sama lohko hankinnoille ja omistuksille
+// (omistuksella selite puhuu koko arvosta ja yhteislainasta)
+function sharedToggleHtml(ev) {
+  if (!(familyOn() && shareable(ev) && !family.persons[family.active].child
+    && (ev.shared || adultPeerIdx() >= 0))) return '';
+  const ti = ev.peerPid != null ? idxOfPid(ev.peerPid) : adultPeerIdx();
+  const peerName = ti >= 0 ? family.persons[ti].name : 'puoliso';
+  return `<label class="toggle" style="margin-top:2px"><input id="pv-shared" type="checkbox" ${ev.shared ? 'checked' : ''} /><span class="switch"></span>` +
+    `<span>Jaettu puolison kanssa <small>puolet kummallekin — kentissä oma osuutesi</small></span></label>` +
+    (ev.shared
+      ? (ev.owned
+        ? `<p class="note">Koko arvo ${fmtEur(Math.abs(ev.amount) * 2)}${(ev.loanLeft || 0) > 0 ? ` · lainaa yhteensä ${fmtEur(ev.loanLeft * 2)}` : ''} — toinen puolikas on kirjattu: ${escapeHtml(peerName)}. Muutokset synkataan molemmille.</p>`
+        : `<p class="note">Koko summa ${fmtEur(Math.abs(ev.amount) * 2)}${ev.recMonthly ? ` + ${fmtEur(Math.abs(ev.recMonthly) * 2)}/kk` : ''} — toinen puolikas on kirjattu: ${escapeHtml(peerName)}. Muutokset synkataan molemmille.</p>`)
+      : '');
+}
+
 function openPopover(id) {
   const ev = state.events.find((e) => e.id === id);
   if (!ev) return;
@@ -1170,6 +1186,8 @@ function openPopover(id) {
         `<span class="input"><input id="pv-recy" type="number" min="1" max="60" step="1" value="${Math.round(ev.recYears != null ? ev.recYears : 10)}" /><em>v</em></span></label>` +
         `</div>`;
     }
+    // Jaettu omistus: puolet arvosta ja lainasta kummallekin aikuiselle
+    fields += sharedToggleHtml(ev);
   } else {
     fields =
       `<label class="field"><span class="field-label">Ikä</span>` +
@@ -1193,17 +1211,7 @@ function openPopover(id) {
     }
 
     // Jaettu hankinta: puolet kummallekin aikuiselle (vain perhetilassa)
-    if (familyOn() && shareable(ev) && !family.persons[family.active].child
-      && (ev.shared || adultPeerIdx() >= 0)) {
-      const ti = ev.peerPid != null ? idxOfPid(ev.peerPid) : adultPeerIdx();
-      const peerName = ti >= 0 ? family.persons[ti].name : 'puoliso';
-      fields +=
-        `<label class="toggle" style="margin-top:2px"><input id="pv-shared" type="checkbox" ${ev.shared ? 'checked' : ''} /><span class="switch"></span>` +
-        `<span>Jaettu puolison kanssa <small>puolet kummallekin — kentissä oma osuutesi</small></span></label>` +
-        (ev.shared
-          ? `<p class="note">Koko summa ${fmtEur(Math.abs(ev.amount) * 2)}${ev.recMonthly ? ` + ${fmtEur(Math.abs(ev.recMonthly) * 2)}/kk` : ''} — toinen puolikas on kirjattu: ${escapeHtml(peerName)}. Muutokset synkataan molemmille.</p>`
-          : '');
-    }
+    fields += sharedToggleHtml(ev);
 
     if (ev.amount < 0) {
       const isLoan = ev.financing === 'loan';
@@ -4339,12 +4347,13 @@ const peerAgeOf = (age, od) => clamp(age - state.ageNow + od.ageNow, od.ageNow, 
 // Jaettu hankinta: kulu puoliksi molemmille aikuisille. Kumpikin puolikas on
 // tavallinen tapahtuma omassa suunnitelmassa (moottori ei tiedä jaosta mitään);
 // linkId+peerPid pitävät parin synkassa täsmälleen kuten siirroissa.
-const SHARE_FIELDS = ['financing', 'down', 'rate', 'years', 'recMonthly', 'recYears', 'isAsset', 'appr', 'sellTaxFree'];
-const SHARE_PRESET = new Set(['home', 'car', 'cottage', 'renovation', 'wedding']); // dialogin esivalinta
+const SHARE_FIELDS = ['financing', 'down', 'rate', 'years', 'recMonthly', 'recYears', 'isAsset', 'appr', 'sellTaxFree', 'owned', 'loanLeft', 'boughtYear'];
+const SHARE_PRESET = new Set(['home', 'car', 'cottage', 'renovation', 'wedding', 'ownHome', 'ownCottage']); // dialogin esivalinta
 const shareable = (e) => {
   const def = EVENT_TYPES[e.type];
-  // Omistuksia ei jaeta v1:ssä — halveShared ei osaa puolittaa loanLeftiä
-  return !!def && !def.familyOnly && !def.metric && !def.owned && e.type !== 'retirement';
+  // Omistuksetkin jaetaan: halveShared puolittaa nykyarvon JA jäljellä olevan
+  // lainan — kahden puolikkaan annuiteetit summautuvat täyteen erään
+  return !!def && !def.familyOnly && !def.metric && e.type !== 'retirement';
 };
 const isPaired = (e) => !!e.linkId && (e.shared || (EVENT_TYPES[e.type] && EVENT_TYPES[e.type].familyOnly));
 const adultPeerIdx = () => family.persons.findIndex((p, i) => i !== family.active && !p.child);
@@ -4353,11 +4362,13 @@ function halveShared(e) {
   e.amount = Math.round(e.amount / 2);
   if (e.down != null) e.down = Math.round(e.down / 2);
   if (e.recMonthly != null) e.recMonthly = Math.round(e.recMonthly / 2);
+  if (e.loanLeft != null) e.loanLeft = Math.round(e.loanLeft / 2);
 }
 function unshareEvent(e) {
   e.amount = Math.round(e.amount * 2);
   if (e.down != null) e.down = Math.round(e.down * 2);
   if (e.recMonthly != null) e.recMonthly = Math.round(e.recMonthly * 2);
+  if (e.loanLeft != null) e.loanLeft = Math.round(e.loanLeft * 2);
   delete e.shared; delete e.linkId; delete e.peerPid;
 }
 
@@ -4801,6 +4812,19 @@ const EXAMPLES = [
       events: [
         { type: 'renovation', age: 50, amount: -40000, financing: 'loan', down: 4000, rate: 4.5, years: 10 },
         { type: 'retirement', age: 61, withdrawal: 3200, pension: 1900, pensionAge: 65, goal: 'saving', conf: 0.85 },
+      ],
+    },
+  },
+  {
+    // HUOM: monthly on säästö ENNEN lainanhoitoa — moottori maksaa erän
+    // kuukausisäästöstä ja myy alijäämän salkusta (ks. 24.7. korjaus)
+    name: 'Asunnonomistaja (40 v)', desc: 'Asunto ja laina jo hankittu — riittääkö loppupolku?',
+    data: {
+      ageNow: 40, ageEnd: 90, startCapital: 20000, monthly: 1200, savingsGrowth: 1.5,
+      allocStocks: 75, allocBonds: 15, glide: false, real: false, tax: true,
+      events: [
+        { type: 'ownHome', age: 40, amount: -280000, loanLeft: 140000, rate: 3.5, years: 17, isAsset: true, appr: 2, boughtYear: 2021 },
+        { type: 'retirement', age: 65, withdrawal: 3100, pension: 1800, pensionAge: 65 },
       ],
     },
   },
@@ -6442,9 +6466,18 @@ function rampResult(retA) {
     `<p class="ramp-note">Tarkenna kuvaa työtilassa: lisää työeläkkeesi ja elämäsi isot hankinnat, ja kokeile eläkeikää vetämällä käyrästä.</p>` +
     `<div class="ramp-acts2">` +
     `<button class="btn" id="rampOpen">Avaa suunnitelmani</button>` +
+    `<button class="btn ghost" id="rampOwn">🔑 Omistan jo asunnon</button>` +
     `<button class="btn ghost" id="rampTour">Esittelykierros</button>` +
     `</div>`;
   $('rampOpen').addEventListener('click', () => { closeRamp(); showVetoHint(); toast('Vinkki: Esittelykierros löytyy ☰-valikosta'); });
+  // Omistuksen sisäänkäynti: jo omistettu asunto lainoineen puuttuu muuten
+  // helposti kokonaan — polku vie suoraan popoveriin täyttämään nykyarvot
+  $('rampOwn').addEventListener('click', () => {
+    closeRamp();
+    track('Omistan jo rampista');
+    addEvent('ownHome');
+    toast('Täytä asunnon nykyarvo ja jäljellä oleva laina');
+  });
   $('rampTour').addEventListener('click', () => { closeRamp(); startTour(); });
 }
 

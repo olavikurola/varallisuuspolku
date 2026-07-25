@@ -76,8 +76,9 @@ käsin muokattu linkki ei saa kytkeä ostotapahtumaa nollakassavirtaiseksi).
   kulua), badget "omistan" + mahdollinen myynti.
 - Piirtopöydän ＋ Lisää -valikko EI listaa omistuksia (nykytilan syöttö kuuluu
   kojelaudalle, ei tulevaisuuspintaan).
-- Perhejako ("jaettu puolison kanssa") EI koske omistuksia v1:ssä (halveShared
-  ei osaa puolittaa loanLeftiä — lisätään vasta tarpeesta).
+- Perhejako ("jaettu puolison kanssa") toimii myös omistuksille (25.7. jatko):
+  halveShared puolittaa nykyarvon JA loanLeftin — kahden puolikkaan annuiteetit
+  summautuvat sentilleen täyteen erään (lineaarinen kaava).
 
 ## Data ja yhteensopivuus
 
@@ -88,13 +89,20 @@ käsin muokattu linkki ei saa kytkeä ostotapahtumaa nollakassavirtaiseksi).
 - Vertailudata: own*-tyypit palvelimen whitelistiin (loanLeft/rate/years),
   samassa pushissa (Railway auto-deploy; sama kuvio kuin goal-tyypillä).
   Tulkki näkee omistukset automaattisesti (sama buildDonationPayload-konteksti).
-- Tulkin työkalu-enumiin (TAPAHTUMATYYPIT) EI lisäystä v1:ssä: Tulkki näkee
-  ja selittää omistukset muttei luo/muokkaa/poista niitä.
+- Tulkin työkalu-enumissa (TAPAHTUMATYYPIT) myös own*-tyypit (25.7. jatko):
+  d-muoto luo omistuksen (ikä pakotetaan nykyhetkeen, ika saa puuttua),
+  b-muodon loanLeft-ominaisuus vain omistuksille; age-muutos omistukselle
+  torjutaan ("omistus on aina nykyhetkessä").
 
-## Jatkot (eivät v1:ssä)
+## Jatkot — KAIKKI TOTEUTETTU 25.7.2026 (sama päivä, toinen erä)
 
-- Ramppiin/tuloskorttiin "＋ Omistan jo asunnon" -sisäänkäynti
-- Tulkin d-muoto ("ostin asunnon, velkaa 120 t€" → ownHome)
-- Tilastot-kortti omistusasteesta kun dataa kertyy
-- EXAMPLES-personalle omistusasunto (kalibrointi erikseen)
-- Perhejaettu omistus (loanLeftin puolitus)
+- ✓ Rampin tuloskorttiin "🔑 Omistan jo asunnon" -nappi (rampOwn: lisää
+  ownHome ja avaa popoverin; Plausible 'Omistan jo rampista')
+- ✓ Tulkin d-muoto (kehote-sääntö 7 b/d + skeema + validateChanges/applyChanges;
+  golden-eval 'omistus-d-muoto' — aja ennen kehotemuutoksia)
+- ✓ Tilastot-kortti "Jo omistettu varallisuus" (server stats.owned: share +
+  value/loanLeft-kvartiilit K_ANON-portein; analytiikka renderOwned tyhjätiloin)
+- ✓ EXAMPLES-persona "Asunnonomistaja (40 v)" (kalibroitu moottorilla:
+  onnistuminen 90 %, wAtRet ~511 t€ — monthly 1200 josta erä ~910/kk)
+- ✓ Perhejaettu omistus (halveShared/unshareEvent puolittaa/tuplaa loanLeftin;
+  SHARE_FIELDS += owned/loanLeft/boughtYear; SHARE_PRESET += ownHome/ownCottage)

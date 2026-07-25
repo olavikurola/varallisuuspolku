@@ -709,7 +709,11 @@
     renovation: 'Remontti', travel: 'Matka', study: 'Opiskelu', wedding: 'Häät',
     inheritance: 'Perintö', bonus: 'Bonus', sidegig: 'Sivutulo',
     recurring: 'Kuukausierä', goal: 'Tavoite',
+    ownHome: 'Oma asunto', ownFlat: 'Sijoitusasunto', ownCottage: 'Oma mökki / vene',
   };
+  // Omistukset ovat nykytilaa: d-muoto pakottaa iän nykyhetkeen, loanLeft
+  // kelpaa vain näille (applySaved normalisoi loput owned-kentät)
+  const OWNED_SET = new Set(['ownHome', 'ownFlat', 'ownCottage']);
   const EVENT_PROPS = {
     age:    { nimi: 'ikä', min: 0, max: 105, yks: 'v' },
     amount: { nimi: 'summa', min: -1e9, max: 1e9, yks: '€' },
@@ -717,6 +721,7 @@
     rate:   { nimi: 'lainan korko', min: 0, max: 25, yks: '%' },
     years:  { nimi: 'laina-aika', min: 1, max: 40, yks: 'v' },
     down:   { nimi: 'käsiraha', min: 0, max: 1e9, yks: '€' },
+    loanLeft: { nimi: 'lainaa jäljellä', min: 0, max: 1e9, yks: '€' },
   };
 
   let previewBefore = null; // serialize()-kopio ennen kokeilua (null = ei aktiivista)
@@ -741,8 +746,9 @@
       // Uusi tapahtuma oletuksilla — summat säädetään saman listan b-alkioilla
       if (c && typeof c.uusi === 'string') {
         const ika = luku(c.ika);
-        if (EVENT_NAMES[c.uusi] && ika != null) {
-          list.push({ uusi: c.uusi, ika: Math.min(105, Math.max(0, Math.round(ika))) });
+        // Omistus ankkuroituu nykyhetkeen — ika saa puuttua, apply pakottaa sen
+        if (EVENT_NAMES[c.uusi] && (ika != null || OWNED_SET.has(c.uusi))) {
+          list.push({ uusi: c.uusi, ika: ika != null ? Math.min(105, Math.max(0, Math.round(ika))) : 0 });
         } else rejected.push(('uusi ' + c.uusi).slice(0, 40));
         continue;
       }
@@ -871,6 +877,19 @@
       // summasta — siksi niitä ei aseteta tässä.
       if (c.uusi) {
         const def = EVENT_TYPES[c.uusi];
+        mod.events = mod.events || [];
+        // Omistus: nykytilan alkuehto — ikä aina nykyhetki, ei rahoituskenttiä
+        if (def.owned) {
+          const ev = {
+            type: c.uusi, age: mod.ageNow, owned: true, amount: def.amount,
+            isAsset: true, appr: def.asset.appr,
+            loanLeft: def.own.loanLeft, rate: def.own.rate, years: def.own.years,
+          };
+          if (def.rec) { ev.recMonthly = def.rec.monthly; ev.recYears = def.rec.years; }
+          mod.events.push(ev);
+          rows.push({ nimi: `${EVENT_NAMES[c.uusi]} (uusi)`, desc: 'omistus nykyhetkessä — oletusarvot ja -laina' });
+          continue;
+        }
         const age = Math.min(mod.ageEnd, Math.max(mod.ageNow, c.ika));
         const ev = { type: c.uusi, age, amount: def.amount };
         if (!def.metric) {
@@ -878,7 +897,6 @@
           if (def.asset) { ev.isAsset = true; ev.appr = def.asset.appr; }
           if (def.rec) { ev.recMonthly = def.rec.monthly; ev.recYears = def.rec.years; }
         }
-        mod.events = mod.events || [];
         mod.events.push(ev);
         rows.push({ nimi: `${EVENT_NAMES[c.uusi]} (uusi)`, desc: `lisätty ikään ${age} v` });
         continue;
@@ -908,11 +926,21 @@
           if (c.tapahtumaIka == null) { rows.push({ nimi: label, ohitettu: 'useita samaa tyyppiä — täsmennä ikä' }); continue; }
           ev = cands.reduce((a, b) => Math.abs(a.age - c.tapahtumaIka) <= Math.abs(b.age - c.tapahtumaIka) ? a : b);
         }
-        if ((c.ominaisuus === 'rate' || c.ominaisuus === 'years' || c.ominaisuus === 'down') && ev.financing !== 'loan') {
+        // Omistuksen lainakentät elävät loanLeftin varassa, ei financing-lippua
+        if ((c.ominaisuus === 'rate' || c.ominaisuus === 'years') && ev.financing !== 'loan' && !(ev.owned && (ev.loanLeft || 0) > 0)) {
           rows.push({ nimi: label, ohitettu: 'tapahtumassa ei ole lainaa' }); continue;
+        }
+        if (c.ominaisuus === 'down' && ev.financing !== 'loan') {
+          rows.push({ nimi: label, ohitettu: 'tapahtumassa ei ole lainaa' }); continue;
+        }
+        if (c.ominaisuus === 'loanLeft' && !ev.owned) {
+          rows.push({ nimi: label, ohitettu: 'vain omistukselle (own*)' }); continue;
         }
         if (c.ominaisuus === 'appr' && !ev.isAsset) {
           rows.push({ nimi: label, ohitettu: 'ei omaisuuserä' }); continue;
+        }
+        if (c.ominaisuus === 'age' && ev.owned) {
+          rows.push({ nimi: label, ohitettu: 'omistus on aina nykyhetkessä' }); continue;
         }
         let arvo = c.arvo;
         if (c.ominaisuus === 'age') arvo = Math.min(mod.ageEnd, Math.max(mod.ageNow, Math.round(arvo)));
@@ -920,7 +948,7 @@
         if (c.ominaisuus === 'amount' && typeof ev.amount === 'number' && ev.amount < 0 && arvo > 0) arvo = -arvo;
         const vanha = ev[c.ominaisuus];
         ev[c.ominaisuus] = arvo;
-        rows.push({ nimi: `${EVENT_NAMES[c.tapahtuma]} (${ev.age} v) · ${p.nimi}`, vanha, uusi: arvo, yks: p.yks });
+        rows.push({ nimi: `${EVENT_NAMES[c.tapahtuma]} (${ev.owned ? 'nyt' : ev.age + ' v'}) · ${p.nimi}`, vanha, uusi: arvo, yks: p.yks });
         continue;
       }
       const f = FIELDS[c.kentta];
