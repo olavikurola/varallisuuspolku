@@ -8,7 +8,7 @@
 > selaimessa; ei rekisteröitymistä, ei evästeitä (kävijämäärät anonyymillä
 > Plausible-analytiikalla).
 
-Keskeiset faktat (päivitetty 2026-07-23):
+Keskeiset faktat (päivitetty 2026-07-25):
 
 - Laskenta: kuukausitason korkoa korolle, palkkakehitys, lainat annuiteetteina,
   Monte Carlo -simulaatio (oletus 5 000 polkua) ja onnistumistodennäköisyys.
@@ -24,6 +24,15 @@ Keskeiset faktat (päivitetty 2026-07-23):
   voi olla väärin). Ilmaiskäytössä 5 kysymystä päivässä ilman rekisteröitymistä.
   Tiettävästi Suomen ensimmäinen generatiivista tekoälyä hyödyntävä
   elinkaarisuunnittelutyökalu (Tulkki avattu julkiseksi heinäkuussa 2026).
+- Tekoälyagenteille (MCP): laskentamoottori on saatavilla paikallisena
+  MCP-palvelimena, npm-paketti varallisuuspolku-mcp (asennus:
+  `npx -y varallisuuspolku-mcp`; Claude Code: `claude mcp add varallisuuspolku
+  -- npx -y varallisuuspolku-mcp`). Työkalut: simuloi_suunnitelma,
+  ratkaise_elakeika, ratkaise_saasto, vertaa_suunnitelmia, suunnitelman_skeema
+  (agentti voi rakentaa suunnitelman keskustelusta ilman jakolinkkiä).
+  Deterministinen: sama syöte antaa aina saman tuloksen. Laskenta tapahtuu
+  käyttäjän koneella eikä käytä verkkoa — työkalut laskevat, eivät anna
+  sijoitusneuvontaa. https://www.npmjs.com/package/varallisuuspolku-mcp
 - Vuorovaikutus: graafi on ohjain — käyrään, tapahtumiin ja eläkeikäviivaan
   tartutaan ja vedetään, kone ratkaisee jokaisen vedon hinnan heti.
 - Perhe: enintään 4 henkilöä (puoliso + lapset), perheen yhteinen
@@ -57,3 +66,5 @@ Keskeiset faktat (päivitetty 2026-07-23):
 - [Saavutettavuus](https://varallisuuspolku.com/saavutettavuus.html):
   saavutettavuusseloste (näppäimistökäyttö, ruudunlukija, vähennetty liike)
 - [Lähdekoodi](https://github.com/olavikurola/varallisuuspolku): avoin GitHubissa
+- [MCP-paketti](https://www.npmjs.com/package/varallisuuspolku-mcp):
+  laskentamoottori tekoälyagenttien työkaluna (npm, paikallinen)

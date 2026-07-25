@@ -72,6 +72,8 @@
         "acceptedAnswer": { "@type": "Answer", "text": "Kyllä — jopa neljä henkilöä: puoliso ja lapset omina käyrinään, perheen yhteinen onnistumistodennäköisyys samassa markkinahistoriassa, rahasiirrot, jaetut hankinnat ja leskiturvatarkastelu." } },
       { "@type": "Question", "name": "Onko palvelussa tekoälyä?",
         "acceptedAnswer": { "@type": "Answer", "text": "On: Tulkki-apuri (✦ Kysy AI) selittää laskurin tulokset selkokielellä, vertailee vaihtoehtoja, kokeilee muutoksia ja suhteuttaa suunnitelman ikäryhmän anonyymiin vertailudataan. Työnjako on tiukka — laskentamoottori laskee ja AI vain selittää, joten luvut tulevat aina laskennasta, eivät kielimallilta. Kysyessä välitetään vain kysymys ja suunnitelman anonyymi muoto; palvelin ei tallenna mitään. Ilmaiseksi 5 kysymystä päivässä." } },
+      { "@type": "Question", "name": "Voiko oman tekoälyavustajan kytkeä Varallisuuspolkuun?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Kyllä: laskentamoottorin saa tekoälyagentin (esimerkiksi Clauden) työkaluksi paikallisena MCP-palvelimena — asennus komennolla npx -y varallisuuspolku-mcp (npm-paketti varallisuuspolku-mcp). Agentti voi simuloida suunnitelman jakolinkistä, ratkaista eläkeiän tai säästötarpeen ja vertailla vaihtoehtoja samalla moottorilla kuin tämä sivu. Laskenta tapahtuu silloinkin omalla koneellasi eikä suunnitelma lähde verkkoon — ja työkalut laskevat, eivät anna sijoitusneuvontaa." } },
       { "@type": "Question", "name": "Sopiiko FIRE- ja varhaiseläkesuunnitteluun?",
         "acceptedAnswer": { "@type": "Answer", "text": "Kyllä. Laskuri ratkaisee aikaisimman mahdollisen eläkeiän, kestävän kuukausitulon ja tarvittavan säästön — halutessasi 75, 85 tai 95 prosentin varmuustasolla. Työeläkkeen alkamisen voi asettaa eri ikään kuin töiden lopettamisen." } },
       { "@type": "Question", "name": "Onko tämä sijoitusneuvontaa?",
@@ -300,6 +302,25 @@
             <p>Kyllä — jopa neljä henkilöä: puoliso ja lapset omina käyrinään, perheen yhteinen
             onnistumistodennäköisyys samassa markkinahistoriassa, rahasiirrot, jaetut hankinnat
             puoliksi ja leskiturvatarkastelu.</p>
+          </details>
+          <details>
+            <summary>Onko palvelussa tekoälyä?</summary>
+            <p>On: Tulkki-apuri (✦ Kysy AI) selittää laskurin tulokset selkokielellä, vertailee
+            vaihtoehtoja, kokeilee muutoksia ja suhteuttaa suunnitelman ikäryhmän anonyymiin
+            vertailudataan. Työnjako on tiukka — laskentamoottori laskee ja AI vain selittää,
+            joten luvut tulevat aina laskennasta, eivät kielimallilta. Kysyessä välitetään vain
+            kysymys ja suunnitelman anonyymi muoto; palvelin ei tallenna mitään. Ilmaiseksi
+            5&nbsp;kysymystä päivässä.</p>
+          </details>
+          <details>
+            <summary>Voiko oman tekoälyavustajan kytkeä Varallisuuspolkuun?</summary>
+            <p>Kyllä: laskentamoottorin saa tekoälyagentin (esimerkiksi Clauden) työkaluksi
+            paikallisena MCP-palvelimena — asennus komennolla <code>npx -y varallisuuspolku-mcp</code>
+            (<a href="https://www.npmjs.com/package/varallisuuspolku-mcp" rel="noopener">npm-paketti
+            varallisuuspolku-mcp</a>). Agentti voi simuloida suunnitelman jakolinkistä, ratkaista
+            eläkeiän tai säästötarpeen ja vertailla vaihtoehtoja samalla moottorilla kuin tämä
+            sivu. Laskenta tapahtuu silloinkin omalla koneellasi eikä suunnitelma lähde verkkoon —
+            ja työkalut laskevat, eivät anna sijoitusneuvontaa.</p>
           </details>
           <details>
             <summary>Sopiiko FIRE- ja varhaiseläkesuunnitteluun?</summary>

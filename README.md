@@ -43,6 +43,7 @@ sisällön näkee kokonaisuudessaan ennen jakamista.
 - **Anonyymi vertailudata** — jaa halutessasi suunnitelmasi anonyymisti ja näe, miten eri ikäiset suunnittelevat talouttaan: jakaumat ikäryhmittäin (P25/mediaani/P75) ja tapahtumien yleisyys; aggregaatit avoimena datana ([palvelin/](palvelin/))
 - **Vaurastumisen kartta** — avoin analytiikkasivu ([analytiikka.html](analytiikka.html)): varallisuusvyöhyke iän yli, elämäntapahtumien "elämän kartta", eläkehaaveet, riskinotto ja asuntolainatilastot — oma suunnitelma näkyy kaavioissa paikallisesti
 - **Suunnitelmani-dokumentti** — tulostettava tavoitedokumentti suunnitelman kulmakivistä ja keskustelunaiheista, minä-muodossa esim. varainhoitajalle annettavaksi; ei sijoitusneuvontaa
+- **MCP-palvelin tekoälyagenteille** — laskentamoottori tekoälyavustajan (esim. Claude) työkaluna paikallisena npm-pakettina ([mcp/](mcp/)): simuloi, ratkaise eläkeikä tai säästö, vertaile — deterministisesti ja omalla koneella, ilman verkkoa
 
 ## Show HN -otsikkoluonnos
 
@@ -55,6 +56,20 @@ Puhdas HTML/CSS/JS — ei buildia, ei riippuvuuksia. Käynnistä kevyt palvelin:
 ```bash
 npx serve .
 ```
+
+## Tekoälyagentit (MCP)
+
+Laskentamoottorin saa oman tekoälyavustajan työkaluksi npm-paketilla
+[varallisuuspolku-mcp](https://www.npmjs.com/package/varallisuuspolku-mcp):
+
+```bash
+claude mcp add varallisuuspolku -- npx -y varallisuuspolku-mcp
+```
+
+Agentti voi simuloida suunnitelman jakolinkistä tai rakentaa sen keskustelusta,
+ratkaista aikaisimman eläkeiän tai tarvittavan säästön ja vertailla vaihtoehtoja —
+samalla moottorilla kuin sivusto, paikallisesti ja ilman verkkoa. Työkalut laskevat,
+eivät anna sijoitusneuvontaa. Lähdekoodi ja dokumentaatio: [mcp/](mcp/).
 
 ## Julkaisu
 
