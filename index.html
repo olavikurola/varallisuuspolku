@@ -665,7 +665,14 @@
   </div>
 
   <script src="laskenta.js" defer></script>
-  <script src="app.js" defer></script>
+  <!-- Entinen app.js kuutena osana — classic scriptit jakavat globaalin
+       skoopin, joten järjestys on sitova (defer säilyttää sen) -->
+  <script src="apu.js" defer></script>
+  <script src="kaavio.js" defer></script>
+  <script src="piirtopoyta.js" defer></script>
+  <script src="kortit.js" defer></script>
+  <script src="laajennukset.js" defer></script>
+  <script src="sovellus.js" defer></script>
   <script src="tulkki.js" defer></script>
 </body>
 </html>
