@@ -570,5 +570,29 @@ console.log('Omistukset (owned): nykytila alkuehtona');
   ok(taxLong < taxShort && close(taxLong / taxShort, 0.6 / 0.8, 0.05), 'ownYears vie 40 % olettamaan', `${taxLong} vs ${taxShort}`);
 }
 
+console.log('Hankintameno-olettama kk-nostoissa: verokirjanpito seuraa olettamaa');
+{
+  // Pitkä horisontti → salkun voitto-osuus eläkkeellä ylittää 60 % → olettama
+  // leikkaa. Raportoidun veron (taxPaid) pitää täsmätä bruttoutuksen veroon
+  // (Σ flows.tax) — aiemmin taxPaid kirjattiin todellisesta voitosta ja
+  // liioitteli veroa jonka bruttoutus oli jo laskenut olettamalla.
+  const st = plan();
+  st.startCapital = 100000;
+  st.ageEnd = 95;
+  st.events = [{ id: 1, type: 'retirement', age: 60, withdrawal: 3000, pension: 0, pensionAge: 65 }];
+  st.proOn = true;
+  st.pro = L.defaultPro();
+  st.pro.tax.acq = true;
+  const s = L.simulate(st);
+  let flowTax = 0;
+  for (let m = 0; m < s.flows.tax.length; m++) flowTax += s.flows.tax[m];
+  ok(flowTax > 0 && close(s.taxPaid, flowTax, Math.max(1, flowTax * 1e-9)),
+    'taxPaid = Σ bruttoutuksen verot kun olettama leikkaa', `${s.taxPaid} vs ${flowTax}`);
+  const st2 = JSON.parse(JSON.stringify(st));
+  st2.pro.tax.acq = false;
+  const s2 = L.simulate(st2);
+  ok(s2.taxPaid > s.taxPaid, 'olettama pienentää raportoitua veroa (voitto-osuus > 60 %)');
+}
+
 console.log(failed ? `\n${failed} TESTIÄ EPÄONNISTUI` : '\nKaikki testit läpi.');
 process.exit(failed ? 1 : 0);

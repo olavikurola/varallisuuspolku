@@ -607,8 +607,12 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
         if (taxAcq) gainRatio = Math.min(gainRatio, m >= 120 ? 0.6 : 0.8);
         const gross = need / Math.max(0.35, 1 - gainRatio * rate); // brutto → netto = need veron jälkeen
         const gain = sell(gross);
-        taxPaid += gain * rate;
-        ytdGain += gain;
+        // Olettaman leikatessa verotettava voitto on olettaman mukainen osuus,
+        // ei salkun todellinen voitto — muuten taxPaid ja 34 %:n portaan
+        // vuosikertymä liioittelevat veroa jonka bruttoutus jo laski oikein
+        const taxable = taxAcq ? Math.min(gain, gainRatio * gross) : gain;
+        taxPaid += taxable * rate;
+        ytdGain += taxable;
         if (fl) { fl.gross[m] = gross; fl.tax[m] = gross - need; }
       } else {
         sell(need);

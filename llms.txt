@@ -28,7 +28,8 @@ Keskeiset faktat (päivitetty 2026-07-25):
   MCP-palvelimena, npm-paketti varallisuuspolku-mcp (asennus:
   `npx -y varallisuuspolku-mcp`; Claude Code: `claude mcp add varallisuuspolku
   -- npx -y varallisuuspolku-mcp`). Työkalut: simuloi_suunnitelma,
-  ratkaise_elakeika, ratkaise_saasto, vertaa_suunnitelmia, suunnitelman_skeema
+  ratkaise_elakeika, ratkaise_saasto, vertaa_suunnitelmia, simuloi_perhe,
+  suunnitelman_skeema
   (agentti voi rakentaa suunnitelman keskustelusta ilman jakolinkkiä).
   Deterministinen: sama syöte antaa aina saman tuloksen. Laskenta tapahtuu
   käyttäjän koneella eikä käytä verkkoa — työkalut laskevat, eivät anna
