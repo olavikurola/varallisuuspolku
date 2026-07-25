@@ -402,45 +402,59 @@ const TAPAHTUMATYYPIT = ['home', 'car', 'cottage', 'child', 'renovation', 'trave
   'ownHome', 'ownFlat', 'ownCottage']; // omistukset (nykytila) — d-muoto luo, b-muoto säätää (loanLeft ym.)
 
 // Yksi alkio kattaa säännön 7 muodot a–e: asiakaspää päättelee muodon siitä,
-// mitkä avaimet ovat läsnä (kentta / tapahtuma+ominaisuus / aikataulu / uusi / poista)
+// mitkä avaimet ovat läsnä (kentta / tapahtuma+ominaisuus / aikataulu / uusi / poista).
+// STRICT TOOL USE: strict:true takaa että input validoituu skeemaa vasten
+// bitilleen (enum-takuu — malli ei voi keksiä kenttiä). Strictin ehdot:
+// KAIKKI avaimet required-listassa, valinnaisuus null-unionilla, jokaisessa
+// objektissa additionalProperties:false, ei oneOf:ia (anyOf käy). Käyttämättömät
+// kentät tulevat siksi nullina — stripNulls riisuu ne ennen selainta, joten
+// asiakaspää näkee täsmälleen entisen muodon (nolla muutosta tulkki.js:ään).
+const NULLABLE_ENUM = (values, description) => ({ anyOf: [{ type: 'string', enum: values }, { type: 'null' }], description });
 const MUUTOS_ALKIO = {
   type: 'object',
+  additionalProperties: false,
   properties: {
-    kentta: { type: 'string', enum: ['ageNow', 'ageEnd', 'monthly', 'startCapital', 'savingsGrowth', 'allocStocks', 'allocBonds', 'retAge', 'withdrawal', 'pension', 'pensionAge'], description: 'Perusmuuttujan nimi (muoto a)' },
-    arvo: { type: 'number', description: 'Uusi arvo pelkkänä lukuna, ilman yksiköitä ja erottimia' },
-    tapahtuma: { type: 'string', enum: TAPAHTUMATYYPIT, description: 'Olemassa olevan tapahtuman tyyppi (muoto b)' },
+    kentta: NULLABLE_ENUM(['ageNow', 'ageEnd', 'monthly', 'startCapital', 'savingsGrowth', 'allocStocks', 'allocBonds', 'retAge', 'withdrawal', 'pension', 'pensionAge'], 'Perusmuuttujan nimi (muoto a); null jos ei muoto a'),
+    arvo: { type: ['number', 'null'], description: 'Uusi arvo pelkkänä lukuna, ilman yksiköitä ja erottimia' },
+    tapahtuma: NULLABLE_ENUM(TAPAHTUMATYYPIT, 'Olemassa olevan tapahtuman tyyppi (muoto b); null jos ei muoto b'),
     tapahtumaIka: { type: ['number', 'null'], description: 'Erottaa samantyyppiset tapahtumat; null jos vain yksi' },
-    ominaisuus: { type: 'string', enum: ['age', 'amount', 'appr', 'rate', 'years', 'down', 'loanLeft'], description: 'Tapahtuman muutettava ominaisuus (muoto b); loanLeft vain own*-omistuksille' },
-    aikataulu: { type: 'array', description: 'KOKO porrastettu säästöaikataulu (muoto c)', items: { type: 'object', properties: { to: { type: 'number' }, amount: { type: 'number' } }, required: ['to', 'amount'] } },
-    uusi: { type: 'string', enum: TAPAHTUMATYYPIT, description: 'Luo uuden tapahtuman oletuksilla (muoto d) — anna ika samassa alkiossa' },
-    ika: { type: 'number', description: 'Uuden tapahtuman ikä (muoto d)' },
-    poista: { type: 'string', enum: TAPAHTUMATYYPIT, description: 'Poista tapahtuma (muoto e) — tapahtumaIka erottaa jos useita' },
+    ominaisuus: NULLABLE_ENUM(['age', 'amount', 'appr', 'rate', 'years', 'down', 'loanLeft'], 'Tapahtuman muutettava ominaisuus (muoto b); loanLeft vain own*-omistuksille'),
+    aikataulu: { anyOf: [{ type: 'array', items: { type: 'object', additionalProperties: false, properties: { to: { type: 'number' }, amount: { type: 'number' } }, required: ['to', 'amount'] } }, { type: 'null' }], description: 'KOKO porrastettu säästöaikataulu (muoto c); null jos ei muoto c' },
+    uusi: NULLABLE_ENUM(TAPAHTUMATYYPIT, 'Luo uuden tapahtuman oletuksilla (muoto d) — anna ika samassa alkiossa'),
+    ika: { type: ['number', 'null'], description: 'Uuden tapahtuman ikä (muoto d)' },
+    poista: NULLABLE_ENUM(TAPAHTUMATYYPIT, 'Poista tapahtuma (muoto e) — tapahtumaIka erottaa jos useita'),
   },
+  required: ['kentta', 'arvo', 'tapahtuma', 'tapahtumaIka', 'ominaisuus', 'aikataulu', 'uusi', 'ika', 'poista'],
 };
 
 const TULKKI_TOOLS = [
   {
     name: 'ehdota_muutos',
     description: 'Ehdota suunnitelmaan muutosta tai kokeilua (säännön 7 muodot a–e). Sovellus näyttää muutoksen aina esikatseluna eikä mitään tapahdu ilman käyttäjän hyväksyntää. Kutsu tätä AINA kun kerrot tekeväsi muutoksen tai kokeilun — älä koskaan pelkästään kuvaile muutosta.',
+    strict: true,
     input_schema: {
       type: 'object',
+      additionalProperties: false,
       properties: {
         muutokset: { type: 'array', items: MUUTOS_ALKIO },
-        selite: { type: 'string', description: 'Lyhyt kuvaus muutoksesta' },
+        selite: { type: ['string', 'null'], description: 'Lyhyt kuvaus muutoksesta' },
       },
-      required: ['muutokset'],
+      required: ['muutokset', 'selite'],
     },
   },
   {
     name: 'vertaile',
     description: 'Laske 2–4 nimettyä vaihtoehtoa rinnakkain moottorilla (sääntö 8). EI muuta suunnitelmaa — sovellus näyttää vertailutaulukon. Älä arvioi tuloslukuja itse.',
+    strict: true,
     input_schema: {
       type: 'object',
+      additionalProperties: false,
       properties: {
         vaihtoehdot: {
           type: 'array',
           items: {
             type: 'object',
+            additionalProperties: false,
             properties: {
               nimi: { type: 'string' },
               muutokset: { type: 'array', items: MUUTOS_ALKIO },
@@ -448,12 +462,25 @@ const TULKKI_TOOLS = [
             required: ['nimi', 'muutokset'],
           },
         },
-        selite: { type: 'string' },
+        selite: { type: ['string', 'null'] },
       },
-      required: ['vaihtoehdot'],
+      required: ['vaihtoehdot', 'selite'],
     },
   },
 ];
+
+// Strict-skeeman null-unionit: malli täyttää käyttämättömät kentät nullina.
+// Riisutaan ne ennen selainta — asiakaspään muodontunnistus (avainten läsnäolo)
+// ja kaikki vanhat testit toimivat muuttumattomina.
+function stripNulls(v) {
+  if (Array.isArray(v)) return v.map(stripNulls);
+  if (v && typeof v === 'object') {
+    const o = {};
+    for (const [k, val] of Object.entries(v)) if (val !== null) o[k] = stripNulls(val);
+    return o;
+  }
+  return v;
+}
 
 const tulkkiHits = new Map(); // IP → {count, reset} — vain muistissa
 let tulkkiDay = '';
@@ -608,7 +635,7 @@ async function handleTulkki(req, res, body, ip) {
     // Sisältöä ei tallenneta — kulkee vain läpi kuten tekstikin.
     for (const b of Object.values(toolBlocks)) {
       try {
-        writeLine({ tool: { name: b.name, input: b.json.trim() ? JSON.parse(b.json) : {} } });
+        writeLine({ tool: { name: b.name, input: b.json.trim() ? stripNulls(JSON.parse(b.json)) : {} } });
         any = true;
       } catch (e) { writeLine({ toolError: b.name }); }
     }

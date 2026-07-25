@@ -35,8 +35,10 @@ const mock = http.createServer((req, res) => {
     sse({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Onnistumistodennäköisyys on 99 %, ' } });
     sse({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'koska säästöaika on pitkä.' } });
     sse({ type: 'content_block_start', index: 1, content_block: { type: 'tool_use', id: 'tu1', name: 'ehdota_muutos', input: {} } });
+    // Strict tool use: malli täyttää käyttämättömät kentät nullina —
+    // palvelimen pitää riisua ne ennen selainta
     sse({ type: 'content_block_delta', index: 1, delta: { type: 'input_json_delta', partial_json: '{"muutokset":[{"kentta":"monthly",' } });
-    sse({ type: 'content_block_delta', index: 1, delta: { type: 'input_json_delta', partial_json: '"arvo":1200}],"selite":"Testi"}' } });
+    sse({ type: 'content_block_delta', index: 1, delta: { type: 'input_json_delta', partial_json: '"arvo":1200,"tapahtuma":null,"tapahtumaIka":null,"ominaisuus":null,"aikataulu":null,"uusi":null,"ika":null,"poista":null}],"selite":"Testi"}' } });
     sse({ type: 'content_block_stop', index: 1 });
     sse({ type: 'message_delta', usage: { output_tokens: 56 } });
     sse({ type: 'message_stop' });
@@ -167,7 +169,25 @@ const CTX = { plan: { ageNow: 30 }, stats: { onnistumistodennakoisyysPct: 99, ve
     ok(up.tool_choice && up.tool_choice.type === 'auto', 'tool_choice auto (malli päättää kutsuuko)');
     const skeema = JSON.stringify(up.tools);
     ok(skeema.includes('"cottage"') && skeema.includes('"aikataulu"') && skeema.includes('"poista"'), 'skeemassa tapahtumatyypit, aikataulu ja poisto');
+    ok(up.tools.every((t) => t.strict === true), 'strict tool use molemmissa työkaluissa');
+    // Strict-vaatimusten vartija: jokaisessa objektissa additionalProperties:false
+    // ja KAIKKI avaimet required-listassa; ei oneOf:ia (vain anyOf käy)
+    const strictOk = (node) => {
+      if (Array.isArray(node)) return node.every(strictOk);
+      if (!node || typeof node !== 'object') return true;
+      if (node.oneOf) return false;
+      if (node.type === 'object' || node.properties) {
+        const keys = Object.keys(node.properties || {});
+        if (node.additionalProperties !== false) return false;
+        if (!Array.isArray(node.required) || keys.some((k) => !node.required.includes(k))) return false;
+      }
+      return Object.values(node).every(strictOk);
+    };
+    ok(up.tools.every((t) => strictOk(t.input_schema)), 'skeema täyttää strictin ehdot (additionalProperties:false + kaikki required, ei oneOf)');
     ok(data.tools.length === 1 && data.tools[0].name === 'ehdota_muutos' && data.tools[0].input.muutokset[0].arvo === 1200, 'työkalukutsu koottu paloista {tool}-riviksi');
+    const alkio = data.tools[0].input.muutokset[0];
+    ok(!('tapahtuma' in alkio) && !('poista' in alkio) && !('aikataulu' in alkio), 'null-kentät riisuttu ennen selainta (asiakaspään muodontunnistus ennallaan)');
+    ok(data.tools[0].input.selite === 'Testi', 'ei-null-kentät säilyvät riisunnassa');
     ok(up.messages.length === 3 && up.messages[0].content === 'aiempi kysymys', 'historia kulkee vuoroina');
     const last = up.messages[2].content;
     ok(/KONTEKSTI:/.test(last) && /KYSYMYS: Miksi onnistuminen/.test(last), 'konteksti + kysymys viimeisessä vuorossa');
