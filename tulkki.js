@@ -193,7 +193,42 @@
       const vertailu = buildVertailu();
       if (vertailu) ctx.vertailu = vertailu;
     } catch (e) { /* vertailu on rikaste — ei saa estää vastausta */ }
+    try {
+      const omat = buildOmatSuunnitelmat();
+      if (omat) ctx.suunnitelmat = omat;
+    } catch (e) { /* rikaste — ei saa estää vastausta */ }
     return ctx;
+  }
+
+  /* Profiilit: käyttäjän rinnakkaiset suunnitelmat (Suunnitelmani-sivu)
+     tunnuslukuineen. Tulkki vertaa niitä NÄILLÄ moottorin luvuilla — ei
+     vertaile-työkalulla, joka vertaa muutoksia aktiiviseen suunnitelmaan.
+     planSim käyttää Suunnitelmani-sivun välimuistia, joten tämä on halpa. */
+  function buildOmatSuunnitelmat() {
+    if (typeof plans === 'undefined' || !Array.isArray(plans) || plans.length < 2) return null;
+    const rivit = [];
+    for (const p of plans.slice(0, 8)) {
+      const d = p.data || {};
+      const ps = typeof planSim === 'function' ? planSim(p) : null;
+      if (!ps) continue;
+      const ret = (d.events || []).find((e) => e.type === 'retirement');
+      rivit.push({
+        nimi: String(p.nimi || 'Suunnitelma').slice(0, 40),
+        aktiivinen: p.id === planActiveId ? true : undefined,
+        ikaNyt: d.ageNow,
+        kkSaastoEurKk: Math.round(d.monthly || 0),
+        elakeika: ret ? Math.round(ret.age) : null,
+        onnistumistodennakoisyysPct: ps.successProb != null ? Math.round(ps.successProb * 100) : null,
+        varallisuusElakkeellaEur: ps.wAtRet != null ? Math.round(ps.wAtRet) : null,
+        kestavaKuukausituloEur: ps.sustainableWd != null ? Math.round(ps.sustainableWd) : null,
+        loppuvarallisuusEur: Math.round(Math.max(0, ps.wEnd || 0)),
+      });
+    }
+    if (rivit.length < 2) return null;
+    return {
+      selite: 'Käyttäjän omat rinnakkaiset suunnitelmat (Suunnitelmani-sivu), moottorin laskemat tunnusluvut. aktiivinen = keskustelun kohteena oleva suunnitelma.',
+      rivit,
+    };
   }
 
   /* ---------- Pehmeä numerovalidointi ---------- */
@@ -234,11 +269,12 @@
     const map = {};
     const walk = (v, p) => {
       if (typeof v === 'number' && isFinite(v)) map[p] = v;
-      else if (v && typeof v === 'object' && !Array.isArray(v)) {
+      else if (Array.isArray(v)) v.forEach((x, i) => walk(x, p + '.' + i));
+      else if (v && typeof v === 'object') {
         for (const k in v) walk(v[k], p ? p + '.' + k : k);
       }
     };
-    walk({ stats: ctx.stats, vertailu: ctx.vertailu }, '');
+    walk({ stats: ctx.stats, vertailu: ctx.vertailu, suunnitelmat: ctx.suunnitelmat }, '');
     // Salliva alias: malli pudottaa joskus etuliitteen (livenä nähty
     // [[verotYhteensaEur]] po. [[stats.verotYhteensaEur]]) — polun häntä
     // kelpaa, jos se on yksikäsitteinen. Ristiriita eri arvoilla → ei aliasta.
@@ -425,14 +461,18 @@
       html = sugs.slice(0, tkNarrow() ? 1 : 2).map((q) => `<button type="button" class="tk-sug">${esc(q)}</button>`).join('') +
         '<button type="button" class="tk-sug tk-haasta">🔍 Haasta suunnitelmani</button>';
     } else {
+      // Profiilichippi vain kun rinnakkaisia suunnitelmia oikeasti on
+      const hasPlans = typeof plans !== 'undefined' && Array.isArray(plans) && plans.length > 1;
       html = (hasRet ? '<button type="button" class="tk-sug tk-market">📉 Markkinatesti</button>' : '') +
         '<button type="button" class="tk-sug tk-haasta">🔍 Haasta suunnitelmani</button>' +
+        (hasPlans ? '<button type="button" class="tk-sug tk-plans">🗂 Vertaa suunnitelmiani</button>' : '') +
         '<button type="button" class="tk-sug tk-adv">📋 Kysymyslista varainhoitajalle</button>';
     }
     el.innerHTML = html;
     el.querySelectorAll('.tk-sug').forEach((b) => {
       b.addEventListener('click', () => {
         if (b.classList.contains('tk-adv')) ask('', 'advisor');
+        else if (b.classList.contains('tk-plans')) ask('Vertaa suunnitelmiani keskenään', 'explain');
         else if (b.classList.contains('tk-haasta')) ask('', 'haasta');
         else if (b.classList.contains('tk-market')) {
           tkTrack('Tulkki markkinatesti');
@@ -1191,10 +1231,11 @@
 
   /* ---------- Markkinatesti: moottorin stressiskenaariot (lukupohjainen) ---------- */
   // Sekvenssiriski: mitä jos markkina käyttäytyy huonosti juuri eläkkeelle
-  // jäädessä. Moottorin valmiit stressit (karhu heti eläkkeellä, menetetty
-  // vuosikymmen, stagflaatio) ajetaan kloonilla — deterministinen, EI AI-kutsua.
+  // jäädessä. Moottorin valmiit stressit ajetaan kloonilla — deterministinen,
+  // EI AI-kutsua. bear/seqNow on opetuspari: sama karhu eläkkeen alussa vs.
+  // heti tänään näyttää sekvenssiriskin suuruuden.
 
-  const STRESS_KEYS = ['bear', 'lost', 'stagf'];
+  const STRESS_KEYS = ['bear', 'seqNow', 'crash', 'lost', 'stagf'];
 
   function runMarketStress() {
     const base = JSON.parse(JSON.stringify(serialize()));
@@ -1246,7 +1287,7 @@
       `<td class="${i === biD ? 'tk-cmp-best' : ''}">${esc(c.dep == null ? '✓' : c.dep + ' v')}</td></tr>`
     ).join('');
     card.innerHTML =
-      `<div class="tk-cmp-lab">Markkinatesti — moottori ajoi kolme stressiskenaariota</div>` +
+      `<div class="tk-cmp-lab">Markkinatesti — moottori ajoi ${cols.length - 1} stressiskenaariota</div>` +
       `<div class="tk-ch-sel">Sekvenssiriski: sama suunnitelma, jos markkina käyttäytyy huonosti eläkkeelle jäädessäsi.</div>` +
       `<div class="tk-cmp-scroll"><table class="tk-cmp-tbl">${head}${body}</table></div>` +
       `<div class="tk-cmp-note">Deterministiset skenaariot, eivät ennuste. Suunnitelmaasi ei muutettu. Kysy “miksi karhumarkkina osuu näin” niin selitän.</div>`;

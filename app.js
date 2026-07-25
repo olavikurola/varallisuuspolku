@@ -3748,7 +3748,7 @@ function buildProMc() {
     + '<div class="field"><span class="field-label">Stressiskenaariot graafiin</span></div>';
   for (const [key, def] of Object.entries(STRESS_DEFS)) {
     h += `<label class="toggle ptog"><input type="checkbox" ${p.mc.stress.includes(key) ? 'checked' : ''} data-pact="stress" data-key="${key}" /><span class="switch"></span>`
-      + `<span>${def.name} <small>${def.months / 12} v · ${Math.round(def.annual * 100)} %/v eläkkeelle jäännistä</small></span></label>`;
+      + `<span>${def.name} <small>${def.months / 12} v · ${Math.round(def.annual * 100)} %/v ${def.from === 'now' ? 'heti nykyhetkestä' : 'eläkkeelle jäännistä'}</small></span></label>`;
   }
   $('proMc').innerHTML = h;
 }

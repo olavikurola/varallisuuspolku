@@ -55,9 +55,11 @@ const PRO_BASE_ASSETS = [
 // Stressiskenaariot: deterministinen kuukausituotto ikkunan ajan.
 // from: 'retire' = alkaa eläkkeelle jäännistä (sekvenssiriski).
 const STRESS_DEFS = {
-  bear:  { name: 'Karhu heti eläkkeellä',   months: 24,  annual: -0.20, from: 'retire' },
-  stagf: { name: 'Stagflaation vuosikymmen', months: 120, annual: 0.02,  from: 'retire' },
-  lost:  { name: 'Menetetty vuosikymmen',    months: 120, annual: 0.00,  from: 'retire' },
+  bear:   { name: 'Karhu heti eläkkeellä',    months: 24,  annual: -0.20, from: 'retire' },
+  seqNow: { name: 'Sama karhu jo tänään',     months: 24,  annual: -0.20, from: 'now' },
+  crash:  { name: 'Romahdus −50 % eläkkeen alussa', months: 12, annual: -0.50, from: 'retire' },
+  stagf:  { name: 'Stagflaation vuosikymmen', months: 120, annual: 0.02,  from: 'retire' },
+  lost:   { name: 'Menetetty vuosikymmen',    months: 120, annual: 0.00,  from: 'retire' },
 };
 
 function defaultPro() {
@@ -134,7 +136,7 @@ function proOf(st) {
     out.mc.seed = Math.round(numOr(p.mc.seed, 1337, 1, 1e9));
     out.mc.dist = p.mc.dist === 't' ? 't' : 'normal';
     out.mc.df = Math.round(numOr(p.mc.df, 5, 3, 30));
-    out.mc.stress = Array.isArray(p.mc.stress) ? p.mc.stress.filter((k) => STRESS_DEFS[k]).slice(0, 3) : [];
+    out.mc.stress = Array.isArray(p.mc.stress) ? p.mc.stress.filter((k) => STRESS_DEFS[k]).slice(0, 6) : [];
   }
   return out;
 }
@@ -1029,7 +1031,10 @@ function simulate(st, opts = {}) {
     out.stress = ctx.pro.mc.stress.map((key) => {
       const def = STRESS_DEFS[key];
       const rM = Math.pow(1 + def.annual, 1 / 12) - 1;
-      const shockFn = (m) => (m > m0 && m <= m0 + def.months ? rM - muM[m] : 0);
+      // from:'now' = shokki alkaa heti (sekvenssiriskin vertailupari:
+      // sama karhu säästövaiheessa on lievä, eläkkeen alussa kallis)
+      const start = def.from === 'now' ? 0 : m0;
+      const shockFn = (m) => (m > start && m <= start + def.months ? rM - muM[m] : 0);
       const r = runPath(ctx, st, withdrawal, retireAge, muM, { clamp0: true, collect: true, shockFn });
       return { key, name: def.name, arr: r.arr, depletion: r.depletion };
     });

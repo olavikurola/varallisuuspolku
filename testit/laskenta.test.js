@@ -234,6 +234,19 @@ console.log('Pro: analyysit ja stressit');
   ok(Array.isArray(s.stress) && s.stress.length === 2, 'stressipolut lasketaan');
   ok(s.stress[0].arr.length === s.months + 1, 'stressipolku täysimittainen');
   ok(s.stress[0].arr[s.months] < s.exp[s.months], 'karhuskenaario odotettua heikompi');
+
+  // Sekvenssiriskin pari: sama karhu heti nyt (from:'now') vs eläkkeen alussa —
+  // varhainen shokki osuu pieneen salkkuun, joten loppusalkku kärsii vähemmän
+  const st5 = plan();
+  st5.proOn = true; st5.pro = L.defaultPro();
+  st5.pro.mc.stress = ['bear', 'seqNow', 'crash', 'lost', 'stagf'];
+  const s5 = L.simulate(st5);
+  ok(s5.stress.length === 5, 'viisi stressiä kerralla (katto nostettu)');
+  const byKey = Object.fromEntries(s5.stress.map((x) => [x.key, x]));
+  ok(byKey.seqNow.arr[12] < s5.exp[12], 'seqNow painaa polkua jo alussa');
+  ok(byKey.bear.arr[12] === s5.exp[12], 'bear ei kosketa säästövaihetta');
+  ok(byKey.seqNow.arr[s5.months] > byKey.bear.arr[s5.months], 'varhainen karhu lievempi kuin eläkkeen alun karhu (sekvenssiriski)');
+  ok(byKey.crash.arr[s5.months] < s5.exp[s5.months], 'romahdus −50 % heikentää loppusalkkua');
   ok(s.ruinCurve && s.ruinCurve[s.months] >= 0 && s.ruinCurve[s.months] <= 1, 'ehtymiskäyrä ∈ [0,1]');
   ok(Math.abs((1 - s.ruinCurve[s.months]) - s.successProb) < 1e-9, 'ehtymiskäyrän loppu = 1 − onnistumis-%');
   st.pro.mc.pctLo = 5; st.pro.mc.pctHi = 95;

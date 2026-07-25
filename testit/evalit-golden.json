@@ -29,6 +29,13 @@
     "years": {
       "selite": "[ikä, sijoitukset €, säästöt €/v, nostot brutto €/v, verot €/v, työeläke €/v]",
       "rivit": [[38, 80000, 7200, 0, 0, 0], [50, 240000, 7200, 0, 0, 0], [63, 620000, 0, 31200, 4300, 0], [65, 590000, 0, 14400, 2100, 16800], [90, 310000, 0, 14400, 1900, 16800]]
+    },
+    "suunnitelmat": {
+      "selite": "Käyttäjän omat rinnakkaiset suunnitelmat (Suunnitelmani-sivu), moottorin laskemat tunnusluvut. aktiivinen = keskustelun kohteena oleva suunnitelma.",
+      "rivit": [
+        { "nimi": "Oma polku", "aktiivinen": true, "ikaNyt": 38, "kkSaastoEurKk": 600, "elakeika": 63, "onnistumistodennakoisyysPct": 84, "varallisuusElakkeellaEur": 620000, "kestavaKuukausituloEur": 2750, "loppuvarallisuusEur": 310000 },
+        { "nimi": "Varovainen", "ikaNyt": 38, "kkSaastoEurKk": 900, "elakeika": 66, "onnistumistodennakoisyysPct": 95, "varallisuusElakkeellaEur": 780000, "kestavaKuukausituloEur": 3200, "loppuvarallisuusEur": 520000 }
+      ]
     }
   },
   "tapaukset": [
@@ -55,6 +62,12 @@
       "mode": "explain",
       "question": "Lisää suunnitelmaan mökin osto 55-vuotiaana, hinta 150000 euroa",
       "odota": { "tyokalu": "ehdota_muutos", "muutosUusi": "cottage" }
+    },
+    {
+      "nimi": "omat-suunnitelmat-vertailu",
+      "mode": "explain",
+      "question": "Vertaa suunnitelmiani keskenään — miten ne eroavat?",
+      "odota": { "tyokalu": null, "tekstissa": ["Oma polku", "Varovainen"] }
     },
     {
       "nimi": "omistus-d-muoto",
