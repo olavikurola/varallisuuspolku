@@ -4868,6 +4868,20 @@ function closeMoreMenu() {
   if (moreMenuEl) { moreMenuEl.remove(); moreMenuEl = null; }
 }
 
+/* ===================== Teema ===================== */
+// Vaalea teema = html.light-luokka; headin inline-skripti lukee saman avaimen
+// ennen ensimmäistä maalausta, joten valinta ei välähdä latauksessa.
+const THEME_KEY = 'vp-theme';
+
+function isLightTheme() { return document.documentElement.classList.contains('light'); }
+
+function applyTheme(light) {
+  document.documentElement.classList.toggle('light', light);
+  const m = document.querySelector('meta[name="theme-color"]');
+  if (m) m.setAttribute('content', light ? '#eef1f8' : '#0a0e1a');
+  try { localStorage.setItem(THEME_KEY, light ? 'light' : 'dark'); } catch (e) {}
+}
+
 function openMoreMenu(anchor) {
   if (moreMenuEl) { closeMoreMenu(); return; }
   closeExamplesMenu();
@@ -4897,6 +4911,10 @@ function openMoreMenu(anchor) {
     () => startTour());
   add('mi-info', 'Tietoa palvelusta', 'Oletukset, tietosuoja ja vinkit',
     () => { $('infoModal').hidden = false; });
+  add('mi-theme',
+    isLightTheme() ? 'Tumma teema' : 'Vaalea teema',
+    'Vaihda värimaailma — valinta muistetaan',
+    () => applyTheme(!isLightTheme()));
 
   // Nollaus vaatii toisen klikkauksen — valikko pysyy auki vahvistusta varten
   const reset = add('mi-reset', 'Nollaa suunnitelma', 'Poistaa avoinna olevan suunnitelman — muut rivit säilyvät', null, true);
