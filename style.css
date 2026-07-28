@@ -2072,6 +2072,7 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .tk-cursor { animation: none; opacity: 0.6; }
   .tk-handle.tk-thinking { animation: none; }
+  .tk-handle.tk-pulse { animation: none; }
 }
 
 /* Porrastettu säästö -editori */
@@ -2246,6 +2247,40 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
 @media (max-width: 560px) {
   .veto-hint { white-space: normal; max-width: 200px; text-align: center; }
 }
+
+/* Vihjeketjun vaihe 2: tapahtumasirut kaavion ylälaidassa (kerran ikinä) */
+.polku-hint {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px;
+  max-width: min(94%, 520px);
+  background: rgba(20, 28, 51, 0.97);
+  border: 1px solid rgba(45, 212, 191, 0.5);
+  border-radius: 12px; padding: 7px 10px;
+  z-index: 30; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  animation: vetoHintIn 0.25s ease;
+}
+.polku-hint .ph-lb { font-size: 12px; color: var(--text-dim); }
+.ph-chip {
+  font: inherit; font-size: 12px; color: var(--text); cursor: pointer;
+  background: rgba(45, 212, 191, 0.1); border: 1px solid rgba(45, 212, 191, 0.4);
+  border-radius: 999px; padding: 4px 10px;
+}
+.ph-chip:hover { background: rgba(45, 212, 191, 0.2); border-color: var(--accent); }
+
+/* Vihjeketjun vaihe 3: Tulkki-kielekkeen kertavihje — asemointi JS:stä
+   kielekkeen mukaan (leveällä viereen pystykeskitettynä, kapealla ylle) */
+.tk-nudge {
+  position: fixed; z-index: 149;
+  background: rgba(20, 28, 51, 0.97);
+  border: 1px solid rgba(139, 124, 246, 0.5);
+  border-radius: 10px; color: var(--text);
+  font-size: 12px; line-height: 1.4; padding: 6px 10px;
+  pointer-events: none; max-width: 220px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  animation: vetoHintIn 0.25s ease;
+}
+.tk-nudge.side { transform: translateY(-50%); }
+.tk-handle.tk-pulse { animation: tkGlow 1.2s ease-in-out 3; }
 
 /* Tilastot-sivu: lohkot, ankkurit, poimintalauseet ja suurennus */
 .an-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--border-soft); }

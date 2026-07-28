@@ -1934,6 +1934,7 @@ function showVetoHint() {
     if (localStorage.getItem(VETO_HINT_KEY) === '1') return;
     localStorage.setItem(VETO_HINT_KEY, '1');
   } catch (e) {}
+  track('Vihje näytetty', { vihje: 'veto' });
   const ret = state.events.find((e) => e.type === 'retirement');
   if (!ret) return;
   if (!document.querySelector(`#chart .marker[data-id="${ret.id}"]`)) return;
@@ -1971,6 +1972,98 @@ function showVetoHint() {
   };
   document.addEventListener('pointerdown', off, true);
   setTimeout(off, 8000);
+}
+
+// Vihjeketju analytiikan aktivointikuiluun: veto → oma tapahtuma → Tulkki.
+// Korkeintaan yksi vihje istuntoa kohti ja jokainen kerran ikinä; vaihe
+// ohitetaan, jos käyttäjä on jo tehnyt asian itse. Ramppi- ja kierros-
+// istunnoissa ketju ei elä — niillä on oma ohjauksensa.
+const HINT_EVENT_KEY = 'vp-vihje-tapahtuma';
+const HINT_TULKKI_KEY = 'vp-vihje-tulkki';
+
+// Vaihe 2: konkreettiset sirut yleiskehotteen sijaan — rampin "Omistan jo"
+// -napin oppi: valmis valinta puree, pelkkä tekstikehote ei. Työeläke ensin,
+// koska rampin otsikkoluku näytetään korostetusti ilman sitä.
+// Poistuu ensimmäisestä muualle-kosketuksesta tai ajastaan — ei jää tielle.
+function showEventHint() {
+  const ret = state.events.find((ev) => ev.type === 'retirement');
+  const bar = document.createElement('div');
+  bar.className = 'polku-hint';
+  bar.innerHTML = '<span class="ph-lb">Tarkenna kuvaasi:</span>';
+  let tmo = 0;
+  const off = () => { clearTimeout(tmo); bar.remove(); document.removeEventListener('pointerdown', outside, true); };
+  const outside = (e) => { if (!bar.contains(e.target)) off(); };
+  const chip = (txt, valinta, fn) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ph-chip';
+    b.textContent = txt;
+    b.addEventListener('click', () => { track('Vihje käytetty', { vihje: 'tapahtuma', valinta }); off(); fn(); });
+    bar.appendChild(b);
+  };
+  if (ret && !(ret.pension > 0)) chip('🌴 Työeläkkeeni', 'työeläke', () => {
+    openPopover(ret.id);
+    const f = $('pv-pen');
+    if (f) { f.focus(); f.select(); }
+  });
+  chip('🏠 Asunnon osto', 'asunto', () => addEvent('home', clamp(state.ageNow + 5, state.ageNow, state.ageEnd)));
+  chip('👶 Lapsi', 'lapsi', () => addEvent('child', clamp(state.ageNow + 3, state.ageNow, state.ageEnd)));
+  wrap.appendChild(bar);
+  document.addEventListener('pointerdown', outside, true);
+  tmo = setTimeout(off, 15000);
+}
+
+// Vaihe 3: ✦-kieleke hehkahtaa kolmesti ja saa ohimenevän tekstin. Tulkin
+// avaajat kysyvät keskimäärin 3+ kysymystä mutta vain harva löytää kielekkeen
+// — löydettävyysongelma, ei laatuongelma. Reduced-motion: ei hehkua, teksti
+// näkyy silti. Sijoitus lasketaan kielekkeestä, jonka asento vaihtelee
+// (leveällä pystynä oikeassa reunassa, kapealla vaakana alanurkassa).
+function showTulkkiHint() {
+  const handle = document.querySelector('.tk-handle');
+  if (!handle || document.body.classList.contains('tk-docked')) return false;
+  handle.classList.add('tk-pulse');
+  const tip = document.createElement('div');
+  tip.className = 'tk-nudge';
+  tip.textContent = 'Tulkki selittää lukusi selkokielellä — kysy mitä vain';
+  const r = handle.getBoundingClientRect();
+  if (getComputedStyle(handle).writingMode.startsWith('vertical')) {
+    tip.classList.add('side');
+    tip.style.right = Math.round(window.innerWidth - r.left + 10) + 'px';
+    tip.style.top = Math.round(r.top + r.height / 2) + 'px';
+  } else {
+    tip.style.right = Math.round(window.innerWidth - r.right) + 'px';
+    tip.style.bottom = Math.round(window.innerHeight - r.top + 10) + 'px';
+  }
+  document.body.appendChild(tip);
+  const off = () => {
+    tip.remove();
+    handle.classList.remove('tk-pulse');
+    document.removeEventListener('pointerdown', off, true);
+  };
+  document.addEventListener('pointerdown', off, true);
+  setTimeout(off, 8000);
+  return true;
+}
+
+// Ketjun askellus: seuraava tekemätön vaihe, yksi per istunto. Kutsutaan
+// vain palaavan käyttäjän latauspolulta (ei rampin/kierroksen istunnoissa).
+function nextHint() {
+  if (fsOn || tourStep >= 0 || !$('ramp').hidden || !$('summary').hidden) return;
+  const seen = (k) => { try { return localStorage.getItem(k) === '1'; } catch (e) { return true; } };
+  const mark = (k) => { try { localStorage.setItem(k, '1'); } catch (e) {} };
+  if (!seen(VETO_HINT_KEY) && !seen(DRAW_TUTOR_KEY)) { showVetoHint(); return; }
+  // "Oma tapahtuma jo lisätty" päätellään tilasta: rampista syntyy vain
+  // eläketapahtuma, joten mikä tahansa muu kertoo itsenäisestä käytöstä
+  if (!seen(HINT_EVENT_KEY) && !state.events.some((ev) => ev.type !== 'retirement')) {
+    mark(HINT_EVENT_KEY);
+    track('Vihje näytetty', { vihje: 'tapahtuma' });
+    showEventHint();
+    return;
+  }
+  if (!seen(HINT_TULKKI_KEY) && !seen('vp-tulkki-intro') && showTulkkiHint()) {
+    mark(HINT_TULKKI_KEY);
+    track('Vihje näytetty', { vihje: 'tulkki' });
+  }
 }
 
 function rampResult(retA) {
@@ -2027,6 +2120,10 @@ if (!autoTourOff && visitKind === 'first' && !rampSeen && $('summary').hidden) {
   setTimeout(() => { if (!fsOn && tourStep < 0 && $('summary').hidden) showRamp(); }, 600);
 } else if (!autoTourOff && !tourSeen && visitKind !== 'returning' && $('summary').hidden) {
   setTimeout(() => { if (!fsOn && tourStep < 0 && $('summary').hidden) startTour(); }, 600);
+} else if (!autoTourOff && $('summary').hidden) {
+  // Palaava käyttäjä ilman ramppia/kierrosta: vihjeketjun vuoro. Viive antaa
+  // ensimmäisen laskennan ja käyrän asettua ennen kuin mitään ehdotetaan.
+  setTimeout(nextHint, 4000);
 }
 
 // Koon muutos vaatii vain geometrian uusiksi — sim ei riipu koosta.
