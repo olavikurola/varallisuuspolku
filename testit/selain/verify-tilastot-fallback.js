@@ -105,6 +105,23 @@ const STATS = {
   ok(await page.locator('.an-tip').isVisible().catch(() => false), 'hover toimii suurennoksessa');
   await page.keyboard.press('Escape');
 
+  console.log('Sinä-kerroksen kytkin');
+  const tg = page.locator('.an-me-toggle');
+  ok(await tg.count() === 1, 'kytkin näkyy kun oma suunnitelma on');
+  await tg.locator('.switch').click();
+  await page.waitForTimeout(200);
+  ok(await page.locator('.an-youchip').count() === 0, 'pois: sinä-selitteet katoavat');
+  ok(await page.locator('.an-take').count() === 0, 'pois: poimintalauseet katoavat');
+  ok(!norm(await page.locator('#retirePlan').textContent()).includes('sinä:'), 'pois: sinä-arvot riveiltä');
+  ok(await page.locator('#heroChart svg path.hbar').count() >= 8, 'kaaviot piirtyvät yhä');
+  await page.reload();
+  await page.waitForFunction(() => document.querySelectorAll('.an-card svg').length >= 3);
+  ok(await page.locator('.an-youchip').count() === 0, 'valinta muistetaan latauksen yli');
+  await page.locator('.an-me-toggle .switch').click();
+  await page.waitForTimeout(200);
+  ok(await page.locator('.an-youchip').count() >= 3, 'päälle: sinä-kerros palaa');
+  ok((await page.locator('#heroChart ~ .an-take').textContent()).length > 0, 'päälle: poimintalause palaa');
+
   ok(errors.length === 0, 'ei sivuvirheitä', errors.join('; '));
   await browser.close();
   server.kill();

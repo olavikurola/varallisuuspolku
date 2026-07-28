@@ -876,17 +876,23 @@ function takeaways(stats, me) {
       : `Jaetuista ${stats.total} suunnitelmasta ${stats.editedN} on muokattuja. Jakaumissa ovat toistaiseksi kaikki; muokkaamattomat esimerkkipohjat suodatetaan pois, kun muokattuja on vähintään ${stats.kAnon}.`;
   }
 
-  renderHero(stats, me);
-  renderRidgeline(stats, me);
-  renderEventRank(stats, me);
-  renderQuartCols('savingsChart', stats, 'monthly', me, me ? me.monthly : null,
+  // Kaikki "sinä"-kerroksesta riippuva piirto yhdessä funktiossa, jotta oman
+  // suunnitelman merkinnät voi kytkeä päälle ja pois ilman sivulatausta.
+  // Portti, paluulinkit ja tiilet käyttävät aina oikeaa me-tilaa.
+  const drawCharts = (m) => {
+  document.querySelectorAll('.an-youchip').forEach((n) => n.remove());
+  document.querySelectorAll('.an-take').forEach((n) => n.remove());
+  renderHero(stats, m);
+  renderRidgeline(stats, m);
+  renderEventRank(stats, m);
+  renderQuartCols('savingsChart', stats, 'monthly', m, m ? m.monthly : null,
     (v) => v >= 1950 ? fmtCompact(v) : Math.round(v / 10) * 10 + ' €');
-  renderQuartCols('stocksChart', stats, 'stocks', me, me ? me.stocks : null,
+  renderQuartCols('stocksChart', stats, 'stocks', m, m ? m.stocks : null,
     (v) => Math.round(v) + ' %', (age) => 110 - age, 100);
-  renderRetireHist(stats, me);
-  renderPenCoverage(stats, me);
+  renderRetireHist(stats, m);
+  renderPenCoverage(stats, m);
 
-  const gd = (me && me.group && stats.groups[me.group] && stats.groups[me.group].goals) ? stats.groups[me.group] : all;
+  const gd = (m && m.group && stats.groups[m.group] && stats.groups[m.group].goals) ? stats.groups[m.group] : all;
   if (gd.goals) {
     renderDonut('goalDonut', [
       { l: 'Kokeilen itse', v: gd.goals.manual, c: '#8fa0c4' },
@@ -904,12 +910,33 @@ function takeaways(stats, me) {
     ]);
   } else empty('confDonut', needMsg(stats.total, stats.kAnon));
 
-  renderRetirePlan(stats, me);
-  renderHomeLoan(stats, me);
-  renderOwned(stats, me);
-  renderRealism(stats, me);
+  renderRetirePlan(stats, m);
+  renderHomeLoan(stats, m);
+  renderOwned(stats, m);
+  renderRealism(stats, m);
   renderTimeline(stats);
-  takeaways(stats, me);
+  takeaways(stats, m);
+  };
+
+  // Kytkin: oma suunnitelma kaavioissa päälle/pois (valinta muistetaan).
+  // Näytetään vain kun oma suunnitelma on olemassa — muuten ei ole kytkettävää.
+  const SHOWME_KEY = 'vp-an-me';
+  let showMe = true;
+  try { showMe = localStorage.getItem(SHOWME_KEY) !== '0'; } catch (e) {}
+  if (me) {
+    const lb = document.createElement('label');
+    lb.className = 'toggle an-me-toggle';
+    lb.innerHTML = `<input type="checkbox" id="anMeToggle"${showMe ? ' checked' : ''} />` +
+      `<span class="switch" aria-hidden="true"></span><span>Oma suunnitelmani kaavioissa</span>`;
+    document.querySelector('.an-nav').appendChild(lb);
+    lb.querySelector('input').addEventListener('change', (e) => {
+      showMe = e.target.checked;
+      try { localStorage.setItem(SHOWME_KEY, showMe ? '1' : '0'); } catch (err) {}
+      drawCharts(showMe ? me : null);
+    });
+  }
+
+  drawCharts(me && showMe ? me : null);
   initZoom();
 
   // Menetelmä: n per ikäryhmä
