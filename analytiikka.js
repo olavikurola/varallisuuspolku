@@ -926,6 +926,12 @@ function takeaways(stats, me) {
   if (me) {
     const lb = document.createElement('label');
     lb.className = 'toggle an-me-toggle';
+    // Asemointi inlinena: JS ja markup kulkevat aina yhdessä, joten oikea
+    // reuna ei riipu style.css:n tuoreudesta (Pages-välimuistin 10 min ikkuna
+    // voi tarjota uuden JS:n ja vanhan CSS:n sekaisin). Mobiilisääntö
+    // ohittaa tämän !importantilla.
+    lb.style.marginLeft = 'auto';
+    lb.style.marginTop = '0';
     lb.innerHTML = `<input type="checkbox" id="anMeToggle"${showMe ? ' checked' : ''} />` +
       `<span class="switch" aria-hidden="true"></span><span>Oma suunnitelmani kaavioissa</span>`;
     document.querySelector('.an-nav').appendChild(lb);

@@ -2290,9 +2290,11 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
   border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px;
 }
 .an-nav a:hover { color: var(--accent); border-color: var(--accent); }
-/* Sinä-kerroksen kytkin sisältöriville: oikeaan reunaan, kompakti */
+/* Sinä-kerroksen kytkin sisältöriville: oikeaan reunaan, kompakti.
+   Asemointi tulee inline-tyylinä JS:stä (versiosekoituksen kesto) —
+   mobiilissa !important ohittaa inlinen ja kytkin putoaa omalle riville. */
 .an-me-toggle { margin: 0 0 0 auto; align-items: center; font-size: 12.5px; color: var(--text-dim); }
-@media (max-width: 560px) { .an-me-toggle { margin-left: 0; flex-basis: 100%; } }
+@media (max-width: 560px) { .an-me-toggle { margin-left: 0 !important; flex-basis: 100%; } }
 /* "sinä"-selite kortin otsikossa — glyyfi vastaa kaavion keltaista merkkiä */
 .an-youchip { float: right; font-size: 11px; font-weight: 700; color: var(--warn-text); white-space: nowrap; margin-left: 10px; }
 /* Kortin ylälaidan otsikossa chip väistää absoluuttisesti asemoitua ⛶-nappia
