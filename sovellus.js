@@ -128,6 +128,30 @@ const EXAMPLES = [
       ],
     },
   },
+  {
+    // Julkisen "milloin miljonäärin rahat loppuvat" -keskustelun vastalasku.
+    // Kalibroitu moottoria vasten 28.7.2026: jakolasku sanoo 55 v 5 kk;
+    // simulaatio (tuotto − verot − työeläke, nykyrahassa) mediaanissa ~57 v,
+    // huonoimmassa kymmenyksessä ~54 v — ja kestävä taso ~3 600 €/kk.
+    name: 'Exit-miljonääri (45 v)', desc: 'Miljoona tilillä, 8 000 €/kk menoa — milloin rahat oikeasti loppuvat?',
+    data: {
+      ageNow: 45, ageEnd: 92, startCapital: 1000000, monthly: 0, savingsGrowth: 0,
+      allocStocks: 60, allocBonds: 30, glide: false, real: true, tax: true,
+      events: [
+        { type: 'retirement', age: 45, withdrawal: 8000, pension: 1800, pensionAge: 68 },
+      ],
+    },
+  },
+  {
+    name: 'Miljoona loppuelämäksi (45 v)', desc: 'Paljonko miljoonasta voi käyttää joka kuukausi 85 % varmuudella?',
+    data: {
+      ageNow: 45, ageEnd: 92, startCapital: 1000000, monthly: 0, savingsGrowth: 0,
+      allocStocks: 60, allocBonds: 30, glide: false, real: true, tax: true,
+      events: [
+        { type: 'retirement', age: 45, withdrawal: 2700, pension: 1800, pensionAge: 68, goal: 'withdrawal', conf: 0.85 },
+      ],
+    },
+  },
 ];
 
 let examplesMenuEl = null;
