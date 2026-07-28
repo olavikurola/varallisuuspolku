@@ -149,59 +149,132 @@ function markYou(containerId, glyph) {
 // Kategorinen histogrammi: lokerot tasalevein pylväin (reunavälit saavat olla
 // epätasaiset). Koko joukon varanäkymä ikäryhmäkortteihin, kunnes ryhmiä
 // aukeaa — mediaaniviiva ja oma merkki kuten eläkeikäkortissa.
+// Pylväiden jaettu pystyliukuväri — yksi def per svg (klooni perii saman id:n,
+// ja selain hakee määritelmän dokumentista, joten suurennos toimii)
+let gradSeq = 0;
+function histBarFill(svg) {
+  if (svg.__barFill) return svg.__barFill;
+  const id = 'anHg' + (++gradSeq);
+  const defs = el('defs', {}, svg);
+  const g = el('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+  el('stop', { offset: '0%', 'stop-color': 'rgba(45,212,191,0.9)' }, g);
+  el('stop', { offset: '100%', 'stop-color': 'rgba(45,212,191,0.3)' }, g);
+  svg.__barFill = `url(#${id})`;
+  return svg.__barFill;
+}
+
+// Pylväs pyöristetyin yläkulmin ja tasaisella jalalla (rect pyöristäisi kaikki)
+function histBar(svg, x, yTop, w, base, fill) {
+  const r = Math.min(4, w / 2, Math.max(0, base - yTop));
+  el('path', {
+    class: 'hbar',
+    d: `M ${x.toFixed(1)} ${base.toFixed(1)} L ${x.toFixed(1)} ${(yTop + r).toFixed(1)}` +
+      ` Q ${x.toFixed(1)} ${yTop.toFixed(1)} ${(x + r).toFixed(1)} ${yTop.toFixed(1)}` +
+      ` L ${(x + w - r).toFixed(1)} ${yTop.toFixed(1)}` +
+      ` Q ${(x + w).toFixed(1)} ${yTop.toFixed(1)} ${(x + w).toFixed(1)} ${(yTop + r).toFixed(1)}` +
+      ` L ${(x + w).toFixed(1)} ${base.toFixed(1)} Z`,
+    fill, stroke: 'rgba(45,212,191,0.45)', 'stroke-width': 1,
+  }, svg);
+}
+
 function renderHistCols(containerId, h, opts) {
   const o = opts || {};
-  const W = o.W || 470, H = o.H || 240, l = 14, r = 14, t = 16, b = 30;
   const fmt = o.fmt || String;
+  // Tyhjät reunalokerot pois (yksi jää puskuriksi): vino jakauma ei jätä
+  // puolta kaaviosta tyhjäksi (esim. osakepaino keskittyy 60–100 %:iin)
+  let lo = h.counts.findIndex((c) => c > 0);
+  if (lo < 0) return empty(containerId, 'Kertyy vielä.');
+  let hi = h.counts.length - 1;
+  while (h.counts[hi] === 0) hi--;
+  lo = Math.max(0, lo - 1); hi = Math.min(h.counts.length - 1, hi + 1);
+  const counts = h.counts.slice(lo, hi + 1);
+  const edges = h.edges.slice(lo, hi + 2);
+  const nB = counts.length;
+  const total = counts.reduce((s, c) => s + c, 0) || 1;
+
+  const W = o.W || 470, H = o.H || 240, l = 40, r = 14, t = 16, b = 30;
   const svg = svgIn($(containerId), W, H);
-  const nB = h.counts.length;
   const bw = (W - l - r) / nB;
-  const maxC = Math.max(...h.counts, 1);
-  const Y = (c) => t + (H - t - b) * (1 - c / maxC);
+  const base = H - b;
+  // %-asteikko ruudukolla: osuudet vertautuvat kaavioiden välillä ja tyhjä
+  // tila saa rakenteen — askel valitaan niin että viivoja on 2–4
+  const maxP = Math.max(...counts) / total;
+  const step = [0.02, 0.05, 0.1, 0.2, 0.25].find((s) => maxP / s <= 4) || 0.5;
+  const yMax = maxP * 1.12;
+  const Y = (p) => base - (p / yMax) * (H - t - b);
+  for (let i = 1; i * step <= yMax; i++) {
+    el('line', { x1: l, y1: Y(i * step), x2: W - r, y2: Y(i * step), class: 'grid-line' }, svg);
+    text(svg, l - 6, Y(i * step) + 4, Math.round(i * step * 100) + ' %', 'an-tick', 'end');
+  }
+  el('line', { x1: l, y1: base, x2: W - r, y2: base, class: 'grid-line' }, svg);
   const xEdge = (k) => l + k * bw;
   const xOf = (v) => { // arvo → x lineaarisesti lokeron sisällä
-    let k = h.edges.findIndex((e, i) => i < nB && v < h.edges[i + 1]);
-    if (k === -1) k = v >= h.edges[nB] ? nB - 1 : 0;
-    const e0 = h.edges[k], e1 = h.edges[k + 1];
-    const f = e1 > e0 ? Math.max(0, Math.min(1, (v - e0) / (e1 - e0))) : 0.5;
+    const cv = Math.max(edges[0], Math.min(edges[nB], v));
+    let k = edges.findIndex((e, i) => i < nB && cv < edges[i + 1]);
+    if (k === -1) k = nB - 1;
+    const e0 = edges[k], e1 = edges[k + 1];
+    const f = e1 > e0 ? Math.max(0, Math.min(1, (cv - e0) / (e1 - e0))) : 0.5;
     return xEdge(k) + f * bw;
   };
-  h.counts.forEach((c, i) => {
+  const fill = histBarFill(svg);
+  counts.forEach((c, i) => {
     if (!c) return;
-    el('rect', { x: xEdge(i) + 1, y: Y(c), width: Math.max(2, bw - 2), height: H - b - Y(c), rx: 3, fill: 'rgba(45,212,191,0.65)' }, svg);
+    histBar(svg, xEdge(i) + 1.5, Y(c / total), Math.max(2, bw - 3), base, fill);
   });
-  const step = Math.ceil(nB / 4);
-  for (let k = 0; k < nB; k += step) {
-    if (nB - k < step * 0.6) break; // liian lähellä oikeaa reunaa — loppureunan nimiö riittää
-    text(svg, xEdge(k), H - 10, fmt(h.edges[k]), 'an-tick', k === 0 ? 'start' : 'middle');
+  // X-nimiöt: siistit tasa-arvot (labelEdges) kun niitä on, muuten joka n:s reuna
+  let labs = (o.labelEdges || []).filter((v) => edges.includes(v));
+  if (labs.length >= 3) {
+    if (!labs.includes(edges[0])) labs.unshift(edges[0]);
+    if (!labs.includes(edges[nB])) labs.push(edges[nB]);
+  } else {
+    labs = [];
+    const st = Math.ceil(nB / 4);
+    for (let k = 0; k < nB; k += st) if (nB - k >= st * 0.6) labs.push(edges[k]);
+    labs.push(edges[nB]);
   }
-  text(svg, xEdge(nB), H - 10, fmt(h.edges[nB]), 'an-tick', 'end');
+  for (const v of labs) {
+    const k = edges.indexOf(v);
+    text(svg, xEdge(k), H - 10, fmt(v), 'an-tick', k === 0 ? 'start' : k === nB ? 'end' : 'middle');
+  }
   if (o.med != null) {
-    el('line', { x1: xOf(o.med), y1: t, x2: xOf(o.med), y2: H - b, stroke: '#2dd4bf', 'stroke-width': 2, 'stroke-dasharray': '3 4' }, svg);
-    text(svg, Math.min(xOf(o.med) + 6, W - r - 60), t + 12, `med. ${fmt(o.med)}`, 'an-tick-strong');
+    const mx = xOf(o.med);
+    el('line', { x1: mx, y1: t, x2: mx, y2: base, stroke: '#2dd4bf', 'stroke-width': 2, 'stroke-dasharray': '3 4' }, svg);
+    const right = mx > l + (W - l - r) * 0.72; // nimiö kääntyy vasemmalle oikeassa reunassa
+    text(svg, right ? mx - 6 : mx + 6, t + 11, `med. ${fmt(o.med)}`, 'an-tick-strong', right ? 'end' : 'start');
   }
+  // Oma merkki oman lokeron pylvään päälle — ei irralleen yläreunaan
   if (o.meVal != null) {
-    el('path', { d: `M ${xOf(o.meVal).toFixed(1)} ${t + 2} l 5 8 l -10 0 Z`, fill: YOU }, svg);
-    markYou(containerId, '▲');
+    const mv = Math.max(edges[0], Math.min(edges[nB], o.meVal));
+    let k = edges.findIndex((e, i) => i < nB && mv < edges[i + 1]);
+    if (k < 0) k = nB - 1;
+    const yTop = counts[k] ? Y(counts[k] / total) : base;
+    el('path', { d: `M ${xOf(mv).toFixed(1)} ${(yTop - 4).toFixed(1)} l 5 -8 l -10 0 Z`, fill: YOU }, svg);
+    markYou(containerId, '▼'); // kärki osoittaa omaan lokeroon
+
   }
-  const totalC = h.counts.reduce((s, c) => s + c, 0) || 1;
   attachHover(svg, (x) => {
     const i = Math.floor((x - l) / bw);
-    if (i < 0 || i >= nB || !h.counts[i]) return null;
+    if (i < 0 || i >= nB || !counts[i]) return null;
     return {
-      html: `<b>${fmt(h.edges[i])} – ${fmt(h.edges[i + 1])}</b><br>${h.counts[i]} suunnitelmaa · ${Math.round((h.counts[i] / totalC) * 100)} %`,
-      x: xEdge(i) + bw / 2, y1: t, y2: H - b,
+      html: `<b>${fmt(edges[i])} – ${fmt(edges[i + 1])}</b><br>${counts[i]} suunnitelmaa · ${Math.round((counts[i] / total) * 100)} %`,
+      x: xEdge(i) + bw / 2, y1: t, y2: base,
     };
   });
 }
 
 // Ikäryhmäkortin varanäkymä koko joukon histogrammista; palauttaa true jos piirtyi
+const LABEL_EDGES = { // siistit x-nimiöarvot per jakauma (leikataan näkyvään alueeseen)
+  monthly: [0, 500, 1000, 2000, 5000, 10000],
+  stocks: [0, 20, 40, 60, 80, 100],
+  startCapital: [0, 50000, 150000, 400000, 1000000, 2000000],
+};
 function histFallback(containerId, stats, key, meVal, fmt, dims) {
   const all = stats.groups.all;
   const ah = all && all.hist && all.hist[key];
   if (!ah) return false;
-  renderHistCols(containerId, ah, Object.assign({ fmt, med: all[key] && all[key].p50, meVal }, dims));
-  setSmall(containerId, `koko joukon jakauma · n = ${all.n} — ikäryhmittäin kun ryhmiä aukeaa`);
+  renderHistCols(containerId, ah, Object.assign(
+    { fmt, med: all[key] && all[key].p50, meVal, labelEdges: LABEL_EDGES[key] }, dims));
+  setSmall(containerId, `kaikki jakajat · n = ${all.n}`);
   return true;
 }
 
@@ -384,20 +457,25 @@ function renderRetireHist(stats, me) {
   const X = (age) => l + ((age - 40) / (80 - 40)) * (W - l - r);
   const maxC = Math.max(...h.counts, 1);
   const Y = (c) => t + (H - t - b) * (1 - c / maxC);
+  // varjostuksen selite on otsikossa — tekstinimiö jäisi pylvään alle
   el('rect', { x: X(65), y: t, width: X(68) - X(65), height: H - t - b, fill: 'rgba(139,124,246,0.12)' }, svg);
-  text(svg, X(66.5), t + 12, 'lakisäät.', 'an-tick', 'middle');
   h.counts.forEach((c, i) => {
     if (!c) return;
     const x0 = X(h.edges[i]), x1 = X(h.edges[i + 1]);
-    el('rect', { x: x0 + 1, y: Y(c), width: Math.max(2, x1 - x0 - 2), height: H - b - Y(c), rx: 3, fill: 'rgba(45,212,191,0.65)' }, svg);
+    histBar(svg, x0 + 1, Y(c), Math.max(2, x1 - x0 - 2), H - b, histBarFill(svg));
   });
   for (let a = 40; a <= 80; a += 10) text(svg, X(a), H - 10, a + ' v', 'an-tick', 'middle');
   if (g.retireAge) {
     el('line', { x1: X(g.retireAge.p50), y1: t, x2: X(g.retireAge.p50), y2: H - b, stroke: '#2dd4bf', 'stroke-width': 2, 'stroke-dasharray': '3 4' }, svg);
   }
   if (me && me.ret) {
-    el('path', { d: `M ${X(me.ret.age).toFixed(1)} ${t + 2} l 5 8 l -10 0 Z`, fill: YOU }, svg);
-    markYou('retireHist', '▲');
+    // merkki oman lokeron pylvään päälle, samaan tapaan kuin histogrammeissa
+    const a = Math.max(h.edges[0], Math.min(h.edges[h.edges.length - 1], me.ret.age));
+    let k = h.edges.findIndex((e, i) => i < h.counts.length && a < h.edges[i + 1]);
+    if (k < 0) k = h.counts.length - 1;
+    const yTop = h.counts[k] ? Y(h.counts[k]) : H - b;
+    el('path', { d: `M ${X(a).toFixed(1)} ${(yTop - 4).toFixed(1)} l 5 -8 l -10 0 Z`, fill: YOU }, svg);
+    markYou('retireHist', '▼');
   }
   const totalC = h.counts.reduce((s, c) => s + c, 0) || 1;
   attachHover(svg, (x) => {

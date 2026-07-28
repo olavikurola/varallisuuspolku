@@ -60,11 +60,15 @@ const STATS = {
   await page.waitForFunction(() => document.querySelectorAll('.an-card svg').length >= 3);
 
   console.log('Histogrammi-fallbackit (ikäryhmät kiinni, koko joukko auki)');
-  ok(await page.locator('#heroChart svg rect').count() >= 8, 'pääkaavio piirtää koko joukon histogrammin');
-  ok(norm(await page.locator('#heroChart').locator('xpath=preceding-sibling::h2').textContent()).includes('koko joukon jakauma'),
+  ok(await page.locator('#heroChart svg path.hbar').count() >= 8, 'pääkaavio piirtää koko joukon histogrammin');
+  ok(norm(await page.locator('#heroChart').locator('xpath=preceding-sibling::h2').textContent()).includes('kaikki jakajat'),
     'pääkaavion otsikko kertoo varanäkymästä');
-  ok(await page.locator('#savingsChart svg rect').count() >= 4, 'kk-säästö piirtyy histogrammina');
-  ok(await page.locator('#stocksChart svg rect').count() >= 3, 'osakepaino piirtyy histogrammina');
+  ok(await page.locator('#savingsChart svg path.hbar').count() >= 4, 'kk-säästö piirtyy histogrammina');
+  ok(await page.locator('#stocksChart svg path.hbar').count() >= 3, 'osakepaino piirtyy histogrammina');
+  // Trimmaus: osakepainon data alkaa 60 %:sta → vasin nimiö ≥ 50 % (ei tyhjää alkua)
+  const stockTicks = await page.locator('#stocksChart svg text').allTextContents();
+  ok(!stockTicks.some((t) => norm(t).startsWith('0 %')), 'osakepainon tyhjä alku trimmattu', stockTicks.join(','));
+  ok(stockTicks.some((t) => /%$/.test(norm(t).trim())), 'y-akselin %-ruudukko piirtyy');
   ok(await page.locator('.an-empty').count() <= 1, 'enintään yksi tyhjäkortti (asuntolaina)', String(await page.locator('.an-empty').count()));
   const heroTake = norm(await page.locator('#heroChart ~ .an-take').textContent().catch(() => ''));
   ok(heroTake.includes('Kaikkien jakajien'), 'poimintalause koko joukosta', heroTake);
