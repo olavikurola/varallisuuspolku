@@ -2299,12 +2299,20 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
 .an-xline { stroke: rgba(148, 168, 220, 0.55); stroke-width: 1; stroke-dasharray: 3 4; pointer-events: none; }
 /* Paluulinkki sivun lopussa */
 .an-foot { margin: 20px 0 8px; text-align: center; }
+/* Lohko-otsikot rytmittävät sivun: ylätila selvästi korttiväliä (16 px)
+   suurempi ja turkoosi merkkipalkki ankkuroi katseen osion alkuun */
 .an-gt {
   display: flex; align-items: center; gap: 12px;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--text-dim); margin: 28px 2px 12px; scroll-margin-top: 76px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--text); margin: 54px 2px 16px; scroll-margin-top: 76px;
 }
+.an-gt::before { content: ''; width: 20px; height: 3px; border-radius: 2px; background: var(--accent); }
 .an-gt::after { content: ''; flex: 1; height: 1px; background: var(--border-soft); }
+#g-sina { margin-top: 34px; } /* ensimmäinen lohko: yläosa rajaa jo, puolikas väli riittää */
+@media (max-width: 560px) {
+  .an-gt { margin: 42px 2px 14px; }
+  #g-sina { margin-top: 26px; }
+}
 .an-take { margin: 10px 2px 0; font-size: 13px; color: var(--text-dim); line-height: 1.5; }
 .an-take b { color: var(--accent); }
 .an-take-n { color: var(--text-faint); font-size: 11px; margin-left: 6px; }
