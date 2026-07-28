@@ -81,6 +81,14 @@ gh auth login
 ./julkaise.ps1   # luo repon, pushaa ja kytkee Pagesin
 ```
 
+## Ylläpito ja testit
+
+- [YLLAPITO.md](YLLAPITO.md) — julkaisurutiini, vuosihuolto (verovuosiparametrit,
+  validointisivu), ympäristöt ja periaatteet joita ei rikota
+- [testit/README.md](testit/README.md) — koko patteristo: `node testit/aja-kaikki.js`
+- [tyokalut/](tyokalut/) — og-kuvan ja demovideoiden generaattorit, UX-auditointi,
+  validointisivun lukujen laskin
+
 ## Huomio
 
 Laskelma on suuntaa antava havainnollistus, ei sijoitussuositus.
