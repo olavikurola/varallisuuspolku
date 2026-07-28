@@ -106,6 +106,11 @@
     </section>
 
     <section class="an-card">
+      <h2>Mitä suunnitelmiin sisältyy <small>osuus suunnitelmista, joissa tapahtuma on mukana</small></h2>
+      <div id="eventRank"></div>
+    </section>
+
+    <section class="an-card">
       <h2>Eläkehaaveet</h2>
       <div class="an-grid2">
         <div><h3>Eläkeikätavoite <small>varjostus = lakisääteinen 65–68 v</small></h3><div class="an-chart sm" id="retireHist"></div></div>
@@ -115,6 +120,11 @@
         <div><h3>Eläketavoitteen tyyppi</h3><div class="an-donut" id="goalDonut"></div></div>
         <div><h3>Varmuustason käyttö <small>Monte Carlo -tavoite</small></h3><div class="an-donut" id="confDonut"></div></div>
       </div>
+    </section>
+
+    <section class="an-card">
+      <h2>Eläkeajan talous <small>tulotarve, työeläke ja varallisuus eläkkeelle jäädessä</small></h2>
+      <div id="retirePlan"></div>
     </section>
 
     <section class="an-card">
@@ -137,6 +147,7 @@
     <section class="an-card an-method">
       <h2>Avoin data ja menetelmä</h2>
       <div id="methodChips" class="an-chips"></div>
+      <p class="an-note" id="anBasisNote" hidden style="margin-top:10px"></p>
       <div class="an-grid2" style="margin-top:14px">
         <div><h3>Jaettuja suunnitelmia kuukausittain</h3><div class="an-chart xs" id="timeline"></div></div>
         <div class="an-note">

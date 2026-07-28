@@ -11,11 +11,14 @@ const DATA_API = 'https://varallisuuspolku-data.up.railway.app';
 const ICONS = {
   study: '🎓', home: '🏠', car: '🚗', wedding: '💍', child: '👶', renovation: '🛠️',
   travel: '✈️', recurring: '💳', cottage: '🏡', inheritance: '💎', bonus: '💰', retirement: '🌴',
+  sidegig: '💼', goal: '🎯', ownHome: '🔑', ownFlat: '🏢', ownCottage: '🌲',
 };
 const LABELS = {
   study: 'Opiskelu', home: 'Asunnon osto', car: 'Auton osto', wedding: 'Häät', child: 'Lapsi',
   renovation: 'Remontti', travel: 'Unelmamatka', recurring: 'Kuukausimeno', cottage: 'Mökki / vene',
   inheritance: 'Perintö / lahja', bonus: 'Bonus', retirement: 'Eläkkeelle jäänti',
+  sidegig: 'Sivutulo', goal: 'Tavoitepiste', ownHome: 'Asunto jo omistuksessa',
+  ownFlat: 'Sijoitusasunto omistuksessa', ownCottage: 'Mökki / vene omistuksessa',
 };
 const GROUPS = [
   ['18-24', 21], ['25-29', 27], ['30-34', 32], ['35-39', 37], ['40-44', 42],
@@ -115,6 +118,18 @@ function bindHover(svg, resolve) {
 }
 function attachHover(svg, resolve) { svg.__anHover = resolve; bindHover(svg, resolve); }
 
+/* Kortin otsikon small-tekstin vaihto — fallback-näkymä kertoo mitä näytetään */
+function setSmall(containerId, txt) {
+  const c = $(containerId);
+  if (!c) return;
+  let h = c.previousElementSibling;
+  while (h && !/^H[23]$/.test(h.tagName)) h = h.previousElementSibling;
+  if (!h) return;
+  let s = h.querySelector('small');
+  if (!s) { s = document.createElement('small'); h.appendChild(s); }
+  s.textContent = txt;
+}
+
 /* "sinä"-selite kortin otsikkoon — kaavion viereen, ei irralliseksi.
    Kutsutaan vain kun oma merkki oikeasti piirtyi; glyyfi vastaa kaavion merkkiä. */
 function markYou(containerId, glyph) {
@@ -131,11 +146,73 @@ function markYou(containerId, glyph) {
 
 /* ---------- Kaaviot ---------- */
 
+// Kategorinen histogrammi: lokerot tasalevein pylväin (reunavälit saavat olla
+// epätasaiset). Koko joukon varanäkymä ikäryhmäkortteihin, kunnes ryhmiä
+// aukeaa — mediaaniviiva ja oma merkki kuten eläkeikäkortissa.
+function renderHistCols(containerId, h, opts) {
+  const o = opts || {};
+  const W = o.W || 470, H = o.H || 240, l = 14, r = 14, t = 16, b = 30;
+  const fmt = o.fmt || String;
+  const svg = svgIn($(containerId), W, H);
+  const nB = h.counts.length;
+  const bw = (W - l - r) / nB;
+  const maxC = Math.max(...h.counts, 1);
+  const Y = (c) => t + (H - t - b) * (1 - c / maxC);
+  const xEdge = (k) => l + k * bw;
+  const xOf = (v) => { // arvo → x lineaarisesti lokeron sisällä
+    let k = h.edges.findIndex((e, i) => i < nB && v < h.edges[i + 1]);
+    if (k === -1) k = v >= h.edges[nB] ? nB - 1 : 0;
+    const e0 = h.edges[k], e1 = h.edges[k + 1];
+    const f = e1 > e0 ? Math.max(0, Math.min(1, (v - e0) / (e1 - e0))) : 0.5;
+    return xEdge(k) + f * bw;
+  };
+  h.counts.forEach((c, i) => {
+    if (!c) return;
+    el('rect', { x: xEdge(i) + 1, y: Y(c), width: Math.max(2, bw - 2), height: H - b - Y(c), rx: 3, fill: 'rgba(45,212,191,0.65)' }, svg);
+  });
+  const step = Math.ceil(nB / 4);
+  for (let k = 0; k < nB; k += step) {
+    if (nB - k < step * 0.6) break; // liian lähellä oikeaa reunaa — loppureunan nimiö riittää
+    text(svg, xEdge(k), H - 10, fmt(h.edges[k]), 'an-tick', k === 0 ? 'start' : 'middle');
+  }
+  text(svg, xEdge(nB), H - 10, fmt(h.edges[nB]), 'an-tick', 'end');
+  if (o.med != null) {
+    el('line', { x1: xOf(o.med), y1: t, x2: xOf(o.med), y2: H - b, stroke: '#2dd4bf', 'stroke-width': 2, 'stroke-dasharray': '3 4' }, svg);
+    text(svg, Math.min(xOf(o.med) + 6, W - r - 60), t + 12, `med. ${fmt(o.med)}`, 'an-tick-strong');
+  }
+  if (o.meVal != null) {
+    el('path', { d: `M ${xOf(o.meVal).toFixed(1)} ${t + 2} l 5 8 l -10 0 Z`, fill: YOU }, svg);
+    markYou(containerId, '▲');
+  }
+  const totalC = h.counts.reduce((s, c) => s + c, 0) || 1;
+  attachHover(svg, (x) => {
+    const i = Math.floor((x - l) / bw);
+    if (i < 0 || i >= nB || !h.counts[i]) return null;
+    return {
+      html: `<b>${fmt(h.edges[i])} – ${fmt(h.edges[i + 1])}</b><br>${h.counts[i]} suunnitelmaa · ${Math.round((h.counts[i] / totalC) * 100)} %`,
+      x: xEdge(i) + bw / 2, y1: t, y2: H - b,
+    };
+  });
+}
+
+// Ikäryhmäkortin varanäkymä koko joukon histogrammista; palauttaa true jos piirtyi
+function histFallback(containerId, stats, key, meVal, fmt, dims) {
+  const all = stats.groups.all;
+  const ah = all && all.hist && all.hist[key];
+  if (!ah) return false;
+  renderHistCols(containerId, ah, Object.assign({ fmt, med: all[key] && all[key].p50, meVal }, dims));
+  setSmall(containerId, `koko joukon jakauma · n = ${all.n} — ikäryhmittäin kun ryhmiä aukeaa`);
+  return true;
+}
+
 // Hero: varallisuusvyöhyke ikäryhmien yli (sqrt-asteikko — varallisuus kasvaa moninkertaisesti)
 function renderHero(stats, me) {
   const pts = GROUPS.map(([g, cx]) => ({ g, cx, q: stats.groups[g] && stats.groups[g].startCapital }))
     .filter((p) => p.q);
-  if (pts.length < 2) return empty('heroChart', needMsg(stats.total, stats.kAnon));
+  if (pts.length < 2) {
+    if (histFallback('heroChart', stats, 'startCapital', me ? me.startCapital : null, fmtCompact, { W: 960, H: 320 })) return;
+    return empty('heroChart', needMsg(stats.total, stats.kAnon));
+  }
   const W = 960, H = 320, l = 64, r = 20, t = 16, b = 36;
   const svg = svgIn($('heroChart'), W, H);
   let vMax = Math.max(...pts.map((p) => p.q.p75), me ? me.startCapital : 0) * 1.15 + 1;
@@ -245,7 +322,10 @@ function renderRidgeline(stats, me) {
 // Kvartiilipylväät ikäryhmittäin (kk-säästö, osakepaino)
 function renderQuartCols(containerId, stats, key, me, meVal, fmt, refFn, vCap) {
   const pts = GROUPS.map(([g, cx], i) => ({ g, i, q: stats.groups[g] && stats.groups[g][key] })).filter((p) => p.q);
-  if (pts.length < 2) return empty(containerId, needMsg(stats.total, stats.kAnon));
+  if (pts.length < 2) {
+    if (histFallback(containerId, stats, key, meVal, fmt)) return;
+    return empty(containerId, needMsg(stats.total, stats.kAnon));
+  }
   const W = 470, H = 240, l = 56, r = 10, t = 14, b = 32;
   const svg = svgIn($(containerId), W, H);
   const vMax = vCap || Math.max(...pts.map((p) => p.q.p75), meVal || 0) * 1.15 + 1;
@@ -336,6 +416,10 @@ function renderRetireHist(stats, me) {
 // Työeläkkeen kateosuus: pinopalkit ikäryhmittäin
 function renderPenCoverage(stats, me) {
   const rows = GROUPS.map(([g]) => ({ g, s: stats.groups[g] && stats.groups[g].penShare })).filter((r) => r.s);
+  // Koko joukon rivi, kunnes yksikin ikäryhmä on auki
+  if (!rows.length && stats.groups.all && stats.groups.all.penShare) {
+    rows.push({ g: 'kaikki', s: stats.groups.all.penShare });
+  }
   if (!rows.length) return empty('penCoverage', needMsg(stats.total, stats.kAnon));
   let html = '<div class="an-cov">';
   for (const r of rows) {
@@ -349,10 +433,19 @@ function renderPenCoverage(stats, me) {
   $('penCoverage').innerHTML = html;
 }
 
-// Donitsi
+// Donitsi. Kun yksi siivu on ≥ 90 %, donitsi ei kerro mitään — silloin
+// osuudet piirretään palkkiriveinä, jotka pysyvät lukukelpoisina.
 function renderDonut(containerId, slicesIn, note) {
   const slices = slicesIn.filter((s) => s.v > 0.005);
   if (!slices.length) return empty(containerId, 'Kertyy vielä.');
+  const totalV = slices.reduce((s, x) => s + x.v, 0);
+  if (Math.max(...slices.map((s) => s.v)) / totalV >= 0.9) {
+    $(containerId).innerHTML = slices.map((s) =>
+      `<div class="an-share"><span class="k">${s.l}</span>` +
+      `<span class="sbar"><i style="width:${Math.round((s.v / totalV) * 100)}%"></i></span>` +
+      `<b>${Math.round((s.v / totalV) * 100)} %</b></div>`).join('');
+    return;
+  }
   const W = 300, H = 150, cx = 72, cy = 74, r0 = 40, r1 = 64;
   const svg = svgIn($(containerId), W, H);
   let a = -Math.PI / 2;
@@ -384,6 +477,41 @@ function renderDonut(containerId, slicesIn, note) {
     const hit = arcs.find((a) => ang >= a.a0 && ang < a.a1);
     return hit ? `<b>${hit.s.l}</b> · ${Math.round((hit.s.v / total) * 100)} %` : null;
   });
+}
+
+// Tapahtumaranking: kuinka suuri osa suunnitelmista sisältää kunkin tapahtuman
+function renderEventRank(stats, me) {
+  const g = (me && me.group && stats.groups[me.group] && stats.groups[me.group].events)
+    ? stats.groups[me.group] : stats.groups.all;
+  if (!g || !g.events) return empty('eventRank', needMsg(stats.total, stats.kAnon));
+  const rows = Object.entries(g.events)
+    .filter(([t, v]) => t !== 'retirement' && v > 0 && LABELS[t])
+    .sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (!rows.length) return empty('eventRank', 'Kertyy vielä.');
+  $('eventRank').innerHTML = rows.map(([t, v]) => {
+    const mine = me && me.events.some((e) => e.type === t) ? ' <span class="you">sinullakin ✓</span>' : '';
+    return `<div class="an-share"><span class="k">${ICONS[t]} ${LABELS[t]}${mine}</span>` +
+      `<span class="sbar"><i style="width:${Math.round(v * 100)}%"></i></span><b>${Math.round(v * 100)} %</b></div>`;
+  }).join('') + `<p class="an-note" style="margin-top:10px">Osuus suunnitelmista${g !== stats.groups.all ? ` ikäryhmässä ${me.group}` : ''}, joissa tapahtuma on mukana (n = ${g.n}).</p>`;
+}
+
+// Eläkeajan talous: tulotarve, työeläke ja varallisuus eläkkeelle jäädessä
+function renderRetirePlan(stats, me) {
+  const g = (me && me.group && stats.groups[me.group] && stats.groups[me.group].withdrawal)
+    ? stats.groups[me.group] : stats.groups.all;
+  if (!g || (!g.withdrawal && !g.wAtRet)) return empty('retirePlan', needMsg(stats.total, stats.kAnon));
+  const eurKk = (v) => Math.round(v).toLocaleString('fi-FI') + ' €/kk';
+  const row = (k, q, fmt, mine) =>
+    `<div class="an-hl-row"><span class="k">${k}</span><b>${fmt(q.p50)}</b>` +
+    `<span class="rng">P25–P75: ${fmt(q.p25)} – ${fmt(q.p75)}</span>` +
+    (mine != null ? `<span class="you">sinä: ${fmt(mine)}</span>` : '') + `</div>`;
+  let html = '';
+  if (g.withdrawal) html += row('Kuukausitulon tarve eläkkeellä', g.withdrawal, eurKk, me && me.ret ? me.ret.withdrawal : null);
+  if (g.pension) html += row('Työeläkeoletus', g.pension, eurKk, me && me.ret && me.ret.pension > 0 ? me.ret.pension : null);
+  if (g.wAtRet) html += row('Varallisuus eläkkeelle jäädessä', g.wAtRet, fmtCompact, null);
+  $('retirePlan').innerHTML = html +
+    `<p class="an-note" style="margin-top:10px">Mediaani ja P25–P75 ${g === stats.groups.all ? 'kaikista jakajista' : `ikäryhmästä ${me.group}`} (n = ${g.n}). ` +
+    `Varallisuus eläkkeellä on laskentamoottorin tulos kunkin suunnitelman omilla oletuksilla.</p>`;
 }
 
 // Asuntolaina: tunnuslukurivit
@@ -447,6 +575,16 @@ function renderRealism(stats, me) {
 function renderTimeline(stats) {
   const tl = stats.timeline || [];
   if (!tl.length) return empty('timeline', 'Ei vielä jaettuja suunnitelmia.');
+  // Parin kuukauden kertymä yhtenä möhkälepalkkina näyttäisi rikkinäiseltä —
+  // lukuteksti kunnes kuukausia on vertailtavaksi asti
+  if (tl.length < 3) {
+    const since = new Date(tl[0].m + '-01T00:00:00').toLocaleDateString('fi-FI', { month: 'long', year: 'numeric' });
+    $('timeline').innerHTML =
+      `<div class="an-hl-row"><span class="k">Jaettuja suunnitelmia yhteensä</span><b>${stats.total}</b>` +
+      `<span class="rng">alkaen ${since}</span></div>` +
+      `<p class="an-note" style="margin-top:8px">Kuukausittainen kertymäkäyrä piirtyy, kun kuukausia on useampi.</p>`;
+    return;
+  }
   const W = 470, H = 110, l = 8, r = 8, t = 10, b = 24;
   const svg = svgIn($('timeline'), W, H);
   const maxN = Math.max(...tl.map((x) => x.n), 1);
@@ -572,6 +710,18 @@ function takeaways(stats, me) {
   if (g && g.stocks && me.stocks != null) {
     addTake('stocksChart', `Ikäryhmäsi mediaaniosakepaino on <b>${Math.round(g.stocks.p50)} %</b> — sinulla ${Math.round(me.stocks)} %.${n}`);
   }
+  // Ikäryhmä vielä kiinni mutta koko joukko auki: sama lause kaikista jakajista
+  const all = stats.groups.all;
+  const an = all && all.n ? ` <span class="an-take-n">n = ${all.n}</span>` : '';
+  if (me && !(g && g.startCapital) && all && all.startCapital && me.startCapital != null) {
+    addTake('heroChart', `Kaikkien jakajien mediaanivarallisuus on <b>${fmtCompact(all.startCapital.p50)}</b> — sinun ${fmtCompact(me.startCapital)} on ${quartPos(me.startCapital, all.startCapital)}.${an}`);
+  }
+  if (me && !(g && g.monthly) && all && all.monthly && me.monthly != null) {
+    addTake('savingsChart', `Kaikkien jakajien mediaanisäästö on <b>${Math.round(all.monthly.p50).toLocaleString('fi-FI')}&nbsp;€/kk</b> — sinun ${Math.round(me.monthly).toLocaleString('fi-FI')}&nbsp;€/kk on ${quartPos(me.monthly, all.monthly)}.${an}`);
+  }
+  if (me && !(g && g.stocks) && all && all.stocks && me.stocks != null) {
+    addTake('stocksChart', `Kaikkien jakajien mediaaniosakepaino on <b>${Math.round(all.stocks.p50)}&nbsp;%</b> — sinulla ${Math.round(me.stocks)}&nbsp;%.${an}`);
+  }
   const rg = (g && g.retireAge) ? g : stats.groups.all;
   if (rg && rg.retireAge && me && me.ret) {
     const med = Math.round(rg.retireAge.p50);
@@ -632,14 +782,25 @@ function takeaways(stats, me) {
   const tiles = [{ k: 'Jaettuja suunnitelmia', v: String(stats.total) }];
   if (all.monthly) tiles.push({ k: 'Mediaani kk-säästö', v: `${Math.round(all.monthly.p50).toLocaleString('fi-FI')} €/kk` });
   if (all.retireAge) tiles.push({ k: 'Mediaani eläkeikätavoite', v: `${Math.round(all.retireAge.p50)} v` });
+  if (all.wAtRet) tiles.push({ k: 'Mediaani varallisuus eläkkeellä', v: fmtCompact(all.wAtRet.p50) });
   if (all.events) {
-    const top = Object.entries(all.events).filter(([t]) => t !== 'retirement').sort((a, b) => b[1] - a[1])[0];
-    if (top && top[1] > 0) tiles.push({ k: 'Yleisin tapahtuma', v: `${ICONS[top[0]]} ${Math.round(top[1] * 100)} %` });
+    const top = Object.entries(all.events).filter(([t]) => t !== 'retirement' && LABELS[t]).sort((a, b) => b[1] - a[1])[0];
+    if (top && top[1] > 0) tiles.push({ k: `Yleisin: ${LABELS[top[0]].toLowerCase()}`, v: `${ICONS[top[0]]} ${Math.round(top[1] * 100)} %` });
   }
   $('anTiles').innerHTML = tiles.map((c) => `<div class="sum-tile"><div class="k">${c.k}</div><div class="v">${c.v}</div></div>`).join('');
 
+  // Rehellisyys jakaumien pohjasta: muokatut vs. esimerkkipohjat (v3-palvelin)
+  const bn = $('anBasisNote');
+  if (bn && stats.editedN != null) {
+    bn.hidden = false;
+    bn.textContent = stats.basis === 'edited'
+      ? `Jakaumat lasketaan ${stats.editedN} muokatusta suunnitelmasta — muokkaamattomina jaetut esimerkkipohjat (${stats.total - stats.editedN} kpl) eivät vääristä lukuja.`
+      : `Jaetuista ${stats.total} suunnitelmasta ${stats.editedN} on muokattuja. Jakaumissa ovat toistaiseksi kaikki; muokkaamattomat esimerkkipohjat suodatetaan pois, kun muokattuja on vähintään ${stats.kAnon}.`;
+  }
+
   renderHero(stats, me);
   renderRidgeline(stats, me);
+  renderEventRank(stats, me);
   renderQuartCols('savingsChart', stats, 'monthly', me, me ? me.monthly : null,
     (v) => v >= 1950 ? fmtCompact(v) : Math.round(v / 10) * 10 + ' €');
   renderQuartCols('stocksChart', stats, 'stocks', me, me ? me.stocks : null,
@@ -659,12 +820,13 @@ function takeaways(stats, me) {
   if (gd.confs) {
     renderDonut('confDonut', [
       { l: 'Odotettu polku', v: gd.confs.none, c: '#8fa0c4' },
-      { l: '75 %', v: gd.confs.c75, c: '#2dd4bf' },
-      { l: '85 %', v: gd.confs.c85, c: '#8b7cf6' },
-      { l: '95 %', v: gd.confs.c95, c: '#fb923c' },
+      { l: 'Varmuus 75 %', v: gd.confs.c75, c: '#2dd4bf' },
+      { l: 'Varmuus 85 %', v: gd.confs.c85, c: '#8b7cf6' },
+      { l: 'Varmuus 95 %', v: gd.confs.c95, c: '#fb923c' },
     ]);
   } else empty('confDonut', needMsg(stats.total, stats.kAnon));
 
+  renderRetirePlan(stats, me);
   renderHomeLoan(stats, me);
   renderOwned(stats, me);
   renderRealism(stats, me);

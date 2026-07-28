@@ -176,6 +176,31 @@ const AGE_GROUPS = [
   ['40-44', 40, 44], ['45-49', 45, 49], ['50-54', 50, 54], ['55-59', 55, 59],
   ['60-64', 60, 64], ['65+', 65, 120],
 ];
+
+/* Oletuspohjien tunnistus: sovelluksen aloitustila ja esimerkkiprofiilit
+   jaetaan joskus muokkaamattomina, jolloin jakaumat kaiuttavat sovelluksen
+   esimerkkilukuja, eivät käyttäjien valintoja. Sormenjälki vaatii VIIDEN
+   kentän yhtäaikaisen osuman (varallisuus + kk-säästö + eläkeikä + tulotarve
+   + työeläke), joten aito suunnitelma ei pudota itseään vahingossa. Luvut
+   ovat tasalukuja, joten asiakaspään 2 merkitsevän numeron pyöristys säilyttää
+   ne bitilleen. Lähde: apu.js state + sovellus.js EXAMPLES — pidä synkassa. */
+const TEMPLATE_FPS = [
+  [20000, 1000, 65, 2400, 1500],   // aloitustila
+  [3000, 1100, 68, 2300, 1500],    // Aloittaja (25 v)
+  [40000, 2300, 66, 3000, 1900],   // Perhe ja asunto (35 v)
+  [90000, 1200, 61, 3200, 1900],   // Kiri eläkkeelle (45 v)
+  [20000, 1200, 65, 3100, 1800],   // Asunnonomistaja (40 v)
+  [60000, 2600, 50, 2200, 1300],   // FIRE-haaveilija (32 v)
+  [1000000, 0, 45, 8000, 1800],    // Exit-miljonääri (45 v)
+  [1000000, 0, 45, 2700, 1800],    // Miljoona loppuelämäksi (45 v)
+];
+function isTemplate(r) {
+  const ret = (r.events || []).find((e) => e.type === 'retirement');
+  if (!ret) return false;
+  return TEMPLATE_FPS.some(([sc, mo, ra, wd, pe]) =>
+    r.startCapital === sc && r.monthly === mo && ret.age === ra &&
+    ret.withdrawal === wd && ret.pension === pe);
+}
 const groupOf = (age) => (AGE_GROUPS.find(([, lo, hi]) => age >= lo && age <= hi) || [null])[0];
 
 function quartiles(arr) {
@@ -200,6 +225,7 @@ function hist(values, edges) {
 const share = (list, pred) => list.length ? Math.round(list.filter(pred).length / list.length * 100) / 100 : 0;
 
 const MONTHLY_EDGES = [0, 100, 200, 300, 400, 500, 750, 1000, 1250, 1500, 2000, 2500, 3000, 4000, 5000, 7500, 10000];
+const START_EDGES = [0, 5000, 10000, 25000, 50000, 100000, 150000, 250000, 400000, 600000, 1000000, 2000000];
 const STOCKS_EDGES = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 const RETIRE_EDGES = [40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 80];
 const EVENT_AGE_EDGES = [18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 54, 57, 60, 63, 66, 69, 72, 75, 81];
@@ -221,8 +247,16 @@ function computeStats() {
   const replaced = new Set(rows.map((r) => r.replaces).filter(Boolean));
   rows = rows.filter((r) => !(r.rid && replaced.has(r.rid)));
 
+  // Jakaumien pohja: muokkaamattomat oletuspohjat pois heti kun muokattuja on
+  // k-anon-rajan verran — muuten kaikki rivit (lippu basis kertoo sivulle
+  // kumpi on käytössä, jotta se voi kertoa asian rehellisesti). Kokonaismäärä
+  // ja kertymäaikajana lasketaan silti kaikista jaetuista.
+  const editedRows = rows.filter((r) => !isTemplate(r));
+  const basisRows = editedRows.length >= K_ANON ? editedRows : rows;
+  const basis = basisRows === editedRows ? 'edited' : 'all';
+
   const buckets = new Map([['all', []]]);
-  for (const r of rows) {
+  for (const r of basisRows) {
     buckets.get('all').push(r);
     const g = groupOf(r.ageNow);
     if (g) {
@@ -270,6 +304,7 @@ function computeStats() {
       g.hist = g.hist || {};
       g.hist.monthly = hist(list.map((r) => r.monthly), MONTHLY_EDGES);
       g.hist.stocks = hist(list.map((r) => r.alloc.stocks), STOCKS_EDGES);
+      g.hist.startCapital = hist(list.map((r) => r.startCapital), START_EDGES);
       // tapahtumatyyppien yleisyys suunnitelmissa
       g.events = {};
       for (const t of EVENT_TYPES) {
@@ -331,7 +366,8 @@ function computeStats() {
     .slice(-24).map(([m, n]) => ({ m, n }));
 
   const json = JSON.stringify({
-    updated: new Date().toISOString(), v: 2, kAnon: K_ANON, total: rows.length,
+    updated: new Date().toISOString(), v: 3, kAnon: K_ANON, total: rows.length,
+    editedN: editedRows.length, basis,
     groups, eventAges, homeLoan, owned, timeline,
   });
   statsCache = { at: Date.now(), json };
