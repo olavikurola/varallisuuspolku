@@ -24,13 +24,13 @@ const { chromium } = require('playwright');
   const chartBox = await mob.locator('#chartWrap').boundingBox();
   ok(chartBox && chartBox.height > 500 && chartBox.y + chartBox.height <= 844, 'mobiili: graafi täyttää ruudun', JSON.stringify(chartBox));
   ok(await mob.evaluate(() => document.documentElement.scrollWidth <= 391), 'mobiili: ei vaakascrollia');
-  await mob.screenshot({ path: 'mobile-fs.png' });
+  await mob.screenshot({ path: require('path').join(require('os').tmpdir(), 'mobile-fs.png') });
   // normaalinäkymä: graafin yläreuna näkyvissä ensiruudussa (Olavin linjaus)
   await mob.keyboard.press('Escape');
   await mob.waitForTimeout(400);
   const cw = await mob.locator('#chartWrap').boundingBox();
   ok(cw && cw.y < 560, 'mobiili: graafi näkyy ensiruudussa normaalitilassa', JSON.stringify(cw));
-  await mob.screenshot({ path: 'mobile-normal.png' });
+  await mob.screenshot({ path: require('path').join(require('os').tmpdir(), 'mobile-normal.png') });
   await mob.close();
 
   // --- Suorituskyky: raahauksen framet ---

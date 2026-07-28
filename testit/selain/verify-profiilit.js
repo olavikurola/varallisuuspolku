@@ -238,7 +238,7 @@ const nb = (s) => String(s).replace(/[  ]/g, ' ');
   });
   ok(over <= 0, 'mobiili: taulukko ei vuoda yli', String(over));
   ok(await mob.evaluate(() => getComputedStyle(document.querySelector('.ph-row .c-saasto')).display === 'none'), 'mobiili: sarakkeet väistyvät');
-  await mob.screenshot({ path: __dirname + '/profiilit-mobile.png' });
+  await mob.screenshot({ path: require('path').join(require('os').tmpdir(), 'profiilit-mobile.png') });
   await mob.close();
 
   ok(errors.length === 0, 'ei konsolivirheitä', errors.join(' | '));

@@ -27,7 +27,7 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   ok(body.includes('verovuoden 2026'), 'verovuosi mainittu');
   ok(await page.locator('.an-card').count() >= 5, 'kortit renderöityvät');
   ok((await page.locator('.sum-table').count()) >= 4, 'taulukot renderöityvät');
-  await page.screenshot({ path: 'validointi.png', fullPage: true });
+  await page.screenshot({ path: require('path').join(require('os').tmpdir(), 'validointi.png'), fullPage: true });
 
   console.log('saavutettavuus.html');
   await page.goto('http://localhost:8123/saavutettavuus.html');
@@ -35,7 +35,7 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   const body2 = norm(await page.textContent('body'));
   ok(body2.includes('prefers-reduced-motion'), 'reduced-motion mainittu');
   ok(body2.includes('Tunnetut puutteet'), 'puutteet-osio');
-  await page.screenshot({ path: 'saavutettavuus.png', fullPage: true });
+  await page.screenshot({ path: require('path').join(require('os').tmpdir(), 'saavutettavuus.png'), fullPage: true });
 
   console.log('linkitys index.html:stä');
   await page.goto('http://localhost:8123/');

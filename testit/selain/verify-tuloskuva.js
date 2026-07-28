@@ -33,7 +33,7 @@ const ok = (c, n, d = '') => { if (c) console.log('  ✓ ' + n); else { failed++
   if (info) {
     const png = Buffer.from(info.data.split(',')[1], 'base64');
     ok(png.length > 30000, 'PNG ei ole tyhjä (> 30 kB)', String(png.length));
-    fs.writeFileSync(path.join(__dirname, 'tuloskuva-tyotila.png'), png);
+    fs.writeFileSync(path.join(require('os').tmpdir(), 'tuloskuva-tyotila.png'), png);
   }
 
   // ☰-valikossa EI enää tuloskuvaa (siirretty suunnitelmarivin ⋯-valikkoon)
@@ -76,7 +76,7 @@ const ok = (c, n, d = '') => { if (c) console.log('  ✓ ' + n); else { failed++
     const c = buildShareImage();
     return c ? c.toDataURL('image/png') : null;
   });
-  if (rinfo) fs.writeFileSync(path.join(__dirname, 'tuloskuva-ramppi.png'), Buffer.from(rinfo.split(',')[1], 'base64'));
+  if (rinfo) fs.writeFileSync(path.join(require('os').tmpdir(), 'tuloskuva-ramppi.png'), Buffer.from(rinfo.split(',')[1], 'base64'));
 
   // 3) Ilman eläketapahtumaa: loppuvarallisuus-haara ei kaadu
   const noRet = await page.evaluate(() => {
@@ -101,7 +101,7 @@ const ok = (c, n, d = '') => { if (c) console.log('  ✓ ' + n); else { failed++
   try { await mp.waitForSelector('#rampShare', { timeout: 8000 }); } catch (e) { await mp.click('#rampGo'); await mp.waitForSelector('#rampShare', { timeout: 8000 }); }
   const over = await mp.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   ok(over <= 0, 'mobiili 390px: ei vaakavuotoa rampissa', String(over));
-  await mp.screenshot({ path: path.join(__dirname, 'tuloskuva-ramppi-mobiili.png') });
+  await mp.screenshot({ path: path.join(require('os').tmpdir(), 'tuloskuva-ramppi-mobiili.png') });
 
   await browser.close();
   console.log(failed ? `${failed} PUNAISENA` : 'Tuloskuva-verifiointi läpi.');
