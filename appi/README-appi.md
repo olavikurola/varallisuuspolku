@@ -34,9 +34,40 @@ Tuotantoon (GitHub Pages, Railway) tämä kansio ei vaikuta millään tavalla.
   asenna. Paikallisesti: asenna Android Studio + JDK 21, sitten
   `npm run sync:android && cd android && gradlew assembleDebug`.
 - **iOS**: GitHub → Actions → *Appi – iOS (käännöstarkistus)* — todistaa että
-  projekti kääntyy pilvi-Macilla. Laitteelle asennus vaatii Apple Developer
-  -tilin (99 $/v); polku: App Store Connect -API-avain → fastlane/xcodebuild
-  -allekirjoitus CI:ssä → TestFlight. Tämä on seuraava erä, kun tili on olemassa.
+  projekti kääntyy pilvi-Macilla. Laitteelle asennus: TestFlight-työnkulku alla.
+
+## TestFlight-työnkulku (appi-testflight.yml)
+
+Valmiina odottamassa — vaatii Apple Developer -tilin (99 $/v) ja neljä
+GitHub-secretiä. Kun tili on auki, tee kerran:
+
+1. **API-avain**: App Store Connect (appstoreconnect.apple.com) → Users and
+   Access → Integrations → App Store Connect API → Team Keys → **+**.
+   Rooli: **App Manager**. Lataa `.p8`-tiedosto talteen (saa ladata vain kerran!)
+   ja kopioi sivulta **Key ID** ja **Issuer ID**.
+2. **Team ID**: developer.apple.com/account → Membership details → Team ID
+   (10 merkkiä, esim. AB12CD34EF).
+3. **Secretit** (PowerShell repokansiossa; korvaa arvot):
+   ```
+   gh secret set APPSTORE_KEY_ID --body "AVAIMEN_KEY_ID"
+   gh secret set APPSTORE_ISSUER_ID --body "ISSUER_ID"
+   gh secret set APPLE_TEAM_ID --body "TEAM_ID"
+   gh secret set APPSTORE_P8 (Get-Content polku\AuthKey_XXXX.p8 -Raw)
+   ```
+4. **Appirivi App Store Connectiin** (kerran): My Apps → **+** → New App →
+   alusta iOS, nimi "Varallisuuspolku", kieli suomi, Bundle ID
+   `com.varallisuuspolku.app` (jos ID ei ole listalla, aja työnkulku kerran —
+   pilviallekirjoitus rekisteröi sen — ja luo appirivi sitten), SKU esim.
+   `varallisuuspolku`.
+5. Aja GitHub → Actions → **Appi – iOS TestFlight** → Run workflow.
+   Build ilmestyy App Store Connectin TestFlight-välilehdelle ~5–15 min
+   käsittelyn jälkeen → lisää itsesi sisäiseksi testaajaksi → asenna
+   iPhonen TestFlight-apista.
+
+Allekirjoitus hoituu Xcoden pilviallekirjoituksella (API-avain) — sertifikaatteja
+ei säilytetä missään itse. Buildinumero kasvaa automaattisesti (GitHub-ajon
+numero); versionumero (MARKETING_VERSION 1.0) nostetaan Xcode-projektista
+kun julkaistaan isompia versioita.
 
 ## Julkaisumuistilista (kun kauppoihin lähdetään)
 

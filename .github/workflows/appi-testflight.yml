@@ -1,0 +1,90 @@
+# Kääntää allekirjoitetun iOS-appin pilvi-Macilla ja lähettää sen TestFlightiin.
+#
+# Vaatii neljä GitHub-secretiä (ohjeet: appi/README-appi.md):
+#   APPSTORE_KEY_ID     – App Store Connect API-avaimen Key ID
+#   APPSTORE_ISSUER_ID  – saman avaimen Issuer ID
+#   APPSTORE_P8         – .p8-avaintiedoston koko sisältö
+#   APPLE_TEAM_ID       – Apple Developer -tiimin ID (Membership-sivu)
+#
+# Allekirjoitus: Xcoden pilviallekirjoitus (-allowProvisioningUpdates + API-avain)
+# luo ja hallinnoi jakelusertifikaatin ja profiilin automaattisesti — mitään
+# sertifikaatteja ei säilytetä reposissa eikä secreteissä.
+#
+# Buildinumero = GitHub-ajon juokseva numero → aina nouseva, ei törmäyksiä.
+# Käynnistys: GitHub → Actions → "Appi – iOS TestFlight" → Run workflow.
+name: Appi – iOS TestFlight
+
+on:
+  workflow_dispatch:
+
+jobs:
+  testflight:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+      ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+      TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - name: Tarkista salaisuudet
+        run: |
+          puuttuu=""
+          [ -n "$KEY_ID" ] || puuttuu="$puuttuu APPSTORE_KEY_ID"
+          [ -n "$ISSUER_ID" ] || puuttuu="$puuttuu APPSTORE_ISSUER_ID"
+          [ -n "$TEAM_ID" ] || puuttuu="$puuttuu APPLE_TEAM_ID"
+          [ -n "${{ secrets.APPSTORE_P8 }}" ] || puuttuu="$puuttuu APPSTORE_P8"
+          if [ -n "$puuttuu" ]; then
+            echo "::error::GitHub-secretit puuttuvat:$puuttuu — lisää ne (ohjeet appi/README-appi.md) ja aja uudelleen."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: appi/package-lock.json
+
+      - name: Asenna riippuvuudet
+        working-directory: appi
+        run: npm ci
+
+      - name: Kokoa www tuotantotiedostoista ja kopioi iOS-projektiin
+        working-directory: appi
+        run: npm run sync:ios
+
+      - name: Kirjoita API-avain levylle
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s' "${{ secrets.APPSTORE_P8 }}" > "$RUNNER_TEMP/keys/AuthKey_$KEY_ID.p8"
+
+      - name: Arkistoi (Release, pilviallekirjoitus)
+        working-directory: appi/ios/App
+        run: |
+          set -o pipefail
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" archive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_$KEY_ID.p8" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}"
+
+      - name: Vie ja lähetä TestFlightiin
+        working-directory: appi/ios/App
+        run: |
+          set -o pipefail
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_$KEY_ID.p8" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID"
+
+      - name: Valmis
+        run: echo "Lähetetty App Store Connectiin — build näkyy TestFlightissa käsittelyn (~5–15 min) jälkeen."
