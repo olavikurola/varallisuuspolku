@@ -38,6 +38,8 @@ const ALLOWED_ORIGINS = [
   'https://www.varallisuuspolku.com',
   'https://olavikurola.github.io', // vanha osoite: jaetut linkit uudelleenohjautuvat
   'http://localhost:3000', 'http://localhost:8080', 'http://localhost:5173',
+  'capacitor://localhost',         // iOS-appi (Capacitor-kääre)
+  'https://localhost',             // Android-appi (Capacitor-kääre)
 ];
 const isDevOrigin = (o) => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o || '');
 

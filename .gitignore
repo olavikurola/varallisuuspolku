@@ -1,2 +1,6 @@
 # Claude Code — henkilökohtaiset paikallisasetukset (ei jaeta julkiseen repoon)
 .claude/settings.local.json
+
+# Appi (Capacitor): riippuvuudet ja generoitu www (sync-web.mjs kokoaa)
+appi/node_modules/
+appi/www/

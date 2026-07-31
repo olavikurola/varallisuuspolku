@@ -2133,6 +2133,8 @@ new ResizeObserver(() => { if (sim) renderChart(true); }).observe(wrap);
 
 // Offline-tuki: service worker välimuistittaa sovelluksen (verkko ensin,
 // välimuisti varalla) — asennettuna PWA toimii ilman verkkoyhteyttä
-if ('serviceWorker' in navigator && (location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname))) {
+/* Natiiviappi (Capacitor) lataa tiedostot paikallisesti — SW olisi siellä pelkkä riski */
+const vpNativeApp = typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+if (!vpNativeApp && 'serviceWorker' in navigator && (location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname))) {
   navigator.serviceWorker.register('./sw.js').catch(() => { /* ei estä käyttöä */ });
 }

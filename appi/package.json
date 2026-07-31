@@ -1,0 +1,23 @@
+{
+  "name": "varallisuuspolku-appi",
+  "version": "1.0.0",
+  "description": "Varallisuuspolku natiiviappina (Capacitor-kääre saman repon webistä)",
+  "private": true,
+  "scripts": {
+    "sync": "node sync-web.mjs && cap sync",
+    "sync:android": "node sync-web.mjs && cap sync android",
+    "sync:ios": "node sync-web.mjs && cap copy ios",
+    "ikonit": "capacitor-assets generate --iconBackgroundColor \"#0a0e1a\" --iconBackgroundColorDark \"#0a0e1a\" --splashBackgroundColor \"#0a0e1a\" --splashBackgroundColorDark \"#0a0e1a\""
+  },
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/ios": "^8.4.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.4.2"
+  }
+}

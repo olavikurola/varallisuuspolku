@@ -51,6 +51,10 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* Edge-to-edge (natiiviappi, PWA): sisältö väistää Dynamic Islandin ja
+     kotipalkin — selaimessa arvot ovat 0, ei vaikutusta */
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+           env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
 }
 
 /* ---------- Top bar ---------- */

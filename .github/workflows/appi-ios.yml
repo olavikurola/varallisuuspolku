@@ -1,0 +1,38 @@
+# Kääntää iOS-appin pilvi-Macilla (käännöstarkistus ilman allekirjoitusta).
+# Tämä todistaa, että Xcode-projekti kääntyy — TestFlight-jakelu vaatii myöhemmin
+# Apple Developer -tilin salaisuudet (ks. appi/README-appi.md).
+# Käynnistys käsin: GitHub → Actions → "Appi – iOS" → Run workflow.
+name: Appi – iOS (käännöstarkistus)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: appi/package-lock.json
+
+      - name: Asenna riippuvuudet
+        working-directory: appi
+        run: npm ci
+
+      - name: Kokoa www tuotantotiedostoista ja kopioi iOS-projektiin
+        working-directory: appi
+        run: npm run sync:ios
+
+      - name: Käännä (simulaattori, ei allekirjoitusta)
+        working-directory: appi/ios/App
+        run: |
+          set -o pipefail
+          xcodebuild -project App.xcodeproj -scheme App \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug build \
+            CODE_SIGNING_ALLOWED=NO

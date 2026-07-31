@@ -1,0 +1,15 @@
+{
+  "appId": "com.varallisuuspolku.app",
+  "appName": "Varallisuuspolku",
+  "webDir": "www",
+  "backgroundColor": "#0a0e1a",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "adjustMarginsForEdgeToEdge": "auto"
+  },
+  "ios": {
+    "contentInset": "never"
+  }
+}

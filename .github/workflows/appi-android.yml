@@ -1,0 +1,47 @@
+# Kääntää Android-appin (debug-APK) pilvessä — paikallista Android Studiota ei tarvita.
+# Käynnistys käsin: GitHub → Actions → "Appi – Android" → Run workflow.
+# Valmis APK ladataan ajon Artifacts-osiosta ja asennetaan puhelimeen
+# (Asetukset → salli asennus tuntemattomista lähteistä).
+name: Appi – Android (debug-APK)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: appi/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Asenna riippuvuudet
+        working-directory: appi
+        run: npm ci
+
+      - name: Kokoa www tuotantotiedostoista ja synkkaa
+        working-directory: appi
+        run: npm run sync:android
+
+      - name: Käännä debug-APK
+        working-directory: appi/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Julkaise APK artefaktina
+        uses: actions/upload-artifact@v4
+        with:
+          name: varallisuuspolku-debug-apk
+          path: appi/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
