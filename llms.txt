@@ -8,7 +8,7 @@
 > selaimessa; ei rekisteröitymistä, ei evästeitä (kävijämäärät anonyymillä
 > Plausible-analytiikalla).
 
-Keskeiset faktat (päivitetty 2026-07-25):
+Keskeiset faktat (päivitetty 2026-07-31):
 
 - Laskenta: kuukausitason korkoa korolle, palkkakehitys, lainat annuiteetteina,
   Monte Carlo -simulaatio (oletus 5 000 polkua) ja onnistumistodennäköisyys.
@@ -34,6 +34,7 @@ Keskeiset faktat (päivitetty 2026-07-25):
   Deterministinen: sama syöte antaa aina saman tuloksen. Laskenta tapahtuu
   käyttäjän koneella eikä käytä verkkoa — työkalut laskevat, eivät anna
   sijoitusneuvontaa. https://www.npmjs.com/package/varallisuuspolku-mcp
+  Agenttituen esittely: https://varallisuuspolku.com/agentit.html
 - Vuorovaikutus: graafi on ohjain — käyrään, tapahtumiin ja eläkeikäviivaan
   tartutaan ja vedetään, kone ratkaisee jokaisen vedon hinnan heti.
 - Perhe: enintään 4 henkilöä (puoliso + lapset), perheen yhteinen
@@ -66,6 +67,8 @@ Keskeiset faktat (päivitetty 2026-07-25):
   (verovuosi) ja tunnetut yksinkertaistukset avoimesti dokumentoituna
 - [Saavutettavuus](https://varallisuuspolku.com/saavutettavuus.html):
   saavutettavuusseloste (näppäimistökäyttö, ruudunlukija, vähennetty liike)
+- [Agents](https://varallisuuspolku.com/agentit.html): agenttituen esittely —
+  MCP-työkalut, käyttöönotto ja jakolinkit rajapintana
 - [Lähdekoodi](https://github.com/olavikurola/varallisuuspolku): avoin GitHubissa
 - [MCP-paketti](https://www.npmjs.com/package/varallisuuspolku-mcp):
   laskentamoottori tekoälyagenttien työkaluna (npm, paikallinen)

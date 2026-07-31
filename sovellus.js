@@ -449,6 +449,8 @@ function openMoreMenu(anchor) {
     () => startTour());
   add('mi-info', 'Tietoa palvelusta', 'Oletukset, tietosuoja ja vinkit',
     () => { $('infoModal').hidden = false; });
+  add('mi-agents', 'Agents', 'Kytke oma tekoälyavustajasi laskentamoottoriin (MCP)',
+    () => { location.href = 'agentit.html'; });
   add('mi-theme',
     isLightTheme() ? 'Tumma teema' : 'Vaalea teema',
     'Vaihda värimaailma — valinta muistetaan',
@@ -815,6 +817,13 @@ function bindActions() {
   $('sumPrint').addEventListener('click', () => window.print());
   $('sumShare').addEventListener('click', (e) => copyShareUrl(e.target));
   $('moreBtn').addEventListener('click', () => openMoreMenu($('moreBtn')));
+  // Natiiviappi: alapalkin "Lisää" tilastosivulta saapuu lipun kanssa → avataan valikko perillä
+  try {
+    if (sessionStorage.getItem('vp-avaa-valikko')) {
+      sessionStorage.removeItem('vp-avaa-valikko');
+      setTimeout(() => openMoreMenu($('moreBtn')), 350);
+    }
+  } catch (e) { /* yksityistila tms. */ }
   $('infoClose').addEventListener('click', () => { $('infoModal').hidden = true; });
   $('disclaimerInfo').addEventListener('click', (e) => { e.preventDefault(); $('infoModal').hidden = false; });
 

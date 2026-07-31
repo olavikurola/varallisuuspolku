@@ -5,7 +5,7 @@
    välimuistista. Näin julkaisut päivittyvät heti kun verkko on käytössä,
    mutta sovellus toimii myös kokonaan ilman yhteyttä. */
 
-const CACHE = 'varallisuuspolku-v22'; // bump isoissa julkaisuissa: asennuserä pysyy eheänä parina
+const CACHE = 'varallisuuspolku-v23'; // bump isoissa julkaisuissa: asennuserä pysyy eheänä parina
 const CORE = [
   './',
   './index.html',
@@ -17,6 +17,7 @@ const CORE = [
   './laajennukset.js',
   './sovellus.js',
   './laskenta.js',
+  './alapalkki.js',
   './mc-worker.js',
   './analytiikka.html',
   './analytiikka.js',

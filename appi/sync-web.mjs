@@ -19,12 +19,12 @@ const WWW = join(APPI, 'www');
 
 const FILES = [
   // sivut
-  'index.html', 'analytiikka.html', 'saavutettavuus.html', 'validointi.html',
+  'index.html', 'analytiikka.html', 'saavutettavuus.html', 'validointi.html', 'agentit.html',
   // tyylit ja fontit
   'style.css', 'fonts.css', 'fonts/inter-latin.woff2', 'fonts/inter-latin-ext.woff2',
   // ajonaikainen JS (sw.js tarkoituksella pois)
   'apu.js', 'kaavio.js', 'piirtopoyta.js', 'kortit.js', 'laajennukset.js',
-  'sovellus.js', 'laskenta.js', 'mc-worker.js', 'tulkki.js', 'analytiikka.js',
+  'sovellus.js', 'laskenta.js', 'mc-worker.js', 'tulkki.js', 'analytiikka.js', 'alapalkki.js',
   // ikonit ja manifesti
   'favicon.svg', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-512-maskable.png',
 ];
