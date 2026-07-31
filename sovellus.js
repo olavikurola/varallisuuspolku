@@ -449,7 +449,7 @@ function openMoreMenu(anchor) {
     () => startTour());
   add('mi-info', 'Tietoa palvelusta', 'Oletukset, tietosuoja ja vinkit',
     () => { $('infoModal').hidden = false; });
-  add('mi-agents', 'Agents', 'Kytke oma tekoälyavustajasi laskentamoottoriin (MCP)',
+  add('mi-agents', 'Agentit', 'Kytke oma tekoälyavustajasi laskentamoottoriin (MCP)',
     () => { location.href = 'agentit.html'; });
   add('mi-theme',
     isLightTheme() ? 'Tumma teema' : 'Vaalea teema',

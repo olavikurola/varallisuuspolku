@@ -64,7 +64,7 @@ const PLAN = {
   await page.reload();
   await page.click('#moreBtn');
   const ids = await page.$$eval('.menu button', (bs) => bs.map((b) => b.id));
-  Q('valikon järjestys: vertaile → tilastot → kierros → tietoa → agents → teema → nollaus',
+  Q('valikon järjestys: vertaile → tilastot → kierros → tietoa → agentit → teema → nollaus',
     JSON.stringify(ids) === JSON.stringify(['mi-compare', 'mi-analytics', 'mi-tour', 'mi-info', 'mi-agents', 'mi-theme', 'mi-reset']));
   await page.click('#mi-analytics');
   await page.waitForURL('**/analytiikka.html');

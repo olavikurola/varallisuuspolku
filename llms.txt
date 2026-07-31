@@ -67,7 +67,7 @@ Keskeiset faktat (päivitetty 2026-07-31):
   (verovuosi) ja tunnetut yksinkertaistukset avoimesti dokumentoituna
 - [Saavutettavuus](https://varallisuuspolku.com/saavutettavuus.html):
   saavutettavuusseloste (näppäimistökäyttö, ruudunlukija, vähennetty liike)
-- [Agents](https://varallisuuspolku.com/agentit.html): agenttituen esittely —
+- [Agentit](https://varallisuuspolku.com/agentit.html): agenttituen esittely —
   MCP-työkalut, käyttöönotto ja jakolinkit rajapintana
 - [Lähdekoodi](https://github.com/olavikurola/varallisuuspolku): avoin GitHubissa
 - [MCP-paketti](https://www.npmjs.com/package/varallisuuspolku-mcp):
