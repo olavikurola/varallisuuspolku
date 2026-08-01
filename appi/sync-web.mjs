@@ -68,4 +68,17 @@ for (const f of FILES.filter((x) => x.endsWith('.html'))) {
   writeFileSync(p, html);
 }
 
+/* Windows-suoja: `npx cap sync ios` kirjoittaa Windowsilla Package.swiftiin
+   kenoviivapolut, jotka kaatavat SPM:n macOS:llä ("invalid escape sequence").
+   Normalisoidaan erottimet aina — CI ajaa tämän ennen jokaista iOS-käännöstä. */
+const SPM = join(APPI, 'ios', 'App', 'CapApp-SPM', 'Package.swift');
+if (existsSync(SPM)) {
+  const spm = readFileSync(SPM, 'utf8');
+  const fixed = spm.replace(/path:\s*"([^"]*)"/g, (m, p) => `path: "${p.replaceAll('\\', '/')}"`);
+  if (fixed !== spm) {
+    writeFileSync(SPM, fixed);
+    console.log('Korjattu: Package.swiftin polkuerottimet / -muotoon.');
+  }
+}
+
 console.log(`OK: www koottu (${FILES.length} tiedostoa), Plausible riisuttu HTML-sivuilta.`);
