@@ -145,7 +145,26 @@ server.listen(8134, async () => {
   ok(await pg.locator('#vpLukko').count() === 0, 'avaus toimii analytiikkasivulla');
   await ctx.close();
 
-  // 8) Web ilman Capacitoria: ei mitään natiivilisiä
+  // 8) Kaupassa elävä appiversio lukee tulevan webin dataa kuukausia:
+  //    tuntemattomat kentät eivät saa kaataa applySavedia eikä laskentaa
+  ({ ctx, pg } = await page({ native: true }));
+  const tuleva = await pg.evaluate(() => {
+    const okApply = applySaved({
+      ageNow: 34, ageEnd: 91, startCapital: 12000, monthly: 900,
+      allocStocks: 80, allocBonds: 10,
+      tulevaKentta: { syvempi: [1, 2, 3] }, toinenUusi: 'x',
+      events: [{ type: 'retirement', age: 64, withdrawal: 2500, pension: 1700, pensionAge: 65, uusiTapahtumaKentta: true }],
+    });
+    renderAll();
+    const s = serialize();
+    return { okApply, ageNow: state.ageNow, ev: state.events.length, puhdas: !('tulevaKentta' in s), simOk: !!sim && sim.months > 0 };
+  });
+  ok(tuleva.puhdas, 'tuleva skeema: serialize ei kanna tuntemattomia kenttiä eteenpäin');
+  ok(tuleva.okApply === true && tuleva.ageNow === 34 && tuleva.ev === 1, 'tuleva skeema: tunnetut kentät sisään, tuntemattomat eivät kaada');
+  ok(tuleva.simOk, 'tuleva skeema: simulaatio laskee normaalisti');
+  await ctx.close();
+
+  // 9) Web ilman Capacitoria: ei mitään natiivilisiä
   ({ ctx, pg } = await page({ native: false }));
   ok(await pg.evaluate(() => !window.vpNativeMenu), 'webissä ei valikkokoukkua');
   ok(await pg.locator('#vpLukko').count() === 0, 'webissä ei lukituspeitettä');

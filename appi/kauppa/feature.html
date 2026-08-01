@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<title>Play feature graphic 1024×500</title>
+<link rel="stylesheet" href="/fonts.css">
+<style>
+  /* Generoidaan kuvaksi tyokalut/kauppa-kuvat.js:llä — ei julkaista sivuna */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 1024px; height: 500px; background: #0a0e1a; overflow: hidden;
+         font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; position: relative; }
+  svg.kayra { position: absolute; inset: 0; }
+  .sisalto { position: absolute; inset: 0; display: flex; flex-direction: column;
+             justify-content: center; padding-left: 72px; }
+  h1 { color: #e8ecf8; font-size: 58px; font-weight: 700; letter-spacing: -0.5px; }
+  h1 .polku { background: linear-gradient(90deg, #2dd4bf, #8b7cf6);
+              -webkit-background-clip: text; background-clip: text; color: transparent; }
+  p { color: #93a1b8; font-size: 26px; margin-top: 14px; max-width: 560px; line-height: 1.35; }
+</style>
+</head>
+<body>
+  <svg class="kayra" width="1024" height="500" viewBox="0 0 1024 500" fill="none" aria-hidden="true">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#2dd4bf"/><stop offset="100%" stop-color="#8b7cf6"/>
+      </linearGradient>
+      <linearGradient id="a" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="rgba(45,212,191,0.16)"/><stop offset="100%" stop-color="rgba(45,212,191,0)"/>
+      </linearGradient>
+    </defs>
+    <path d="M540 470 C 700 430 780 330 850 250 C 910 185 960 150 1010 130 L 1010 500 L 540 500 Z" fill="url(#a)"/>
+    <path d="M540 470 C 700 430 780 330 850 250 C 910 185 960 150 1010 130" stroke="url(#g)" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="1010" cy="130" r="12" fill="#8b7cf6"/>
+    <circle cx="850" cy="250" r="9" fill="#2dd4bf"/>
+  </svg>
+  <div class="sisalto">
+    <h1>Varallisuus<span class="polku">polku</span></h1>
+    <p>Piirrä polkusi vaurauteen — kaikki laskenta laitteellasi</p>
+  </div>
+</body>
+</html>

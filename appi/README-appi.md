@@ -103,6 +103,10 @@ kun julkaistaan isompia versioita.
 
 ## Julkaisumuistilista (kun kauppoihin lähdetään)
 
+0. **Kauppamateriaalit ovat valmiina** [kauppa/](kauppa/)-kansiossa:
+   kuvaustekstit ja lomakevastausten luonnokset (kuvaukset.md), kuvakaappaukset
+   kaikissa vaadituissa iPhone-/iPad-/Play-ko'oissa (kuvat/, generointi
+   `node tyokalut/kauppa-kuvat.js`) ja Playn feature graphic.
 1. Play Console -tili (25 $ kerran) · App Store: Apple Developer Program (99 $/v).
 2. Release-allekirjoitus: Android keystore (SÄILYTÄ varmuuskopio!) GitHub-secretiksi;
    iOS: App Store Connect API-avain + jakelusertifikaatti secreteiksi.
