@@ -20,6 +20,17 @@
             </intent-filter>
         </activity>
 
+        <!-- Kotinäyttöwidget: suunnitelman tila (lukee vain paikallista tallennusta) -->
+        <receiver
+            android:name=".VarallisuusWidget"
+            android:exported="false"
+            android:label="@string/widget_nimi">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/varallisuus_widget_info" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -32,4 +43,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Sovelluksen lukitus (opt-in): laitteen oma biometrinen tunnistus -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 </manifest>

@@ -25,6 +25,7 @@ const FILES = [
   // ajonaikainen JS (sw.js tarkoituksella pois)
   'apu.js', 'kaavio.js', 'piirtopoyta.js', 'kortit.js', 'laajennukset.js',
   'sovellus.js', 'laskenta.js', 'mc-worker.js', 'tulkki.js', 'analytiikka.js', 'alapalkki.js',
+  'natiivilisat.js',
   // ikonit ja manifesti
   'favicon.svg', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-512-maskable.png',
 ];

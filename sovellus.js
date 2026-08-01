@@ -456,6 +456,9 @@ function openMoreMenu(anchor) {
     'Vaihda värimaailma — valinta muistetaan',
     () => applyTheme(!isLightTheme()));
 
+  // Natiiviappi lisää omat rivinsä (muistutukset, lukitus) — webissä koukkua ei ole
+  if (window.vpNativeMenu) window.vpNativeMenu(add);
+
   // Nollaus vaatii toisen klikkauksen — valikko pysyy auki vahvistusta varten
   const reset = add('mi-reset', 'Nollaa suunnitelma', 'Poistaa avoinna olevan suunnitelman — muut rivit säilyvät', null, true);
   reset.addEventListener('click', () => {

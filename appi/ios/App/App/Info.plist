@@ -53,5 +53,8 @@
 	<!-- Ei omaa salausta — TestFlight ei kysele vientisäädöksistä joka buildilla -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- Sovelluksen lukitus (opt-in): Face ID avaa lukituksen -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>Kasvojentunnistusta käytetään vain sovelluksen lukituksen avaamiseen.</string>
 </dict>
 </plist>

@@ -4,4 +4,9 @@
     <string name="title_activity_main">Varallisuuspolku</string>
     <string name="package_name">com.varallisuuspolku.app</string>
     <string name="custom_url_scheme">com.varallisuuspolku.app</string>
+    <string name="widget_nimi">Varallisuuspolku</string>
+    <string name="widget_kuvaus">Suunnitelmasi tila yhdellä vilkaisulla</string>
+    <string name="widget_oletus_otsikko">Varallisuuspolku</string>
+    <string name="widget_oletus_arvo">—</string>
+    <string name="widget_oletus_alarivi">Avaa sovellus kerran</string>
 </resources>

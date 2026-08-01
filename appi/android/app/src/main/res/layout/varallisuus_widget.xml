@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_juuri"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:background="@drawable/widget_tausta"
+    android:padding="14dp">
+
+    <TextView
+        android:id="@+id/widget_otsikko"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_oletus_otsikko"
+        android:textColor="#93a1b8"
+        android:textSize="11sp"
+        android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/widget_arvo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_oletus_arvo"
+        android:textColor="#2dd4bf"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/widget_alarivi"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_oletus_alarivi"
+        android:textColor="#e8ecf8"
+        android:textSize="12sp"
+        android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/widget_paivitetty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text=""
+        android:textColor="#93a1b8"
+        android:textSize="10sp"
+        android:maxLines="1" />
+</LinearLayout>

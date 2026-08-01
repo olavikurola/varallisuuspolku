@@ -26,6 +26,38 @@ Tuotantoon (GitHub Pages, Railway) tämä kansio ei vaikuta millään tavalla.
 | Ei Plausiblea | appikäyttö erilleen webin mittauksesta; kauppojen tietosuojakortti |
 | Ei service workeria | tiedostot latautuvat paikallisesti; sovellus.js ohittaa rekisteröinnin natiivissa |
 | Palvelin-CORS: `capacitor://localhost` + `https://localhost` | tilastot ja jako toimivat appista (palvelin/server.js) |
+| Natiivilisät (natiivilisat.js) | ks. alla — webissä tiedosto ei tee mitään |
+
+## Natiivilisät (Applen 4.2 "minimum functionality" -vaatimus + käyttötiheys)
+
+Kaikki opt-in, ilmaisia ja paikallisia — mitään ei lähetetä minnekään.
+Web-puoli on yhdessä tiedostossa ([natiivilisat.js](../natiivilisat.js), sauma
+sovellus.js:n `openMoreMenu`ssa `window.vpNativeMenu`-koukkuna), joten appin
+logiikka pysyy periaatteen mukaisesti webissä.
+
+- **Muistutukset** (`@capacitor/local-notifications`, ☰-valikon rivi):
+  kuukausikatsaus kuun 1. päivä klo 9 + suunnitelman tulevat tapahtumat
+  ("Suunnitelmasi mukaan tämä tapahtuu nyt — toteutuiko?"). Tapahtuman
+  kuukausi lasketaan iästä (ikä ankkuroituu nykyhetkeen); ajastukset uusitaan
+  aina käynnistyksessä ja taustalle siirryttäessä, enintään 12 tapahtumaa
+  (iOS:n 64 odottavan raja). Pluginin boot-palautus kestää puhelimen
+  uudelleenkäynnistyksen.
+- **Sovelluksen lukitus** (`@capgo/capacitor-native-biometric`, ☰-valikon
+  rivi): sormenjälki/kasvot/laitteen koodi varamenetelmänä. Peite piirtyy
+  ennen kuin luvut ehtivät ruudulle; lukitus laukeaa kylmäkäynnistyksessä ja
+  kun appi palaa taustalta yli minuutin tauon jälkeen (myös Tilastot-sivulla).
+  Luvat: USE_BIOMETRIC (AndroidManifest), NSFaceIDUsageDescription (Info.plist).
+- **Kotinäyttöwidget (Android)**: natiivilisat.js kirjoittaa tiivistelmän
+  (onnistumis-%, eläkeikä, päiväys) `@capacitor/preferences`-tallennukseen →
+  widget (VarallisuusWidget.java) lukee saman SharedPreferencesin
+  ("CapacitorStorage", avain `vp-widget`) ja näyttää valmiit tekstit — widget
+  ei laske mitään. Päivitys heti VpWidgetPlugin-pikkusillalla (rekisteröity
+  MainActivityssä) + varalta 30 min välein. **iOS-widget tehdään erikseen**
+  kun Apple-tili aukeaa (WidgetKit-laajennus vaatii Xcode-projektimuutokset,
+  joita ei kannata tehdä sokkona ilman TestFlight-testausta).
+
+Regressiot: `testit/selain/verify-natiivilisat.js` (Capacitor-stub: valikkorivit,
+ajastukset, lupa evätty, lukituspolut, widget-JSON, web-noop).
 
 ## Käännökset (ei vaadi paikallista Android Studiota / Macia)
 
@@ -77,8 +109,9 @@ kun julkaistaan isompia versioita.
 3. Tietosuojakortit: appi ei kerää mitään oletuksena; suunnitelman jako ja
    Tulkki ovat opt-in ja kuvattu sivulla itsellään. Tietosuojaseloste-URL:ksi
    käy https://varallisuuspolku.com/ -sivun seloste.
-4. Applen 4.2 (minimum functionality): kääre tarvitsee natiivilisää ennen
-   katselmointia — suositus: kotinäytön widget + paikallinen kuukausimuistutus.
+4. Applen 4.2 (minimum functionality): natiivilisät tehty (muistutukset,
+   lukitus, Android-widget — ks. yllä). iOS-puolelle vielä WidgetKit-widget
+   TestFlight-vaiheessa vahvistamaan 4.2-argumenttia.
 5. Versionumerot: android/app/build.gradle (versionCode/versionName) ja
    Xcode MARKETING_VERSION — nostetaan julkaisuittain.
 
