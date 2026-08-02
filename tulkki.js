@@ -350,11 +350,11 @@
   const sheet = document.createElement('aside');
   sheet.className = 'tk-sheet';
   sheet.hidden = true;
-  sheet.setAttribute('aria-label', 'Tulkki — kysy suunnitelmastasi');
+  sheet.setAttribute('aria-label', 'Tulkki, tekoälyapuri — kysy suunnitelmastasi');
   sheet.innerHTML =
     `<header class="tk-head">
       <span class="tk-dot" aria-hidden="true">✦</span>
-      <b>Tulkki</b><small>kysy, vertaile, kokeile</small>
+      <b>Tulkki</b><small>tekoälyapuri</small>
       <button type="button" class="tk-x" id="tkClose" aria-label="Sulje Tulkki">✕</button>
     </header>
     <div class="tk-privacy" title="Vain suunnitelman anonyymi muoto ja kysymys välitetään selitystä varten — ei nimiä eikä tunnisteita.">🔒 Laskelmasi ei lähde selaimestasi — palvelin ei tallenna mitään.</div>
@@ -1333,10 +1333,12 @@
     card.className = 'tk-intro';
     // Yksi lause riittää: chipit ja syötekentän vihje näyttävät kyvyt
     // esimerkein, ja tietosuoja lukee jo lukkorivillä — ei toistoa.
+    // Tekoälymaininta (tässä ja otsikon tekoälyapuri-rivillä) on AI-asetuksen
+    // art. 50 läpinäkyvyysvaatimus — ei saa pudottaa.
     card.innerHTML =
       `<div class="tk-kats-head"><span>Tervetuloa — Tulkki</span><button type="button" class="tk-kats-x" aria-label="Sulje">✕</button></div>` +
-      `<div class="tk-intro-body">Selitän suunnitelmasi luvut selkokielellä ja autan kokeilemaan muutoksia — ` +
-      `<b>en anna sijoitusneuvontaa</b>: moottori laskee, minä tulkkaan.` +
+      `<div class="tk-intro-body">Olen tekoälyavustaja: selitän suunnitelmasi luvut selkokielellä ja autan kokeilemaan muutoksia — ` +
+      `<b>en anna sijoitusneuvontaa</b>: moottori laskee, minä tulkkaan, ja voin erehtyä.` +
       (tkKey ? '' : ` Ilmaiskäytössä ${QUOTA_MAX} kysymystä päivässä.`) + `</div>`;
     card.querySelector('.tk-kats-x').addEventListener('click', () => card.remove());
     log.appendChild(card);
