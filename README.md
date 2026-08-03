@@ -20,7 +20,7 @@ sisällön näkee kokonaisuudessaan ennen jakamista.
 - **Käänteisratkaisija** — käyrä on kuin naru: tartuntapiste seuraa osoitinta ja bisektio hakee kuukausisäästön tai kuukausitulon, jolla odotuspolku kulkee pisteen kautta — deterministisesti joka framella
 - **Tavoitepisteet** — 🎯 mittari graafille: pystyvaje ("iässä 55 puuttuu 80 000 €"), saavutusikä ja osuus markkinapoluista, jotka ylittävät pisteen; Ratkaise hakee säästön odotuspolulle tai valitulle varmuustasolle — tiukin piste sitoo
 - **Interaktiivinen aikajana** — varallisuuden kehitys iän ja kalenterivuoden mukaan, odotettu kehitys ja P10–P90-viuhka samasta Monte Carlo -polkujoukosta
-- **Raahattavat elämäntapahtumat** — asunnon osto, opiskelu, auto, häät, lapsi, remontti, mökki, perintö, eläkkeelle jäänti ym. pudotetaan graafille ja siirretään haluttuun ikään
+- **Raahattavat elämäntapahtumat** — asunnon osto, opiskelu, auto, häät, lapsi, ero, remontti, mökki, perintö, eläkkeelle jäänti ym. pudotetaan graafille ja siirretään haluttuun ikään
 - **Allokointimoottori** — osake/korko/käteinen-painot, tuotto-odotus ja volatiliteetti, valinnainen ikäsidonnainen allokaatio (glidepath) ja inflaatiokorjaus
 - **Palkkakehitys** — kuukausisijoitus voi kasvaa vuosittain, mikä vastaa uran tuomia korotuksia
 - **Velkarahoitus** — annuiteettilainat korkoineen: käsiraha, maksuerät ja velkasaldo; työuralla erät vähentävät säästökykyä, eläkkeellä ne maksetaan sijoituksista

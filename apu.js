@@ -12,6 +12,9 @@ const EVENT_TYPES = {
   car:         { icon: '🚗', label: 'Auton osto',          amount: -25000,  loan: { share: 0.2,  rate: 4.5, years: 6 },  defaultFin: 'loan', asset: { appr: -10.0 } },
   wedding:     { icon: '💍', label: 'Häät',                amount: -20000,  loan: CONSUMER_LOAN, defaultFin: 'cash' },
   child:       { icon: '👶', label: 'Lapsi',               amount: -3000,   loan: CONSUMER_LOAN, defaultFin: 'cash', rec: { monthly: -300, years: 18 } },
+  // Ero tai muu suuri elämänmuutos: kertakulu (ositus, muutto, uusi koti) +
+  // toistuva kulunlisäys (yksin asuminen, elatus) — molemmat säädettävissä
+  divorce:     { icon: '💔', label: 'Ero / iso muutos',    amount: -20000,  loan: { share: 0.2,  rate: 4.5, years: 10 }, defaultFin: 'cash', rec: { monthly: -300, years: 5 } },
   renovation:  { icon: '🛠️', label: 'Remontti',            amount: -30000,  loan: { share: 0.1,  rate: 4.5, years: 10 }, defaultFin: 'loan' },
   travel:      { icon: '✈️', label: 'Unelmamatka',         amount: -8000,   loan: CONSUMER_LOAN, defaultFin: 'cash' },
   recurring:   { icon: '💳', label: 'Kuukausimeno',        amount: 0,       loan: CONSUMER_LOAN, defaultFin: 'cash', rec: { monthly: -200, years: 10 } },

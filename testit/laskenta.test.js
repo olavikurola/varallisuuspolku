@@ -594,5 +594,28 @@ console.log('Hankintameno-olettama kk-nostoissa: verokirjanpito seuraa olettamaa
   ok(s2.taxPaid > s.taxPaid, 'olettama pienentää raportoitua veroa (voitto-osuus > 60 %)');
 }
 
+console.log('Ero / iso muutos (divorce): kertakulu + toistuva kulunlisäys');
+{
+  const bare = () => { const s = plan(); s.events = s.events.filter((e) => e.type === 'retirement'); return s; };
+  const base = L.simulate(bare());
+  // Käteinen: kertakulu kuukauden könttänä, toistuva kulu vähentää säästöä
+  const st = bare();
+  st.events.push({ id: 9, type: 'divorce', age: 40, amount: -20000, financing: 'cash', recMonthly: -300, recYears: 5 });
+  const ctx = L.prepareSim(st);
+  const m0 = (40 - 30) * 12;
+  ok(close(ctx.lump.get(m0) || 0, -20000, 1e-9), 'kertakulu kirjautuu tapahtumakuukauteen');
+  ok(close(ctx.payments[m0 + 1], 300, 1e-9) && close(ctx.payments[m0 + 60], 300, 1e-9) && ctx.payments[m0 + 61] === 0,
+    'toistuva kulu juoksee täsmälleen 5 vuotta');
+  const s = L.simulate(st);
+  ok(s.wEnd < base.wEnd, 'ero pienentää loppuvarallisuutta');
+  // Laina: käsiraha heti, loppu annuiteettina — ei omaisuuserää (ei isAsset)
+  const st2 = bare();
+  st2.events.push({ id: 9, type: 'divorce', age: 40, amount: -20000, financing: 'loan', down: 4000, rate: 4.5, years: 10 });
+  const c2 = L.prepareSim(st2);
+  ok(close(c2.lump.get(m0) || 0, -4000, 1e-9), 'lainarahoitus: käsiraha könttänä');
+  ok(close(c2.debt[m0], 16000, 0.01), 'velka = summa − käsiraha');
+  ok(c2.assets[m0] === 0, 'ei omaisuuserää — kulu, ei omaisuutta');
+}
+
 console.log(failed ? `\n${failed} TESTIÄ EPÄONNISTUI` : '\nKaikki testit läpi.');
 process.exit(failed ? 1 : 0);

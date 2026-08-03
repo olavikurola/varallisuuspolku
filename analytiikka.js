@@ -9,13 +9,13 @@
 const DATA_API = 'https://varallisuuspolku-data.up.railway.app';
 
 const ICONS = {
-  study: '🎓', home: '🏠', car: '🚗', wedding: '💍', child: '👶', renovation: '🛠️',
+  study: '🎓', home: '🏠', car: '🚗', wedding: '💍', child: '👶', divorce: '💔', renovation: '🛠️',
   travel: '✈️', recurring: '💳', cottage: '🏡', inheritance: '💎', bonus: '💰', retirement: '🌴',
   sidegig: '💼', goal: '🎯', ownHome: '🔑', ownFlat: '🏢', ownCottage: '🌲',
 };
 const LABELS = {
   study: 'Opiskelu', home: 'Asunnon osto', car: 'Auton osto', wedding: 'Häät', child: 'Lapsi',
-  renovation: 'Remontti', travel: 'Unelmamatka', recurring: 'Kuukausimeno', cottage: 'Mökki / vene',
+  divorce: 'Ero / iso muutos', renovation: 'Remontti', travel: 'Unelmamatka', recurring: 'Kuukausimeno', cottage: 'Mökki / vene',
   inheritance: 'Perintö / lahja', bonus: 'Bonus', retirement: 'Eläkkeelle jäänti',
   sidegig: 'Sivutulo', goal: 'Tavoitepiste', ownHome: 'Asunto jo omistuksessa',
   ownFlat: 'Sijoitusasunto omistuksessa', ownCottage: 'Mökki / vene omistuksessa',
@@ -334,7 +334,7 @@ function renderHero(stats, me) {
 
 // Elämän kartta: ridgeline tapahtumien suunnitelluista i'istä
 function renderRidgeline(stats, me) {
-  const order = ['study', 'home', 'child', 'wedding', 'car', 'renovation', 'travel', 'recurring', 'cottage', 'retirement'];
+  const order = ['study', 'home', 'child', 'wedding', 'divorce', 'car', 'renovation', 'travel', 'recurring', 'cottage', 'retirement'];
   const rows = order.filter((t) => stats.eventAges && stats.eventAges[t]);
   if (!rows.length) return empty('ridgeline', needMsg(stats.total, stats.kAnon));
   const W = 960, rowH = 52, l = 170, r = 90, headH = 26;

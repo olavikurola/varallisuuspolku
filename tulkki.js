@@ -745,7 +745,7 @@
   // Tapahtumien muutettavat ominaisuudet — rajat samat kuin popoverin kentissä.
   // Kohdennus: tyyppi + tarvittaessa tapahtumaIka (useita samaa tyyppiä).
   const EVENT_NAMES = {
-    home: 'Asunto', car: 'Auto', cottage: 'Mökki', child: 'Lapsi',
+    home: 'Asunto', car: 'Auto', cottage: 'Mökki', child: 'Lapsi', divorce: 'Ero',
     renovation: 'Remontti', travel: 'Matka', study: 'Opiskelu', wedding: 'Häät',
     inheritance: 'Perintö', bonus: 'Bonus', sidegig: 'Sivutulo',
     recurring: 'Kuukausierä', goal: 'Tavoite',

@@ -25,6 +25,7 @@ const EVENT_TYPES = {
   car:         { label: 'Auton osto',           amount: -25000,  loan: { share: 0.2,  rate: 4.5, years: 6 },  defaultFin: 'loan', asset: { appr: -10.0 } },
   wedding:     { label: 'Häät',                 amount: -20000,  loan: CONSUMER_LOAN, defaultFin: 'cash' },
   child:       { label: 'Lapsi',                amount: -3000,   loan: CONSUMER_LOAN, defaultFin: 'cash', rec: { monthly: -300, years: 18 } },
+  divorce:     { label: 'Ero / iso elämänmuutos', amount: -20000, loan: { share: 0.2, rate: 4.5, years: 10 }, defaultFin: 'cash', rec: { monthly: -300, years: 5 } },
   renovation:  { label: 'Remontti',             amount: -30000,  loan: { share: 0.1,  rate: 4.5, years: 10 }, defaultFin: 'loan' },
   travel:      { label: 'Unelmamatka',          amount: -8000,   loan: CONSUMER_LOAN, defaultFin: 'cash' },
   recurring:   { label: 'Kuukausimeno',         amount: 0,       loan: CONSUMER_LOAN, defaultFin: 'cash', rec: { monthly: -200, years: 10 } },

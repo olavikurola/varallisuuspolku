@@ -57,6 +57,14 @@ console.log('Sanitoija: purku ja clampit');
   ok(oe.owned === true && oe.age === 30, 'omistuksen ikä ankkuroituu nykyhetkeen');
   ok(oe.rate === 3.5 && oe.years === 18 && oe.isAsset === true, 'omistuksen lainaoletukset täydentyvät');
   ok(oe.ownYears === new Date().getFullYear() - 2020, 'ownYears johdetaan hankintavuodesta');
+
+  const ero = S.lueSuunnitelma({
+    ...PLAN(),
+    events: [{ type: 'divorce', age: 40, amount: -20000, recMonthly: -300, recYears: 5 }],
+  });
+  const de = ero.events[0];
+  ok(de.type === 'divorce' && de.amount === -20000 && de.recMonthly === -300 && de.recYears === 5,
+    'ero-tapahtuma (divorce) kelpaa kertakuluineen ja toistuvine kuluineen');
 }
 
 console.log('Sanitoija: virheet ovat selkokielisiä');
