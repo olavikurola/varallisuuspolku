@@ -93,8 +93,9 @@ async function browserTests() {
   await pg.evaluate(() => showRamp());
   await pg.fill('#rampAge', '40'); await pg.fill('#rampWealth', '20000'); await pg.fill('#rampMonthly', '1200');
   await pg.click('#rampGo');
-  await pg.waitForTimeout(2500); // ratkaisija + tuloskortti
-  const hasOwnBtn = await pg.$('#rampOwn');
+  // Ratkaisija + tuloskortti: kiinteä odotus fleikkasi kuormitetulla koneella,
+  // odotetaan nappia itseään (timeout kaatuu ok(false):ksi, ei poikkeukseksi)
+  const hasOwnBtn = await pg.waitForSelector('#rampOwn', { timeout: 15000 }).catch(() => null);
   ok(!!hasOwnBtn, 'tuloskortissa Omistan jo -nappi');
   if (hasOwnBtn) {
     await pg.click('#rampOwn');

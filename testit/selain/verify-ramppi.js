@@ -47,6 +47,15 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   ok(res.goal === 'withdrawal' && res.pension === 0 && res.retA === 65, 'eläke 65 v, kestävä tulo ratkaistaan, työeläke 0');
   const statTxts = await page.locator('.ramp-stat .v').allTextContents();
   ok(statTxts.length === 2 && statTxts.every((t) => /\d/.test(t)), 'otsikkovastaus: kaksi lukua', JSON.stringify(statTxts));
+  // Neljä toimintonappia mahtui aiemmin vain rivittymällä — vahdi ettei rivi
+  // vuoda kortin reunan yli (deskarilla kortti on kapeampi kuin nappien summa)
+  const overflow = await page.evaluate(() => {
+    const card = document.querySelector('.ramp-card').getBoundingClientRect();
+    return [...document.querySelectorAll('.ramp-acts2 .btn')]
+      .map((b) => b.getBoundingClientRect())
+      .filter((b) => b.right > card.right + 0.5 || b.left < card.left - 0.5).length;
+  });
+  ok(overflow === 0, 'toimintonapit pysyvät kortin sisällä', overflow + ' nappia yli reunan');
 
   console.log('Avaus työtilaan');
   await page.click('#rampOpen');
