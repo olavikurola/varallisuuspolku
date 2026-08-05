@@ -75,8 +75,11 @@ GitHub-secretiä. Kun tili on auki, tee kerran:
 
 1. **API-avain**: App Store Connect (appstoreconnect.apple.com) → Users and
    Access → Integrations → App Store Connect API → Team Keys → **+**.
-   Rooli: **App Manager**. Lataa `.p8`-tiedosto talteen (saa ladata vain kerran!)
-   ja kopioi sivulta **Key ID** ja **Issuer ID**.
+   Rooli: **Admin** — pilviallekirjoitus luo jakelusertifikaatin, ja sen
+   luonti vaatii Admin-oikeudet (App Manager riitti vasta valmiin sertifikaatin
+   käyttöön; opittu 5.8.2026 "Cloud signing permission error" -virheestä).
+   Lataa `.p8`-tiedosto talteen (saa ladata vain kerran!) ja kopioi sivulta
+   **Key ID** ja **Issuer ID**.
 2. **Team ID**: developer.apple.com/account → Membership details → Team ID
    (10 merkkiä, esim. AB12CD34EF).
 3. **Secretit** (PowerShell repokansiossa; korvaa arvot):
@@ -86,20 +89,31 @@ GitHub-secretiä. Kun tili on auki, tee kerran:
    gh secret set APPLE_TEAM_ID --body "TEAM_ID"
    gh secret set APPSTORE_P8 (Get-Content polku\AuthKey_XXXX.p8 -Raw)
    ```
-4. **Appirivi App Store Connectiin** (kerran): My Apps → **+** → New App →
+4. **Bundle ID** (kerran): developer.apple.com/account → Certificates,
+   Identifiers & Profiles → Identifiers → **+** → App IDs → App → Explicit
+   `com.varallisuuspolku.app`, ei capabilityjä. (Automaattirekisteröintiin ei
+   kannata luottaa — ilman allekirjoitusta arkistoitaessa se ei tapahdu.)
+5. **Appirivi App Store Connectiin** (kerran): My Apps → **+** → New App →
    alusta iOS, nimi "Varallisuuspolku", kieli suomi, Bundle ID
-   `com.varallisuuspolku.app` (jos ID ei ole listalla, aja työnkulku kerran —
-   pilviallekirjoitus rekisteröi sen — ja luo appirivi sitten), SKU esim.
-   `varallisuuspolku`.
-5. Aja GitHub → Actions → **Appi – iOS TestFlight** → Run workflow.
+   `com.varallisuuspolku.app`, SKU esim. `varallisuuspolku`, User Access:
+   Full Access. Ilman appiriviä vienti kaatuu virheeseen
+   "Error Downloading App Information".
+6. Aja GitHub → Actions → **Appi – iOS TestFlight** → Run workflow.
    Build ilmestyy App Store Connectin TestFlight-välilehdelle ~5–15 min
-   käsittelyn jälkeen → lisää itsesi sisäiseksi testaajaksi → asenna
-   iPhonen TestFlight-apista.
+   käsittelyn jälkeen → lisää itsesi sisäiseksi testaajaksi (Internal
+   Testing → ryhmä → oma käyttäjä + buildi) → asenna iPhonen
+   TestFlight-apista.
 
-Allekirjoitus hoituu Xcoden pilviallekirjoituksella (API-avain) — sertifikaatteja
-ei säilytetä missään itse. Buildinumero kasvaa automaattisesti (GitHub-ajon
-numero); versionumero (MARKETING_VERSION 1.0) nostetaan Xcode-projektista
-kun julkaistaan isompia versioita.
+Nämä askeleet on tehty ja putki todettu toimivaksi 5.8.2026 (ensimmäinen
+buildi ladattu ASC:hen ajossa #5). Tekniset ratkaisut joihin päädyttiin:
+arkistointi ilman allekirjoitusta ja allekirjoitus vasta vientivaiheessa
+(kehitysprofiili olisi vaatinut rekisteröidyn laitteen — jakeluprofiili ei
+vaadi), teamID injektoidaan ExportOptions-kopioon secretistä, ja käännös
+tehdään runnerin uusimmalla Xcode 26:lla (Apple hylkää vanhemmalla SDK:lla
+tehdyt buildit). Sertifikaatteja ei säilytetä missään itse. Buildinumero
+kasvaa automaattisesti (GitHub-ajon numero); versionumero
+(MARKETING_VERSION 1.0) nostetaan Xcode-projektista kun julkaistaan
+isompia versioita.
 
 ## Julkaisumuistilista (kun kauppoihin lähdetään)
 
