@@ -6,8 +6,10 @@
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<!-- Kotinäytön nimi lyhyenä — "Varallisuuspolku" katkeaa ikonin alla (~11 merkkiä).
+	     Kaupan nimi pysyy täytenä App Store Connectissa. -->
 	<key>CFBundleDisplayName</key>
-        <string>Varallisuuspolku</string>
+        <string>Polku</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

@@ -64,8 +64,12 @@ const PLAN = {
   await page.reload();
   await page.click('#moreBtn');
   const ids = await page.$$eval('.menu button', (bs) => bs.map((b) => b.id));
-  Q('valikon järjestys: vertaile → tilastot → kierros → tietoa → agentit → teema → nollaus',
-    JSON.stringify(ids) === JSON.stringify(['mi-compare', 'mi-analytics', 'mi-tour', 'mi-info', 'mi-agents', 'mi-theme', 'mi-reset']));
+  // Ryhmitelty valikko (5.8.2026): Toiminnot (vertaile, kierros) → Sivut
+  // (tilastot, agentit, tietoa) → Asetukset (teema) → nollaus viimeisenä
+  Q('valikon järjestys: vertaile → kierros → tilastot → agentit → tietoa → teema → nollaus',
+    JSON.stringify(ids) === JSON.stringify(['mi-compare', 'mi-tour', 'mi-analytics', 'mi-agents', 'mi-info', 'mi-theme', 'mi-reset']));
+  Q('väliotsikot: Toiminnot / Sivut / Asetukset',
+    JSON.stringify(await page.$$eval('.menu .msect', (ss) => ss.map((s) => s.textContent))) === JSON.stringify(['Toiminnot', 'Sivut', 'Asetukset']));
   await page.click('#mi-analytics');
   await page.waitForURL('**/analytiikka.html');
   await page.waitForSelector('#heroChart svg');

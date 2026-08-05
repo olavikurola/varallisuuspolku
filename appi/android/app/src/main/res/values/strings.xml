@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Varallisuuspolku</string>
-    <string name="title_activity_main">Varallisuuspolku</string>
+    <!-- Käynnistimen nimi lyhyenä kuten iOS:llä — kaupan nimi pysyy täytenä -->
+    <string name="app_name">Polku</string>
+    <string name="title_activity_main">Polku</string>
     <string name="package_name">com.varallisuuspolku.app</string>
     <string name="custom_url_scheme">com.varallisuuspolku.app</string>
     <string name="widget_nimi">Varallisuuspolku</string>

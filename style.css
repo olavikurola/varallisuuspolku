@@ -890,6 +890,11 @@ input[type="range"]::-moz-range-thumb {
 }
 .menu button:hover { background: rgba(45, 212, 191, 0.08); }
 .menu .mdesc { font-size: 11.5px; color: var(--text-faint); font-weight: 400; margin-top: 1px; }
+.menu .msect {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-faint); padding: 8px 10px 3px; user-select: none;
+}
+.menu .msect:not(:first-child) { margin-top: 4px; border-top: 1px solid var(--border-soft); padding-top: 10px; }
 .menu button.danger div:first-child { color: var(--danger); }
 .menu button.danger:hover { background: rgba(248, 113, 113, 0.08); }
 .menu button.armed-item { background: rgba(248, 113, 113, 0.12); }

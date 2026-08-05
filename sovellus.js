@@ -435,7 +435,16 @@ function openMoreMenu(anchor) {
     menu.appendChild(b);
     return b;
   };
+  // Väliotsikot ryhmittävät rivit lajeittain — kytkimet erottuvat siirtymistä
+  // (Olavin laitehavainto 5.8.: valikossa monta eri lajia sekaisin)
+  const sect = (label) => {
+    const s = document.createElement('div');
+    s.className = 'msect';
+    s.textContent = label;
+    menu.appendChild(s);
+  };
 
+  sect('Toiminnot');
   add('mi-compare',
     baseline ? 'Vertailu päällä ✓' : 'Vertaile',
     baseline ? 'Poista vertailukohta' : 'Tallenna nykyinen suunnitelma haamukäyräksi',
@@ -443,14 +452,18 @@ function openMoreMenu(anchor) {
       if (baseline) { clearBaseline(); toast('Vertailu poistettu'); }
       else { setBaseline(); toast('Vertailukohta tallennettu — erot näkyvät, kun muutat suunnitelmaa'); }
     });
-  add('mi-analytics', 'Tilastot', 'Miten muut suunnittelevat vaurastumista — avoin data',
-    () => { location.href = 'analytiikka.html'; });
   add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti yhdeksällä klikkauksella',
     () => startTour());
-  add('mi-info', 'Tietoa palvelusta', 'Oletukset, tietosuoja ja vinkit',
-    () => { $('infoModal').hidden = false; });
+
+  sect('Sivut');
+  add('mi-analytics', 'Tilastot', 'Miten muut suunnittelevat vaurastumista — avoin data',
+    () => { location.href = 'analytiikka.html'; });
   add('mi-agents', 'Agentit', 'Kytke oma tekoälyavustajasi laskentamoottoriin (MCP)',
     () => { location.href = 'agentit.html'; });
+  add('mi-info', 'Tietoa palvelusta', 'Oletukset, tietosuoja ja vinkit',
+    () => { $('infoModal').hidden = false; });
+
+  sect('Asetukset');
   add('mi-theme',
     isLightTheme() ? 'Tumma teema' : 'Vaalea teema',
     'Vaihda värimaailma — valinta muistetaan',
