@@ -115,6 +115,12 @@ server.listen(8134, async () => {
   ({ ctx, pg } = await page({ native: true, lukitus: true, wait: 1200 }));
   ok(await pg.locator('#vpLukko').count() === 0, 'käynnistyslukitus avautui tunnistuksella');
   ok(await pg.evaluate(() => window.__bio.length) >= 1, 'verifyIdentity kutsuttiin');
+  // sivunvaihto appin sisällä (Polku ↔ Tilastot) ei saa lukita uudestaan:
+  // istunnon avaus elää sessionStoragessa, joka säilyy saman välilehden latauksissa
+  await pg.reload();
+  await pg.waitForTimeout(800);
+  ok(await pg.locator('#vpLukko').count() === 0, 'sivunvaihto ei lukitse uudestaan (istunnon avaus voimassa)');
+  ok(await pg.evaluate(() => window.__bio.length) === 0, 'tunnistusta ei kysytty uudestaan sivunvaihdossa');
   await ctx.close();
 
   // 5) Lukitus: peruttu tunnistus jättää peitteen, Avaa yrittää uudestaan
@@ -164,7 +170,20 @@ server.listen(8134, async () => {
   ok(tuleva.simOk, 'tuleva skeema: simulaatio laskee normaalisti');
   await ctx.close();
 
-  // 9) Web ilman Capacitoria: ei mitään natiivilisiä
+  // 9) Alapalkki ei peitä sivun häntää (havaittu laitteella: paneelin
+  //    disclaimer jäi palkin alle — paneelia padataan palkin verran)
+  ({ ctx, pg } = await page({ native: true, w: 390, h: 844 }));
+  await pg.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await pg.waitForTimeout(500);
+  const pohja = await pg.evaluate(() => {
+    const bar = document.querySelector('.vp-tabbar').getBoundingClientRect();
+    const d = document.querySelector('.panel .disclaimer').getBoundingClientRect();
+    return { dBottom: Math.round(d.bottom), barTop: Math.round(bar.top) };
+  });
+  ok(pohja.dBottom <= pohja.barTop, 'disclaimer palkin yläpuolella pohjaskrollissa (' + pohja.dBottom + ' ≤ ' + pohja.barTop + ')');
+  await ctx.close();
+
+  // 10) Web ilman Capacitoria: ei mitään natiivilisiä
   ({ ctx, pg } = await page({ native: false }));
   ok(await pg.evaluate(() => !window.vpNativeMenu), 'webissä ei valikkokoukkua');
   ok(await pg.locator('#vpLukko').count() === 0, 'webissä ei lukituspeitettä');

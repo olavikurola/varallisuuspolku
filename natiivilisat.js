@@ -110,8 +110,18 @@
   // taustalta yli minuutin tauon jälkeen.
 
   var LUKKO_TAUKO_MS = 60000;
+  var LUKKO_AUKI_KEY = 'vp-lukko-auki'; // sessionStorage: avaus kattaa istunnon,
+  // jotta sivunvaihto appin sisällä (Polku ↔ Tilastot) ei lukitse uudestaan.
+  // Appin sulkeminen tyhjentää session → kylmäkäynnistys lukitsee aina.
   var lukkoEl = null;
   var piilossaAlkoi = 0;
+
+  function lukkoAvattu() {
+    try { return sessionStorage.getItem(LUKKO_AUKI_KEY) === '1'; } catch (e) { return false; }
+  }
+  function merkitseAvatuksi(auki) {
+    try { auki ? sessionStorage.setItem(LUKKO_AUKI_KEY, '1') : sessionStorage.removeItem(LUKKO_AUKI_KEY); } catch (e) {}
+  }
 
   function naytaLukko() {
     if (lukkoEl) return;
@@ -133,6 +143,7 @@
 
   function piilotaLukko() {
     if (lukkoEl) { lukkoEl.remove(); lukkoEl = null; }
+    merkitseAvatuksi(true);
   }
 
   function avaaLukko() {
@@ -218,7 +229,7 @@
 
   /* ===================== Elinkaari ===================== */
 
-  if (paalla(LUKITUS_KEY)) {
+  if (paalla(LUKITUS_KEY) && !lukkoAvattu()) {
     naytaLukko();
     setTimeout(avaaLukko, 350); // pieni viive: silta ja teema ehtivät asettua
   }
@@ -229,6 +240,7 @@
       ajastaMuistutukset();
       widgetPaivita();
     } else if (paalla(LUKITUS_KEY) && piilossaAlkoi && Date.now() - piilossaAlkoi > LUKKO_TAUKO_MS) {
+      merkitseAvatuksi(false); // pitkä tauko → istunnon avaus raukeaa
       naytaLukko();
       avaaLukko();
     }

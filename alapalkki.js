@@ -29,6 +29,9 @@
     '.vp-tab:focus-visible{outline:2px solid var(--accent, #2dd4bf);outline-offset:2px;border-radius:8px;}',
     /* sisältö, toastit ja Kysy AI -kelluke väistävät palkkia */
     'body.vp-has-tabbar{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px)) !important;}',
+    /* paneelin häntä (Pro-rivi, disclaimer) ei nojaa bodyn paddingiin — layoutissa
+       paneeli valuu sen ohi, joten padataan paneelia itseään (havaittu laitteella) */
+    'body.vp-has-tabbar .panel{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px)) !important;}',
     'body.vp-has-tabbar .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px));}',
     'body.vp-has-tabbar .tk-handle{bottom:calc(72px + env(safe-area-inset-bottom,0px));}',
     /* piirtopöytä ja esittelykierros saavat koko ruudun */
