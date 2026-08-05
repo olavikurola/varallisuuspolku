@@ -40,6 +40,19 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      # Applen validointi vaatii iOS 26 SDK:n (huhtikuusta 2026) — runnerin
+      # oletus-Xcode on vanhempi, joten valitaan koneen uusin Xcode 26.
+      - name: Valitse Xcode 26
+        run: |
+          XC=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XC" ]; then
+            echo "::error::Runnerilta ei löytynyt Xcode 26:ta (/Applications/Xcode_26*.app) — tarkista runner-imagen Xcode-versiot."
+            ls -d /Applications/Xcode*.app
+            exit 1
+          fi
+          sudo xcode-select -s "$XC/Contents/Developer"
+          xcodebuild -version
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
