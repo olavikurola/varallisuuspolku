@@ -764,7 +764,12 @@ input[type="range"]::-moz-range-thumb {
   overflow-y: auto;
   background: rgba(6, 10, 20, 0.82);
   backdrop-filter: blur(6px);
-  padding: 24px 16px 48px;
+  /* fixed-peite ohittaa bodyn safe-area-paddingit — napit (Sulje ym.) eivät
+     saa jäädä iOS:n tilapalkin alle; selaimessa env() on 0 */
+  padding: calc(24px + env(safe-area-inset-top, 0px))
+           calc(16px + env(safe-area-inset-right, 0px))
+           calc(48px + env(safe-area-inset-bottom, 0px))
+           calc(16px + env(safe-area-inset-left, 0px));
 }
 .sum-bar { max-width: 860px; margin: 0 auto 12px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
 .sum-sheet {

@@ -30,6 +30,10 @@ server.listen(8134, async () => {
       localStorage.setItem('vp-autotour-off', '1');
       localStorage.setItem('vp-veto-vihje', '1');
       if (o.lukitus) localStorage.setItem('vp-lukitus', '1');
+      if (o.plan) {
+        localStorage.setItem('varallisuuspolku-v1', JSON.stringify({ ageNow: 30, ageEnd: 90, startCapital: 10000, monthly: 500, allocStocks: 70, allocBonds: 20, events: [] }));
+        localStorage.setItem('vp-donate-v1', JSON.stringify({ donatedHash: 'abc' }));
+      }
       if (!o.native) return;
       window.__lnSchedule = [];
       window.__lnCancel = [];
@@ -183,14 +187,47 @@ server.listen(8134, async () => {
   ok(pohja.dBottom <= pohja.barTop, 'disclaimer palkin yläpuolella pohjaskrollissa (' + pohja.dBottom + ' ≤ ' + pohja.barTop + ')');
   await ctx.close();
 
-  // 10) Web ilman Capacitoria: ei mitään natiivilisiä
+  // 10) Appin tiivis etusivu (Olavin laitehavainnot): UKK-kortti ja Pro-rivi
+  //     piilossa, tase kiinni oletuksena, Pro-kytkin valikossa, valikko sheetinä
+  ({ ctx, pg } = await page({ native: true }));
+  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.card[data-card=about]')).display) === 'none', 'UKK-kortti piilossa appissa');
+  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.pro-switch')).display) === 'none', 'Pro-rivi piilossa appissa');
+  ok(await pg.evaluate(() => document.getElementById('balancePanel').classList.contains('collapsed')), 'tase kiinni oletuksena appissa');
+  await pg.click('#moreBtn');
+  await pg.waitForTimeout(300);
+  ok(await pg.locator('#mi-pro').count() === 1, 'Pro-kytkin valikossa appissa');
+  const sheetR = await pg.evaluate(() => {
+    const r = document.querySelector('.menu').getBoundingClientRect();
+    return { bottom: Math.round(r.bottom), left: Math.round(r.left), ih: window.innerHeight };
+  });
+  ok(sheetR.bottom === sheetR.ih && sheetR.left === 0, 'valikko avautuu bottom sheetinä (' + JSON.stringify(sheetR) + ')');
+  await ctx.close();
+
+  // 11) Tilastot-sivun Lisää avaa sheetin paikan päällä — ei hyppyä etusivulle
+  //     (suunnitelma + jako kylvetty: ilman niitä sivun portti peittäisi palkin)
+  ({ ctx, pg } = await page({ native: true, url: '/analytiikka.html', plan: true }));
+  await pg.click('.vp-tab:nth-child(3)');
+  await pg.waitForTimeout(400);
+  ok(/analytiikka\.html/.test(pg.url()), 'Lisää ei vaihda sivua Tilastoissa');
+  ok(await pg.locator('.menu #mi-theme').count() === 1 && await pg.locator('.menu #mi-muistutukset').count() === 1, 'sheetissä teema ja natiivirivit');
+  await pg.click('.menu #mi-muistutukset');
+  await pg.waitForTimeout(400);
+  ok(await pg.evaluate(() => localStorage.getItem('vp-muistutukset')) === '1', 'muistutukset kytkeytyvät Tilastot-sivulta');
+  ok(await pg.locator('.toast.show').count() === 1, 'varatoast antaa palautteen Tilastot-sivulla');
+  await ctx.close();
+
+  // 12) Web ilman Capacitoria: ei mitään natiivilisiä
   ({ ctx, pg } = await page({ native: false }));
   ok(await pg.evaluate(() => !window.vpNativeMenu), 'webissä ei valikkokoukkua');
   ok(await pg.locator('#vpLukko').count() === 0, 'webissä ei lukituspeitettä');
   await pg.click('#moreBtn');
   await pg.waitForTimeout(300);
   ok(await pg.locator('#mi-muistutukset').count() === 0, 'webissä ei Muistutukset-riviä');
+  ok(await pg.locator('#mi-pro').count() === 0, 'webissä ei Pro-valikkoriviä (rivi paneelissa)');
   ok(await pg.locator('#mi-theme').count() === 1, 'webin valikko ennallaan');
+  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.card[data-card=about]')).display) !== 'none', 'UKK-kortti näkyy webissä');
+  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.pro-switch')).display) !== 'none', 'Pro-rivi näkyy webissä');
+  ok(await pg.evaluate(() => !document.getElementById('balancePanel').classList.contains('collapsed')), 'tase auki oletuksena webissä');
   await ctx.close();
 
   await b.close();

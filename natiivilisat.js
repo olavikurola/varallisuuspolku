@@ -28,8 +28,19 @@
   function aseta(key, on) {
     try { on ? localStorage.setItem(key, '1') : localStorage.removeItem(key); } catch (e) {}
   }
+  var toastEl2 = null, toastTimer2 = null;
   function ilmoita(msg) {
-    if (typeof toast === 'function') toast(msg);
+    if (typeof toast === 'function') { toast(msg); return; }
+    // tilastosivulla ei ole sovellus.js:n toastia — kevyt varatoteutus samalla tyylillä
+    if (!toastEl2) {
+      toastEl2 = document.createElement('div');
+      toastEl2.className = 'toast';
+      document.body.appendChild(toastEl2);
+    }
+    toastEl2.textContent = msg;
+    toastEl2.classList.add('show');
+    clearTimeout(toastTimer2);
+    toastTimer2 = setTimeout(function () { toastEl2.classList.remove('show'); }, 2400);
   }
 
   /* ===================== Muistutukset ===================== */

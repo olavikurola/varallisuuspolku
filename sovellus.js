@@ -469,6 +469,19 @@ function openMoreMenu(anchor) {
     'Vaihda värimaailma — valinta muistetaan',
     () => applyTheme(!isLightTheme()));
 
+  // Appi: Pro-kytkin valikossa — etusivun kytkinrivi on appissa piilotettu
+  // (alapalkki.js) etusivun tiivistämiseksi; webissä rivi pysyy paneelissa
+  if (window.vpNativeMenu) {
+    add('mi-pro',
+      state.proOn ? 'Pro-tila päällä ✓' : 'Pro-tila',
+      state.proOn ? 'Poista ammattilaissäädöt käytöstä' : 'Ammattilaisen säädöt ja analyysit',
+      () => {
+        // ensimmäinen kytkentä kulkee esittelysivun kautta kuten webissäkin
+        if (!state.proOn && !proSeen()) { openProModal(); return; }
+        setPro(!state.proOn);
+      });
+  }
+
   // Natiiviappi lisää omat rivinsä (muistutukset, lukitus) — webissä koukkua ei ole
   if (window.vpNativeMenu) window.vpNativeMenu(add);
 
@@ -874,7 +887,13 @@ function bindActions() {
   // Tase-paneelin supistus
   const balanceToggle = $('balanceToggle');
   let balCollapsed = false;
-  try { balCollapsed = localStorage.getItem('vp-balance-collapsed') === '1'; } catch (e) {}
+  try {
+    const s = localStorage.getItem('vp-balance-collapsed');
+    // Appi: tase kiinni ensiavauksessa — graafi ja tunnusluvut hallitsevat
+    // ensinäkymää; napautus avaa ja valinta muistetaan (webissä auki kuten ennen)
+    balCollapsed = s != null ? s === '1'
+      : !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  } catch (e) {}
   if (balCollapsed) { balPanel.classList.add('collapsed'); balanceToggle.textContent = '▸'; }
   balanceToggle.addEventListener('click', () => {
     const c = balPanel.classList.toggle('collapsed');

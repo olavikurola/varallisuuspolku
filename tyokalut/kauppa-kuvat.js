@@ -53,6 +53,7 @@ server.listen(8135, async () => {
     // Lavastus: esimerkkipersoona "Perhe ja asunto (35 v)"
     await pg.evaluate(() => {
       applySaved(JSON.parse(JSON.stringify(EXAMPLES[1].data)));
+      syncInputs(); // lomakekentät samaan tilaan graafin kanssa
       renderAll();
     });
     await pg.waitForFunction(() => typeof sim !== 'undefined' && sim && sim.successProb != null && !sim.successStale, null, { timeout: 10000 }).catch(() => {});

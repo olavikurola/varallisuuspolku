@@ -37,6 +37,17 @@
     /* piirtopöytä ja esittelykierros saavat koko ruudun */
     'body.fs .vp-tabbar{display:none;}',
     'body.fs.vp-has-tabbar{padding-bottom:0 !important;}',
+    /* valikot bottom sheetinä: appimainen tapa — nousee alhaalta koko leveydeltä
+       (sovellus.js asemoi valikon inlinena ankkurin alle → !important ohittaa) */
+    'body.vp-has-tabbar .menu{position:fixed !important;top:auto !important;left:0 !important;right:0 !important;bottom:0 !important;',
+    ' max-width:none;border-radius:18px 18px 0 0;border-bottom:0;max-height:75vh;overflow-y:auto;z-index:130;',
+    ' padding:10px 14px calc(14px + env(safe-area-inset-bottom,0px));animation:vp-sheet-up 0.22s ease;}',
+    '@keyframes vp-sheet-up{from{transform:translateY(28px);opacity:0.5}to{transform:none;opacity:1}}',
+    /* appin etusivu tiiviimmäksi (Olavin laitehavainnot 5.8.): UKK-kortti on
+       webin hakukonesisältöä — appissa sama tieto on valikon Tietoa-sivulla;
+       Pro-kytkin siirtyy valikon Asetuksiin (sovellus.js lisää rivin) */
+    'body.vp-has-tabbar .card[data-card=about]{display:none;}',
+    'body.vp-has-tabbar .pro-switch{display:none;}',
   ].join('');
 
   var ICONS = {
@@ -44,6 +55,54 @@
     tilastot: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><line x1="4.5" y1="18.5" x2="4.5" y2="12"/><line x1="11" y1="18.5" x2="11" y2="4.5"/><line x1="17.5" y1="18.5" x2="17.5" y2="9"/></svg>',
     lisaa: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7.5"/><circle cx="7.4" cy="11" r="1.05" fill="currentColor" stroke="none"/><circle cx="11" cy="11" r="1.05" fill="currentColor" stroke="none"/><circle cx="14.6" cy="11" r="1.05" fill="currentColor" stroke="none"/></svg>',
   };
+
+  /* Tilastot-sivun Lisää-sheet: samat ryhmät kuin ☰-valikossa siltä osin kuin
+     ne toimivat ilman etusivun skriptejä; natiivirivit (muistutukset, lukitus)
+     tulevat natiivilisat.js:n koukusta. */
+  var sheetEl = null;
+  function suljeSheet() {
+    if (sheetEl) { sheetEl.remove(); sheetEl = null; document.removeEventListener('click', sheetUlkoklikki, true); }
+  }
+  function sheetUlkoklikki(e) {
+    if (sheetEl && !sheetEl.contains(e.target)) suljeSheet();
+  }
+  function vaihdaTeema() {
+    var light = !document.documentElement.classList.contains('light');
+    document.documentElement.classList.toggle('light', light);
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute('content', light ? '#eef1f8' : '#0a0e1a');
+    try { localStorage.setItem('vp-theme', light ? 'light' : 'dark'); } catch (e) {}
+  }
+  function avaaSheet() {
+    if (sheetEl) { suljeSheet(); return; }
+    var menu = document.createElement('div');
+    menu.className = 'menu';
+    var sect = function (label) {
+      var s = document.createElement('div');
+      s.className = 'msect';
+      s.textContent = label;
+      menu.appendChild(s);
+    };
+    var add = function (id, name, desc, fn) {
+      var b = document.createElement('button');
+      b.id = id;
+      b.innerHTML = '<div>' + name + '</div><div class="mdesc">' + desc + '</div>';
+      b.addEventListener('click', function () { suljeSheet(); if (fn) fn(); });
+      menu.appendChild(b);
+      return b;
+    };
+    sect('Sivut');
+    add('mi-agents', 'Agentit', 'Kytke oma tekoälyavustajasi laskentamoottoriin (MCP)',
+      function () { location.href = './agentit.html'; });
+    sect('Asetukset');
+    add('mi-theme',
+      document.documentElement.classList.contains('light') ? 'Tumma teema' : 'Vaalea teema',
+      'Vaihda värimaailma — valinta muistetaan', vaihdaTeema);
+    if (window.vpNativeMenu) window.vpNativeMenu(add);
+    document.body.appendChild(menu);
+    sheetEl = menu;
+    setTimeout(function () { document.addEventListener('click', sheetUlkoklikki, true); }, 0);
+  }
 
   function tab(id, label, act) {
     var el = document.createElement('button');
@@ -80,9 +139,9 @@
       if (typeof window.openMoreMenu === 'function' && btn) {
         window.openMoreMenu(btn);
       } else {
-        /* tilastosivulla ☰-valikkoa ei ole — avataan kotisivun valikko perillä */
-        try { sessionStorage.setItem('vp-avaa-valikko', '1'); } catch (e) {}
-        location.href = './index.html';
+        /* tilastosivulla ☰-valikkoa ei ole — oma sheet suoraan tässä,
+           ei hyppyä etusivulle (Olavin laitehavainto 5.8.) */
+        avaaSheet();
       }
     });
 
