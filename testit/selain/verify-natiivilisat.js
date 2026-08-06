@@ -68,7 +68,7 @@ server.listen(8134, async () => {
 
   // 1) Natiivi: valikkorivit ja muistutusten kytkentä päälle/pois
   let { ctx, pg } = await page({ native: true });
-  await pg.click('#moreBtn');
+  await pg.click('.vp-tab:nth-child(5)');
   await pg.waitForTimeout(300);
   ok(await pg.locator('#mi-muistutukset').count() === 1, 'valikossa Muistutukset-rivi (natiivi)');
   ok(await pg.locator('#mi-lukitus').count() === 1, 'valikossa Lukitus-rivi (natiivi)');
@@ -83,7 +83,7 @@ server.listen(8134, async () => {
   ok(tapahtumat.every((n) => n.schedule && n.schedule.at && new Date(n.schedule.at) > new Date()), 'tapahtumamuistutukset tulevaisuudessa');
   ok(tapahtumat.every((n) => n.title && n.title.length > 0), 'tapahtumilla otsikko (evLabel)');
   // uusi avaus näyttää tilan ja pois-kytkentä peruu ajastukset
-  await pg.click('#moreBtn');
+  await pg.click('.vp-tab:nth-child(5)');
   await pg.waitForTimeout(300);
   ok(await pg.textContent('#mi-muistutukset').then((t) => t.includes('päällä ✓')), 'valikkorivi näyttää tilan');
   await pg.click('#mi-muistutukset');
@@ -106,7 +106,7 @@ server.listen(8134, async () => {
   // 3) Ilmoituslupa evätty → ei kytkeydy päälle
   ({ ctx, pg } = await page({ native: true }));
   await pg.evaluate(() => { window.__lupaEvatty = true; });
-  await pg.click('#moreBtn');
+  await pg.click('.vp-tab:nth-child(5)');
   await pg.waitForTimeout(300);
   await pg.click('#mi-muistutukset');
   await pg.waitForTimeout(500);
@@ -138,7 +138,7 @@ server.listen(8134, async () => {
 
   // 6) Lukituksen käyttöönotto valikosta vaatii onnistuneen tunnistuksen
   ({ ctx, pg } = await page({ native: true }));
-  await pg.click('#moreBtn');
+  await pg.click('.vp-tab:nth-child(5)');
   await pg.waitForTimeout(300);
   await pg.click('#mi-lukitus');
   await pg.waitForTimeout(500);
@@ -193,20 +193,41 @@ server.listen(8134, async () => {
   ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.card[data-card=about]')).display) === 'none', 'UKK-kortti piilossa appissa');
   ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.pro-switch')).display) === 'none', 'Pro-rivi piilossa appissa');
   ok(await pg.evaluate(() => document.getElementById('balancePanel').classList.contains('collapsed')), 'tase kiinni oletuksena appissa');
-  await pg.click('#moreBtn');
+  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.topbar-right')).display) === 'none', 'yläpalkin napit piilossa appissa (toiminnot alapalkissa)');
+  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.tk-handle')).display) === 'none', 'Kysy AI -kelluke piilossa appissa (oma tabi)');
+  ok(await pg.evaluate(() => getComputedStyle(document.getElementById('tableBtn')).display) === 'none', 'Vuositaulukko-nappi piilossa appissa (valikossa)');
+  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.stats')).gridTemplateColumns.split(' ').length) === 2, 'tunnusluvut 2×2-ruudukkona appissa');
+  await pg.click('.vp-tab:nth-child(5)');
   await pg.waitForTimeout(300);
   ok(await pg.locator('#mi-pro').count() === 1, 'Pro-kytkin valikossa appissa');
+  ok(await pg.locator('#mi-taulukko').count() === 1, 'Vuositaulukko valikossa appissa');
   const sheetR = await pg.evaluate(() => {
     const r = document.querySelector('.menu').getBoundingClientRect();
     return { bottom: Math.round(r.bottom), left: Math.round(r.left), ih: window.innerHeight };
   });
   ok(sheetR.bottom === sheetR.ih && sheetR.left === 0, 'valikko avautuu bottom sheetinä (' + JSON.stringify(sheetR) + ')');
+  await pg.click('#mi-taulukko');
+  await pg.waitForTimeout(400);
+  ok(await pg.evaluate(() => !document.getElementById('tableModal').hidden), 'Vuositaulukko avautuu valikosta');
+  await ctx.close();
+
+  // 10b) Alapalkin viisi tabia: Kysy AI ja Suunnitelma toimivat etusivulla
+  ({ ctx, pg } = await page({ native: true }));
+  ok(await pg.locator('.vp-tab').count() === 5, 'alapalkissa viisi tabia');
+  await pg.click('.vp-tab:nth-child(4)'); // Suunnitelma
+  await pg.waitForTimeout(600);
+  ok(await pg.evaluate(() => !document.getElementById('summary').hidden), 'Suunnitelma-tabi avaa Suunnitelmani');
+  await pg.click('#sumClose');
+  await pg.waitForTimeout(300);
+  await pg.click('.vp-tab:nth-child(3)'); // Kysy AI
+  await pg.waitForTimeout(600);
+  ok(await pg.evaluate(() => !document.querySelector('.tk-sheet').hidden), 'Kysy AI -tabi avaa Tulkin');
   await ctx.close();
 
   // 11) Tilastot-sivun Lisää avaa sheetin paikan päällä — ei hyppyä etusivulle
   //     (suunnitelma + jako kylvetty: ilman niitä sivun portti peittäisi palkin)
   ({ ctx, pg } = await page({ native: true, url: '/analytiikka.html', plan: true }));
-  await pg.click('.vp-tab:nth-child(3)');
+  await pg.click('.vp-tab:nth-child(5)');
   await pg.waitForTimeout(400);
   ok(/analytiikka\.html/.test(pg.url()), 'Lisää ei vaihda sivua Tilastoissa');
   ok(await pg.locator('.menu #mi-theme').count() === 1 && await pg.locator('.menu #mi-muistutukset').count() === 1, 'sheetissä teema ja natiivirivit');
@@ -228,6 +249,9 @@ server.listen(8134, async () => {
   ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.card[data-card=about]')).display) !== 'none', 'UKK-kortti näkyy webissä');
   ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.pro-switch')).display) !== 'none', 'Pro-rivi näkyy webissä');
   ok(await pg.evaluate(() => !document.getElementById('balancePanel').classList.contains('collapsed')), 'tase auki oletuksena webissä');
+  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.topbar-right')).display) !== 'none', 'yläpalkin napit näkyvät webissä');
+  ok(await pg.evaluate(() => getComputedStyle(document.getElementById('tableBtn')).display) !== 'none', 'Vuositaulukko-nappi näkyy webissä');
+  ok(await pg.locator('#mi-taulukko').count() === 0, 'webin valikossa ei Vuositaulukko-riviä');
   await ctx.close();
 
   await b.close();

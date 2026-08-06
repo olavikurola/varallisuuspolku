@@ -73,8 +73,8 @@ server.listen(8135, async () => {
     await pg.evaluate(() => exitFs());
     await pg.waitForTimeout(600);
 
-    // 4) ☰-valikko: natiivirivit (muistutukset + lukitus) näkyvissä
-    await pg.click('#moreBtn');
+    // 4) valikko (Lisää-tabi): natiivirivit (muistutukset + lukitus) näkyvissä
+    await pg.click('.vp-tab:nth-child(5)');
     await pg.waitForTimeout(400);
     await pg.screenshot({ path: p.join(OUT, laite.nimi + '-4-valikko.png') });
     await ctx.close();

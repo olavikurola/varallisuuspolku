@@ -136,24 +136,34 @@
 
   function naytaLukko() {
     if (lukkoEl) return;
-    var vaalea = document.documentElement.classList.contains('light');
+    // Logoruutu: käynnistys alkaa brändiruudusta josta avautuminen tapahtuu —
+    // sama tumma ilme kuin splashissa, ei paljasta mitään sisältöä
     var o = document.createElement('div');
     o.id = 'vpLukko';
     o.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;' +
-      'align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;' +
-      'background:' + (vaalea ? '#eef1f8' : '#0a0e1a') + ';';
+      'align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;' +
+      'background:radial-gradient(1200px 600px at 80% -10%,rgba(139,124,246,0.12),transparent 60%),' +
+      'radial-gradient(900px 500px at -10% 110%,rgba(45,212,191,0.08),transparent 60%),#0a0e1a;' +
+      'transition:opacity 0.25s ease;';
     o.innerHTML =
-      '<div style="font-size:44px" aria-hidden="true">🔒</div>' +
-      '<div style="font-weight:600;font-size:17px;line-height:1.45;color:' + (vaalea ? '#1c2433' : '#e8ecf8') + '">Varallisuuspolku on lukittu</div>' +
-      '<button id="vpAvaaLukko" type="button" style="font:inherit;font-weight:600;font-size:15px;padding:12px 26px;border:0;border-radius:10px;' +
-      'background:var(--accent,#2dd4bf);color:#06251f;cursor:pointer">Avaa</button>';
+      '<img src="./icon-192.png" alt="" width="84" height="84" style="border-radius:20px;box-shadow:0 12px 40px rgba(45,212,191,0.22)" />' +
+      '<div style="font-weight:700;font-size:22px;letter-spacing:-0.3px;color:#e8ecf8">Varallisuuspolku</div>' +
+      '<div style="font-size:13px;color:#93a1b8">Lukittu — avaa tunnistautumalla</div>' +
+      '<button id="vpAvaaLukko" type="button" style="font:inherit;font-weight:600;font-size:15px;margin-top:6px;padding:12px 28px;border:0;border-radius:12px;' +
+      'background:linear-gradient(90deg,#2dd4bf,#8b7cf6);color:#0a0e1a;cursor:pointer">Avaa</button>';
     (document.body || document.documentElement).appendChild(o);
     lukkoEl = o;
     o.querySelector('#vpAvaaLukko').addEventListener('click', avaaLukko);
   }
 
   function piilotaLukko() {
-    if (lukkoEl) { lukkoEl.remove(); lukkoEl = null; }
+    if (lukkoEl) {
+      var el = lukkoEl;
+      lukkoEl = null;
+      el.style.opacity = '0'; // pehmeä häivytys logoruudusta sisältöön
+      el.style.pointerEvents = 'none';
+      setTimeout(function () { el.remove(); }, 260);
+    }
     merkitseAvatuksi(true);
   }
 

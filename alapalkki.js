@@ -33,7 +33,19 @@
        paneeli valuu sen ohi, joten padataan paneelia itseään (havaittu laitteella) */
     'body.vp-has-tabbar .panel{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px)) !important;}',
     'body.vp-has-tabbar .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px));}',
-    'body.vp-has-tabbar .tk-handle{bottom:calc(72px + env(safe-area-inset-bottom,0px));}',
+    /* Kysy AI on appissa oma tabi — kelluke pois sisällön päältä */
+    'body.vp-has-tabbar .tk-handle{display:none !important;}',
+    /* päätoiminnot alapalkissa → yläpalkkiin jää logo ja nimi */
+    'body.vp-has-tabbar .topbar-right{display:none;}',
+    /* tunnusluvut 2×2-ruudukkona: kaikki neljä kerralla näkyvissä, ei piiloon
+       jäävää vaakaskrollia (Olavin laitehavainto 6.8.) */
+    'body.vp-has-tabbar .stats{display:grid;grid-template-columns:1fr 1fr;overflow:visible;margin:0;padding:0;gap:8px;}',
+    'body.vp-has-tabbar .stat{width:auto;padding:8px 11px;}',
+    'body.vp-has-tabbar .stat .v{font-size:16px;}',
+    /* legenda tiiviimmin; Vuositaulukko siirtyi valikkoon (sovellus.js) */
+    'body.vp-has-tabbar .legend{gap:8px 14px;font-size:11px;padding:2px 2px 4px;}',
+    'body.vp-has-tabbar .legend .lg{gap:5px;}',
+    'body.vp-has-tabbar #tableBtn{display:none;}',
     /* piirtopöytä ja esittelykierros saavat koko ruudun */
     'body.fs .vp-tabbar{display:none;}',
     'body.fs.vp-has-tabbar{padding-bottom:0 !important;}',
@@ -53,6 +65,8 @@
   var ICONS = {
     polku: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M2.5 16.5 C7 14 9.5 8.5 14 6 C15.8 5 17.5 5.5 19.5 7.5"/><circle cx="19.5" cy="7.5" r="1.8" fill="currentColor" stroke="none"/></svg>',
     tilastot: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><line x1="4.5" y1="18.5" x2="4.5" y2="12"/><line x1="11" y1="18.5" x2="11" y2="4.5"/><line x1="17.5" y1="18.5" x2="17.5" y2="9"/></svg>',
+    ai: '<svg width="22" height="22" viewBox="0 0 22 22" fill="currentColor" aria-hidden="true"><path d="M11 3 L12.8 9.2 L19 11 L12.8 12.8 L11 19 L9.2 12.8 L3 11 L9.2 9.2 Z"/><path d="M17.5 3.5 L18.2 5.8 L20.5 6.5 L18.2 7.2 L17.5 9.5 L16.8 7.2 L14.5 6.5 L16.8 5.8 Z" opacity="0.7"/></svg>',
+    suunnitelma: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2.8 h7.5 L17 6.3 V19.2 H6 Z"/><line x1="8.6" y1="10" x2="14.4" y2="10"/><line x1="8.6" y1="13.2" x2="14.4" y2="13.2"/><line x1="8.6" y1="16.4" x2="12.2" y2="16.4"/></svg>',
     lisaa: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7.5"/><circle cx="7.4" cy="11" r="1.05" fill="currentColor" stroke="none"/><circle cx="11" cy="11" r="1.05" fill="currentColor" stroke="none"/><circle cx="14.6" cy="11" r="1.05" fill="currentColor" stroke="none"/></svg>',
   };
 
@@ -133,6 +147,23 @@
       else location.href = './analytiikka.html';
     });
 
+    /* Kysy AI ja Suunnitelma ovat toimintotabeja (avaavat näkymän, eivät
+       "aktivoidu"); tilastosivulla siirrytään etusivulle lipun kanssa */
+    var ai = tab('ai', 'Kysy AI', false);
+    ai.addEventListener('click', function () {
+      var h = document.querySelector('.tk-handle');
+      if (h) { h.click(); return; }
+      try { sessionStorage.setItem('vp-avaa-tulkki', '1'); } catch (e) {}
+      location.href = './index.html';
+    });
+
+    var suunnitelma = tab('suunnitelma', 'Suunnitelma', false);
+    suunnitelma.addEventListener('click', function () {
+      if (typeof window.openSummary === 'function') { window.openSummary(); return; }
+      try { sessionStorage.setItem('vp-avaa-suunnitelma', '1'); } catch (e) {}
+      location.href = './index.html';
+    });
+
     var lisaa = tab('lisaa', 'Lisää', false);
     lisaa.addEventListener('click', function () {
       var btn = document.getElementById('moreBtn');
@@ -147,9 +178,26 @@
 
     bar.appendChild(polku);
     bar.appendChild(tilastot);
+    bar.appendChild(ai);
+    bar.appendChild(suunnitelma);
     bar.appendChild(lisaa);
     document.body.appendChild(bar);
     document.body.classList.add('vp-has-tabbar');
+
+    /* tilastosivulta tulleet avausliput (Tulkki/Suunnitelmani etusivulla);
+       viive antaa muiden skriptien rakentaa käyttöliittymänsä ensin */
+    if (!onStats) {
+      try {
+        if (sessionStorage.getItem('vp-avaa-tulkki')) {
+          sessionStorage.removeItem('vp-avaa-tulkki');
+          setTimeout(function () { var h = document.querySelector('.tk-handle'); if (h) h.click(); }, 600);
+        }
+        if (sessionStorage.getItem('vp-avaa-suunnitelma')) {
+          sessionStorage.removeItem('vp-avaa-suunnitelma');
+          setTimeout(function () { if (typeof window.openSummary === 'function') window.openSummary(); }, 600);
+        }
+      } catch (e) {}
+    }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build);

@@ -454,6 +454,12 @@ function openMoreMenu(anchor) {
     });
   add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti yhdeksällä klikkauksella',
     () => startTour());
+  // Appi: Vuositaulukko valikosta — legendan alta vapautuu rivi (nappi piilossa,
+  // alapalkki.js); webissä nappi pysyy graafin alla
+  if (window.vpNativeMenu) {
+    add('mi-taulukko', 'Vuositaulukko', 'Vuosikohtaiset luvut taulukkona ja CSV:nä',
+      () => { renderYearTable(); $('tableModal').hidden = false; });
+  }
 
   sect('Sivut');
   add('mi-analytics', 'Tilastot', 'Miten muut suunnittelevat vaurastumista — avoin data',
