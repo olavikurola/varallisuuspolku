@@ -55,6 +55,12 @@
     ' max-width:none;border-radius:18px 18px 0 0;border-bottom:0;max-height:75vh;overflow-y:auto;z-index:130;',
     ' padding:10px 14px calc(14px + env(safe-area-inset-bottom,0px));animation:vp-sheet-up 0.22s ease;}',
     '@keyframes vp-sheet-up{from{transform:translateY(28px);opacity:0.5}to{transform:none;opacity:1}}',
+    /* modaalit (Tietoa, Suunnitelmani, Vuositaulukko…) täysiksi sivuiksi:
+       webissä tausta kuultaa peitteen takaa — appissa näkymä avautuu omana
+       sivunaan yhdellä siirtymällä (Olavin laitehavainto 6.8.) */
+    'body.vp-has-tabbar .summary{background:var(--bg,#0a0e1a);backdrop-filter:none;-webkit-backdrop-filter:none;',
+    ' animation:vp-page-in 0.2s ease;}',
+    '@keyframes vp-page-in{from{transform:translateY(14px);opacity:0.4}to{transform:none;opacity:1}}',
     /* appin etusivu tiiviimmäksi (Olavin laitehavainnot 5.8.): UKK-kortti on
        webin hakukonesisältöä — appissa sama tieto on valikon Tietoa-sivulla;
        Pro-kytkin siirtyy valikon Asetuksiin (sovellus.js lisää rivin) */

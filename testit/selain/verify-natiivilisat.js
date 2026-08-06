@@ -209,6 +209,8 @@ server.listen(8134, async () => {
   await pg.click('#mi-taulukko');
   await pg.waitForTimeout(400);
   ok(await pg.evaluate(() => !document.getElementById('tableModal').hidden), 'Vuositaulukko avautuu valikosta');
+  // modaali on appissa täysi sivu: opaakki tausta (webissä läpikuultava rgba)
+  ok(await pg.evaluate(() => !getComputedStyle(document.getElementById('tableModal')).backgroundColor.includes('rgba')), 'modaali täytenä sivuna appissa (opaakki tausta)');
   await ctx.close();
 
   // 10b) Alapalkin viisi tabia: Kysy AI ja Suunnitelma toimivat etusivulla
