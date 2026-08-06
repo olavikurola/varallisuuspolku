@@ -52,9 +52,19 @@
     /* valikot bottom sheetinä: appimainen tapa — nousee alhaalta koko leveydeltä
        (sovellus.js asemoi valikon inlinena ankkurin alle → !important ohittaa) */
     'body.vp-has-tabbar .menu{position:fixed !important;top:auto !important;left:0 !important;right:0 !important;bottom:0 !important;',
-    ' max-width:none;border-radius:18px 18px 0 0;border-bottom:0;max-height:75vh;overflow-y:auto;z-index:130;',
-    ' padding:10px 14px calc(14px + env(safe-area-inset-bottom,0px));animation:vp-sheet-up 0.22s ease;}',
+    ' max-width:none;border-radius:18px 18px 0 0;border-bottom:0;overflow-y:auto;z-index:130;',
+    ' max-height:calc(100dvh - 80px - env(safe-area-inset-top,0px));',
+    ' padding:8px 14px calc(14px + env(safe-area-inset-bottom,0px));animation:vp-sheet-up 0.22s ease;}',
+    /* vetokahva kertoo että kyseessä on sheet */
+    'body.vp-has-tabbar .menu::before{content:"";display:block;width:36px;height:4px;border-radius:2px;',
+    ' background:var(--border,rgba(148,168,220,0.35));margin:2px auto 6px;}',
     '@keyframes vp-sheet-up{from{transform:translateY(28px);opacity:0.5}to{transform:none;opacity:1}}',
+    /* Tulkki ja Suunnitelmani täysinä sivuina: koko ruutu alapalkkiin asti —
+       tausta ei kuulla eikä jää "kellumaan" (Olavin laitehavainto 6.8.) */
+    'body.vp-has-tabbar .tk-sheet{top:0 !important;height:auto !important;width:100% !important;',
+    ' bottom:calc(64px + env(safe-area-inset-bottom,0px)) !important;',
+    ' border-radius:0 !important;border-top:0 !important;padding-top:env(safe-area-inset-top,0px);}',
+    'body.vp-has-tabbar .summary{bottom:calc(64px + env(safe-area-inset-bottom,0px));padding-bottom:28px;}',
     /* modaalit (Tietoa, Suunnitelmani, Vuositaulukko…) täysiksi sivuiksi:
        webissä tausta kuultaa peitteen takaa — appissa näkymä avautuu omana
        sivunaan yhdellä siirtymällä (Olavin laitehavainto 6.8.) */
@@ -189,6 +199,27 @@
     bar.appendChild(lisaa);
     document.body.appendChild(bar);
     document.body.classList.add('vp-has-tabbar');
+
+    /* tab-aktiivitilat: Kysy AI ja Suunnitelma näkyvät valittuina kun niiden
+       sivu on auki — sivumaisuus tuntuu aidolta (hidden-attribuutin vahti) */
+    if (!onStats) {
+      setTimeout(function () {
+        var tk = document.querySelector('.tk-sheet');
+        var sum = document.getElementById('summary');
+        if (!sum) return;
+        var paivita = function () {
+          var tkAuki = !!(tk && !tk.hidden);
+          var sumAuki = !sum.hidden;
+          ai.classList.toggle('act', tkAuki);
+          suunnitelma.classList.toggle('act', sumAuki && !tkAuki);
+          polku.classList.toggle('act', !tkAuki && !sumAuki);
+        };
+        var mo = new MutationObserver(paivita);
+        if (tk) mo.observe(tk, { attributes: true, attributeFilter: ['hidden'] });
+        mo.observe(sum, { attributes: true, attributeFilter: ['hidden'] });
+        paivita();
+      }, 400);
+    }
 
     /* tilastosivulta tulleet avausliput (Tulkki/Suunnitelmani etusivulla);
        viive antaa muiden skriptien rakentaa käyttöliittymänsä ensin */

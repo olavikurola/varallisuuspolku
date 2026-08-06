@@ -896,8 +896,8 @@ input[type="range"]::-moz-range-thumb {
 .menu button:hover { background: rgba(45, 212, 191, 0.08); }
 .menu .mdesc { font-size: 11.5px; color: var(--text-faint); font-weight: 400; margin-top: 1px; }
 .menu .msect {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--text-faint); padding: 8px 10px 3px; user-select: none;
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-dim); padding: 8px 10px 4px; user-select: none;
 }
 .menu .msect:not(:first-child) { margin-top: 4px; border-top: 1px solid var(--border-soft); padding-top: 10px; }
 .menu button.danger div:first-child { color: var(--danger); }
@@ -2562,3 +2562,11 @@ html.light svg [stroke="rgba(148,168,220,0.35)"] { stroke: rgba(80, 100, 150, 0.
 /* Tulkin injektoima mailto-pilleri on violetti pastelli — tummennetaan */
 html.light .tk-mailto { color: #6250d8; }
 html.light .tk-mailto:hover { color: #4f3fd0; }
+
+/* Tilastot-sivun avaustiilet mobiilissa: 2 saraketta (minmax(160px) ei mahdu
+   328 px:n sisältöleveyteen → valui yhdeksi pinoksi), ensimmäinen tiili
+   koko leveydelle — tasapainoinen 1+2+2-asettelu viidelle tiilelle */
+@media (max-width: 560px) {
+  .an-tiles { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .an-tiles .sum-tile:first-child { grid-column: 1 / -1; }
+}

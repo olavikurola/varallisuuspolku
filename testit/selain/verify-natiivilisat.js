@@ -219,11 +219,31 @@ server.listen(8134, async () => {
   await pg.click('.vp-tab:nth-child(4)'); // Suunnitelma
   await pg.waitForTimeout(600);
   ok(await pg.evaluate(() => !document.getElementById('summary').hidden), 'Suunnitelma-tabi avaa Suunnitelmani');
+  // täysi sivu: modaali päättyy alapalkin yläreunaan ja tabi näkyy valittuna
+  const sumR = await pg.evaluate(() => ({
+    b: Math.round(document.getElementById('summary').getBoundingClientRect().bottom),
+    ih: window.innerHeight,
+    act: document.querySelectorAll('.vp-tab')[3].classList.contains('act'),
+  }));
+  ok(sumR.b === sumR.ih - 64, 'Suunnitelmani päättyy alapalkin yläreunaan (' + sumR.b + ')');
+  ok(sumR.act, 'Suunnitelma-tabi valittuna kun sivu auki');
   await pg.click('#sumClose');
   await pg.waitForTimeout(300);
+  ok(await pg.evaluate(() => document.querySelectorAll('.vp-tab')[0].classList.contains('act')), 'Polku-tabi palaa valituksi suljettaessa');
   await pg.click('.vp-tab:nth-child(3)'); // Kysy AI
   await pg.waitForTimeout(600);
   ok(await pg.evaluate(() => !document.querySelector('.tk-sheet').hidden), 'Kysy AI -tabi avaa Tulkin');
+  const tkR = await pg.evaluate(() => {
+    const r = document.querySelector('.tk-sheet').getBoundingClientRect();
+    return { t: Math.round(r.top), b: Math.round(r.bottom), ih: window.innerHeight, act: document.querySelectorAll('.vp-tab')[2].classList.contains('act') };
+  });
+  ok(tkR.t === 0 && tkR.b === tkR.ih - 64, 'Tulkki täytenä sivuna alapalkin yllä (' + tkR.t + '–' + tkR.b + ')');
+  ok(tkR.act, 'Kysy AI -tabi valittuna kun Tulkki auki');
+  await ctx.close();
+
+  // 10c) Tilastot-sivun avaustiilet 2 sarakkeessa kapealla näytöllä
+  ({ ctx, pg } = await page({ native: true, url: '/analytiikka.html', plan: true, w: 390, h: 844 }));
+  ok(await pg.evaluate(() => getComputedStyle(document.getElementById('anTiles')).gridTemplateColumns.split(' ').length) === 2, 'tilastotiilet 2 sarakkeessa mobiilissa');
   await ctx.close();
 
   // 11) Tilastot-sivun Lisää avaa sheetin paikan päällä — ei hyppyä etusivulle
