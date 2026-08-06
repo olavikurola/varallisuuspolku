@@ -227,18 +227,26 @@ server.listen(8134, async () => {
   }));
   ok(sumR.b === sumR.ih - 64, 'Suunnitelmani päättyy alapalkin yläreunaan (' + sumR.b + ')');
   ok(sumR.act, 'Suunnitelma-tabi valittuna kun sivu auki');
-  await pg.click('#sumClose');
+  // aito sivu: ei Sulje-nappia — tabit hoitavat poistumisen
+  ok(await pg.evaluate(() => getComputedStyle(document.getElementById('sumClose')).display) === 'none', 'Suunnitelmani ilman Sulje-nappia appissa');
+  await pg.click('.vp-tab:nth-child(1)'); // Polku sulkee sivun
   await pg.waitForTimeout(300);
+  ok(await pg.evaluate(() => document.getElementById('summary').hidden), 'Polku-tabi sulkee Suunnitelman');
   ok(await pg.evaluate(() => document.querySelectorAll('.vp-tab')[0].classList.contains('act')), 'Polku-tabi palaa valituksi suljettaessa');
   await pg.click('.vp-tab:nth-child(3)'); // Kysy AI
   await pg.waitForTimeout(600);
   ok(await pg.evaluate(() => !document.querySelector('.tk-sheet').hidden), 'Kysy AI -tabi avaa Tulkin');
   const tkR = await pg.evaluate(() => {
     const r = document.querySelector('.tk-sheet').getBoundingClientRect();
-    return { t: Math.round(r.top), b: Math.round(r.bottom), ih: window.innerHeight, act: document.querySelectorAll('.vp-tab')[2].classList.contains('act') };
+    return { t: Math.round(r.top), b: Math.round(r.bottom), ih: window.innerHeight, act: document.querySelectorAll('.vp-tab')[2].classList.contains('act'), x: getComputedStyle(document.querySelector('.tk-x')).display };
   });
   ok(tkR.t === 0 && tkR.b === tkR.ih - 64, 'Tulkki täytenä sivuna alapalkin yllä (' + tkR.t + '–' + tkR.b + ')');
   ok(tkR.act, 'Kysy AI -tabi valittuna kun Tulkki auki');
+  ok(tkR.x === 'none', 'Tulkki ilman ✕-nappia appissa');
+  // Suunnitelma-tabi sulkee Tulkin ja avaa oman sivunsa (keskinäinen poissulku)
+  await pg.click('.vp-tab:nth-child(4)');
+  await pg.waitForTimeout(400);
+  ok(await pg.evaluate(() => document.querySelector('.tk-sheet').hidden && !document.getElementById('summary').hidden), 'Suunnitelma-tabi sulkee Tulkin ja avaa sivunsa');
   await ctx.close();
 
   // 10c) Tilastot-sivun avaustiilet 2 sarakkeessa kapealla näytöllä
@@ -253,6 +261,8 @@ server.listen(8134, async () => {
   await pg.waitForTimeout(400);
   ok(/analytiikka\.html/.test(pg.url()), 'Lisää ei vaihda sivua Tilastoissa');
   ok(await pg.locator('.menu #mi-theme').count() === 1 && await pg.locator('.menu #mi-muistutukset').count() === 1, 'sheetissä teema ja natiivirivit');
+  // yhtenäinen valikko: sama sisältö joka sivulla (Toiminnot → Nollaa)
+  ok(await pg.locator('.menu #mi-compare').count() === 1 && await pg.locator('.menu #mi-taulukko').count() === 1 && await pg.locator('.menu #mi-reset').count() === 1, 'Tilastot-sheetissä sama sisältö kuin etusivulla');
   await pg.click('.menu #mi-muistutukset');
   await pg.waitForTimeout(400);
   ok(await pg.evaluate(() => localStorage.getItem('vp-muistutukset')) === '1', 'muistutukset kytkeytyvät Tilastot-sivulta');

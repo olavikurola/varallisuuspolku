@@ -420,6 +420,23 @@ function applyTheme(light) {
   try { localStorage.setItem(THEME_KEY, light ? 'light' : 'dark'); } catch (e) {}
 }
 
+// Nollaus koskee vain aktiivista suunnitelmariviä — muut säilyvät ja seuraava
+// rivi aktivoituu latauksessa (initPlans palauttaa sen tilaan). Globaali,
+// jotta myös appin alapalkkivalikko (alapalkki.js) käyttää samaa logiikkaa.
+function nollaaAktiivinen() {
+  try {
+    if (plans) {
+      localStorage.setItem(PLANS_KEY, JSON.stringify(plans.filter((p) => p.id !== planActiveId)));
+      localStorage.removeItem(PLAN_ACTIVE_KEY);
+    }
+  } catch (e) {}
+  try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(BASELINE_KEY); localStorage.removeItem(FAMILY_KEY); localStorage.removeItem(SCEN_KEY); } catch (e) {}
+  // Nollaaja ei ole ensivierailija: paluu dashboardille, ei piirtopöydälle
+  try { sessionStorage.setItem('vp-reset', '1'); } catch (e) {}
+  location.hash = '';
+  location.reload();
+}
+
 function openMoreMenu(anchor) {
   if (moreMenuEl) { closeMoreMenu(); return; }
   closeExamplesMenu();
@@ -454,12 +471,6 @@ function openMoreMenu(anchor) {
     });
   add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti yhdeksällä klikkauksella',
     () => startTour());
-  // Appi: Vuositaulukko valikosta — legendan alta vapautuu rivi (nappi piilossa,
-  // alapalkki.js); webissä nappi pysyy graafin alla
-  if (window.vpNativeMenu) {
-    add('mi-taulukko', 'Vuositaulukko', 'Vuosikohtaiset luvut taulukkona ja CSV:nä',
-      () => { renderYearTable(); $('tableModal').hidden = false; });
-  }
 
   sect('Sivut');
   add('mi-analytics', 'Tilastot', 'Miten muut suunnittelevat vaurastumista — avoin data',
@@ -475,39 +486,11 @@ function openMoreMenu(anchor) {
     'Vaihda värimaailma — valinta muistetaan',
     () => applyTheme(!isLightTheme()));
 
-  // Appi: Pro-kytkin valikossa — etusivun kytkinrivi on appissa piilotettu
-  // (alapalkki.js) etusivun tiivistämiseksi; webissä rivi pysyy paneelissa
-  if (window.vpNativeMenu) {
-    add('mi-pro',
-      state.proOn ? 'Pro-tila päällä ✓' : 'Pro-tila',
-      state.proOn ? 'Poista ammattilaissäädöt käytöstä' : 'Ammattilaisen säädöt ja analyysit',
-      () => {
-        // ensimmäinen kytkentä kulkee esittelysivun kautta kuten webissäkin
-        if (!state.proOn && !proSeen()) { openProModal(); return; }
-        setPro(!state.proOn);
-      });
-  }
-
-  // Natiiviappi lisää omat rivinsä (muistutukset, lukitus) — webissä koukkua ei ole
-  if (window.vpNativeMenu) window.vpNativeMenu(add);
-
   // Nollaus vaatii toisen klikkauksen — valikko pysyy auki vahvistusta varten
   const reset = add('mi-reset', 'Nollaa suunnitelma', 'Poistaa avoinna olevan suunnitelman — muut rivit säilyvät', null, true);
   reset.addEventListener('click', () => {
     if (reset.dataset.armed) {
-      try {
-        // Nollaus koskee vain aktiivista suunnitelmariviä — muut säilyvät ja
-        // seuraava rivi aktivoituu latauksessa (initPlans palauttaa sen tilaan)
-        if (plans) {
-          localStorage.setItem(PLANS_KEY, JSON.stringify(plans.filter((p) => p.id !== planActiveId)));
-          localStorage.removeItem(PLAN_ACTIVE_KEY);
-        }
-      } catch (e) {}
-      try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(BASELINE_KEY); localStorage.removeItem(FAMILY_KEY); localStorage.removeItem(SCEN_KEY); } catch (e) {}
-      // Nollaaja ei ole ensivierailija: paluu dashboardille, ei piirtopöydälle
-      try { sessionStorage.setItem('vp-reset', '1'); } catch (e) {}
-      location.hash = '';
-      location.reload();
+      nollaaAktiivinen();
       return;
     }
     reset.dataset.armed = '1';

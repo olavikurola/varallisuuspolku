@@ -2570,3 +2570,12 @@ html.light .tk-mailto:hover { color: #4f3fd0; }
   .an-tiles { grid-template-columns: 1fr 1fr; gap: 8px; }
   .an-tiles .sum-tile:first-child { grid-column: 1 / -1; }
 }
+
+/* Tilastot-sivun sisältölinkit mobiilissa: siisti 2+1-ruudukko rivittymisen
+   sijaan; "Sisältö:"-etiketti pois (linkit kertovat itse mitä ovat) */
+@media (max-width: 560px) {
+  .an-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .an-nav-lb { display: none; }
+  .an-nav a { text-align: center; padding: 8px 10px; }
+  .an-nav a:nth-child(4) { grid-column: 1 / -1; }
+}
