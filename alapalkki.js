@@ -26,7 +26,9 @@
   var onIndex = !/analytiikka\.html$|agentit\.html$|saavutettavuus\.html$|validointi\.html$/.test(location.pathname);
 
   var css = [
-    '.vp-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:58;display:flex;justify-content:space-around;align-items:stretch;',
+    /* z-index sivujen (summary 90, tk 160, menu 170) yläpuolella: sivut
+       ulottuvat palkin taakse, palkki pysyy aina klikattavana päällimmäisenä */
+    '.vp-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:200;display:flex;justify-content:space-around;align-items:stretch;',
     ' padding:6px 8px calc(10px + env(safe-area-inset-bottom,0px));',
     ' background:color-mix(in srgb, var(--bg-2, #0e1424) 92%, transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);',
     ' border-top:1px solid var(--border, rgba(148,168,220,0.14));}',
@@ -61,25 +63,30 @@
     /* valikot aitoina kokosivuina: koko ruutu alapalkkiin asti, oma otsikko —
        ei enää bottom sheetiä joka jätti taustan näkyviin (Olavin toive 7.8.)
        (sovellus.js asemoi ☰-valikon inlinena ankkurin alle → !important ohittaa) */
-    'body.vp-has-tabbar .menu{position:fixed !important;top:0 !important;left:0 !important;right:0 !important;',
-    ' bottom:calc(64px + env(safe-area-inset-bottom,0px)) !important;',
+    'body.vp-has-tabbar .menu{position:fixed !important;top:0 !important;left:0 !important;right:0 !important;bottom:0 !important;',
     ' max-width:none;max-height:none;border:0;border-radius:0;overflow-y:auto;z-index:170;',
     ' background:var(--bg,#0a0e1a);overscroll-behavior:contain;',
-    ' padding:calc(14px + env(safe-area-inset-top,0px)) 16px 24px;animation:vp-page-in 0.2s ease;}',
+    ' padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(78px + env(safe-area-inset-bottom,0px));animation:vp-page-in 0.2s ease;}',
     '.vp-sivuotsikko{font-size:21px;font-weight:700;letter-spacing:-0.3px;color:var(--text,#e8ecf8);margin:4px 10px 10px;}',
     /* avoin sivu lukitsee taustan skrollauksen — mikään ei "pyöri takana" */
     'html:has(body.vp-has-tabbar.vp-sivu-auki){overflow:hidden;}',
     'body.vp-has-tabbar.vp-sivu-auki{overflow:hidden !important;}',
     'body.vp-has-tabbar .tk-log{overscroll-behavior:contain;}',
     'body.vp-has-tabbar .summary{overscroll-behavior:contain;}',
-    /* Tulkki ja Suunnitelmani täysinä sivuina: koko ruutu alapalkkiin asti,
-       ei sulkunappeja — tabit hoitavat poistumisen (Olavin laitehavainto 6.8.) */
-    'body.vp-has-tabbar .tk-sheet{top:0 !important;height:auto !important;width:100% !important;',
-    ' bottom:calc(64px + env(safe-area-inset-bottom,0px)) !important;',
-    ' border-radius:0 !important;border-top:0 !important;padding-top:env(safe-area-inset-top,0px);}',
+    /* Tulkki ja Suunnitelmani täysinä sivuina: pohjaan asti alapalkin TAAKSE
+       (palkin lasi peittää — väliin ei jää rakoa josta tausta kuultaisi),
+       sisältö väistää palkkia paddingilla. Ei sulkunappeja — tabit hoitavat. */
+    'body.vp-has-tabbar .tk-sheet{top:0 !important;height:auto !important;width:100% !important;bottom:0 !important;',
+    ' border-radius:0 !important;border-top:0 !important;padding-top:env(safe-area-inset-top,0px);',
+    ' padding-bottom:calc(64px + env(safe-area-inset-bottom,0px));}',
     'body.vp-has-tabbar .tk-x{display:none;}',
     'body.vp-has-tabbar #sumClose{display:none;}',
-    'body.vp-has-tabbar .summary{bottom:calc(64px + env(safe-area-inset-bottom,0px));padding-bottom:28px;}',
+    'body.vp-has-tabbar .summary{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px));}',
+    /* Tulkin otsikkorivi samaan mittakaavaan muiden sivujen kanssa —
+       oma ✦-symboli säilyy, mutta kokoluokka yhtenäistyy */
+    'body.vp-has-tabbar .tk-dot{width:42px;height:42px;border-radius:12px;font-size:19px;}',
+    'body.vp-has-tabbar .tk-head{padding:14px 16px;}',
+    'body.vp-has-tabbar .tk-head b{font-size:21px;letter-spacing:-0.3px;}',
     /* modaalit täysiksi sivuiksi: webissä tausta kuultaa peitteen takaa —
        appissa näkymä avautuu omana sivunaan yhdellä siirtymällä */
     'body.vp-has-tabbar .summary{background:var(--bg,#0a0e1a);backdrop-filter:none;-webkit-backdrop-filter:none;',
@@ -95,12 +102,19 @@
     'body.vp-has-tabbar .sum-head h1::before,body.vp-has-tabbar .ph-head h2::before,body.vp-has-tabbar .vp-sivuotsikko::before{',
     ' content:"";display:inline-block;width:42px;height:42px;border-radius:12px;vertical-align:-13px;margin-right:12px;',
     ' background:url(./icon-192.png) center/cover;box-shadow:0 4px 18px rgba(45,212,191,0.35);}',
-    /* Suunnitelmat- ja Vuositaulukko-sivut alkavat otsikolla kuten muutkin —
-       toimintonapit (Tulosta/PDF, Kopioi jakolinkki, Lataa CSV) siirtyvät
-       sisällön loppuun; Vuositaulukon Sulje pois (tabit hoitavat poistumisen) */
+    /* Suunnitelmat- ja Vuositaulukko-sivut alkavat otsikolla kuten muutkin.
+       min-width:0 on pakollinen: flex-lapsen min-width:auto antaisi leveän
+       sisällön (taulukko 640 px, tiilirivistö) levittää arkin ruutua
+       leveämmäksi → tarpeeton vaakaskrolli (auditoitu 390 px:ssä). */
     'body.vp-has-tabbar #summary,body.vp-has-tabbar #tableModal{display:flex;flex-direction:column;}',
-    'body.vp-has-tabbar #summary > *,body.vp-has-tabbar #tableModal > *{flex:0 0 auto;}',
-    'body.vp-has-tabbar #summary .sum-bar,body.vp-has-tabbar #tableModal .sum-bar{order:9;justify-content:center;margin:18px auto 6px;}',
+    'body.vp-has-tabbar #summary > *,body.vp-has-tabbar #tableModal > *{flex:0 0 auto;min-width:0;}',
+    /* margin:0 auto (webin keskitys) estäisi flex-venytyksen → arkki leviäisi
+       sisältönsä (esim. taulukon) levyiseksi ja toisi vaakaskrollin */
+    'body.vp-has-tabbar #summary .sum-sheet,body.vp-has-tabbar #tableModal .sum-sheet,body.vp-has-tabbar #summary .plans-home{margin-left:0;margin-right:0;}',
+    /* Suunnitelmat: toimintonapit sisällön loppuun */
+    'body.vp-has-tabbar #summary .sum-bar{order:9;justify-content:center;margin:18px auto 6px;}',
+    /* Vuositaulukko: Lataa CSV otsikkorivin oikeaan reunaan, Sulje pois */
+    'body.vp-has-tabbar #tableModal .sum-bar{order:0;justify-content:flex-end;margin:0 4px -66px 0;position:relative;z-index:2;}',
     'body.vp-has-tabbar #tableClose{display:none;}',
   ].join('');
 

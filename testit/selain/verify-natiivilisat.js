@@ -213,7 +213,7 @@ server.listen(8134, async () => {
       otsikko: (document.querySelector('.menu .vp-sivuotsikko') || {}).textContent,
     };
   });
-  ok(sheetR.top === 0 && sheetR.bottom === sheetR.ih - 64 && sheetR.left === 0, 'Lisää avautuu kokosivuna (' + sheetR.top + '–' + sheetR.bottom + ')');
+  ok(sheetR.top === 0 && sheetR.bottom === sheetR.ih && sheetR.left === 0, 'Lisää avautuu kokosivuna palkin taakse (' + sheetR.top + '–' + sheetR.bottom + ')');
   ok(sheetR.act, 'Lisää-tabi valittuna kun sivu auki');
   ok(sheetR.lukko, 'avoin sivu lukitsee taustan skrollauksen');
   ok(sheetR.otsikko === 'Lisää', 'sivulla oma otsikko');
@@ -221,7 +221,12 @@ server.listen(8134, async () => {
   await pg.waitForTimeout(400);
   ok(await pg.evaluate(() => !document.getElementById('tableModal').hidden), 'Vuositaulukko avautuu valikosta');
   ok(await pg.evaluate(() => getComputedStyle(document.getElementById('tableClose')).display) === 'none', 'Vuositaulukon Sulje piilossa appissa');
-  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('#tableModal .sum-bar')).order) === '9', 'Lataa CSV sisällön lopussa');
+  ok(await pg.evaluate(() => {
+    const b = document.getElementById('tableCsv').getBoundingClientRect();
+    const h = document.querySelector('#tableModal .sum-head h1').getBoundingClientRect();
+    return b.top < h.bottom && b.right > h.right; // otsikkorivin oikeassa reunassa
+  }), 'Lataa CSV otsikkorivin oikeassa reunassa');
+  ok(await pg.evaluate(() => document.querySelector('#tableModal .sum-sheet').getBoundingClientRect().right <= window.innerWidth + 1), 'Vuositaulukon arkki ei vuoda vaakasuunnassa (taulukko skrollaa sisällään)');
   await pg.click('.vp-tab:nth-child(1)'); // Polku sulkee dialogisivun
   await pg.waitForTimeout(300);
   ok(await pg.evaluate(() => document.getElementById('tableModal').hidden), 'Polku-tabi sulkee Vuositaulukon');
@@ -241,7 +246,9 @@ server.listen(8134, async () => {
     ih: window.innerHeight,
     act: document.querySelectorAll('.vp-tab')[3].classList.contains('act'),
   }));
-  ok(sumR.b === sumR.ih - 64, 'Suunnitelmani päättyy alapalkin yläreunaan (' + sumR.b + ')');
+  ok(sumR.b === sumR.ih, 'Suunnitelmani ulottuu pohjaan palkin taakse (' + sumR.b + ')');
+  // sisältö ei levene ruutua leveämmäksi (flex min-width + auto-marginaalien poisto)
+  ok(await pg.evaluate(() => document.getElementById('sumSheet').getBoundingClientRect().right <= window.innerWidth + 1), 'Suunnitelmat-arkki ei vuoda vaakasuunnassa');
   ok(sumR.act, 'Suunnitelma-tabi valittuna kun sivu auki');
   // aito sivu: ei Sulje-nappia — tabit hoitavat poistumisen
   ok(await pg.evaluate(() => getComputedStyle(document.getElementById('sumClose')).display) === 'none', 'Suunnitelmani ilman Sulje-nappia appissa');
@@ -256,7 +263,7 @@ server.listen(8134, async () => {
     const r = document.querySelector('.tk-sheet').getBoundingClientRect();
     return { t: Math.round(r.top), b: Math.round(r.bottom), ih: window.innerHeight, act: document.querySelectorAll('.vp-tab')[2].classList.contains('act'), x: getComputedStyle(document.querySelector('.tk-x')).display };
   });
-  ok(tkR.t === 0 && tkR.b === tkR.ih - 64, 'Tulkki täytenä sivuna alapalkin yllä (' + tkR.t + '–' + tkR.b + ')');
+  ok(tkR.t === 0 && tkR.b === tkR.ih, 'Tulkki täytenä sivuna palkin taakse (' + tkR.t + '–' + tkR.b + ')');
   ok(tkR.act, 'Kysy AI -tabi valittuna kun Tulkki auki');
   ok(tkR.x === 'none', 'Tulkki ilman ✕-nappia appissa');
   ok(await pg.evaluate(() => document.body.classList.contains('vp-sivu-auki')), 'Tulkki lukitsee taustan skrollauksen');
