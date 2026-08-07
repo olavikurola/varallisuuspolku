@@ -30,6 +30,9 @@ server.listen(8134, async () => {
       localStorage.setItem('vp-autotour-off', '1');
       localStorage.setItem('vp-veto-vihje', '1');
       if (o.lukitus) localStorage.setItem('vp-lukitus', '1');
+      // logoruutu näkyy vain kylmäkäynnistyksessä — testit simuloivat oletuksena
+      // jo avattua istuntoa, paitsi kun logoruutua tai lukitusta testataan
+      if (o.native && !o.lukitus && !o.tervetuloa) sessionStorage.setItem('vp-lukko-auki', '1');
       if (o.plan) {
         localStorage.setItem('varallisuuspolku-v1', JSON.stringify({ ageNow: 30, ageEnd: 90, startCapital: 10000, monthly: 500, allocStocks: 70, allocBonds: 20, events: [] }));
         localStorage.setItem('vp-donate-v1', JSON.stringify({ donatedHash: 'abc' }));
@@ -258,7 +261,43 @@ server.listen(8134, async () => {
   ok(await pg.evaluate(() => document.querySelector('.tk-sheet').hidden && !document.getElementById('summary').hidden), 'Suunnitelma-tabi sulkee Tulkin ja avaa sivunsa');
   await ctx.close();
 
-  // 10c) Tilastot-sivun avaustiilet 2 sarakkeessa kapealla näytöllä
+  // 10c) Logoruutu myös ilman lukitusta: Avaa vie sisään ilman tunnistusta
+  ({ ctx, pg } = await page({ native: true, tervetuloa: true, wait: 800 }));
+  ok(await pg.locator('#vpLukko').count() === 1, 'logoruutu näkyy kylmäkäynnistyksessä ilman lukitusta');
+  ok(await pg.evaluate(() => window.__bio.length) === 0, 'tunnistusta ei käynnistetä kun lukitus on pois');
+  await pg.click('#vpAvaaLukko');
+  await pg.waitForTimeout(500);
+  ok(await pg.locator('#vpLukko').count() === 0, 'Avaa vie suoraan sisään');
+  ok(await pg.evaluate(() => window.__bio.length) === 0, 'Avaa ei kysynyt tunnistusta');
+  await pg.reload();
+  await pg.waitForTimeout(600);
+  ok(await pg.locator('#vpLukko').count() === 0, 'logoruutu ei palaa sivunvaihdossa (istuntolippu)');
+  await ctx.close();
+
+  // 10d) Suunnitelmat-sivun yhtenäinen ilme: otsikko logolla ylhäällä,
+  //      toimintonapit sisällön lopussa
+  ({ ctx, pg } = await page({ native: true }));
+  await pg.click('.vp-tab:nth-child(4)');
+  await pg.waitForTimeout(600);
+  const sumTyyli = await pg.evaluate(() => ({
+    suunta: getComputedStyle(document.getElementById('summary')).flexDirection,
+    jarjestys: getComputedStyle(document.querySelector('#summary .sum-bar')).order,
+    logo: getComputedStyle(document.querySelector('.ph-head h2'), '::before').width,
+  }));
+  ok(sumTyyli.suunta === 'column' && sumTyyli.jarjestys === '9', 'Suunnitelmat: toimintonapit sisällön lopussa (' + sumTyyli.jarjestys + ')');
+  ok(sumTyyli.logo === '26px', 'Suunnitelmat-otsikossa logo');
+  await ctx.close();
+
+  // 10e) Agentit-sivu: alapalkki mukana (ei umpikujaa) ja tabit toimivat
+  ({ ctx, pg } = await page({ native: true, url: '/agentit.html' }));
+  ok(await pg.locator('.vp-tab').count() === 5, 'Agentit-sivulla alapalkki');
+  await pg.click('.vp-tab:nth-child(4)'); // Suunnitelma → etusivulle lipulla
+  await pg.waitForTimeout(1500);
+  ok(/index\.html|\/$/.test(pg.url().split('?')[0]), 'Suunnitelma-tabi vie etusivulle Agenteista');
+  ok(await pg.evaluate(() => !document.getElementById('summary').hidden), 'Suunnitelmat avautui perillä');
+  await ctx.close();
+
+  // 10f) Tilastot-sivun avaustiilet 2 sarakkeessa kapealla näytöllä
   ({ ctx, pg } = await page({ native: true, url: '/analytiikka.html', plan: true, w: 390, h: 844 }));
   ok(await pg.evaluate(() => getComputedStyle(document.getElementById('anTiles')).gridTemplateColumns.split(' ').length) === 2, 'tilastotiilet 2 sarakkeessa mobiilissa');
   await ctx.close();

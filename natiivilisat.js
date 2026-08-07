@@ -114,16 +114,17 @@
     }).catch(function () { ilmoita('Ilmoituslupaa ei saatu'); });
   }
 
-  /* ===================== Sovelluksen lukitus ===================== */
-  // Laitteen oma tunnistus (sormenjälki / kasvot / laitteen suojakoodi
-  // varamenetelmänä). Peite piirretään heti skriptin ajossa ennen kuin
-  // suunnitelman luvut ehtivät ruudulle, ja uudestaan kun appi palaa
-  // taustalta yli minuutin tauon jälkeen.
+  /* ===================== Logoruutu ja sovelluksen lukitus ===================== */
+  // Käynnistys alkaa AINA logoruudusta (Olavin toive 7.8.): lukitus päällä →
+  // Face ID vie eteenpäin automaattisesti; lukitus pois → käyttäjä painaa
+  // Avaa. Peite piirretään heti skriptin ajossa ennen kuin suunnitelman
+  // luvut ehtivät ruudulle; lukitustilassa se palaa myös kun appi on ollut
+  // taustalla yli minuutin.
 
   var LUKKO_TAUKO_MS = 60000;
   var LUKKO_AUKI_KEY = 'vp-lukko-auki'; // sessionStorage: avaus kattaa istunnon,
-  // jotta sivunvaihto appin sisällä (Polku ↔ Tilastot) ei lukitse uudestaan.
-  // Appin sulkeminen tyhjentää session → kylmäkäynnistys lukitsee aina.
+  // jotta sivunvaihto appin sisällä (Polku ↔ Tilastot) ei näytä ruutua
+  // uudestaan. Appin sulkeminen tyhjentää session → kylmäkäynnistys näyttää aina.
   var lukkoEl = null;
   var piilossaAlkoi = 0;
 
@@ -136,12 +137,12 @@
 
   function naytaLukko() {
     if (lukkoEl) return;
-    // Logoruutu: käynnistys alkaa brändiruudusta josta avautuminen tapahtuu —
-    // sama tumma ilme kuin splashissa, ei paljasta mitään sisältöä
-    var o = document.createElement('div');
-    o.id = 'vpLukko';
+    // Logoruutu: sama tumma ilme kuin splashissa, ei paljasta mitään sisältöä.
     // Brändi yläkolmanneksessa ja Avaa-nappi alhaalla — ruudun keskusta jää
     // vapaaksi iOS:n Face ID -dialogille, joka piirtyy juuri keskelle
+    var lukossa = paalla(LUKITUS_KEY);
+    var o = document.createElement('div');
+    o.id = 'vpLukko';
     o.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;' +
       'align-items:center;justify-content:flex-start;gap:14px;text-align:center;' +
       'padding:calc(16vh + env(safe-area-inset-top,0px)) 24px 24px;' +
@@ -151,7 +152,9 @@
     o.innerHTML =
       '<img src="./icon-192.png" alt="" width="84" height="84" style="border-radius:20px;box-shadow:0 12px 40px rgba(45,212,191,0.22)" />' +
       '<div style="font-weight:700;font-size:22px;letter-spacing:-0.3px;color:#e8ecf8">Varallisuuspolku</div>' +
-      '<div style="font-size:13px;color:#93a1b8">Lukittu — avaa tunnistautumalla</div>' +
+      '<div style="font-size:13px;color:#93a1b8">' +
+      (lukossa ? 'Lukittu — avaa tunnistautumalla' : 'Koko elinkaaresi vaurastuminen yhdellä näkymällä') +
+      '</div>' +
       '<button id="vpAvaaLukko" type="button" style="position:absolute;left:50%;transform:translateX(-50%);' +
       'bottom:calc(40px + env(safe-area-inset-bottom,0px));font:inherit;font-weight:600;font-size:15px;padding:12px 32px;border:0;border-radius:12px;' +
       'background:linear-gradient(90deg,#2dd4bf,#8b7cf6);color:#0a0e1a;cursor:pointer">Avaa</button>';
@@ -172,7 +175,9 @@
   }
 
   function avaaLukko() {
-    if (!NB) { piilotaLukko(); return; } // pluginia ei ole → ei jätetä käyttäjää loukkuun
+    // Ilman lukitusta Avaa vie suoraan sisään; pluginin puuttuessa samoin
+    // (ei jätetä käyttäjää loukkuun)
+    if (!paalla(LUKITUS_KEY) || !NB) { piilotaLukko(); return; }
     NB.verifyIdentity({
       reason: 'Avaa Varallisuuspolku',
       title: 'Varallisuuspolku on lukittu',
@@ -254,9 +259,11 @@
 
   /* ===================== Elinkaari ===================== */
 
-  if (paalla(LUKITUS_KEY) && !lukkoAvattu()) {
+  if (!lukkoAvattu()) {
     naytaLukko();
-    setTimeout(avaaLukko, 350); // pieni viive: silta ja teema ehtivät asettua
+    // lukitus päällä → tunnistus vie eteenpäin automaattisesti;
+    // ilman lukitusta käyttäjä painaa itse Avaa
+    if (paalla(LUKITUS_KEY)) setTimeout(avaaLukko, 350);
   }
 
   document.addEventListener('visibilitychange', function () {

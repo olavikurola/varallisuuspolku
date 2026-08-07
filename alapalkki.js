@@ -21,6 +21,9 @@
   if (!native) return;
 
   var onStats = /analytiikka\.html$/.test(location.pathname);
+  // Etusivu = ainoa sivu jolla suunnitelmatoiminnot elävät; muut (Tilastot,
+  // Agentit) ajavat ne sinne lippujen kautta
+  var onIndex = !/analytiikka\.html$|agentit\.html$|saavutettavuus\.html$|validointi\.html$/.test(location.pathname);
 
   var css = [
     '.vp-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:58;display:flex;justify-content:space-around;align-items:stretch;',
@@ -86,6 +89,17 @@
        tieto valikon Tietoa-sivulla); Pro-kytkin on valikon Asetuksissa */
     'body.vp-has-tabbar .card[data-card=about]{display:none;}',
     'body.vp-has-tabbar .pro-switch{display:none;}',
+    /* yhtenäinen sivuilme (Olavin toive 7.8.): logo + otsikko myös sisäsivuilla —
+       sama pari kuin yläpalkissa (Varallisuuspolku, Tilastot, Agentit) */
+    'body.vp-has-tabbar .sum-head h1::before,body.vp-has-tabbar .ph-head h2::before,body.vp-has-tabbar .vp-sivuotsikko::before{',
+    ' content:"";display:inline-block;width:26px;height:26px;border-radius:7px;vertical-align:-5px;margin-right:10px;',
+    ' background:url(./icon-192.png) center/cover;}',
+    'body.vp-has-tabbar .tk-dot{font-size:0;width:26px;height:26px;border-radius:7px;background:url(./icon-192.png) center/cover;}',
+    /* Suunnitelmat-sivu alkaa otsikolla kuten muutkin sivut — toimintonapit
+       (Tulosta/PDF, Kopioi jakolinkki) siirtyvät sisällön loppuun */
+    'body.vp-has-tabbar #summary{display:flex;flex-direction:column;}',
+    'body.vp-has-tabbar #summary > *{flex:0 0 auto;}',
+    'body.vp-has-tabbar #summary .sum-bar{order:9;justify-content:center;margin:18px auto 6px;}',
   ].join('');
 
   var ICONS = {
@@ -111,7 +125,7 @@
     location.href = './index.html';
   }
   function kotona(fn, lippu) {
-    return function () { if (onStats) etusivulle(lippu); else fn(); };
+    return function () { if (!onIndex) etusivulle(lippu); else fn(); };
   }
 
   function toimVertaile() {
@@ -135,6 +149,14 @@
       if (c) c.click(); else s.hidden = true;
     }
   }
+  function suljeModaalit() {
+    // muutkin peitesivut (Vuositaulukko, Tietoa, Pro…) kiinni tabivaihdossa —
+    // sivumallissa tabi vie aina puhtaaseen näkymään
+    document.querySelectorAll('.summary:not([hidden])').forEach(function (m) {
+      if (m.id === 'summary') suljeSuunnitelma();
+      else m.hidden = true;
+    });
+  }
   function suljeTulkki() {
     var tk = document.querySelector('.tk-sheet');
     if (tk && !tk.hidden) {
@@ -144,7 +166,7 @@
   }
   function suljeAvoimet() {
     suljeSheet();
-    suljeSuunnitelma();
+    suljeModaalit();
     suljeTulkki();
   }
 
@@ -167,7 +189,7 @@
     tabAi.classList.toggle('act', !sheetAuki && tkAuki);
     tabSuunnitelma.classList.toggle('act', !sheetAuki && !tkAuki && sumAuki);
     var perus = !sheetAuki && !tkAuki && !sumAuki;
-    tabPolku.classList.toggle('act', perus && !onStats);
+    tabPolku.classList.toggle('act', perus && onIndex);
     tabTilastot.classList.toggle('act', perus && onStats);
     document.body.classList.toggle('vp-sivu-auki', sheetAuki || tkAuki || sumAuki);
   }
@@ -216,7 +238,7 @@
 
     sect('Toiminnot');
     add('mi-compare',
-      (!onStats && typeof baseline !== 'undefined' && baseline) ? 'Vertailu päällä ✓' : 'Vertaile',
+      (onIndex && typeof baseline !== 'undefined' && baseline) ? 'Vertailu päällä ✓' : 'Vertaile',
       'Tallenna nykyinen suunnitelma haamukäyräksi', kotona(toimVertaile, LIPUT.vertaile));
     add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti yhdeksällä klikkauksella',
       kotona(function () { startTour(); }, LIPUT.kierros));
@@ -235,7 +257,7 @@
       document.documentElement.classList.contains('light') ? 'Tumma teema' : 'Vaalea teema',
       'Vaihda värimaailma — valinta muistetaan', vaihdaTeema);
     add('mi-pro',
-      (!onStats && typeof state !== 'undefined' && state.proOn) ? 'Pro-tila päällä ✓' : 'Pro-tila',
+      (onIndex && typeof state !== 'undefined' && state.proOn) ? 'Pro-tila päällä ✓' : 'Pro-tila',
       'Ammattilaisen säädöt ja analyysit', kotona(toimPro, LIPUT.pro));
     if (window.vpNativeMenu) window.vpNativeMenu(add); // muistutukset + lukitus
 
@@ -243,7 +265,7 @@
     // etusivulle sheet auki — tuhoavaa toimintoa ei ajeta lipun kautta.
     add('mi-reset', 'Nollaa suunnitelma', 'Poistaa avoinna olevan suunnitelman — muut rivit säilyvät',
       function (b) {
-        if (onStats) { etusivulle(LIPUT.sheet); return; }
+        if (!onIndex) { etusivulle(LIPUT.sheet); return; }
         if (b.dataset.armed) { nollaaAktiivinen(); return; }
         b.dataset.armed = '1';
         b.classList.add('armed-item');
@@ -280,9 +302,9 @@
     bar.className = 'vp-tabbar';
     bar.setAttribute('aria-label', 'Päänavigaatio');
 
-    var polku = tab('polku', 'Polku', !onStats);
+    var polku = tab('polku', 'Polku', onIndex);
     polku.addEventListener('click', function () {
-      if (onStats) { location.href = './index.html'; return; }
+      if (!onIndex) { location.href = './index.html'; return; }
       suljeAvoimet();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
@@ -295,21 +317,22 @@
 
     var ai = tab('ai', 'Kysy AI', false);
     ai.addEventListener('click', function () {
-      if (onStats) { etusivulle(LIPUT.tulkki); return; }
+      if (!onIndex) { etusivulle(LIPUT.tulkki); return; }
       var tk = document.querySelector('.tk-sheet');
       if (tk && !tk.hidden) return; // jo auki
       suljeSheet();
-      suljeSuunnitelma();
+      suljeModaalit();
       var h = document.querySelector('.tk-handle');
       if (h) h.click();
     });
 
     var suunnitelma = tab('suunnitelma', 'Suunnitelma', false);
     suunnitelma.addEventListener('click', function () {
-      if (onStats) { etusivulle(LIPUT.suunnitelma); return; }
+      if (!onIndex) { etusivulle(LIPUT.suunnitelma); return; }
       var s = document.getElementById('summary');
       if (s && !s.hidden) return; // jo auki
       suljeSheet();
+      suljeModaalit();
       suljeTulkki();
       if (typeof window.openSummary === 'function') window.openSummary();
     });
@@ -331,7 +354,7 @@
     /* tab-aktiivitilat ja taustan skrollilukko: Tulkin ja Suunnitelman
        avautumista vahditaan hidden-attribuutista (avautuvat myös muualta
        kuin tabeista), Lisää-sivu päivittää tilansa itse */
-    if (!onStats) {
+    if (onIndex) {
       setTimeout(function () {
         var tk = document.querySelector('.tk-sheet');
         var sum = document.getElementById('summary');
@@ -342,9 +365,9 @@
       }, 400);
     }
 
-    /* Tilastot-sivulta tulleet toimintoliput: ajetaan HETI (ei viivettä —
+    /* Muilta sivuilta tulleet toimintoliput: ajetaan HETI (ei viivettä —
        Tulkin avausvälähdys pois: sivu on auki jo ensimmäisessä maalauksessa) */
-    if (!onStats) {
+    if (onIndex) {
       var lippu = function (k) {
         try { var v = sessionStorage.getItem(k); if (v) sessionStorage.removeItem(k); return !!v; } catch (e) { return false; }
       };

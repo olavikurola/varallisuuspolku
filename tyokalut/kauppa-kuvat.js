@@ -46,6 +46,7 @@ server.listen(8135, async () => {
       localStorage.setItem('vp-autotour-off', '1');
       localStorage.setItem('vp-veto-vihje', '1');
       if (light) localStorage.setItem('vp-theme', 'light');
+      sessionStorage.setItem('vp-lukko-auki', '1'); // logoruutu ohi kuvia varten
       window.Capacitor = { isNativePlatform: () => true, Plugins: {} };
     }, !!vaalea);
     const pg = await ctx.newPage();
