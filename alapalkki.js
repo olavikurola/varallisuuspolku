@@ -55,16 +55,20 @@
     /* piirtopöytä ja esittelykierros saavat koko ruudun */
     'body.fs .vp-tabbar{display:none;}',
     'body.fs.vp-has-tabbar{padding-bottom:0 !important;}',
-    /* valikot bottom sheetinä: appimainen tapa — nousee alhaalta koko leveydeltä
+    /* valikot aitoina kokosivuina: koko ruutu alapalkkiin asti, oma otsikko —
+       ei enää bottom sheetiä joka jätti taustan näkyviin (Olavin toive 7.8.)
        (sovellus.js asemoi ☰-valikon inlinena ankkurin alle → !important ohittaa) */
-    'body.vp-has-tabbar .menu{position:fixed !important;top:auto !important;left:0 !important;right:0 !important;bottom:0 !important;',
-    ' max-width:none;border-radius:18px 18px 0 0;border-bottom:0;overflow-y:auto;z-index:130;',
-    ' max-height:calc(100dvh - 80px - env(safe-area-inset-top,0px));',
-    ' padding:8px 14px calc(14px + env(safe-area-inset-bottom,0px));animation:vp-sheet-up 0.22s ease;}',
-    /* vetokahva kertoo että kyseessä on sheet */
-    'body.vp-has-tabbar .menu::before{content:"";display:block;width:36px;height:4px;border-radius:2px;',
-    ' background:var(--border,rgba(148,168,220,0.35));margin:2px auto 6px;}',
-    '@keyframes vp-sheet-up{from{transform:translateY(28px);opacity:0.5}to{transform:none;opacity:1}}',
+    'body.vp-has-tabbar .menu{position:fixed !important;top:0 !important;left:0 !important;right:0 !important;',
+    ' bottom:calc(64px + env(safe-area-inset-bottom,0px)) !important;',
+    ' max-width:none;max-height:none;border:0;border-radius:0;overflow-y:auto;z-index:170;',
+    ' background:var(--bg,#0a0e1a);overscroll-behavior:contain;',
+    ' padding:calc(14px + env(safe-area-inset-top,0px)) 16px 24px;animation:vp-page-in 0.2s ease;}',
+    '.vp-sivuotsikko{font-size:21px;font-weight:700;letter-spacing:-0.3px;color:var(--text,#e8ecf8);margin:4px 10px 10px;}',
+    /* avoin sivu lukitsee taustan skrollauksen — mikään ei "pyöri takana" */
+    'html:has(body.vp-has-tabbar.vp-sivu-auki){overflow:hidden;}',
+    'body.vp-has-tabbar.vp-sivu-auki{overflow:hidden !important;}',
+    'body.vp-has-tabbar .tk-log{overscroll-behavior:contain;}',
+    'body.vp-has-tabbar .summary{overscroll-behavior:contain;}',
     /* Tulkki ja Suunnitelmani täysinä sivuina: koko ruutu alapalkkiin asti,
        ei sulkunappeja — tabit hoitavat poistumisen (Olavin laitehavainto 6.8.) */
     'body.vp-has-tabbar .tk-sheet{top:0 !important;height:auto !important;width:100% !important;',
@@ -147,11 +151,29 @@
   /* ---------- Lisää-sheet (sama sisältö joka sivulla) ---------- */
 
   var sheetEl = null;
-  function suljeSheet() {
-    if (sheetEl) { sheetEl.remove(); sheetEl = null; document.removeEventListener('click', sheetUlkoklikki, true); }
+  var tabPolku = null, tabTilastot = null, tabAi = null, tabSuunnitelma = null, tabLisaa = null;
+
+  /* Yksi totuus tabien tilasta ja taustan skrollilukosta: avoin sivu
+     (Lisää > Tulkki > Suunnitelma) määrää aktiivisen tabin, ja mikä tahansa
+     avoin sivu lukitsee taustasivun skrollauksen (vp-sivu-auki). */
+  function paivitaTabit() {
+    if (!tabPolku) return;
+    var tk = document.querySelector('.tk-sheet');
+    var sum = document.getElementById('summary');
+    var tkAuki = !!(tk && !tk.hidden);
+    var sumAuki = !!(sum && !sum.hidden);
+    var sheetAuki = !!sheetEl;
+    tabLisaa.classList.toggle('act', sheetAuki);
+    tabAi.classList.toggle('act', !sheetAuki && tkAuki);
+    tabSuunnitelma.classList.toggle('act', !sheetAuki && !tkAuki && sumAuki);
+    var perus = !sheetAuki && !tkAuki && !sumAuki;
+    tabPolku.classList.toggle('act', perus && !onStats);
+    tabTilastot.classList.toggle('act', perus && onStats);
+    document.body.classList.toggle('vp-sivu-auki', sheetAuki || tkAuki || sumAuki);
   }
-  function sheetUlkoklikki(e) {
-    if (sheetEl && !sheetEl.contains(e.target)) suljeSheet();
+
+  function suljeSheet() {
+    if (sheetEl) { sheetEl.remove(); sheetEl = null; paivitaTabit(); }
   }
   function vaihdaTeema() {
     if (typeof applyTheme === 'function') { applyTheme(!document.documentElement.classList.contains('light')); return; }
@@ -164,8 +186,14 @@
 
   function avaaSheet() {
     if (sheetEl) { suljeSheet(); return; }
+    suljeSuunnitelma();
+    suljeTulkki();
     var menu = document.createElement('div');
     menu.className = 'menu';
+    var otsikko = document.createElement('div');
+    otsikko.className = 'vp-sivuotsikko';
+    otsikko.textContent = 'Lisää';
+    menu.appendChild(otsikko);
     var sect = function (label) {
       var s = document.createElement('div');
       s.className = 'msect';
@@ -230,7 +258,7 @@
 
     document.body.appendChild(menu);
     sheetEl = menu;
-    setTimeout(function () { document.addEventListener('click', sheetUlkoklikki, true); }, 0);
+    paivitaTabit();
   }
 
   /* ---------- Palkki ---------- */
@@ -297,24 +325,20 @@
     document.body.appendChild(bar);
     document.body.classList.add('vp-has-tabbar');
 
-    /* tab-aktiivitilat: Kysy AI ja Suunnitelma näkyvät valittuina kun niiden
-       sivu on auki — sivumaisuus tuntuu aidolta (hidden-attribuutin vahti) */
+    tabPolku = polku; tabTilastot = tilastot; tabAi = ai;
+    tabSuunnitelma = suunnitelma; tabLisaa = lisaa;
+
+    /* tab-aktiivitilat ja taustan skrollilukko: Tulkin ja Suunnitelman
+       avautumista vahditaan hidden-attribuutista (avautuvat myös muualta
+       kuin tabeista), Lisää-sivu päivittää tilansa itse */
     if (!onStats) {
       setTimeout(function () {
         var tk = document.querySelector('.tk-sheet');
         var sum = document.getElementById('summary');
-        if (!sum) return;
-        var paivita = function () {
-          var tkAuki = !!(tk && !tk.hidden);
-          var sumAuki = !sum.hidden;
-          ai.classList.toggle('act', tkAuki);
-          suunnitelma.classList.toggle('act', sumAuki && !tkAuki);
-          polku.classList.toggle('act', !tkAuki && !sumAuki);
-        };
-        var mo = new MutationObserver(paivita);
+        var mo = new MutationObserver(paivitaTabit);
         if (tk) mo.observe(tk, { attributes: true, attributeFilter: ['hidden'] });
-        mo.observe(sum, { attributes: true, attributeFilter: ['hidden'] });
-        paivita();
+        if (sum) mo.observe(sum, { attributes: true, attributeFilter: ['hidden'] });
+        paivitaTabit();
       }, 400);
     }
 

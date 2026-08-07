@@ -203,9 +203,17 @@ server.listen(8134, async () => {
   ok(await pg.locator('#mi-taulukko').count() === 1, 'Vuositaulukko valikossa appissa');
   const sheetR = await pg.evaluate(() => {
     const r = document.querySelector('.menu').getBoundingClientRect();
-    return { bottom: Math.round(r.bottom), left: Math.round(r.left), ih: window.innerHeight };
+    return {
+      top: Math.round(r.top), bottom: Math.round(r.bottom), left: Math.round(r.left), ih: window.innerHeight,
+      act: document.querySelectorAll('.vp-tab')[4].classList.contains('act'),
+      lukko: document.body.classList.contains('vp-sivu-auki') && getComputedStyle(document.body).overflow === 'hidden',
+      otsikko: (document.querySelector('.menu .vp-sivuotsikko') || {}).textContent,
+    };
   });
-  ok(sheetR.bottom === sheetR.ih && sheetR.left === 0, 'valikko avautuu bottom sheetinä (' + JSON.stringify(sheetR) + ')');
+  ok(sheetR.top === 0 && sheetR.bottom === sheetR.ih - 64 && sheetR.left === 0, 'Lisää avautuu kokosivuna (' + sheetR.top + '–' + sheetR.bottom + ')');
+  ok(sheetR.act, 'Lisää-tabi valittuna kun sivu auki');
+  ok(sheetR.lukko, 'avoin sivu lukitsee taustan skrollauksen');
+  ok(sheetR.otsikko === 'Lisää', 'sivulla oma otsikko');
   await pg.click('#mi-taulukko');
   await pg.waitForTimeout(400);
   ok(await pg.evaluate(() => !document.getElementById('tableModal').hidden), 'Vuositaulukko avautuu valikosta');
@@ -243,6 +251,7 @@ server.listen(8134, async () => {
   ok(tkR.t === 0 && tkR.b === tkR.ih - 64, 'Tulkki täytenä sivuna alapalkin yllä (' + tkR.t + '–' + tkR.b + ')');
   ok(tkR.act, 'Kysy AI -tabi valittuna kun Tulkki auki');
   ok(tkR.x === 'none', 'Tulkki ilman ✕-nappia appissa');
+  ok(await pg.evaluate(() => document.body.classList.contains('vp-sivu-auki')), 'Tulkki lukitsee taustan skrollauksen');
   // Suunnitelma-tabi sulkee Tulkin ja avaa oman sivunsa (keskinäinen poissulku)
   await pg.click('.vp-tab:nth-child(4)');
   await pg.waitForTimeout(400);
