@@ -900,7 +900,7 @@
   // Soveltaa muutokset serialisoituun kopioon; palauttaa rivit näytölle
   function applyChanges(mod, list) {
     const rows = [];
-    const ret = (mod.events || []).find((e) => e.type === 'retirement');
+    let ret = (mod.events || []).find((e) => e.type === 'retirement');
     for (const c of list) {
       // Porrastettu säästöaikataulu: korvaa koko aikataulun (ja tasaisen säästön)
       if (c.aikataulu) {
@@ -994,7 +994,20 @@
       const f = FIELDS[c.kentta];
       let arvo = c.arvo;
       if (f.ret) {
-        if (!ret) { rows.push({ nimi: f.nimi, ohitettu: 'ei eläketapahtumaa' }); continue; }
+        if (!ret) {
+          // Eläkekenttä ilman eläketapahtumaa → luodaan oletustapahtuma, jotta
+          // "kokeile eläkeikää 60" toimii myös tyhjästä (Olavin havainto 7.8.).
+          // Esikatselu + Palauta suojaavat kokeilua kuten muitakin muutoksia.
+          const def = EVENT_TYPES.retirement;
+          ret = {
+            type: 'retirement',
+            age: Math.min(mod.ageEnd - 1, Math.max(mod.ageNow + 1, def.pensionAge)),
+            withdrawal: def.withdrawal, pension: def.pension, pensionAge: def.pensionAge,
+          };
+          mod.events = mod.events || [];
+          mod.events.push(ret);
+          rows.push({ nimi: 'Eläkkeelle jäänti', desc: `lisätty suunnitelmaan oletuksin (nosto ${def.withdrawal} €/kk, työeläke ${def.pension} €/kk ${def.pensionAge} v alkaen)` });
+        }
         if (c.kentta === 'retAge') arvo = Math.min(mod.ageEnd - 1, Math.max(mod.ageNow + 1, Math.round(arvo)));
         const vanha = ret[f.ret];
         ret[f.ret] = arvo;

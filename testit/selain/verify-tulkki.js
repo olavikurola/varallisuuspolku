@@ -19,6 +19,7 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   await page.route('**/tulkki', (route) => {
     lastReq = JSON.parse(route.request().postData());
     const q = lastReq.question || '';
+    const retTyhjasta = /eläkeikää 58/i.test(q); // eläkekenttä ilman eläketapahtumaa → luodaan oletuksin
     const cmd = /kokeile/i.test(q);
     const evChange = /arvonnousu/i.test(q);
     const badField = /marginaali/i.test(q);
@@ -46,6 +47,9 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
     } else if (compare) {
       answer = 'Katso vertailu alta.';
       toolLine = { tool: { name: 'vertaile', input: { vaihtoehdot: [{ nimi: 'Eläkeikä 60', muutokset: [{ kentta: 'retAge', arvo: 60 }] }, { nimi: 'Eläkeikä 65', muutokset: [{ kentta: 'retAge', arvo: 65 }] }], selite: 'Eläkeiän vaikutus' } } };
+    } else if (retTyhjasta) {
+      answer = 'Kokeillaan — katso esikatselu.';
+      toolLine = { tool: { name: 'ehdota_muutos', input: { muutokset: [{ kentta: 'retAge', arvo: 58 }], selite: 'Eläkeikä 58 v' } } };
     } else if (cmd) {
       answer = 'Kokeillaan — katso esikatselu.';
       toolLine = { tool: { name: 'ehdota_muutos', input: { muutokset: [{ kentta: 'monthly', arvo: 1200 }, { kentta: 'retAge', arvo: 62 }], selite: 'Säästö 1 200 €/kk ja eläkeikä 62 v' } } };
@@ -360,6 +364,25 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   ok(await page.evaluate(() => localStorage.getItem('vp-ramp-done')) === '1', 'ramppi merkitty tehdyksi');
   await page.click('#rampOpen');
   ok(await page.evaluate(() => document.getElementById('ramp').hidden), 'Avaa suunnitelmani sulkee rampin');
+
+  console.log('Eläkekenttä ilman eläketapahtumaa → tapahtuma luodaan oletuksin (7.8. korjaus)');
+  await page.evaluate(() => {
+    state.events = state.events.filter((e) => e.type !== 'retirement');
+    renderAll();
+  });
+  ok(await page.evaluate(() => !state.events.find((e) => e.type === 'retirement')), 'lähtötila: ei eläketapahtumaa');
+  // kahva togglaa — avataan vain jos lehti on kiinni
+  await page.evaluate(() => { const s = document.querySelector('.tk-sheet'); if (s && s.hidden) document.querySelector('.tk-handle').click(); });
+  await page.fill('#tkInput', 'kokeile eläkeikää 58');
+  await page.press('#tkInput', 'Enter');
+  await page.waitForFunction(() => [...document.querySelectorAll('.tk-change')].some((c) => c.textContent.includes('lisätty suunnitelmaan oletuksin')));
+  const luotuRet = await page.evaluate(() => state.events.find((e) => e.type === 'retirement'));
+  ok(luotuRet && luotuRet.age === 58, 'eläketapahtuma luotiin ja ikä asettui (58 v)', JSON.stringify(luotuRet));
+  ok(luotuRet && luotuRet.withdrawal === 2400 && luotuRet.pension === 1500 && luotuRet.pensionAge === 65, 'oletusnosto ja työeläke tapahtumasta', JSON.stringify(luotuRet));
+  const luontiKortti = await page.locator('.tk-change').last().textContent();
+  ok(!luontiKortti.includes('ei voitu soveltaa'), 'ohituskorttia ei enää synny');
+  await page.locator('.tk-revert').last().click();
+  ok(await page.evaluate(() => !state.events.find((e) => e.type === 'retirement')), 'Palauta poisti luodun tapahtuman');
 
   console.log('Avaimen poisto');
   await page.goto('http://localhost:8123/?pois=1#tulkki=pois');
