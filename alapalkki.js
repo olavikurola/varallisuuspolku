@@ -123,7 +123,10 @@
     'body.vp-has-tabbar .menu .vp-kr{min-width:0;flex:1 1 auto;display:block;}',
     'body.vp-has-tabbar .menu .vp-kr-nimi{display:block;}',
     'body.vp-has-tabbar .menu .vp-kr .mdesc{display:block;}',
-    'body.vp-has-tabbar .menu .vp-kr-sw{margin:0;flex:0 0 auto;}',
+    /* switch ilman sisäkkäistä flexiä: .toggle-kääre romahti WebKitissä
+       nollalevyiseksi ja nuppi valui kortista yli (mitattu WebKit-moottorilla) */
+    'body.vp-has-tabbar .menu .vp-kr-sw{margin:0;flex:0 0 36px;width:36px;display:block;position:relative;}',
+    'body.vp-has-tabbar .menu .vp-kr-sw .switch{display:block;width:36px;}',
     'body.vp-has-tabbar .menu>#mi-reset{margin-top:2px;}',
     /* yhtenäinen sivuilme (Olavin toive 7.8.): logo + otsikko myös sisäsivuilla —
        sama koko ja muoto kuin yläpalkin brand-markissa (42 px, kulmat 12 px).
