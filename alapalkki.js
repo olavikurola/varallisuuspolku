@@ -117,9 +117,13 @@
     'body.vp-has-tabbar .menu .vp-ryhma .msect{border-top:0;margin:0;padding:10px 0 2px;}',
     'body.vp-has-tabbar .menu .vp-ryhma button{padding:11px 0;}',
     'body.vp-has-tabbar .menu .vp-ryhma button+button{border-top:1px solid var(--border-soft,rgba(148,168,220,0.08));border-radius:0;}',
-    'body.vp-has-tabbar .menu .vp-kytkinrivi{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;text-align:left;}',
-    'body.vp-has-tabbar .menu .vp-kr{min-width:0;}',
-    'body.vp-has-tabbar .menu .vp-kr-sw{margin:0;flex:none;}',
+    'body.vp-has-tabbar .menu{overflow-x:hidden;}',
+    'body.vp-has-tabbar .menu .vp-kytkinrivi{width:100%;text-align:left;}',
+    'body.vp-has-tabbar .menu .vp-krow{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;}',
+    'body.vp-has-tabbar .menu .vp-kr{min-width:0;flex:1 1 auto;display:block;}',
+    'body.vp-has-tabbar .menu .vp-kr-nimi{display:block;}',
+    'body.vp-has-tabbar .menu .vp-kr .mdesc{display:block;}',
+    'body.vp-has-tabbar .menu .vp-kr-sw{margin:0;flex:0 0 auto;}',
     'body.vp-has-tabbar .menu>#mi-reset{margin-top:2px;}',
     /* yhtenäinen sivuilme (Olavin toive 7.8.): logo + otsikko myös sisäsivuilla —
        sama koko ja muoto kuin yläpalkin brand-markissa (42 px, kulmat 12 px).
@@ -298,8 +302,12 @@
       var b = document.createElement('button');
       b.id = id;
       b.className = 'vp-kytkinrivi';
-      b.innerHTML = '<div class="vp-kr"><div>' + name + '</div><div class="mdesc">' + desc + '</div></div>' +
-        '<span class="toggle vp-kr-sw"><input type="checkbox" tabindex="-1" aria-hidden="true"><span class="switch"></span></span>';
+      // flex asuu sisäkääreessä: <button> flex-kontainerina on WebKitissä
+      // epäluotettava (Chromiumissa ok, laitteella switch vuoti kortista yli)
+      b.innerHTML = '<span class="vp-krow">' +
+        '<span class="vp-kr"><span class="vp-kr-nimi">' + name + '</span><span class="mdesc">' + desc + '</span></span>' +
+        '<span class="toggle vp-kr-sw"><input type="checkbox" tabindex="-1" aria-hidden="true"><span class="switch"></span></span>' +
+        '</span>';
       var input = b.querySelector('input');
       var paivita = function () { input.checked = !!tilaFn(); };
       paivita();

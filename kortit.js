@@ -195,9 +195,11 @@ function loadBaseline() {
 }
 
 function updateCompareBtn() {
-  // Vertailun tila näkyy ⋯-valikon kohdassa, jos valikko on auki
+  // Vertailun tila näkyy ⋯-valikon kohdassa, jos valikko on auki.
+  // Appin Lisää-sivulla sama id on kytkinrivi, jonka tila elää switchissä —
+  // tekstiä ei saa ylikirjoittaa (rikkoisi rivin rakenteen).
   const mi = $('mi-compare');
-  if (!mi) return;
+  if (!mi || mi.classList.contains('vp-kytkinrivi')) return;
   mi.querySelector('div').textContent = baseline ? 'Vertailu päällä ✓' : 'Vertaile';
   const d = mi.querySelector('.mdesc');
   if (d) d.textContent = baseline ? 'Poista vertailukohta' : 'Tallenna nykyinen suunnitelma haamukäyräksi';

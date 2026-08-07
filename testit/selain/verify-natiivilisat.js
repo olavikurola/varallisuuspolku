@@ -207,6 +207,24 @@ server.listen(8134, async () => {
   // kaksijako: Sivut + Asetukset ryhmäkortteina, asetukset kytkiminä
   ok(await pg.evaluate(() => [...document.querySelectorAll('.menu .vp-ryhma .msect')].map((s) => s.textContent).join(',')) === 'Sivut,Asetukset', 'ryhmät: Sivut + Asetukset');
   ok(await pg.locator('.menu .vp-kytkinrivi').count() === 5, 'viisi kytkinriviä (vertailu, teema, pro, muistutukset, lukitus)');
+  // kytkimen kääntö: tila vaihtuu switchissä, rivin teksti EI elä (updateCompareBtn-vahti)
+  await pg.click('#mi-compare');
+  await pg.waitForTimeout(400);
+  const vert = await pg.evaluate(() => ({
+    checked: document.querySelector('#mi-compare input').checked,
+    nimi: document.querySelector('#mi-compare .vp-kr-nimi').textContent,
+    haamu: typeof baseline !== 'undefined' && !!baseline,
+  }));
+  ok(vert.checked && vert.haamu, 'Vertailu-kytkin asettaa haamukäyrän');
+  ok(vert.nimi === 'Vertailu', 'kytkinrivin teksti ei elä tilan mukana (' + vert.nimi + ')');
+  // switch pysyy korttinsa sisällä (WebKit-buttonflex-kierto sisäkääreellä)
+  ok(await pg.evaluate(() => {
+    const sw = document.querySelector('#mi-compare .switch').getBoundingClientRect();
+    const kortti = document.querySelector('.menu .vp-ryhma:nth-of-type(2)').getBoundingClientRect();
+    return sw.right <= kortti.right + 1;
+  }), 'kytkin pysyy korttinsa sisällä');
+  await pg.click('#mi-compare');
+  await pg.waitForTimeout(300);
   const sheetR = await pg.evaluate(() => {
     const r = document.querySelector('.menu').getBoundingClientRect();
     return {
