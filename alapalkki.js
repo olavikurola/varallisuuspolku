@@ -90,11 +90,11 @@
     'body.vp-has-tabbar .card[data-card=about]{display:none;}',
     'body.vp-has-tabbar .pro-switch{display:none;}',
     /* yhtenäinen sivuilme (Olavin toive 7.8.): logo + otsikko myös sisäsivuilla —
-       sama pari kuin yläpalkissa (Varallisuuspolku, Tilastot, Agentit) */
+       sama koko ja muoto kuin yläpalkin brand-markissa (42 px, kulmat 12 px).
+       Tulkki pitää oman ✦-symbolinsa (Olavin linjaus). */
     'body.vp-has-tabbar .sum-head h1::before,body.vp-has-tabbar .ph-head h2::before,body.vp-has-tabbar .vp-sivuotsikko::before{',
-    ' content:"";display:inline-block;width:26px;height:26px;border-radius:7px;vertical-align:-5px;margin-right:10px;',
-    ' background:url(./icon-192.png) center/cover;}',
-    'body.vp-has-tabbar .tk-dot{font-size:0;width:26px;height:26px;border-radius:7px;background:url(./icon-192.png) center/cover;}',
+    ' content:"";display:inline-block;width:42px;height:42px;border-radius:12px;vertical-align:-13px;margin-right:12px;',
+    ' background:url(./icon-192.png) center/cover;box-shadow:0 4px 18px rgba(45,212,191,0.35);}',
     /* Suunnitelmat-sivu alkaa otsikolla kuten muutkin sivut — toimintonapit
        (Tulosta/PDF, Kopioi jakolinkki) siirtyvät sisällön loppuun */
     'body.vp-has-tabbar #summary{display:flex;flex-direction:column;}',

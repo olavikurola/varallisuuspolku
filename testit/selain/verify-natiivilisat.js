@@ -285,7 +285,8 @@ server.listen(8134, async () => {
     logo: getComputedStyle(document.querySelector('.ph-head h2'), '::before').width,
   }));
   ok(sumTyyli.suunta === 'column' && sumTyyli.jarjestys === '9', 'Suunnitelmat: toimintonapit sisällön lopussa (' + sumTyyli.jarjestys + ')');
-  ok(sumTyyli.logo === '26px', 'Suunnitelmat-otsikossa logo');
+  ok(sumTyyli.logo === '42px', 'Suunnitelmat-otsikossa logo yläpalkin koossa (42 px)');
+  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.tk-dot') || document.body).backgroundImage) === 'none', 'Tulkin oma ✦-symboli ennallaan');
   await ctx.close();
 
   // 10e) Agentit-sivu: alapalkki mukana (ei umpikujaa) ja tabit toimivat
