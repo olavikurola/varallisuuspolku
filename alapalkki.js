@@ -110,6 +110,17 @@
        tieto valikon Tietoa-sivulla); Pro-kytkin on valikon Asetuksissa */
     'body.vp-has-tabbar .card[data-card=about]{display:none;}',
     'body.vp-has-tabbar .pro-switch{display:none;}',
+    /* Lisää-sivun ryhmäkortit: Sivut ja Asetukset erottuvat kokonaisuuksina
+       (Olavin havainto 8.8.) — kortti, sisäiset erotinviivat, kytkinrivit */
+    'body.vp-has-tabbar .menu .vp-ryhma{background:linear-gradient(180deg,var(--card,#111a2e),var(--bg-2,#0e1424));',
+    ' border:1px solid var(--border,rgba(148,168,220,0.14));border-radius:14px;padding:4px 14px 6px;margin:0 0 14px;}',
+    'body.vp-has-tabbar .menu .vp-ryhma .msect{border-top:0;margin:0;padding:10px 0 2px;}',
+    'body.vp-has-tabbar .menu .vp-ryhma button{padding:11px 0;}',
+    'body.vp-has-tabbar .menu .vp-ryhma button+button{border-top:1px solid var(--border-soft,rgba(148,168,220,0.08));border-radius:0;}',
+    'body.vp-has-tabbar .menu .vp-kytkinrivi{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;text-align:left;}',
+    'body.vp-has-tabbar .menu .vp-kr{min-width:0;}',
+    'body.vp-has-tabbar .menu .vp-kr-sw{margin:0;flex:none;}',
+    'body.vp-has-tabbar .menu>#mi-reset{margin-top:2px;}',
     /* yhtenäinen sivuilme (Olavin toive 7.8.): logo + otsikko myös sisäsivuilla —
        sama koko ja muoto kuin yläpalkin brand-markissa (42 px, kulmat 12 px).
        Tulkki pitää oman ✦-symbolinsa (Olavin linjaus). */
@@ -252,11 +263,20 @@
     otsikko.className = 'vp-sivuotsikko';
     otsikko.textContent = 'Lisää';
     menu.appendChild(otsikko);
-    var sect = function (label) {
+
+    /* Kaksijako (Olavin jäsennys 8.8.): SIVUT = navigointi, ASETUKSET =
+       on/off-tilat kytkiminä (sama switch kuin Polku-sivun säädöissä).
+       Ryhmät korttitaustoilla, jotta kokonaisuudet erottuvat. */
+    var ryhmaEl = null;
+    var ryhma = function (label) {
+      var r = document.createElement('div');
+      r.className = 'vp-ryhma';
       var s = document.createElement('div');
       s.className = 'msect';
       s.textContent = label;
-      menu.appendChild(s);
+      r.appendChild(s);
+      menu.appendChild(r);
+      ryhmaEl = r;
     };
     var add = function (id, name, desc, fn, o) {
       var b = document.createElement('button');
@@ -268,34 +288,60 @@
         suljeSheet();
         if (fn) fn(b);
       });
-      menu.appendChild(b);
+      (ryhmaEl || menu).appendChild(b);
+      return b;
+    };
+    // Kytkinrivi: napautus ei sulje sivua — tila näkyy heti switchissä.
+    // toggleFn saa paivita-callbackin, jota myös asynkroniset kytkennät
+    // (ilmoituslupa, Face ID) kutsuvat kun tila on ratkennut.
+    var kytkin = function (id, name, desc, tilaFn, toggleFn) {
+      var b = document.createElement('button');
+      b.id = id;
+      b.className = 'vp-kytkinrivi';
+      b.innerHTML = '<div class="vp-kr"><div>' + name + '</div><div class="mdesc">' + desc + '</div></div>' +
+        '<span class="toggle vp-kr-sw"><input type="checkbox" tabindex="-1" aria-hidden="true"><span class="switch"></span></span>';
+      var input = b.querySelector('input');
+      var paivita = function () { input.checked = !!tilaFn(); };
+      paivita();
+      b.addEventListener('click', function () { toggleFn(paivita); });
+      (ryhmaEl || menu).appendChild(b);
       return b;
     };
 
-    sect('Toiminnot');
-    add('mi-compare',
-      (onIndex && typeof baseline !== 'undefined' && baseline) ? 'Vertailu päällä ✓' : 'Vertaile',
-      'Tallenna nykyinen suunnitelma haamukäyräksi', kotona(toimVertaile, LIPUT.vertaile));
-    add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti yhdeksällä klikkauksella',
-      kotona(function () { startTour(); }, LIPUT.kierros));
+    ryhma('Sivut');
     add('mi-taulukko', 'Vuositaulukko', 'Vuosikohtaiset luvut taulukkona ja CSV:nä',
       kotona(toimTaulukko, LIPUT.taulukko));
-
-    sect('Sivut');
     add('mi-analytics', 'Tilastot', 'Miten muut suunnittelevat vaurastumista — avoin data',
       function () { if (onStats) ylos(); else location.href = './analytiikka.html'; });
     add('mi-agents', 'Agentit', 'Kytke oma tekoälyavustajasi laskentamoottoriin (MCP)',
       function () { location.href = './agentit.html'; });
     add('mi-info', 'Tietoa palvelusta', 'Oletukset, tietosuoja ja vinkit', kotona(toimTietoa, LIPUT.tietoa));
+    add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti yhdeksällä klikkauksella',
+      kotona(function () { startTour(); }, LIPUT.kierros));
 
-    sect('Asetukset');
-    add('mi-theme',
-      document.documentElement.classList.contains('light') ? 'Tumma teema' : 'Vaalea teema',
-      'Vaihda värimaailma — valinta muistetaan', vaihdaTeema);
-    add('mi-pro',
-      (onIndex && typeof state !== 'undefined' && state.proOn) ? 'Pro-tila päällä ✓' : 'Pro-tila',
-      'Ammattilaisen säädöt ja analyysit', kotona(toimPro, LIPUT.pro));
-    if (window.vpNativeMenu) window.vpNativeMenu(add); // muistutukset + lukitus
+    ryhma('Asetukset');
+    kytkin('mi-compare', 'Vertailu', 'Nykyinen suunnitelma haamukäyräksi graafiin',
+      function () { return onIndex && typeof baseline !== 'undefined' && !!baseline; },
+      function (paivita) {
+        if (!onIndex) { etusivulle(LIPUT.vertaile); return; }
+        toimVertaile();
+        paivita();
+      });
+    kytkin('mi-theme', 'Vaalea teema', 'Vaihda värimaailma — valinta muistetaan',
+      function () { return document.documentElement.classList.contains('light'); },
+      function (paivita) { vaihdaTeema(); paivita(); });
+    kytkin('mi-pro', 'Pro-tila', 'Ammattilaisen säädöt ja analyysit',
+      function () { return onIndex && typeof state !== 'undefined' && !!state.proOn; },
+      function (paivita) {
+        if (!onIndex) { etusivulle(LIPUT.pro); return; }
+        // ensimmäinen kytkentä kulkee esittelysivun kautta kuten webissäkin
+        if (!state.proOn && !proSeen()) { suljeSheet(); openProModal(); return; }
+        setPro(!state.proOn);
+        paivita();
+      });
+    if (window.vpNativeMenu) window.vpNativeMenu(add, kytkin); // muistutukset + lukitus
+
+    ryhmaEl = null; // nollaus omana rivinään ryhmien alla
 
     // Nollaus: kaksivaiheinen vahvistus sheetissä. Tilastot-sivulta siirrytään
     // etusivulle sheet auki — tuhoavaa toimintoa ei ajeta lipun kautta.

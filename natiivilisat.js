@@ -92,8 +92,9 @@
     }).catch(function () { /* ilmoitusvirhe ei saa kaataa sovellusta */ });
   }
 
-  function toggleMuistutukset() {
-    if (!LN) { ilmoita('Ilmoitukset eivät ole käytettävissä tässä versiossa'); return; }
+  function toggleMuistutukset(valmis) {
+    var done = function () { if (valmis) valmis(); };
+    if (!LN) { ilmoita('Ilmoitukset eivät ole käytettävissä tässä versiossa'); done(); return; }
     if (paalla(MUISTUTUS_KEY)) {
       aseta(MUISTUTUS_KEY, false);
       LN.getPending().then(function (res) {
@@ -101,17 +102,20 @@
         if (pend.length) LN.cancel({ notifications: pend.map(function (n) { return { id: n.id }; }) });
       }).catch(function () {});
       ilmoita('Muistutukset pois päältä');
+      done();
       return;
     }
     LN.requestPermissions().then(function (perm) {
       if (perm.display !== 'granted') {
         ilmoita('Ilmoituslupa puuttuu — salli ilmoitukset laitteen asetuksista');
+        done();
         return;
       }
       aseta(MUISTUTUS_KEY, true);
       ajastaMuistutukset();
       ilmoita('Muistutukset päällä — kuukausikatsaus ja suunnitelmasi tapahtumat');
-    }).catch(function () { ilmoita('Ilmoituslupaa ei saatu'); });
+      done();
+    }).catch(function () { ilmoita('Ilmoituslupaa ei saatu'); done(); });
   }
 
   /* ===================== Logoruutu ja sovelluksen lukitus ===================== */
@@ -185,16 +189,19 @@
     }).then(piilotaLukko).catch(function () { /* peruttu → peite jää, Avaa yrittää uudelleen */ });
   }
 
-  function toggleLukitus() {
-    if (!NB) { ilmoita('Lukitus ei ole käytettävissä tässä versiossa'); return; }
+  function toggleLukitus(valmis) {
+    var done = function () { if (valmis) valmis(); };
+    if (!NB) { ilmoita('Lukitus ei ole käytettävissä tässä versiossa'); done(); return; }
     if (paalla(LUKITUS_KEY)) {
       aseta(LUKITUS_KEY, false);
       ilmoita('Lukitus pois päältä');
+      done();
       return;
     }
     NB.isAvailable({ useFallback: true }).then(function (r) {
       if (!r || !r.isAvailable) {
         ilmoita('Laitteessa ei ole käytettävissä olevaa lukitustapaa');
+        done();
         return;
       }
       return NB.verifyIdentity({
@@ -204,8 +211,9 @@
       }).then(function () {
         aseta(LUKITUS_KEY, true);
         ilmoita('Lukitus päällä — appi vaatii avauksen jatkossa');
-      }).catch(function () { ilmoita('Tunnistautuminen peruttiin'); });
-    }).catch(function () { ilmoita('Lukitustavan tarkistus epäonnistui'); });
+        done();
+      }).catch(function () { ilmoita('Tunnistautuminen peruttiin'); done(); });
+    }).catch(function () { ilmoita('Lukitustavan tarkistus epäonnistui'); done(); });
   }
 
   /* ===================== Widget-silta ===================== */
@@ -244,17 +252,28 @@
   /* ===================== Valikkorivit (☰) ===================== */
   // sovellus.js kutsuu tätä openMoreMenu:n lopussa — rivit näkyvät vain appissa.
 
-  window.vpNativeMenu = function (add) {
+  window.vpNativeMenu = function (add, kytkin) {
+    if (kytkin) {
+      // Lisää-sivun kytkinrivit: tila näkyy switchissä, asynkroniset kytkennät
+      // (ilmoituslupa, Face ID) päivittävät sen valmis-callbackilla
+      kytkin('mi-muistutukset', 'Muistutukset', 'Kuukausikatsaus ja suunnitelmasi tapahtumat ilmoituksina',
+        function () { return paalla(MUISTUTUS_KEY); },
+        function (paivita) { toggleMuistutukset(paivita); });
+      kytkin('mi-lukitus', 'Sovelluksen lukitus', 'Avaa sormenjäljellä, kasvoilla tai laitteen koodilla',
+        function () { return paalla(LUKITUS_KEY); },
+        function (paivita) { toggleLukitus(paivita); });
+      return;
+    }
     var mOn = paalla(MUISTUTUS_KEY);
     add('mi-muistutukset',
       mOn ? 'Muistutukset päällä ✓' : 'Muistutukset',
       mOn ? 'Poista ilmoitukset käytöstä' : 'Kuukausikatsaus ja suunnitelmasi tapahtumat ilmoituksina',
-      toggleMuistutukset);
+      function () { toggleMuistutukset(); });
     var lOn = paalla(LUKITUS_KEY);
     add('mi-lukitus',
       lOn ? 'Lukitus päällä ✓' : 'Sovelluksen lukitus',
       lOn ? 'Poista lukitus käytöstä' : 'Avaa sormenjäljellä, kasvoilla tai laitteen koodilla',
-      toggleLukitus);
+      function () { toggleLukitus(); });
   };
 
   /* ===================== Elinkaari ===================== */

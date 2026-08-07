@@ -85,14 +85,13 @@ server.listen(8134, async () => {
   ok(tapahtumat.length >= 1, 'suunnitelman tapahtumia ajastettu (' + tapahtumat.length + ' kpl)');
   ok(tapahtumat.every((n) => n.schedule && n.schedule.at && new Date(n.schedule.at) > new Date()), 'tapahtumamuistutukset tulevaisuudessa');
   ok(tapahtumat.every((n) => n.title && n.title.length > 0), 'tapahtumilla otsikko (evLabel)');
-  // uusi avaus näyttää tilan ja pois-kytkentä peruu ajastukset
-  await pg.click('.vp-tab:nth-child(5)');
-  await pg.waitForTimeout(300);
-  ok(await pg.textContent('#mi-muistutukset').then((t) => t.includes('päällä ✓')), 'valikkorivi näyttää tilan');
+  // kytkinrivi näyttää tilan heti eikä sivu sulkeudu — pois-kytkentä samasta rivistä
+  ok(await pg.evaluate(() => document.querySelector('#mi-muistutukset input').checked), 'kytkin näyttää tilan (päällä)');
   await pg.click('#mi-muistutukset');
   await pg.waitForTimeout(500);
   ok(await pg.evaluate(() => localStorage.getItem('vp-muistutukset')) === null, 'muistutukset pois: avain poistettu');
   ok(await pg.evaluate(() => window.__lnCancel.length) >= 1, 'odottavat ilmoitukset peruttiin');
+  ok(await pg.evaluate(() => !document.querySelector('#mi-muistutukset input').checked), 'kytkin päivittyi pois-tilaan');
 
   // 2) Widget-silta: tiivistelmä Preferencesiin
   await pg.evaluate(() => window.vpNatiivi.widgetPaivita());
@@ -147,6 +146,7 @@ server.listen(8134, async () => {
   await pg.waitForTimeout(500);
   ok(await pg.evaluate(() => localStorage.getItem('vp-lukitus')) === '1', 'lukitus päälle tunnistuksen jälkeen');
   ok(await pg.evaluate(() => window.__bio.length) >= 1, 'käyttöönotto vahvistettiin tunnistuksella');
+  ok(await pg.evaluate(() => document.querySelector('#mi-lukitus input').checked), 'lukituskytkin päivittyi tunnistuksen jälkeen');
   await ctx.close();
 
   // 7) Lukitus toimii myös Tilastot-sivulla
@@ -204,6 +204,9 @@ server.listen(8134, async () => {
   await pg.waitForTimeout(300);
   ok(await pg.locator('#mi-pro').count() === 1, 'Pro-kytkin valikossa appissa');
   ok(await pg.locator('#mi-taulukko').count() === 1, 'Vuositaulukko valikossa appissa');
+  // kaksijako: Sivut + Asetukset ryhmäkortteina, asetukset kytkiminä
+  ok(await pg.evaluate(() => [...document.querySelectorAll('.menu .vp-ryhma .msect')].map((s) => s.textContent).join(',')) === 'Sivut,Asetukset', 'ryhmät: Sivut + Asetukset');
+  ok(await pg.locator('.menu .vp-kytkinrivi').count() === 5, 'viisi kytkinriviä (vertailu, teema, pro, muistutukset, lukitus)');
   const sheetR = await pg.evaluate(() => {
     const r = document.querySelector('.menu').getBoundingClientRect();
     return {
