@@ -29,6 +29,10 @@
     /* z-index sivujen (summary 90, tk 160, menu 170) yläpuolella: sivut
        ulottuvat palkin taakse, palkki pysyy aina klikattavana päällimmäisenä */
     '.vp-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:200;display:flex;justify-content:space-around;align-items:stretch;',
+    /* suojakaistale palkin alle: kumijouston aikana fixed-palkki elää hetken
+       mukana ja alta paljastuisi sivua (havaittu laitteella) — kiinteä jatke
+       peittää raon millä tahansa joustolla */
+    '.vp-tabbar::after{content:"";position:absolute;top:100%;left:0;right:0;height:160px;background:var(--bg-2,#0e1424);}',
     ' padding:6px 8px calc(10px + env(safe-area-inset-bottom,0px));',
     ' background:color-mix(in srgb, var(--bg-2, #0e1424) 92%, transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);',
     ' border-top:1px solid var(--border, rgba(148,168,220,0.14));}',
@@ -38,6 +42,16 @@
     '.vp-tab svg{display:block}',
     '.vp-tab.act{color:var(--accent, #2dd4bf);}',
     '.vp-tab:focus-visible{outline:2px solid var(--accent, #2dd4bf);outline-offset:2px;border-radius:8px;}',
+    /* Skrollaus dokumentilta bodyn sisään: kumijousto tapahtuu sisällössä,
+       mutta viewport (ja siihen ankkuroidut fixed-elementit, ennen kaikkea
+       alapalkki) EI liiku jouston mukana — palkki pysyy naulattuna.
+       overscroll-behavior:contain estää ketjutuksen, jousto säilyy. */
+    'html:has(body.vp-has-tabbar){overflow:hidden;height:100%;}',
+    'body.vp-has-tabbar{overflow-y:auto;height:100dvh;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}',
+    /* tilapalkin tausta: skrollattu sisältö ei vilku kellon ja akun alla —
+       sama suoja ylös kuin palkin alle */
+    'body.vp-has-tabbar::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);',
+    ' background:var(--bg,#0a0e1a);z-index:210;pointer-events:none;}',
     /* sisältö ja toastit väistävät palkkia */
     'body.vp-has-tabbar{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px)) !important;}',
     /* paneelin häntä (disclaimer) ei nojaa bodyn paddingiin — layoutissa
@@ -213,6 +227,12 @@
   function suljeSheet() {
     if (sheetEl) { sheetEl.remove(); sheetEl = null; paivitaTabit(); }
   }
+  /* skrollaaja on appissa body (dokumentti on lukittu) — ylös molemmilla */
+  function ylos() {
+    try { document.body.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   function vaihdaTeema() {
     if (typeof applyTheme === 'function') { applyTheme(!document.documentElement.classList.contains('light')); return; }
     var light = !document.documentElement.classList.contains('light');
@@ -263,7 +283,7 @@
 
     sect('Sivut');
     add('mi-analytics', 'Tilastot', 'Miten muut suunnittelevat vaurastumista — avoin data',
-      function () { if (onStats) window.scrollTo({ top: 0, behavior: 'smooth' }); else location.href = './analytiikka.html'; });
+      function () { if (onStats) ylos(); else location.href = './analytiikka.html'; });
     add('mi-agents', 'Agentit', 'Kytke oma tekoälyavustajasi laskentamoottoriin (MCP)',
       function () { location.href = './agentit.html'; });
     add('mi-info', 'Tietoa palvelusta', 'Oletukset, tietosuoja ja vinkit', kotona(toimTietoa, LIPUT.tietoa));
@@ -322,12 +342,12 @@
     polku.addEventListener('click', function () {
       if (!onIndex) { location.href = './index.html'; return; }
       suljeAvoimet();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      ylos();
     });
 
     var tilastot = tab('tilastot', 'Tilastot', onStats);
     tilastot.addEventListener('click', function () {
-      if (onStats) { suljeSheet(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+      if (onStats) { suljeSheet(); ylos(); return; }
       location.href = './analytiikka.html';
     });
 

@@ -180,7 +180,7 @@ server.listen(8134, async () => {
   // 9) Alapalkki ei peitä sivun häntää (havaittu laitteella: paneelin
   //    disclaimer jäi palkin alle — paneelia padataan palkin verran)
   ({ ctx, pg } = await page({ native: true, w: 390, h: 844 }));
-  await pg.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await pg.evaluate(() => { document.body.scrollTo(0, document.body.scrollHeight); window.scrollTo(0, document.body.scrollHeight); });
   await pg.waitForTimeout(500);
   const pohja = await pg.evaluate(() => {
     const bar = document.querySelector('.vp-tabbar').getBoundingClientRect();
