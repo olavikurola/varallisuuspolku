@@ -367,6 +367,11 @@
     tabPolku = polku; tabTilastot = tilastot; tabAi = ai;
     tabSuunnitelma = suunnitelma; tabLisaa = lisaa;
 
+    /* Tulkin kehotepaikka lyhyeksi appissa — webin pitkä esimerkki
+       ("Kysy tai kokeile: …") ahtautui kapeaan kenttään sekavasti */
+    var tkInp = document.getElementById('tkInput');
+    if (tkInp) tkInp.placeholder = 'Kysy suunnitelmastasi…';
+
     /* tab-aktiivitilat ja taustan skrollilukko: Tulkin ja Suunnitelman
        avautumista vahditaan hidden-attribuutista (avautuvat myös muualta
        kuin tabeista), Lisää-sivu päivittää tilansa itse */

@@ -41,6 +41,11 @@ html, body {
   height: 100%;
 }
 
+/* iOS/WKWebView paisuttaa pienet tekstit epätasaisesti ilman tätä (appissa
+   Tulkin alaosa näytti sekavalta: eri lohkot eri kertoimilla). Koot
+   päätetään itse — mobiilikoot omissa media-lohkoissaan. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
 body {
   font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   background:
@@ -2578,4 +2583,20 @@ html.light .tk-mailto:hover { color: #4f3fd0; }
   .an-nav-lb { display: none; }
   .an-nav a { text-align: center; padding: 8px 10px; }
   .an-nav a:nth-child(4) { grid-column: 1 / -1; }
+}
+
+/* Tulkin tekstit käsin mitoitettuina kapealle näytölle — text-size-adjust-
+   esto poisti iOS:n automaattisuurennuksen, joten koot päätetään itse:
+   selkeä hierarkia (syöte 16 > viestit 15 > chipit 13 > metarivi 11) */
+@media (max-width: 560px) {
+  .tk-q, .tk-a { font-size: 15px; }
+  .tk-intro-body { font-size: 14px; }
+  .tk-privacy { font-size: 12px; }
+  .tk-sug { font-size: 13px; padding: 7px 12px; }
+  .tk-sugs { gap: 8px; }
+  .tk-ask { padding: 8px 8px 8px 14px; }
+  .tk-ask input { font-size: 16px; } /* 16 px estää myös iOS:n fokus-zoomin */
+  .tk-ask button { width: 34px; height: 34px; font-size: 16px; }
+  .tk-foot { font-size: 11px; }
+  .tk-change { font-size: 13.5px; }
 }
