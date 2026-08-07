@@ -95,11 +95,13 @@
     'body.vp-has-tabbar .sum-head h1::before,body.vp-has-tabbar .ph-head h2::before,body.vp-has-tabbar .vp-sivuotsikko::before{',
     ' content:"";display:inline-block;width:42px;height:42px;border-radius:12px;vertical-align:-13px;margin-right:12px;',
     ' background:url(./icon-192.png) center/cover;box-shadow:0 4px 18px rgba(45,212,191,0.35);}',
-    /* Suunnitelmat-sivu alkaa otsikolla kuten muutkin sivut — toimintonapit
-       (Tulosta/PDF, Kopioi jakolinkki) siirtyvät sisällön loppuun */
-    'body.vp-has-tabbar #summary{display:flex;flex-direction:column;}',
-    'body.vp-has-tabbar #summary > *{flex:0 0 auto;}',
-    'body.vp-has-tabbar #summary .sum-bar{order:9;justify-content:center;margin:18px auto 6px;}',
+    /* Suunnitelmat- ja Vuositaulukko-sivut alkavat otsikolla kuten muutkin —
+       toimintonapit (Tulosta/PDF, Kopioi jakolinkki, Lataa CSV) siirtyvät
+       sisällön loppuun; Vuositaulukon Sulje pois (tabit hoitavat poistumisen) */
+    'body.vp-has-tabbar #summary,body.vp-has-tabbar #tableModal{display:flex;flex-direction:column;}',
+    'body.vp-has-tabbar #summary > *,body.vp-has-tabbar #tableModal > *{flex:0 0 auto;}',
+    'body.vp-has-tabbar #summary .sum-bar,body.vp-has-tabbar #tableModal .sum-bar{order:9;justify-content:center;margin:18px auto 6px;}',
+    'body.vp-has-tabbar #tableClose{display:none;}',
   ].join('');
 
   var ICONS = {

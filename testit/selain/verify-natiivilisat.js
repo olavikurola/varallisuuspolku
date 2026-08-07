@@ -220,6 +220,11 @@ server.listen(8134, async () => {
   await pg.click('#mi-taulukko');
   await pg.waitForTimeout(400);
   ok(await pg.evaluate(() => !document.getElementById('tableModal').hidden), 'Vuositaulukko avautuu valikosta');
+  ok(await pg.evaluate(() => getComputedStyle(document.getElementById('tableClose')).display) === 'none', 'Vuositaulukon Sulje piilossa appissa');
+  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('#tableModal .sum-bar')).order) === '9', 'Lataa CSV sisällön lopussa');
+  await pg.click('.vp-tab:nth-child(1)'); // Polku sulkee dialogisivun
+  await pg.waitForTimeout(300);
+  ok(await pg.evaluate(() => document.getElementById('tableModal').hidden), 'Polku-tabi sulkee Vuositaulukon');
   // modaali on appissa täysi sivu: opaakki tausta (webissä läpikuultava rgba)
   ok(await pg.evaluate(() => !getComputedStyle(document.getElementById('tableModal')).backgroundColor.includes('rgba')), 'modaali täytenä sivuna appissa (opaakki tausta)');
   await ctx.close();
