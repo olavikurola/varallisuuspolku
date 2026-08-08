@@ -118,6 +118,12 @@
     'body.vp-has-tabbar .menu .vp-ryhma button{padding:11px 0;}',
     'body.vp-has-tabbar .menu .vp-ryhma button+button{border-top:1px solid var(--border-soft,rgba(148,168,220,0.08));border-radius:0;}',
     'body.vp-has-tabbar .menu{overflow-x:hidden;}',
+    /* kosketuslaitteella hover jää "päälle" napautetulle riville ja iOS lisää
+       oman harmaan tap-korostuksensa — pois; palaute on hetkellinen :active */
+    'body.vp-has-tabbar .menu button{-webkit-tap-highlight-color:transparent;}',
+    'body.vp-has-tabbar .menu button:hover{background:none;}',
+    'body.vp-has-tabbar .menu button:active{background:rgba(45,212,191,0.07);}',
+    'body.vp-has-tabbar .menu button.armed-item{background:rgba(248,113,113,0.12);}',
     'body.vp-has-tabbar .menu .vp-kytkinrivi{width:100%;text-align:left;}',
     'body.vp-has-tabbar .menu .vp-krow{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;}',
     'body.vp-has-tabbar .menu .vp-kr{min-width:0;flex:1 1 auto;display:block;}',
@@ -422,7 +428,7 @@
       var input = b.querySelector('input');
       var paivita = function () { input.checked = !!tilaFn(); };
       paivita();
-      b.addEventListener('click', function () { napsu('Light'); toggleFn(paivita); });
+      b.addEventListener('click', function () { toggleFn(paivita); });
       (ryhmaEl || menu).appendChild(b);
       return b;
     };
@@ -469,8 +475,7 @@
     add('mi-reset', 'Nollaa suunnitelma', 'Poistaa avoinna olevan suunnitelman — muut rivit säilyvät',
       function (b) {
         if (!onIndex) { etusivulle(LIPUT.sheet); return; }
-        if (b.dataset.armed) { napsu('Medium'); nollaaAktiivinen(); return; }
-        napsu('Medium');
+        if (b.dataset.armed) { nollaaAktiivinen(); return; }
         b.dataset.armed = '1';
         b.classList.add('armed-item');
         b.querySelector('div').textContent = 'Vahvista nollaus';
