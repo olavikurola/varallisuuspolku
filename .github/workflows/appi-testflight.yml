@@ -74,20 +74,26 @@ jobs:
           mkdir -p "$RUNNER_TEMP/keys"
           printf '%s' "${{ secrets.APPSTORE_P8 }}" > "$RUNNER_TEMP/keys/AuthKey_$KEY_ID.p8"
 
-      # Arkisto tehdään ILMAN allekirjoitusta: automaattinen allekirjoitus
-      # arkistointivaiheessa vaatisi kehitysprofiilin, joka taas vaatii
-      # vähintään yhden rekisteröidyn laitteen tiimille. Vientivaihe
-      # allekirjoittaa App Store -jakeluprofiililla, jolla laitevaatimusta
-      # ei ole — pilviallekirjoitus luo sertifikaatin ja profiilin itse.
-      - name: Arkistoi (Release, ei allekirjoitusta)
+      # Arkisto allekirjoitetaan suoraan Apple Distribution -pilviallekirjoituksella
+      # (automaattinen tyyli + jakeluidentiteetti + API-avain): App Store -profiili
+      # ei vaadi rekisteröityä laitetta, toisin kuin kehitysprofiili, joka kaatoi
+      # arkistovaiheen allekirjoituksen alun perin. TÄRKEÄÄ: allekirjoittamattomasta
+      # arkistosta KATOAVAT entitlementit (App Group jäi pois ja iOS-widget jäi
+      # ilman tietoja — opittu 8.8.2026) — viennin uudelleenallekirjoitus säilyttää
+      # vain arkistoon kirjatut oikeudet.
+      - name: Arkistoi (Release, pilviallekirjoitus)
         working-directory: appi/ios/App
         run: |
           set -o pipefail
           xcodebuild -project App.xcodeproj -scheme App -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/App.xcarchive" archive \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_$KEY_ID.p8" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" \
+            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}"
 
