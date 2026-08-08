@@ -819,6 +819,16 @@ const makeShareUrl = () => {
 async function copyShareUrl(btn) {
   const url = makeShareUrl();
   track('Jakolinkki luotu', { tyyppi: familyOn() ? 'perhe' : 'oma' });
+  // Appi: laitteen oma jakoarkki (Viestit, sähköposti, AirDrop…) — kopiointi
+  // leikepöydälle on arkin oma vaihtoehto. Peruutus ei pudota leikepöydälle.
+  if (vpNativeApp && window.vpNatiivi && window.vpNatiivi.jaa) {
+    const jaettiin = await window.vpNatiivi.jaa({
+      title: 'Varallisuuspolku-suunnitelma',
+      text: 'Suunnitelmani Varallisuuspolussa — linkki kantaa koko suunnitelman:',
+      url,
+    });
+    if (jaettiin) return;
+  }
   const orig = btn.textContent;
   try {
     await navigator.clipboard.writeText(url);
@@ -833,6 +843,10 @@ function bindActions() {
   $('summaryBtn').addEventListener('click', openSummary);
   $('sumClose').addEventListener('click', closeSummary);
   $('sumPrint').addEventListener('click', () => window.print());
+  // appin taitetut osiot auki tulosteeseen — kiinni oleva <details> ei tulostu
+  window.addEventListener('beforeprint', () => {
+    document.querySelectorAll('details.sum-taite').forEach((d) => { d.open = true; });
+  });
   $('sumShare').addEventListener('click', (e) => copyShareUrl(e.target));
   $('moreBtn').addEventListener('click', () => openMoreMenu($('moreBtn')));
   // Natiiviappi: alapalkin "Lisää" tilastosivulta saapuu lipun kanssa → avataan valikko perillä
@@ -1062,7 +1076,8 @@ function renderSummary() {
     { k: 'Kuukausitulo eläkkeellä', v: retire ? `${fmtEur(s.withdrawal)}/kk` : '—',
       s: retire ? (s.pension > 0 ? `sis. työeläke ${fmtEur(s.pension)}/kk` : (s.goal === 'withdrawal' ? 'kestävä tulo — varat loppuun' : 'sijoituksista')) : '' },
     { k: 'Varallisuus eläkkeellä', v: s.wAtRet != null ? fmtEur(s.wAtRet) : '—', cls: 'accent' },
-    { k: 'Onnistumistodennäköisyys', v: p != null ? `${p} %` : '—', cls: p >= 80 ? 'ok' : p >= 55 ? '' : 'bad', s: `${(s.mcPaths || MC_LIVE).toLocaleString('fi-FI')} markkinapolkua` },
+    // appissa lyhyt label — täysi sana rivittyi rumasti kapeassa tiilessä
+    { k: vpNativeApp ? 'Onnistumis-%' : 'Onnistumistodennäköisyys', v: p != null ? `${p} %` : '—', cls: p >= 80 ? 'ok' : p >= 55 ? '' : 'bad', s: `${(s.mcPaths || MC_LIVE).toLocaleString('fi-FI')} markkinapolkua` },
   ];
 
   const evRows = [...state.events].sort((x, y) => x.age - y.age).map((e) => {
@@ -1102,6 +1117,13 @@ function renderSummary() {
 
   const li = (x) => `<li${x.warn ? ' class="warn"' : ''}>${x.html}</li>`;
 
+  // Appi: osiot <details>-taitteina — dokumentti on tulostusparadigma, appissa
+  // pitkä vieritys. Kehitys (käyrä) auki oletuksena, muut avataan tarpeeseen.
+  // Webissä ja tulosteessa kaikki auki kuten ennen (beforeprint avaa taitteet).
+  const osio = (otsikko, sisalto, auki) => vpNativeApp
+    ? `<details class="sum-taite"${auki ? ' open' : ''}><summary><h2>${otsikko}</h2></summary>${sisalto}</details>`
+    : `<h2>${otsikko}</h2>${sisalto}`;
+
   $('sumSheet').innerHTML =
     `<div class="sum-head">` +
     `<div><h1>Varallisuussuunnitelma</h1><div class="sum-sub">Tavoitteeni ja suunnitelmani elämäni taloudelle</div></div>` +
@@ -1109,15 +1131,15 @@ function renderSummary() {
     `</div>` +
     `<div class="sum-tiles">${tiles.map((c) =>
       `<div class="sum-tile"><div class="k">${c.k}</div><div class="v ${c.cls || ''}">${c.v}</div>${c.s ? `<div class="s">${c.s}</div>` : ''}</div>`).join('')}</div>` +
-    `<h2>Varallisuuden odotettu kehitys</h2>` +
-    `<div class="sum-chart">${summaryChartSVG(s)}</div>` +
-    `<div class="sum-legend"><span><i class="sw sum-lg-line"></i>Sijoitusvarallisuus</span><span><i class="sw sum-lg-band"></i>Vaihteluväli</span><span><i class="sw sum-lg-inv"></i>Sijoitettu pääoma</span></div>` +
-    `<h2>Suunnitelmani kulmakivet</h2>` +
-    `<ol class="sum-points">${summaryPoints(s).map(li).join('')}</ol>` +
-    `<h2>Elämäntapahtumat aikajanalla</h2>` +
-    `<div class="table-scroll"><table class="sum-table"><thead><tr><th>Tapahtuma</th><th>Ajankohta</th><th>Summa</th><th>Rahoitus</th><th>Huom.</th></tr></thead><tbody>${evRows}</tbody></table></div>` +
-    `<h2>Keskusteltavaa esim. varainhoitajan kanssa</h2>` +
-    `<ul class="sum-points">${summaryTalks(s).map(li).join('')}</ul>` +
+    osio('Varallisuuden odotettu kehitys',
+      `<div class="sum-chart">${summaryChartSVG(s)}</div>` +
+      `<div class="sum-legend"><span><i class="sw sum-lg-line"></i>Sijoitusvarallisuus</span><span><i class="sw sum-lg-band"></i>Vaihteluväli</span><span><i class="sw sum-lg-inv"></i>Sijoitettu pääoma</span></div>`, true) +
+    osio('Suunnitelmani kulmakivet',
+      `<ol class="sum-points">${summaryPoints(s).map(li).join('')}</ol>`, false) +
+    osio('Elämäntapahtumat aikajanalla',
+      `<div class="table-scroll"><table class="sum-table"><thead><tr><th>Tapahtuma</th><th>Ajankohta</th><th>Summa</th><th>Rahoitus</th><th>Huom.</th></tr></thead><tbody>${evRows}</tbody></table></div>`, false) +
+    osio('Keskusteltavaa esim. varainhoitajan kanssa',
+      `<ul class="sum-points">${summaryTalks(s).map(li).join('')}</ul>`, false) +
     (familyOn() ? familySummaryHtml() : '') +
     (state.proOn ? proSummaryHtml(s) : '') +
     `<p class="sum-assump">Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa${state.savingsGrowth > 0 ? `; säästön kasvu ${state.savingsGrowth.toLocaleString('fi-FI')} %/v` : ''}${state.real ? `; inflaatio ${state.inflation.toLocaleString('fi-FI')} %/v, luvut nykyrahassa` : ''}${state.glide ? '; ikäsidonnainen allokaatio' : ''}${s.pension > 0 ? '; lakisääteinen työeläke huomioitu eläketulona' : ''}${state.tax ? '; myyntivoittovero 30/34 % nostojen voitto-osuudesta' : ''}${state.acct === 'ost' ? '; osakesäästötili (osingot ja myynnit tilillä verotta, nostosta vero voitto-osuudesta)' : state.acct === 'ins' ? `; vakuutuskuori (tuotot kuoressa verotta, nostosta vero voitto-osuudesta${state.wrapFee > 0 ? `, kuoren kulu ${state.wrapFee.toLocaleString('fi-FI')} %/v` : ''})` : ''}${state.feePct > 0 ? `; sijoituskulut ${state.feePct.toLocaleString('fi-FI')} %/v` : ''}${state.acct === 'aot' && state.tax && state.divYield > 0 ? `; suorien osakkeiden osinkotuotto ${state.divYield.toLocaleString('fi-FI')} %/v verotettuna vuosittain` : ''}${(s.saleInfos || []).some((x) => x.tax > 0.5) ? '; omaisuuden myynnissä hankintameno-olettama' : ''}. ` +
@@ -1438,7 +1460,7 @@ function renderPlans() {
     `<span class="num c-wret">Eläkkeellä</span><span class="num c-kestava">Tulo/kk</span><span class="num c-onn">Onnist.</span>` +
     `<span class="num">Riittävyys</span><span class="num c-spark">Kehitys</span><span></span></div>`;
 
-  const newSec = `<div class="ph-new"><h3>➕ Uusi suunnitelma</h3><div class="ph-opts">` +
+  const newInner = `<div class="ph-opts">` +
     `<button type="button" class="ph-opt" data-act="ramppi"><b>Kolme kysymystä</b><span>Sama tuttu aloitus — ikä, varallisuus, säästö. Sopii läheisen suunnitelman pohjaksi.</span></button>` +
     (hasTulkki ? `<button type="button" class="ph-opt" data-act="nl"><b>Kerro omin sanoin <em class="beta">BETA</em></b><span>Kuvaile tilanne vapaasti — Tulkki täyttää luvut ja tapahtumat puolestasi.</span></button>` : '') +
     `<button type="button" class="ph-opt" data-act="kopio"><b>Kopio nykyisestä</b><span>Skenaariokokeiluun: sama suunnitelma, eri valinnat rinnakkain.</span></button>` +
@@ -1448,18 +1470,30 @@ function renderPlans() {
     `<button type="button" class="btn ghost" data-act="tuolinkki">Tuo linkistä</button>` +
     `<button type="button" class="btn ghost" data-act="tuotiedosto">Tuo tiedostosta…</button>` +
     `<button type="button" class="btn ghost" data-act="vie">Vie kaikki varmuuskopioksi</button>` +
-    `</div></div>`;
+    `</div>`;
+  // Appi: vaihtoehdot ja tuonti/vienti napin takana — sivu pysyy tiiviinä,
+  // ohjeet näkyvät vasta kun uutta suunnitelmaa oikeasti tehdään
+  const newSec = vpNativeApp
+    ? `<div class="ph-new"><button type="button" class="btn ghost ph-new-toggle">➕ Uusi suunnitelma</button><div class="ph-new-body" hidden>${newInner}</div></div>`
+    : `<div class="ph-new"><h3>➕ Uusi suunnitelma</h3>${newInner}</div>`;
 
   let bytes = 0;
   try { bytes = JSON.stringify(plans).length; } catch (e) {}
-  const foot = `<div class="ph-foot">` +
-    `<span><b>${plans.length} suunnitelma${plans.length === 1 ? '' : 'a'}</b> · ~${Math.max(1, Math.round(bytes / 1024))} kt · selaimen omassa muistissa</span>` +
-    `<span>Yksityisselaimessa tiedot katoavat ikkunan sulkeutuessa — ota varmuuskopio</span>` +
-    `<span>Jakolinkki kantaa koko suunnitelman: linkki toiselle laitteelle = siirto</span></div>`;
+  const foot = vpNativeApp
+    ? `<div class="ph-foot"><span><b>${plans.length} suunnitelma${plans.length === 1 ? '' : 'a'}</b> · tallessa tällä laitteella</span>` +
+      `<span>Jakolinkki kantaa koko suunnitelman: linkki toiselle laitteelle = siirto ja varmuuskopio</span></div>`
+    : `<div class="ph-foot">` +
+      `<span><b>${plans.length} suunnitelma${plans.length === 1 ? '' : 'a'}</b> · ~${Math.max(1, Math.round(bytes / 1024))} kt · selaimen omassa muistissa</span>` +
+      `<span>Yksityisselaimessa tiedot katoavat ikkunan sulkeutuessa — ota varmuuskopio</span>` +
+      `<span>Jakolinkki kantaa koko suunnitelman: linkki toiselle laitteelle = siirto</span></div>`;
 
   host.innerHTML =
-    `<div class="ph-head"><h2>Suunnitelmat</h2><p>Omat ja lähipiirin suunnitelmat — kaikki tallessa <b>vain tässä selaimessa</b>. ` +
-    `Ruksi kaksi riviä vertailuun, <b>Avaa</b> ottaa suunnitelman työtilaan.</p></div>` +
+    `<div class="ph-head"><h2>Suunnitelmat</h2><p>` +
+    (vpNativeApp
+      ? `Omat ja lähipiirin suunnitelmat, tallessa <b>vain tällä laitteella</b> — ruksi kaksi riviä vertailuun.`
+      : `Omat ja lähipiirin suunnitelmat — kaikki tallessa <b>vain tässä selaimessa</b>. ` +
+        `Ruksi kaksi riviä vertailuun, <b>Avaa</b> ottaa suunnitelman työtilaan.`) +
+    `</p></div>` +
     cmpbar + `<div class="ph-grid">${thead}${rows}</div>` + newSec + foot;
 
   // Tunnusluvut täytetään rivi kerrallaan — iso lista ei jumita avausta
@@ -1479,6 +1513,12 @@ function bindPlansHome() {
   if (!host || plansHomeBound) return;
   plansHomeBound = true;
   host.addEventListener('click', (e) => {
+    const nt = e.target.closest('.ph-new-toggle');
+    if (nt) {
+      const body = host.querySelector('.ph-new-body');
+      if (body) body.hidden = !body.hidden;
+      return;
+    }
     const opt = e.target.closest('[data-act]');
     if (opt) { handlePlanAct(opt.dataset.act); return; }
     if (e.target.closest('.ph-cmp-open')) { openPlanCompare(); return; }
@@ -2116,7 +2156,7 @@ function rampResult(retA) {
     `<button class="btn ghost" id="rampShare">📸 Jaa tuloskuva</button>` +
     `<button class="btn ghost" id="rampTour">Esittelykierros</button>` +
     `</div>`;
-  $('rampOpen').addEventListener('click', () => { closeRamp(); showVetoHint(); toast('Vinkki: Esittelykierros löytyy ☰-valikosta'); });
+  $('rampOpen').addEventListener('click', () => { closeRamp(); showVetoHint(); toast(`Vinkki: Esittelykierros löytyy ${vpNativeApp ? 'Lisää' : '☰'}-valikosta`); });
   // Jakonappi ei sulje ramppia — jakoarkki avautuu päälle ja käyttäjä jatkaa siitä
   $('rampShare').addEventListener('click', () => shareResultImage('ramppi'));
   // Omistuksen sisäänkäynti: jo omistettu asunto lainoineen puuttuu muuten

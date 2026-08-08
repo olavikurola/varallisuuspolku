@@ -47,6 +47,9 @@ server.listen(8135, async () => {
       localStorage.setItem('vp-veto-vihje', '1');
       if (light) localStorage.setItem('vp-theme', 'light');
       sessionStorage.setItem('vp-lukko-auki', '1'); // logoruutu ohi kuvia varten
+      sessionStorage.setItem('vp-intro-ok', '1');   // piirtoanimaatio ohi — terävät kuvat
+      // kauppakuviin suunnitelma näkyviin: Perustiedot ja tapahtumat auki
+      localStorage.setItem('vp-kortit-auki-v1', JSON.stringify(['basics', 'events']));
       window.Capacitor = { isNativePlatform: () => true, Plugins: {} };
     }, !!vaalea);
     const pg = await ctx.newPage();

@@ -7,8 +7,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Kuvakkeen pikatoiminto kylmäkäynnistyksessä: tyyppi talteen ennen
+        // webin latautumista — natiivilisat.js hakee sen VpWidget.oikotie():lla
+        if let oikotie = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem {
+            VpWidgetPlugin.oikotieArvo = oikotie.type
+        }
         return true
+    }
+
+    // Pikatoiminto kun appi on jo käynnissä: web poimii arvon palatessaan etualalle
+    func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
+        VpWidgetPlugin.oikotieArvo = shortcutItem.type
+        completionHandler(true)
     }
 
     func applicationWillResignActive(_ application: UIApplication) {

@@ -33,6 +33,8 @@ server.listen(8134, async () => {
       // logoruutu näkyy vain kylmäkäynnistyksessä — testit simuloivat oletuksena
       // jo avattua istuntoa, paitsi kun logoruutua tai lukitusta testataan
       if (o.native && !o.lukitus && !o.tervetuloa) sessionStorage.setItem('vp-lukko-auki', '1');
+      // käynnistysanimaatio pois oletuksena — deterministiset mittaukset
+      if (!o.intro) sessionStorage.setItem('vp-intro-ok', '1');
       if (o.plan) {
         localStorage.setItem('varallisuuspolku-v1', JSON.stringify({ ageNow: 30, ageEnd: 90, startCapital: 10000, monthly: 500, allocStocks: 70, allocBonds: 20, events: [] }));
         localStorage.setItem('vp-donate-v1', JSON.stringify({ donatedHash: 'abc' }));
@@ -43,9 +45,26 @@ server.listen(8134, async () => {
       window.__prefs = {};
       window.__bio = [];
       window.__bioFail = !!o.bioFail;
+      window.__haptics = [];
+      window.__share = [];
+      window.__oikotie = o.oikotie || null;
       window.Capacitor = {
         isNativePlatform: () => true,
         Plugins: {
+          Haptics: {
+            impact: (x) => { window.__haptics.push((x || {}).style); return Promise.resolve(); },
+          },
+          Share: {
+            share: (x) => { window.__share.push(x); return Promise.resolve({}); },
+          },
+          VpWidget: {
+            paivita: (x) => { window.__widgetData = x && x.data; return Promise.resolve(); },
+            oikotie: () => {
+              const a = window.__oikotie;
+              window.__oikotie = null;
+              return Promise.resolve(a ? { arvo: a } : {});
+            },
+          },
           LocalNotifications: {
             checkPermissions: () => Promise.resolve({ display: 'granted' }),
             requestPermissions: () => Promise.resolve({ display: window.__lupaEvatty ? 'denied' : 'granted' }),
@@ -351,6 +370,123 @@ server.listen(8134, async () => {
   ok(await pg.locator('.toast.show').count() === 1, 'varatoast antaa palautteen Tilastot-sivulla');
   await ctx.close();
 
+  // 13) Appitekstit ja Suunnitelmat-sivun tiivistys (Olavin havaintokierros #6):
+  //     appi puhuu laitteesta eikä selaimesta, Uusi suunnitelma napin takana,
+  //     kierros osoittaa tabeihin, Tilastot ilman paluulinkkiä
+  ({ ctx, pg } = await page({ native: true }));
+  ok(await pg.evaluate(() => document.querySelector('.panel .disclaimer').textContent.includes('laitteellesi')), 'disclaimer: tallentuu laitteellesi (appi)');
+  ok(await pg.evaluate(() => !document.getElementById('infoModal').textContent.includes('☰-valikossa')), 'Tietoa-sivu: ei ☰-viittauksia appissa');
+  ok(await pg.evaluate(() => !document.getElementById('infoModal').textContent.includes('aloitusnäytölle (PWA)')), 'Tietoa-sivu: ei PWA-asennusvinkkiä appissa');
+  ok(await pg.evaluate(() => document.getElementById('infoModal').textContent.includes('Lisää-valikossa')), 'Tietoa-sivu: viittaa Lisää-valikkoon');
+  ok(await pg.evaluate(() => document.getElementById('infoModal').textContent.includes('sovelluksen omaan muistiin')), 'Tietoa-sivu: tallennus sovelluksen muistiin');
+  ok(await pg.evaluate(() => !!document.getElementById('donateReset')), 'Tietoa-sivun linkit säilyvät tekstivaihdossa');
+  ok(await pg.evaluate(() => document.getElementById('proModal').textContent.includes('omalla laitteellasi')), 'Pro-esittely: laskenta omalla laitteellasi');
+  // kierros osoittaa appissa tabeihin, ei piilotettuihin webin nappeihin
+  ok(await pg.evaluate(() => TOUR_STEPS.every((s) => !['.tk-handle', '#summaryBtn', '#proSwitch', '#moreBtn'].includes(s.s))), 'kierros ei osoita piilotettuihin nappeihin appissa');
+  ok(await pg.evaluate(() => TOUR_STEPS.some((s) => s.s === '#vpTabAi') && TOUR_STEPS.some((s) => s.s === '#vpTabLisaa') && !!document.querySelector('#vpTabAi')), 'kierros osoittaa alapalkin tabeihin (ID:t olemassa)');
+  ok(await pg.evaluate(() => TOUR_STEPS[0].x.includes('laitteellasi')), 'kierroksen avausteksti puhuu laitteesta');
+  // Suunnitelmat: tiivis otsikkoteksti, Uusi suunnitelma napin takana, lyhyt alaviite
+  await pg.click('.vp-tab:nth-child(4)');
+  await pg.waitForTimeout(600);
+  ok(await pg.evaluate(() => document.querySelector('.ph-head p').textContent.includes('tällä laitteella')), 'Suunnitelmat-otsikko: tallessa tällä laitteella');
+  ok(await pg.evaluate(() => !document.querySelector('.ph-head p').textContent.includes('selaimessa')), 'Suunnitelmat-otsikko: ei selainmainintaa appissa');
+  ok(await pg.locator('.ph-new-toggle').count() === 1, 'Uusi suunnitelma nappina appissa');
+  ok(await pg.evaluate(() => document.querySelector('.ph-new-body').hidden), 'vaihtoehdot piilossa ennen napautusta');
+  ok(await pg.evaluate(() => !document.querySelector('.ph-foot').textContent.includes('Yksityisselaimessa')), 'alaviite ilman yksityisselainriviä appissa');
+  ok(await pg.evaluate(() => document.querySelector('.ph-foot').textContent.includes('tällä laitteella')), 'alaviite: tallessa tällä laitteella');
+  await pg.click('.ph-new-toggle');
+  ok(await pg.evaluate(() => !document.querySelector('.ph-new-body').hidden && document.querySelectorAll('.ph-opt').length >= 3), 'napautus avaa vaihtoehdot');
+  await pg.click('.ph-opt[data-act="kopio"]');
+  await pg.waitForTimeout(600);
+  ok(await pg.evaluate(() => plans.length === 2), 'kopio syntyy avatusta napista (toiminnot ennallaan)');
+  // Tulkin tietosuojarivi
+  await pg.click('.vp-tab:nth-child(3)');
+  await pg.waitForTimeout(600);
+  ok(await pg.evaluate(() => document.querySelector('.tk-privacy').textContent.includes('ei lähde laitteeltasi')), 'Tulkin tietosuojarivi: laitteeltasi (appi)');
+  await ctx.close();
+
+  // 13b) Tilastot appissa: ei paluulinkkiä (tabit ovat väylä), portti ja
+  //      alaviite puhuvat laitteesta
+  ({ ctx, pg } = await page({ native: true, url: '/analytiikka.html' }));
+  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.an-foot')).display) === 'none', 'Tilastot: alareunan paluulinkki piilossa appissa');
+  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.topbar-right')).display) === 'none', 'Tilastot: yläreunan paluulinkki piilossa appissa');
+  ok(await pg.evaluate(() => document.querySelector('.an-lock-card .small').textContent.includes('omalla laitteellasi')), 'Tilastot-portti: suunnitelma pysyy laitteellasi');
+  ok(await pg.evaluate(() => document.querySelector('.an-main > .disclaimer').textContent.includes('omalla laitteellasi')), 'Tilastot-alaviite: suunnittelu omalla laitteellasi');
+  await ctx.close();
+
+  // 14) Wow-erä (havaintokierros #7): haptiikka, taittuvat kortit, dokumentin
+  //     taitteet, Tulkin aloituskortit ja jakolinkki laitteen jakoarkkiin
+  ({ ctx, pg } = await page({ native: true }));
+  ok(await pg.evaluate(() => document.querySelector('.card[data-card=basics]').classList.contains('vp-kiinni')), 'Perustiedot taitettuna oletuksena appissa');
+  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.card[data-card=basics] .row2')).display) === 'none', 'taitetun kortin sisältö piilossa');
+  // klikki otsikon tekstiin — keskikohta osuisi perhechippiin (＋), jonka
+  // napautus ei tarkoituksella taita korttia
+  await pg.click('.card[data-card=basics] > h2', { position: { x: 12, y: 10 } });
+  await pg.waitForTimeout(200);
+  ok(await pg.evaluate(() => !document.querySelector('.card[data-card=basics]').classList.contains('vp-kiinni')), 'otsikon napautus avaa kortin');
+  ok(await pg.evaluate(() => (JSON.parse(localStorage.getItem('vp-kortit-auki-v1')) || []).includes('basics')), 'avoin kortti muistetaan');
+  ok(await pg.evaluate(() => window.__haptics.length) >= 1, 'haptiikka napsahtaa (kortin avaus)');
+  const hapt0 = await pg.evaluate(() => window.__haptics.length);
+  await pg.click('.vp-tab:nth-child(4)');
+  await pg.waitForTimeout(700);
+  ok(await pg.evaluate(() => window.__haptics.length) > hapt0, 'tabivaihto napsahtaa');
+  ok(await pg.locator('#sumSheet details.sum-taite').count() === 4, 'Suunnitelmani-dokumentissa neljä taitetta appissa');
+  ok(await pg.evaluate(() => {
+    const d = [...document.querySelectorAll('#sumSheet details.sum-taite')];
+    return d[0].open && !d[1].open && !d[2].open && !d[3].open;
+  }), 'Kehitys auki oletuksena, muut taitteet kiinni');
+  await pg.click('#sumShare');
+  await pg.waitForTimeout(300);
+  ok(await pg.evaluate(() => window.__share.length === 1 && /#(s|f)=/.test(window.__share[0].url)), 'jakolinkki menee laitteen jakoarkkiin appissa');
+  await pg.click('.vp-tab:nth-child(3)');
+  await pg.waitForTimeout(700);
+  ok(await pg.locator('.tk-sugs-alku').count() === 1 && await pg.locator('.tk-alku-otsikko').count() === 1, 'Tulkin ehdotukset kortteina tyhjässä aloituksessa');
+  ok(await pg.locator('.tk-sugs-alku .tk-sug').count() >= 3, 'vähintään kolme ehdotuskorttia');
+  await ctx.close();
+
+  // 14b) Toteumaseuranta: kirjaus jäädyttää vertailukohdan, widget kertoo
+  //      tilan, tyhjennys nollaa viitteen, tabi sulkee sivun
+  ({ ctx, pg } = await page({ native: true }));
+  await pg.click('.vp-tab:nth-child(5)');
+  await pg.waitForTimeout(300);
+  ok(await pg.locator('#mi-toteuma').count() === 1, 'Toteuma-rivi Lisää-valikossa');
+  await pg.click('#mi-toteuma');
+  await pg.waitForTimeout(600);
+  ok(await pg.locator('.vp-toteuma').count() === 1, 'Toteuma avautuu kokosivuna');
+  await pg.waitForFunction(() => typeof sim !== 'undefined' && sim && sim.exp && sim.exp.length);
+  await pg.fill('#vptEur', '25000');
+  await pg.click('#vptTallenna');
+  await pg.waitForTimeout(300);
+  const tot = await pg.evaluate(() => JSON.parse(localStorage.getItem('vp-toteuma-v1')));
+  ok(tot && tot.rivit.length === 1 && tot.rivit[0].eur === 25000, 'kirjaus tallentuu');
+  ok(tot && tot.viite && Array.isArray(tot.viite.exp) && tot.viite.exp.length > 100, 'vertailukohta jäädytetään ensimmäisestä kirjauksesta');
+  ok(await pg.evaluate(() => !!document.querySelector('.vpt-tila') && !!document.querySelector('.vpt-rivi')), 'tilakortti ja kirjausrivi näkyvät');
+  await pg.evaluate(() => window.vpNatiivi.widgetPaivita());
+  await pg.waitForTimeout(300);
+  ok(await pg.evaluate(() => (window.__prefs['vp-widget'] || '').includes('Toteuma:')), 'widget-alarivi kertoo toteuman tilan');
+  ok(await pg.evaluate(() => !!window.__widgetData && window.__widgetData.includes('Toteuma:')), 'iOS-silta saa saman JSONin argumenttina');
+  await pg.click('.vpt-rivi .x');
+  await pg.waitForTimeout(200);
+  ok(await pg.evaluate(() => {
+    const t = JSON.parse(localStorage.getItem('vp-toteuma-v1'));
+    return t.rivit.length === 0 && !t.viite;
+  }), 'kaikkien kirjausten poisto nollaa vertailukohdan');
+  await pg.click('.vp-tab:nth-child(1)');
+  await pg.waitForTimeout(300);
+  ok(await pg.locator('.vp-toteuma').count() === 0, 'Polku-tabi sulkee Toteuman');
+  await ctx.close();
+
+  // 14c) Kuvakkeen pikatoiminto: laitteen kirjaama oikotie avaa oikean sivun
+  ({ ctx, pg } = await page({ native: true, oikotie: 'toteuma' }));
+  await pg.waitForTimeout(800);
+  ok(await pg.locator('.vp-toteuma').count() === 1, 'pikatoiminto avaa Toteuman käynnistyksessä');
+  await ctx.close();
+
+  // 14d) Käynnistysanimaatio merkitään tehdyksi (kerran per istunto)
+  ({ ctx, pg } = await page({ native: true, intro: true, wait: 2500 }));
+  ok(await pg.evaluate(() => sessionStorage.getItem('vp-intro-ok') === '1'), 'intro ajettu ja merkitty istuntoon');
+  await ctx.close();
+
   // 12) Web ilman Capacitoria: ei mitään natiivilisiä
   ({ ctx, pg } = await page({ native: false }));
   ok(await pg.evaluate(() => !window.vpNativeMenu), 'webissä ei valikkokoukkua');
@@ -366,6 +502,18 @@ server.listen(8134, async () => {
   ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.topbar-right')).display) !== 'none', 'yläpalkin napit näkyvät webissä');
   ok(await pg.evaluate(() => getComputedStyle(document.getElementById('tableBtn')).display) !== 'none', 'Vuositaulukko-nappi näkyy webissä');
   ok(await pg.locator('#mi-taulukko').count() === 0, 'webin valikossa ei Vuositaulukko-riviä');
+  // webin tekstit ja Suunnitelmat ennallaan (selain-sanat, avoin Uusi suunnitelma)
+  ok(await pg.evaluate(() => document.querySelector('.panel .disclaimer').textContent.includes('selaimeesi')), 'webin disclaimer puhuu selaimesta');
+  ok(await pg.evaluate(() => TOUR_STEPS.some((s) => s.s === '#moreBtn')), 'webin kierros osoittaa ☰-valikkoon');
+  await pg.click('#summaryBtn');
+  await pg.waitForTimeout(600);
+  ok(await pg.evaluate(() => document.querySelector('.ph-head p').textContent.includes('tässä selaimessa')), 'webin Suunnitelmat-otsikko ennallaan');
+  ok(await pg.locator('.ph-new-toggle').count() === 0 && await pg.locator('.ph-opt').count() >= 3, 'webin Uusi suunnitelma avoinna ilman nappia');
+  ok(await pg.evaluate(() => document.querySelector('.ph-foot').textContent.includes('Yksityisselaimessa')), 'webin alaviite ennallaan');
+  // wow-erän appimuutokset eivät vuoda webiin
+  ok(await pg.locator('.card.vp-kiinni').count() === 0, 'webin kortit avoinna (ei taittoa)');
+  ok(await pg.locator('#sumSheet details').count() === 0, 'webin Suunnitelmani ilman taitteita');
+  ok(await pg.locator('#mi-toteuma').count() === 0, 'webin valikossa ei Toteuma-riviä');
   await ctx.close();
 
   await b.close();

@@ -368,6 +368,8 @@ function dragRetline(d, age, noSnap) {
   const lo = state.ageNow + 1;
   if (a < lo) { a = lo; constraint = 'Eläkeikä ei voi olla alle nykyikä + 1 v'; }
   if (a > state.ageEnd) { a = state.ageEnd; constraint = 'Suunnitelma päättyy tähän ikään'; }
+  // appissa vuosisnap tuntuu sormissa (webissä vpHaptic ei ole olemassa)
+  if (!noSnap && a !== d.ev.age && window.vpHaptic) window.vpHaptic('Light');
   d.ev.age = a;
   return { html: chipWrap(chipRow('Eläkeikä', d.startAge, a, 'v'), constraint), constraint };
 }
@@ -401,6 +403,7 @@ function dragEvent(d, age, py, noSnap) {
     if (a < state.ageNow) { a = state.ageNow; constraint = 'Menneisyyteen ei pääse'; }
     if (a > state.ageEnd) { a = state.ageEnd; constraint = 'Suunnitelma päättyy tähän ikään'; }
   }
+  if (!noSnap && !ev.owned && a !== ev.age && window.vpHaptic) window.vpHaptic('Light');
   ev.age = a;
   if (ev.sellAge != null && ev.sellAge <= ev.age) ev.sellAge = ev.age + 1;
   let rows = ev.owned ? '' : chipRow('Ikä', d.startAge, a, 'v');

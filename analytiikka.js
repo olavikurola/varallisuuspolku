@@ -709,7 +709,7 @@ function renderGate(me) {
        <p>Tämä näkymä kertoo, miten eri ikäiset suunnittelevat talouttaan ja etenevät
        vaurastumisen matkalla. Tilastot aukeavat, kun sinullakin on <b>oma suunnitelma</b>.</p>
        <a class="btn" href="./">Tee oma suunnitelma →</a>
-       <p class="small">Vie pari minuuttia — suunnitelmasi pysyy omassa selaimessasi.</p></div>`;
+       <p class="small">Vie pari minuuttia — suunnitelmasi pysyy ${(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ? 'omalla laitteellasi' : 'omassa selaimessasi'}.</p></div>`;
   document.body.appendChild(lock);
   return true;
 }

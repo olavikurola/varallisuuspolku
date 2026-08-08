@@ -19,6 +19,8 @@
   const KEY_LS = 'vp-tulkki-key';
   const EVALS_LS = 'vp-tulkki-evals';
   const TAX_YEAR = 2026; // pidä samassa kuin validointi.html
+  // Appi puhuu laitteesta, web selaimesta (tietosuojatekstit)
+  const APPI = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 
   /* ---------- Avain ---------- */
 
@@ -357,7 +359,7 @@
       <b>Tulkki</b><small>tekoälyapuri</small>
       <button type="button" class="tk-x" id="tkClose" aria-label="Sulje Tulkki">✕</button>
     </header>
-    <div class="tk-privacy" title="Vain suunnitelman anonyymi muoto ja kysymys välitetään selitystä varten — ei nimiä eikä tunnisteita.">🔒 Laskelmasi ei lähde selaimestasi — palvelin ei tallenna mitään.</div>
+    <div class="tk-privacy" title="Vain suunnitelman anonyymi muoto ja kysymys välitetään selitystä varten — ei nimiä eikä tunnisteita.">🔒 Laskelmasi ei lähde ${APPI ? 'laitteeltasi' : 'selaimestasi'} — palvelin ei tallenna mitään.</div>
     <div class="tk-log" id="tkLog" aria-live="polite"></div>
     <div class="tk-sugs" id="tkSugs"></div>
     <form class="tk-ask" id="tkForm">
@@ -458,8 +460,11 @@
       }
       sugs.push('Mikä suunnitelmassani on suurin epävarmuus?');
       sugs.push('Mistä verot kertyvät?');
-      html = sugs.slice(0, tkNarrow() ? 1 : 2).map((q) => `<button type="button" class="tk-sug">${esc(q)}</button>`).join('') +
+      // Appissa tyhjä aloitusnäkymä täyttyy ehdotuskorteilla (3 + haasta) —
+      // webissä kapea chippirivi kuten ennen
+      html = sugs.slice(0, APPI ? 3 : (tkNarrow() ? 1 : 2)).map((q) => `<button type="button" class="tk-sug">${esc(q)}</button>`).join('') +
         '<button type="button" class="tk-sug tk-haasta">🔍 Haasta suunnitelmani</button>';
+      if (APPI) html = '<div class="tk-alku-otsikko">Kokeile näitä</div>' + html;
     } else {
       // Profiilichippi vain kun rinnakkaisia suunnitelmia oikeasti on
       const hasPlans = typeof plans !== 'undefined' && Array.isArray(plans) && plans.length > 1;
@@ -469,6 +474,7 @@
         '<button type="button" class="tk-sug tk-adv">📋 Kysymyslista varainhoitajalle</button>';
     }
     el.innerHTML = html;
+    el.classList.toggle('tk-sugs-alku', APPI && !chat.length);
     el.querySelectorAll('.tk-sug').forEach((b) => {
       b.addEventListener('click', () => {
         if (b.classList.contains('tk-adv')) ask('', 'advisor');
@@ -1192,7 +1198,7 @@
     card.className = 'tk-actions';
     let html = `<div class="tk-kats-head"><span>Tulkin toimet</span><button type="button" class="tk-kats-x" aria-label="Sulje">✕</button></div>`;
     if (!list.length) {
-      html += '<div class="tk-ch-note">Tulkki ei ole vielä muuttanut suunnitelmaasi. Pidetyt muutokset kirjautuvat tähän — vain sinun selaimeesi, ei minnekään muualle.</div>';
+      html += '<div class="tk-ch-note">Tulkki ei ole vielä muuttanut suunnitelmaasi. Pidetyt muutokset kirjautuvat tähän — vain sinun ' + (APPI ? 'laitteellesi' : 'selaimeesi') + ', ei minnekään muualle.</div>';
     } else {
       html += `<div class="tk-act-tools"><button type="button" class="tk-mini tk-act-export">Lataa loki</button><button type="button" class="tk-mini tk-act-clear">Tyhjennä</button></div>`;
       html += list.slice().reverse().map((e, ri) => {

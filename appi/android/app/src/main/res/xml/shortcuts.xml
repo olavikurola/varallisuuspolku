@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kuvakkeen pikatoiminnot (pitkä painallus käynnistimessä). Intent kantaa
+     vp_oikotie-extran → MainActivity kirjaa sen VpWidgetPluginiin → web lukee
+     sen natiivilisat.js:n tarkistaOikotie-polulla ja avaa oikean sivun. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="tulkki"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/oikotie_tulkki">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.varallisuuspolku.app"
+            android:targetClass="com.varallisuuspolku.app.MainActivity">
+            <extra android:name="vp_oikotie" android:value="tulkki" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="toteuma"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/oikotie_toteuma">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.varallisuuspolku.app"
+            android:targetClass="com.varallisuuspolku.app.MainActivity">
+            <extra android:name="vp_oikotie" android:value="toteuma" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="suunnitelma"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/oikotie_suunnitelma">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.varallisuuspolku.app"
+            android:targetClass="com.varallisuuspolku.app.MainActivity">
+            <extra android:name="vp_oikotie" android:value="suunnitelma" />
+        </intent>
+    </shortcut>
+</shortcuts>

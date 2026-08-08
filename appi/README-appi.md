@@ -52,9 +52,36 @@ logiikka pysyy periaatteen mukaisesti webissä.
   widget (VarallisuusWidget.java) lukee saman SharedPreferencesin
   ("CapacitorStorage", avain `vp-widget`) ja näyttää valmiit tekstit — widget
   ei laske mitään. Päivitys heti VpWidgetPlugin-pikkusillalla (rekisteröity
-  MainActivityssä) + varalta 30 min välein. **iOS-widget tehdään erikseen**
-  kun Apple-tili aukeaa (WidgetKit-laajennus vaatii Xcode-projektimuutokset,
-  joita ei kannata tehdä sokkona ilman TestFlight-testausta).
+  MainActivityssä) + varalta 30 min välein.
+- **Kotinäyttöwidget (iOS, 7.8.2026)**: WidgetKit-laajennus
+  `ios/App/VarallisuusWidget/` (target lisätty pbxprojiin käsin). Sama
+  periaate kuin Androidilla: natiivilisat.js antaa valmiin JSONin
+  VpWidgetPlugin.swiftille (rekisteröity VPViewControllerin
+  capacitorDidLoadissa), joka kirjoittaa sen App Groupiin
+  `group.com.varallisuuspolku.app` ja lataa aikajanan uudelleen
+  (WidgetCenter). **EDELLYTYS ENNEN SEURAAVAA TESTFLIGHT-BUILDIA** (kerran,
+  porttaalissa developer.apple.com): (1) Identifiers → App Groups → **+** →
+  `group.com.varallisuuspolku.app`; (2) Identifiers → uusi App ID
+  `com.varallisuuspolku.app.widget` (App-tyyppi) ja rasti App Groups
+  -capability + liitä ryhmä; (3) avaa `com.varallisuuspolku.app` ja rasti
+  sillekin App Groups + sama ryhmä. Ilman näitä vientivaihe kaatuu
+  provisiointivirheeseen — pilviallekirjoitus luo profiilit itse kunhan
+  ID:t ja ryhmä ovat olemassa.
+- **Toteumaseuranta (7.8.2026)**: Lisää-valikon Toteuma-sivu — käyttäjä
+  kirjaa kuukauden toteutuneen varallisuuden, ja ensimmäinen kirjaus
+  jäädyttää suunnitelman odotuskäyrän vertailukohdaksi (localStorage
+  `vp-toteuma-v1`). Tila (polulla/edellä/jäljessä) näkyy sivulla ja widgetin
+  alarivillä; kuukausimuistutus kehottaa kirjaamaan. Kaikki laitteella.
+- **Kuvakkeen pikatoiminnot (7.8.2026)**: pitkä painallus käynnistimessä →
+  Kysy AI / Toteuma / Suunnitelma. iOS: Info.plistin static shortcut -itemit
+  + AppDelegate kirjaa tyypin VpWidgetPluginiin; Android: res/xml/shortcuts.xml
+  → MainActivity poimii intent-extran samaan siltaan. Web hakee odottavan
+  valinnan `VpWidget.oikotie()`-kutsulla käynnistyksessä ja etualalle
+  palatessa (natiivilisat.js) ja ajaa sen alapalkin vpAjaLippu-väylällä.
+- **Haptiikka** (`@capacitor/haptics`) ja **jakoarkki** (`@capacitor/share`,
+  7.8.2026): kevyt napsu tabeissa, kytkimissä ja piirtopöydän vuosisnapeissa
+  (`window.vpHaptic`-koukku, webissä no-op); Suunnitelmani-sivun jakolinkki
+  aukeaa laitteen omaan jakovalikkoon (peruutus ei pudota leikepöytäpolkuun).
 
 Regressiot: `testit/selain/verify-natiivilisat.js` (Capacitor-stub: valikkorivit,
 ajastukset, lupa evätty, lukituspolut, widget-JSON, web-noop).

@@ -9,5 +9,8 @@ class VPViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         webView?.scrollView.bounces = true
         webView?.scrollView.alwaysBounceVertical = true
+        // Oma pikkuplugin (widget-silta + kuvakkeen pikatoiminnot) — paikallinen
+        // Swift-luokka rekisteröidään käsin, npm-pluginit rekisteröityvät itse
+        bridge?.registerPluginInstance(VpWidgetPlugin())
     }
 }

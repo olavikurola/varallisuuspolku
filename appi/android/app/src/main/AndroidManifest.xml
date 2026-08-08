@@ -18,6 +18,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Kuvakkeen pikatoiminnot (pitkä painallus) -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
 
         <!-- Kotinäyttöwidget: suunnitelman tila (lukee vain paikallista tallennusta) -->

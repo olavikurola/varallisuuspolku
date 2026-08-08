@@ -10,4 +10,8 @@
     <string name="widget_oletus_otsikko">Varallisuuspolku</string>
     <string name="widget_oletus_arvo">—</string>
     <string name="widget_oletus_alarivi">Avaa sovellus kerran</string>
+    <!-- Kuvakkeen pikatoiminnot -->
+    <string name="oikotie_tulkki">Kysy AI</string>
+    <string name="oikotie_toteuma">Toteuma</string>
+    <string name="oikotie_suunnitelma">Suunnitelma</string>
 </resources>

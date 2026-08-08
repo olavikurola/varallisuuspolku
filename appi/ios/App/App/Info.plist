@@ -58,5 +58,34 @@
 	<!-- Sovelluksen lukitus (opt-in): Face ID avaa lukituksen -->
 	<key>NSFaceIDUsageDescription</key>
 	<string>Kasvojentunnistusta käytetään vain sovelluksen lukituksen avaamiseen.</string>
+	<!-- Kuvakkeen pikatoiminnot (pitkä painallus): AppDelegate kirjaa tyypin
+	     VpWidgetPluginiin ja web avaa oikean sivun -->
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>tulkki</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Kysy AI</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>sparkles</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>toteuma</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Toteuma</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>chart.line.uptrend.xyaxis</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>suunnitelma</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Suunnitelma</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>doc.text</string>
+		</dict>
+	</array>
 </dict>
 </plist>

@@ -35,6 +35,26 @@ const TOUR_STEPS = [
     x: 'Vertailu tallentaa nykyisen suunnitelman haamukäyräksi muutosten taakse. Täältä löytyvät myös Tilastot ja palvelun tiedot.' },
 ];
 
+// Appissa (Capacitor) navigointi elää alapalkissa: kierros osoittaa tabeihin
+// webin piilotettujen nappien sijaan (kelluke, Pro-rivi, yläpalkki, ☰), ja
+// tekstit puhuvat laitteesta, eivät selaimesta. Webissä lohko ei tee mitään.
+// Tabien ID:t (#vpTabAi ym.) syntyvät alapalkki.js:ssä ennen kierroksen alkua.
+if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+  TOUR_STEPS[0].x = TOUR_STEPS[0].x.replace('omassa selaimessasi', 'omalla laitteellasi');
+  for (const st of TOUR_STEPS) {
+    if (st.s === '.tk-handle') st.s = '#vpTabAi';
+    else if (st.s === '#summaryBtn') st.s = '#vpTabSuunnitelma';
+    else if (st.s === '#proSwitch') {
+      st.s = '#vpTabLisaa';
+      st.x = 'Lisää-valikon Asetuksista löytyvä Pro-kytkin avaa ammattilaissäädöt: omat tuotto-oletukset ja korrelaatiot, kulut, nostostrategiat ja syvemmät analyysit. Perusversio riittää pitkälle — Pro odottaa, kun tarvitset sitä.';
+    } else if (st.s === '#moreBtn') {
+      st.t = 'Lisää';
+      st.s = '#vpTabLisaa';
+      st.x = 'Lisää-valikosta löytyvät Vuositaulukko, Vertailu ja palvelun tiedot — sekä asetukset: teema, Pro, muistutukset ja sovelluksen lukitus.';
+    }
+  }
+}
+
 function tourShow(i) {
   if (i >= TOUR_STEPS.length) return endTour();
   const st = TOUR_STEPS[i];
@@ -45,6 +65,11 @@ function tourShow(i) {
   const tour = $('tour'), hole = $('tourHole'), card = $('tourCard');
   tour.hidden = false;
   const target = st.s ? document.querySelector(st.s) : null;
+  // appin taitettu kortti auki ennen valokeilaa (vp-kiinni on vain appissa)
+  if (target && target.closest) {
+    const taitettu = target.closest('.card.vp-kiinni');
+    if (taitettu) taitettu.classList.remove('vp-kiinni');
+  }
   if (target) target.scrollIntoView({ block: 'center' });
 
   const last = i === TOUR_STEPS.length - 1;

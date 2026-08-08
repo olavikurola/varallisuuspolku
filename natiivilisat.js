@@ -66,7 +66,7 @@
         var lista = [{
           id: KK_ID,
           title: 'Kuukausikatsaus',
-          body: 'Päivitä lukusi Varallisuuspolussa — ollaanko yhä polulla?',
+          body: 'Kirjaa toteutunut varallisuutesi — ollaanko yhä polulla?',
           schedule: { on: { day: 1, hour: 9, minute: 0 }, allowWhileIdle: true },
         }];
         if (typeof state !== 'undefined' && state && state.events && typeof evLabel === 'function') {
@@ -216,6 +216,165 @@
     }).catch(function () { ilmoita('Lukitustavan tarkistus epäonnistui'); done(); });
   }
 
+  /* ===================== Jakoarkki ===================== */
+  // Laitteen oma jakovalikko (Viestit, sähköposti, AirDrop…) jakolinkille.
+  // Palauttaa true kun arkki näytettiin (myös peruutus — silloin EI pudota
+  // leikepöytäpolkuun), false kun plugin puuttuu → kutsuja käyttää varapolkua.
+
+  function jaa(opts) {
+    if (!P.Share || !P.Share.share) return Promise.resolve(false);
+    return P.Share.share({
+      title: opts.title || 'Varallisuuspolku',
+      text: opts.text || '',
+      url: opts.url,
+      dialogTitle: opts.title || 'Jaa',
+    }).then(function () { return true; }).catch(function () { return true; });
+  }
+
+  /* ===================== Toteumaseuranta ===================== */
+  // Kirjaa toteutunut varallisuus kuukausittain ja vertaa sitä suunnitelman
+  // odotukseen. Vertailukohta JÄÄDYTETÄÄN ensimmäisestä kirjauksesta
+  // (odotuskäyrä + kuukausi): suunnitelma elää ja ankkuroituu aina nykyhetkeen,
+  // joten ilman jäädytystä "odotus silloin" ei olisi olemassa. Kaikki data
+  // pysyy laitteella. Graafin historiajana on kirjattu jatkoon — graafi alkaa
+  // nykyhetkestä, joten menneet pisteet eivät mahdu sen akselille.
+
+  var TOTEUMA_KEY = 'vp-toteuma-v1';
+
+  function kkNyt() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+  function kkEro(a, b) { // kuukausia a → b ('YYYY-MM')
+    var pa = a.split('-').map(Number), pb = b.split('-').map(Number);
+    return (pb[0] - pa[0]) * 12 + (pb[1] - pa[1]);
+  }
+  function kkNimi(kk) {
+    var p = kk.split('-').map(Number);
+    return p[1] + '/' + p[0];
+  }
+  function toteumaLue() {
+    try { return JSON.parse(localStorage.getItem(TOTEUMA_KEY)) || { viite: null, rivit: [] }; } catch (e) { return { viite: null, rivit: [] }; }
+  }
+  function toteumaTallennaData(t) {
+    try { localStorage.setItem(TOTEUMA_KEY, JSON.stringify(t)); } catch (e) {}
+  }
+
+  function toteumaOdotus(t, kk) {
+    if (!t.viite || !t.viite.exp || !t.viite.exp.length) return null;
+    var i = kkEro(t.viite.pvm, kk);
+    if (i < 0) i = 0;
+    if (i >= t.viite.exp.length) i = t.viite.exp.length - 1;
+    return t.viite.exp[i];
+  }
+
+  // Tuorein kirjaus suhteessa jäädytettyyn odotukseen → tila widgetiin ja sivulle
+  function toteumaTila() {
+    var t = toteumaLue();
+    if (!t.rivit.length) return null;
+    var r = t.rivit[t.rivit.length - 1];
+    var odotus = toteumaOdotus(t, r.kk);
+    if (odotus == null || typeof fmtCompact !== 'function') return null;
+    var delta = r.eur - odotus;
+    var suhde = odotus > 0 ? delta / odotus : 0;
+    var teksti, lyhyt;
+    if (Math.abs(suhde) < 0.05) { teksti = 'Polulla ✓'; lyhyt = 'Toteuma: polulla ✓'; }
+    else if (delta > 0) { teksti = 'Edellä ' + fmtCompact(delta); lyhyt = 'Toteuma: ' + fmtCompact(delta) + ' edellä'; }
+    else { teksti = 'Jäljessä ' + fmtCompact(-delta); lyhyt = 'Toteuma: ' + fmtCompact(-delta) + ' jäljessä'; }
+    return { teksti: teksti, lyhyt: lyhyt, kk: r.kk, eur: r.eur, odotus: odotus, delta: delta };
+  }
+
+  function toteumaKirjaa(eur) {
+    var t = toteumaLue();
+    if (!t.viite) {
+      // jäädytys: odotuskäyrä kirjaushetkellä (kokonaisiin euroihin pyöristettynä)
+      if (typeof sim === 'undefined' || !sim || !sim.exp) return false;
+      var exp = [];
+      for (var i = 0; i < sim.exp.length; i++) exp.push(Math.round(sim.exp[i]));
+      t.viite = { pvm: kkNyt(), exp: exp };
+    }
+    var kk = kkNyt();
+    t.rivit = t.rivit.filter(function (r) { return r.kk !== kk; });
+    t.rivit.push({ kk: kk, eur: eur });
+    t.rivit.sort(function (a, b) { return a.kk < b.kk ? -1 : 1; });
+    toteumaTallennaData(t);
+    widgetPaivita();
+    return true;
+  }
+
+  var toteumaEl = null;
+
+  function suljeToteuma() {
+    if (toteumaEl) {
+      toteumaEl.remove();
+      toteumaEl = null;
+      document.body.classList.remove('vp-sivu-auki');
+    }
+  }
+  window.vpSuljeToteuma = suljeToteuma;
+
+  function renderToteuma() {
+    if (!toteumaEl) return;
+    var t = toteumaLue();
+    var tila = toteumaTila();
+    var fmt = typeof fmtCompact === 'function' ? fmtCompact : function (v) { return Math.round(v) + ' €'; };
+    var html = '<div class="vp-sivuotsikko">Toteuma</div>' +
+      '<div class="vpt-nyt"><input id="vptEur" type="number" inputmode="numeric" min="0" step="1000" ' +
+      'placeholder="Sijoitukset ja säästöt nyt, €"><button type="button" class="btn" id="vptTallenna">Kirjaa</button></div>';
+    if (tila) {
+      html += '<div class="vpt-tila">' + tila.teksti +
+        '<small>' + kkNimi(tila.kk) + ': kirjattu ' + fmt(tila.eur) + ' · suunnitelman odotus ' + fmt(tila.odotus) + '</small></div>';
+    } else {
+      html += '<div class="vpt-tila">Aloita kirjaamalla tämän kuun varallisuutesi' +
+        '<small>Vertailukohta jäädytetään suunnitelmastasi ensimmäisellä kirjauksella</small></div>';
+    }
+    var rivit = t.rivit.slice().reverse().map(function (r) {
+      var od = toteumaOdotus(t, r.kk);
+      var d = od != null ? r.eur - od : null;
+      return '<div class="vpt-rivi" data-kk="' + r.kk + '"><span><b>' + kkNimi(r.kk) + '</b> · ' + fmt(r.eur) + '</span>' +
+        '<span class="d">' + (d == null ? '' : (d >= 0 ? '+' : '−') + fmt(Math.abs(d))) + '</span>' +
+        '<button type="button" class="x" aria-label="Poista kirjaus">✕</button></div>';
+    }).join('');
+    if (rivit) html += '<div class="vpt-lista">' + rivit + '</div>';
+    html += '<div class="vpt-info">Kirjaukset ja vertailukohta pysyvät vain tällä laitteella. ' +
+      (t.viite ? 'Vertailukohta on jäädytetty suunnitelmastasi ' + kkNimi(t.viite.pvm) + ' — kaikkien kirjausten poisto nollaa sen.' :
+        'Kuukausimuistutus muistuttaa kirjaamisesta, kun muistutukset ovat päällä.') + '</div>';
+    toteumaEl.innerHTML = html;
+
+    toteumaEl.querySelector('#vptTallenna').addEventListener('click', function () {
+      var inp = toteumaEl.querySelector('#vptEur');
+      var v = parseFloat(inp.value);
+      if (!(v >= 0)) { ilmoita('Anna varallisuus euroina'); return; }
+      if (typeof sim === 'undefined' || !sim || !sim.exp) { ilmoita('Suunnitelma ei ole vielä laskenut — hetki'); return; }
+      if (window.vpHaptic) window.vpHaptic('Medium');
+      toteumaKirjaa(Math.round(v));
+      renderToteuma();
+      ilmoita('Kirjattu — ' + (toteumaTila() || {}).teksti);
+    });
+    toteumaEl.querySelectorAll('.vpt-rivi .x').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var kk = b.closest('.vpt-rivi').dataset.kk;
+        var t2 = toteumaLue();
+        t2.rivit = t2.rivit.filter(function (r) { return r.kk !== kk; });
+        if (!t2.rivit.length) t2.viite = null; // tyhjä loki nollaa vertailukohdan
+        toteumaTallennaData(t2);
+        widgetPaivita();
+        renderToteuma();
+      });
+    });
+  }
+
+  window.vpAvaaToteuma = function () {
+    if (toteumaEl) return;
+    suljeToteuma();
+    var el = document.createElement('div');
+    el.className = 'menu vp-toteuma'; // .menu = appin kokosivupohja (alapalkki.js)
+    document.body.appendChild(el);
+    document.body.classList.add('vp-sivu-auki');
+    toteumaEl = el;
+    renderToteuma();
+  };
+
   /* ===================== Widget-silta ===================== */
   // Tiivistelmä kotinäyttöwidgetille Preferences-tallennukseen (Androidilla
   // SharedPreferences "CapacitorStorage", josta widget lukee). Luvut tulevat
@@ -241,11 +400,29 @@
         alarivi: 'Suunnitelma ' + Math.round(state.ageEnd) + ' v ikään',
       };
     } else return;
+    // toteumakirjaus vie alarivin: polulla / edellä / jäljessä
+    var tila = toteumaTila();
+    if (tila) data.alarivi = tila.lyhyt;
     data.paivitetty = new Date().toLocaleDateString('fi-FI');
-    P.Preferences.set({ key: 'vp-widget', value: JSON.stringify(data) }).then(function () {
-      // Android-widget päivittyy heti pikkupluginilla; ilman sitä (iOS) tiedot
-      // odottavat widgetin omaa päivitysrytmiä
-      if (P.VpWidget && P.VpWidget.paivita) P.VpWidget.paivita().catch(function () {});
+    var json = JSON.stringify(data);
+    P.Preferences.set({ key: 'vp-widget', value: json }).then(function () {
+      // Pikkusilta päivittää widgetin heti: Android lukee Preferencesin,
+      // iOS saa JSONin argumenttina (App Group -tallennus + WidgetKit-reload)
+      if (P.VpWidget && P.VpWidget.paivita) P.VpWidget.paivita({ data: json }).catch(function () {});
+    }).catch(function () {});
+  }
+
+  /* ===================== Kuvakkeen pikatoiminnot ===================== */
+  // Pitkä painallus appikuvakkeesta (Kysy AI / Suunnitelma / Toteuma):
+  // natiivipuoli kirjaa valinnan talteen, ja täällä se ajetaan alapalkin
+  // vpAjaLippu-väylän kautta — sama polku kuin tabeilla. Tarkistus myös
+  // taustalta palattaessa (appi oli jo käynnissä pikapainalluksen hetkellä).
+
+  function tarkistaOikotie() {
+    if (!P.VpWidget || !P.VpWidget.oikotie) return;
+    P.VpWidget.oikotie().then(function (r) {
+      var arvo = r && r.arvo;
+      if (arvo && window.vpAjaLippu) window.vpAjaLippu(arvo);
     }).catch(function () {});
   }
 
@@ -290,15 +467,19 @@
       piilossaAlkoi = Date.now();
       ajastaMuistutukset();
       widgetPaivita();
-    } else if (paalla(LUKITUS_KEY) && piilossaAlkoi && Date.now() - piilossaAlkoi > LUKKO_TAUKO_MS) {
-      merkitseAvatuksi(false); // pitkä tauko → istunnon avaus raukeaa
-      naytaLukko();
-      avaaLukko();
+    } else {
+      if (paalla(LUKITUS_KEY) && piilossaAlkoi && Date.now() - piilossaAlkoi > LUKKO_TAUKO_MS) {
+        merkitseAvatuksi(false); // pitkä tauko → istunnon avaus raukeaa
+        naytaLukko();
+        avaaLukko();
+      }
+      tarkistaOikotie(); // kuvakkeen pikatoiminto voi odottaa myös lämpimässä paluussa
     }
   });
 
   function kaynnistys() {
     ajastaMuistutukset();
+    tarkistaOikotie();
     // widget tarvitsee ensimmäisen simulaation — odotellaan kevyesti
     var yritys = 0;
     (function odota() {
@@ -309,6 +490,12 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', kaynnistys);
   else kaynnistys();
 
-  // testien ja vianetsinnän kädensija
-  window.vpNatiivi = { ajastaMuistutukset: ajastaMuistutukset, widgetPaivita: widgetPaivita };
+  // testien ja vianetsinnän kädensija + sovellus.js:n jakosauma
+  window.vpNatiivi = {
+    ajastaMuistutukset: ajastaMuistutukset,
+    widgetPaivita: widgetPaivita,
+    jaa: jaa,
+    toteumaTila: toteumaTila,
+    tarkistaOikotie: tarkistaOikotie,
+  };
 })();
