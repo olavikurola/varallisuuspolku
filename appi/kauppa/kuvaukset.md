@@ -55,9 +55,14 @@ MITÄ SOVELLUS TEKEE
   tekstinä, jonka voi viedä mukaan pankkiin tai neuvojalle
 
 SOVELLUKSEN LISÄT
+• Toteumaseuranta: kirjaa toteutunut varallisuutesi kuukausittain ja näe,
+  oletko polulla, edellä vai jäljessä suunnitelmastasi
+• Kotinäyttöwidget: suunnitelmasi tila yhdellä vilkaisulla
 • Muistutukset (valinnainen): kuukausikatsaus ja suunnitelmasi omat
   tapahtumat — "tämän piti tapahtua nyt, toteutuiko?"
 • Sovelluksen lukitus (valinnainen): Face ID, Touch ID tai laitteen koodi
+• Pikatoiminnot: pitkä painallus kuvakkeesta suoraan Kysy AI:hin,
+  Toteumaan tai Suunnitelmaan
 
 YKSITYISYYS EDELLÄ
 Kaikki laskenta ja tiedot pysyvät laitteellasi. Ei tiliä, ei
@@ -82,10 +87,14 @@ varallisuuspolku.com.
 
 **App Review -muistiinpanot (katselmoijalle):**
 ```
-Ei kirjautumista — kaikki toiminnot käytettävissä heti. Kokeile:
-1) Etusivun esimerkit-valikosta valmis persoona, 2) käyrän raahaus
-piirtopöydällä, 3) ☰-valikosta Muistutukset ja Sovelluksen lukitus
-(natiivitoiminnot). Kaikki data pysyy laitteella; appi ei kerää mitään.
+No sign-in — all features work immediately. Native features beyond the
+web experience: home screen widget (WidgetKit), icon quick actions,
+monthly progress tracking (Toteuma in the Lisää tab), local notifications,
+Face ID app lock, haptic feedback on the drawing board, native share
+sheet. Try: 1) drag the wealth curve on the drawing board (expand icon on
+the chart), 2) Lisää tab -> Muistutukset / Sovelluksen lukitus / Toteuma,
+3) add the home screen widget after opening the app once. All calculations
+run on device; the app collects no data.
 ```
 
 ## Google Play
