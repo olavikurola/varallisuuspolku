@@ -481,6 +481,29 @@ server.listen(8134, async () => {
   ok(await pg.locator('.vp-toteuma').count() === 1, 'pikatoiminto avaa Toteuman käynnistyksessä');
   await ctx.close();
 
+  // 14e) Esittelykierroksen kortti ei jää alapalkin taakse (laitehavainto:
+  //      alalaidan kohteilla kortti valui palkin alle)
+  ({ ctx, pg } = await page({ native: true, w: 390, h: 844 }));
+  await pg.evaluate(() => startTour());
+  let tourYlivuoto = 0;
+  for (let i = 0; i < 12; i++) {
+    await pg.waitForTimeout(250);
+    const mitta = await pg.evaluate(() => {
+      const t = document.getElementById('tour');
+      if (!t || t.hidden) return null;
+      const c = document.getElementById('tourCard').getBoundingClientRect();
+      const bar = document.querySelector('.vp-tabbar').getBoundingClientRect();
+      return c.bottom - bar.top;
+    });
+    if (mitta == null) break;
+    tourYlivuoto = Math.max(tourYlivuoto, mitta);
+    const next = await pg.locator('#tourNext').count();
+    if (!next) break;
+    await pg.click('#tourNext');
+  }
+  ok(tourYlivuoto <= 1, 'kierroksen kortti pysyy alapalkin yläpuolella joka askeleella (max ylitys ' + Math.round(tourYlivuoto) + ' px)');
+  await ctx.close();
+
   // 14d) Käynnistysanimaatio merkitään tehdyksi (kerran per istunto)
   ({ ctx, pg } = await page({ native: true, intro: true, wait: 2500 }));
   ok(await pg.evaluate(() => sessionStorage.getItem('vp-intro-ok') === '1'), 'intro ajettu ja merkitty istuntoon');

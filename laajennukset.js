@@ -89,6 +89,10 @@ function tourShow(i) {
   // Mittaus vasta kun scrollIntoView on asettunut
   requestAnimationFrame(() => {
     const vw = window.innerWidth, vh = window.innerHeight;
+    // appin alapalkki varaa ruudun alaosan — kortti ei saa jäädä sen taakse
+    // (laitehavainto 8.8.); webissä palkkia ei ole ja alaraja = ruudun pohja
+    const palkki = document.querySelector('.vp-tabbar');
+    const alaraja = palkki ? Math.min(vh, palkki.getBoundingClientRect().top) : vh;
     if (target) {
       const r = target.getBoundingClientRect();
       const pad = 8;
@@ -109,11 +113,11 @@ function tourShow(i) {
     if (target) {
       const r = target.getBoundingClientRect();
       top = r.bottom + 16;
-      if (top + ch > vh - 12) top = r.top - ch - 16;   // ei mahdu alle → ylle
-      if (top < 12) top = Math.max(12, vh - ch - 16);  // ei ylle → alalaitaan
+      if (top + ch > alaraja - 12) top = r.top - ch - 16;   // ei mahdu alle → ylle
+      if (top < 12) top = Math.max(12, alaraja - ch - 16);  // ei ylle → alalaitaan
       left = clamp(r.left + r.width / 2 - cw / 2, 12, Math.max(12, vw - cw - 12));
     } else {
-      top = vh * 0.42 - ch / 2;
+      top = Math.min(vh * 0.42 - ch / 2, alaraja - ch - 12);
       left = (vw - cw) / 2;
     }
     card.style.top = Math.round(top) + 'px';
