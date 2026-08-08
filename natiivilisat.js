@@ -410,14 +410,24 @@
     P.Preferences.set({ key: 'vp-widget', value: json }).then(function () {
       // Pikkusilta päivittää widgetin heti: Android lukee Preferencesin,
       // iOS saa JSONin argumenttina (App Group -tallennus + WidgetKit-reload).
-      // Diagnoosi talteen Toteuma-sivun inforiviä varten: silta puuttuu /
-      // App Group puuttuu allekirjoituksesta / ok.
-      if (P.VpWidget && P.VpWidget.paivita) {
-        P.VpWidget.paivita({ data: json }).then(function (r) {
-          widgetDiag = (r && r.ok === false) ? 'ryhmä puuttuu' : 'ok';
-        }).catch(function () { widgetDiag = 'siltavirhe'; });
+      // Diagnoosi talteen Toteuma-sivun inforiviä varten — plugin haetaan
+      // KUTSUHETKELLÄ suoraan window.Capacitor.Pluginsista (ei latauksessa
+      // kaapatusta P:stä), ja vikatila kertoo täsmälleen puuttuvan lenkin.
+      var vw = null;
+      try { vw = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.VpWidget; } catch (e) {}
+      if (vw && typeof vw.paivita === 'function') {
+        vw.paivita({ data: json }).then(function (r) {
+          widgetDiag = (r && r.ok === false) ? 'ryhmä puuttuu allekirjoituksesta' : 'ok';
+        }).catch(function (e) {
+          widgetDiag = 'siltavirhe: ' + ((e && (e.message || e.code)) || e);
+        });
       } else {
-        widgetDiag = 'silta puuttuu';
+        var headerit = [];
+        try { headerit = (window.Capacitor.PluginHeaders || []).map(function (h) { return h.name; }); } catch (e) {}
+        widgetDiag = !window.Capacitor ? 'ei capacitoria'
+          : !window.Capacitor.Plugins ? 'plugins-objekti puuttuu'
+          : !vw ? 'silta puuttuu — rekisteröidyt: ' + (headerit.join(', ') || '(tyhjä)')
+          : 'paivita-metodi puuttuu (' + typeof vw.paivita + ')';
       }
     }).catch(function () {});
   }
@@ -430,8 +440,10 @@
   // taustalta palattaessa (appi oli jo käynnissä pikapainalluksen hetkellä).
 
   function tarkistaOikotie() {
-    if (!P.VpWidget || !P.VpWidget.oikotie) return;
-    P.VpWidget.oikotie().then(function (r) {
+    var vw = null;
+    try { vw = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.VpWidget; } catch (e) {}
+    if (!vw || !vw.oikotie) return;
+    vw.oikotie().then(function (r) {
       var arvo = r && r.arvo;
       if (arvo && window.vpAjaLippu) window.vpAjaLippu(arvo);
     }).catch(function () {});
