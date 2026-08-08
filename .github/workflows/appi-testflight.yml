@@ -107,5 +107,18 @@ jobs:
             -authenticationKeyID "$KEY_ID" \
             -authenticationKeyIssuerID "$ISSUER_ID"
 
+      # Diagnostiikka: näkyykö App Group allekirjoitetussa paketissa (appi + widget)?
+      # Widget lukee tietonsa ryhmästä — jos entitlementti puuttuu, silta ei toimi.
+      - name: Näytä entitlementit (diagnostiikka)
+        run: |
+          cd "$RUNNER_TEMP/export"
+          IPA=$(ls *.ipa | head -1)
+          unzip -q "$IPA" -d ipa
+          APP=$(ls -d ipa/Payload/*.app | head -1)
+          echo "=== Appin entitlementit ==="
+          codesign -d --entitlements :- "$APP" || true
+          echo "=== Widgetin entitlementit ==="
+          codesign -d --entitlements :- "$APP/PlugIns/VarallisuusWidget.appex" || true
+
       - name: Valmis
         run: echo "Lähetetty App Store Connectiin — build näkyy TestFlightissa käsittelyn (~5–15 min) jälkeen."

@@ -22,11 +22,15 @@ public class VpWidgetPlugin: CAPPlugin, CAPBridgedPlugin {
     static let ryhma = "group.com.varallisuuspolku.app"
 
     @objc func paivita(_ call: CAPPluginCall) {
+        // containerURL on luotettava App Group -oikeuden koetin: nil = appin
+        // allekirjoituksesta puuttuu ryhmä (UserDefaults(suiteName:) palauttaisi
+        // olion ja lukisi omaa välimuistiaan vaikka jako ei toimisi)
+        let onRyhma = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: VpWidgetPlugin.ryhma) != nil
         if let data = call.getString("data"), let d = UserDefaults(suiteName: VpWidgetPlugin.ryhma) {
             d.set(data, forKey: "vp-widget")
         }
         WidgetCenter.shared.reloadAllTimelines()
-        call.resolve()
+        call.resolve(["ok": onRyhma])
     }
 
     @objc func oikotie(_ call: CAPPluginCall) {

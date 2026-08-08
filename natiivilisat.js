@@ -338,7 +338,9 @@
     if (rivit) html += '<div class="vpt-lista">' + rivit + '</div>';
     html += '<div class="vpt-info">Kirjaukset ja vertailukohta pysyvät vain tällä laitteella. ' +
       (t.viite ? 'Vertailukohta on jäädytetty suunnitelmastasi ' + kkNimi(t.viite.pvm) + ' — kaikkien kirjausten poisto nollaa sen.' :
-        'Kuukausimuistutus muistuttaa kirjaamisesta, kun muistutukset ovat päällä.') + '</div>';
+        'Kuukausimuistutus muistuttaa kirjaamisesta, kun muistutukset ovat päällä.') +
+      (widgetDiag && widgetDiag !== 'ok' ? '<br>Widget-silta: ' + widgetDiag + ' — kotinäyttöwidget ei saa tietoja.' : '') +
+      '</div>';
     toteumaEl.innerHTML = html;
 
     toteumaEl.querySelector('#vptTallenna').addEventListener('click', function () {
@@ -407,10 +409,19 @@
     var json = JSON.stringify(data);
     P.Preferences.set({ key: 'vp-widget', value: json }).then(function () {
       // Pikkusilta päivittää widgetin heti: Android lukee Preferencesin,
-      // iOS saa JSONin argumenttina (App Group -tallennus + WidgetKit-reload)
-      if (P.VpWidget && P.VpWidget.paivita) P.VpWidget.paivita({ data: json }).catch(function () {});
+      // iOS saa JSONin argumenttina (App Group -tallennus + WidgetKit-reload).
+      // Diagnoosi talteen Toteuma-sivun inforiviä varten: silta puuttuu /
+      // App Group puuttuu allekirjoituksesta / ok.
+      if (P.VpWidget && P.VpWidget.paivita) {
+        P.VpWidget.paivita({ data: json }).then(function (r) {
+          widgetDiag = (r && r.ok === false) ? 'ryhmä puuttuu' : 'ok';
+        }).catch(function () { widgetDiag = 'siltavirhe'; });
+      } else {
+        widgetDiag = 'silta puuttuu';
+      }
     }).catch(function () {});
   }
+  var widgetDiag = null; // null = ei vielä yritetty
 
   /* ===================== Kuvakkeen pikatoiminnot ===================== */
   // Pitkä painallus appikuvakkeesta (Kysy AI / Suunnitelma / Toteuma):
