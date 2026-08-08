@@ -348,7 +348,6 @@
       var v = parseFloat(inp.value);
       if (!(v >= 0)) { ilmoita('Anna varallisuus euroina'); return; }
       if (typeof sim === 'undefined' || !sim || !sim.exp) { ilmoita('Suunnitelma ei ole vielä laskenut — hetki'); return; }
-      if (window.vpHaptic) window.vpHaptic('Medium');
       toteumaKirjaa(Math.round(v));
       renderToteuma();
       ilmoita('Kirjattu — ' + (toteumaTila() || {}).teksti);

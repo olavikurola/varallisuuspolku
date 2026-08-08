@@ -1517,7 +1517,7 @@ function bindPlansHome() {
     if (nt) {
       const body = host.querySelector('.ph-new-body');
       if (body) body.hidden = !body.hidden;
-      return;
+      return; // ei haptiikkaa — napsu vain piirtopöydän snapeissa
     }
     const opt = e.target.closest('[data-act]');
     if (opt) { handlePlanAct(opt.dataset.act); return; }

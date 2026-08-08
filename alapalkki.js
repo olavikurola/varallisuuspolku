@@ -179,9 +179,11 @@
     'body.vp-has-tabbar .panel .card.vp-kiinni > h2::after{content:"▸";}',
     'body.vp-has-tabbar .panel .card.vp-kiinni > h2{margin-bottom:0;}',
     'body.vp-has-tabbar .panel .card.vp-kiinni > *:not(h2){display:none !important;}',
-    /* koko otsikkorivin kattava aito nappi; perhechipit sen yläpuolella */
+    /* koko otsikkorivin kattava aito nappi; perhechipit sen yläpuolella —
+       mutta vain itse chipit, tyhjä chippirivi päästää napautuksen läpi */
     'body.vp-has-tabbar .vp-taitto-nappi{position:absolute;inset:-6px -8px;background:none;border:0;padding:0;cursor:pointer;z-index:1;-webkit-tap-highlight-color:transparent;}',
-    'body.vp-has-tabbar .panel .card[data-card] > h2 .fam-chips{position:relative;z-index:2;}',
+    'body.vp-has-tabbar .panel .card[data-card] > h2 .fam-chips{position:relative;z-index:2;pointer-events:none;}',
+    'body.vp-has-tabbar .panel .card[data-card] > h2 .fam-chips > *{pointer-events:auto;}',
     /* sivujen sulkeutuminen: sama liike ulos kuin sisään */
     '@keyframes vp-page-out{from{transform:none;opacity:1}to{transform:translateY(14px);opacity:0}}',
     'body.vp-has-tabbar .vp-pois{animation:vp-page-out 0.15s ease forwards;}',
@@ -244,9 +246,10 @@
   };
 
   /* ---------- Haptiikka ja liike ---------- */
-  // Kevyt napsahdus sormiin siellä missä jokin loksahtaa: tabit, kytkimet,
-  // piirtopöydän vuosisnapit (piirtopoyta.js kutsuu window.vpHaptic-koukkua,
-  // joka on olemassa vain appissa — webissä kutsu on no-op-vahdittu).
+  // Kevyt napsahdus VAIN piirtopöydän vuosisnapeissa (Olavin linjaus 8.8.:
+  // tabeissa, valikoissa ja korttien taitossa napsu ei tuo lisäarvoa).
+  // piirtopoyta.js kutsuu window.vpHaptic-koukkua, joka on olemassa vain
+  // appissa — webissä kutsu on no-op-vahdittu.
   function napsu(tyyli) {
     try {
       var H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
@@ -508,25 +511,38 @@
       var h2 = kortti.querySelector(':scope > h2');
       if (!h2) return;
       kortti.classList.toggle('vp-kiinni', auki.indexOf(nimi) === -1);
-      // Aito nappi koko otsikon alueelle: iOS tulkitsee pienenkin liikkeen
-      // skrolliksi ja peruu ei-interaktiivisen elementin tapahtumat (click JA
-      // pointer — molemmat kokeiltu laitteella 8.8.), mutta oikean <button>in
-      // tap-tunnistus on natiivisti salliva — yksi napautus riittää.
-      // Perhechipit nousevat z-indexillä napin yläpuolelle (CSS).
+      // Aito nappi koko otsikon alueelle. Kosketus luetaan suoraan
+      // touch-tapahtumista: iOS välittää ne napille aina, vaikka tap→click-
+      // synteesi jäisi tekemättä (kolmas laitekierros — click ja pointer
+      // olivat kumpikin oikukkaita skrollialueella). preventDefault estää
+      // synteettisen clickin eli tuplatogglen; pystyliike >10 px = skrolli.
+      // Ei haptiikkaa (Olavin linjaus: napsu vain piirtopöydän snapeissa).
       var nappi = document.createElement('button');
       nappi.type = 'button';
       nappi.className = 'vp-taitto-nappi';
       nappi.setAttribute('aria-label', 'Avaa tai sulje: ' + h2.textContent.trim());
       h2.appendChild(nappi);
-      nappi.addEventListener('click', function () {
-        napsu('Light');
+      var toggle = function () {
         var kiinni = kortti.classList.toggle('vp-kiinni');
         var lista = [];
         try { lista = JSON.parse(localStorage.getItem(KORTIT_KEY)) || []; } catch (er) {}
         lista = lista.filter(function (x) { return x !== nimi; });
         if (!kiinni) lista.push(nimi);
         try { localStorage.setItem(KORTIT_KEY, JSON.stringify(lista)); } catch (er) {}
+      };
+      var kosketusY = null;
+      nappi.addEventListener('touchstart', function (e) {
+        kosketusY = e.touches && e.touches[0] ? e.touches[0].clientY : null;
+      }, { passive: true });
+      nappi.addEventListener('touchend', function (e) {
+        var y = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : null;
+        var siirtyma = (kosketusY != null && y != null) ? Math.abs(y - kosketusY) : 0;
+        kosketusY = null;
+        if (siirtyma > 10) return;
+        e.preventDefault();
+        toggle();
       });
+      nappi.addEventListener('click', toggle); // hiiri, näppäimistö ja testit
     });
   }
 
@@ -622,7 +638,6 @@
 
     var polku = tab('polku', 'Polku', onIndex);
     polku.addEventListener('click', function () {
-      napsu('Light');
       if (!onIndex) { location.href = './index.html'; return; }
       suljeAvoimet();
       ylos();
@@ -630,14 +645,12 @@
 
     var tilastot = tab('tilastot', 'Tilastot', onStats);
     tilastot.addEventListener('click', function () {
-      napsu('Light');
       if (onStats) { suljeSheet(); if (window.vpSuljeToteuma) window.vpSuljeToteuma(); ylos(); return; }
       location.href = './analytiikka.html';
     });
 
     var ai = tab('ai', 'Kysy AI', false);
     ai.addEventListener('click', function () {
-      napsu('Light');
       if (!onIndex) { etusivulle(LIPUT.tulkki); return; }
       var tk = document.querySelector('.tk-sheet');
       if (tk && !tk.hidden) return; // jo auki
@@ -650,7 +663,6 @@
 
     var suunnitelma = tab('suunnitelma', 'Suunnitelma', false);
     suunnitelma.addEventListener('click', function () {
-      napsu('Light');
       if (!onIndex) { etusivulle(LIPUT.suunnitelma); return; }
       var s = document.getElementById('summary');
       if (s && !s.hidden) return; // jo auki
@@ -662,7 +674,7 @@
     });
 
     var lisaa = tab('lisaa', 'Lisää', false);
-    lisaa.addEventListener('click', function () { napsu('Light'); avaaSheet(); });
+    lisaa.addEventListener('click', function () { avaaSheet(); });
 
     /* ID:t antavat kiinnityspisteen appikohtaisille osoittimille (mm.
        esittelykierros osoittaa tabeihin webin piilotettujen nappien sijaan) */

@@ -425,11 +425,10 @@ server.listen(8134, async () => {
   await pg.waitForTimeout(200);
   ok(await pg.evaluate(() => !document.querySelector('.card[data-card=basics]').classList.contains('vp-kiinni')), 'otsikon napautus avaa kortin');
   ok(await pg.evaluate(() => (JSON.parse(localStorage.getItem('vp-kortit-auki-v1')) || []).includes('basics')), 'avoin kortti muistetaan');
-  ok(await pg.evaluate(() => window.__haptics.length) >= 1, 'haptiikka napsahtaa (kortin avaus)');
-  const hapt0 = await pg.evaluate(() => window.__haptics.length);
+  ok(await pg.evaluate(() => window.__haptics.length) === 0, 'ei haptiikkaa kortin avauksessa (Olavin linjaus)');
   await pg.click('.vp-tab:nth-child(4)');
   await pg.waitForTimeout(700);
-  ok(await pg.evaluate(() => window.__haptics.length) > hapt0, 'tabivaihto napsahtaa');
+  ok(await pg.evaluate(() => window.__haptics.length) === 0, 'ei haptiikkaa tabivaihdossa');
   ok(await pg.locator('#sumSheet details.sum-taite').count() === 4, 'Suunnitelmani-dokumentissa neljä taitetta appissa');
   ok(await pg.evaluate(() => {
     const d = [...document.querySelectorAll('#sumSheet details.sum-taite')];
