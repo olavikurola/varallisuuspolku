@@ -107,18 +107,21 @@ jobs:
             -authenticationKeyID "$KEY_ID" \
             -authenticationKeyIssuerID "$ISSUER_ID"
 
-      # Diagnostiikka: näkyykö App Group allekirjoitetussa paketissa (appi + widget)?
-      # Widget lukee tietonsa ryhmästä — jos entitlementti puuttuu, silta ei toimi.
-      - name: Näytä entitlementit (diagnostiikka)
+      # Diagnostiikka: sisältävätkö pilviallekirjoituksen luomat profiilit
+      # App Groupin (appi + widget)? Vienti lataa paketin suoraan Appleen eikä
+      # jätä ipaa levylle — profiilien entitlementit kertovat saman asian.
+      # continue-on-error: diagnostiikka ei saa koskaan kaataa julkaisua.
+      - name: Näytä provisiointiprofiilien entitlementit (diagnostiikka)
+        if: always()
+        continue-on-error: true
         run: |
-          cd "$RUNNER_TEMP/export"
-          IPA=$(ls *.ipa | head -1)
-          unzip -q "$IPA" -d ipa
-          APP=$(ls -d ipa/Payload/*.app | head -1)
-          echo "=== Appin entitlementit ==="
-          codesign -d --entitlements :- "$APP" || true
-          echo "=== Widgetin entitlementit ==="
-          codesign -d --entitlements :- "$APP/PlugIns/VarallisuusWidget.appex" || true
+          shopt -s nullglob
+          for p in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision \
+                   ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/*.mobileprovision; do
+            security cms -D -i "$p" > /tmp/prof.plist 2>/dev/null || continue
+            echo "=== $(/usr/libexec/PlistBuddy -c 'Print :Name' /tmp/prof.plist 2>/dev/null) ==="
+            /usr/libexec/PlistBuddy -c 'Print :Entitlements' /tmp/prof.plist 2>/dev/null || true
+          done
 
       - name: Valmis
         run: echo "Lähetetty App Store Connectiin — build näkyy TestFlightissa käsittelyn (~5–15 min) jälkeen."
