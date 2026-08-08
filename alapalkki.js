@@ -173,6 +173,9 @@
     'body.vp-has-tabbar .panel .card.vp-kiinni > h2::after{content:"▸";}',
     'body.vp-has-tabbar .panel .card.vp-kiinni > h2{margin-bottom:0;}',
     'body.vp-has-tabbar .panel .card.vp-kiinni > *:not(h2){display:none !important;}',
+    /* koko otsikkorivin kattava aito nappi; perhechipit sen yläpuolella */
+    'body.vp-has-tabbar .vp-taitto-nappi{position:absolute;inset:-6px -8px;background:none;border:0;padding:0;cursor:pointer;z-index:1;-webkit-tap-highlight-color:transparent;}',
+    'body.vp-has-tabbar .panel .card[data-card] > h2 .fam-chips{position:relative;z-index:2;}',
     /* sivujen sulkeutuminen: sama liike ulos kuin sisään */
     '@keyframes vp-page-out{from{transform:none;opacity:1}to{transform:translateY(14px);opacity:0}}',
     'body.vp-has-tabbar .vp-pois{animation:vp-page-out 0.15s ease forwards;}',
@@ -500,19 +503,17 @@
       var h2 = kortti.querySelector(':scope > h2');
       if (!h2) return;
       kortti.classList.toggle('vp-kiinni', auki.indexOf(nimi) === -1);
-      // Pointer-tapahtumat clickin sijaan: WKWebView ei välitä tap-klikkiä
-      // luotettavasti ei-interaktiiviselle otsikolle (laitehavainto 8.8.) —
-      // pointerup toimii aina, ja skrolli katkaisee pointercancelilla.
-      // Vain pointerup (ei clickiä rinnalle) — kaksi kuuntelijaa togglaisi
-      // auki ja heti kiinni, mikä näyttäisi kuolleelta napilta.
-      var alkuY = null;
-      h2.addEventListener('pointerdown', function (e) { alkuY = e.clientY; });
-      h2.addEventListener('pointercancel', function () { alkuY = null; });
-      h2.addEventListener('pointerup', function (e) {
-        if (alkuY == null || Math.abs(e.clientY - alkuY) > 10) { alkuY = null; return; }
-        alkuY = null;
-        // perhechipit elävät Perustiedot-otsikossa — niiden napautus ei taita
-        if (e.target.closest('.fam-chips')) return;
+      // Aito nappi koko otsikon alueelle: iOS tulkitsee pienenkin liikkeen
+      // skrolliksi ja peruu ei-interaktiivisen elementin tapahtumat (click JA
+      // pointer — molemmat kokeiltu laitteella 8.8.), mutta oikean <button>in
+      // tap-tunnistus on natiivisti salliva — yksi napautus riittää.
+      // Perhechipit nousevat z-indexillä napin yläpuolelle (CSS).
+      var nappi = document.createElement('button');
+      nappi.type = 'button';
+      nappi.className = 'vp-taitto-nappi';
+      nappi.setAttribute('aria-label', 'Avaa tai sulje: ' + h2.textContent.trim());
+      h2.appendChild(nappi);
+      nappi.addEventListener('click', function () {
         napsu('Light');
         var kiinni = kortti.classList.toggle('vp-kiinni');
         var lista = [];
