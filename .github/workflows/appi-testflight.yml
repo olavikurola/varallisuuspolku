@@ -74,28 +74,37 @@ jobs:
           mkdir -p "$RUNNER_TEMP/keys"
           printf '%s' "${{ secrets.APPSTORE_P8 }}" > "$RUNNER_TEMP/keys/AuthKey_$KEY_ID.p8"
 
-      # Arkisto allekirjoitetaan suoraan Apple Distribution -pilviallekirjoituksella
-      # (automaattinen tyyli + jakeluidentiteetti + API-avain): App Store -profiili
-      # ei vaadi rekisteröityä laitetta, toisin kuin kehitysprofiili, joka kaatoi
-      # arkistovaiheen allekirjoituksen alun perin. TÄRKEÄÄ: allekirjoittamattomasta
-      # arkistosta KATOAVAT entitlementit (App Group jäi pois ja iOS-widget jäi
-      # ilman tietoja — opittu 8.8.2026) — viennin uudelleenallekirjoitus säilyttää
-      # vain arkistoon kirjatut oikeudet.
-      - name: Arkistoi (Release, pilviallekirjoitus)
+      # Arkisto tehdään ILMAN allekirjoitusta: automaattinen allekirjoitus
+      # arkistointivaiheessa vaatisi kehitysprofiilin (laitevaatimus), ja
+      # jakeluidentiteetin pakotus automaattityyliin kaatuu ristiriitaan
+      # (kokeiltu 8.8.2026). Vientivaihe allekirjoittaa App Store -profiililla.
+      - name: Arkistoi (Release, ei allekirjoitusta)
         working-directory: appi/ios/App
         run: |
           set -o pipefail
           xcodebuild -project App.xcodeproj -scheme App -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/App.xcarchive" archive \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_$KEY_ID.p8" \
-            -authenticationKeyID "$KEY_ID" \
-            -authenticationKeyIssuerID "$ISSUER_ID" \
-            CODE_SIGN_STYLE=Automatic \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}"
+
+      # KRIITTINEN VÄLIVAIHE (opittu 8.8.2026): viennin uudelleenallekirjoitus
+      # säilyttää vain BINÄÄRIIN kirjatut entitlementit — allekirjoittamattomassa
+      # arkistossa niitä ei ole, jolloin App Group katosi ja iOS-widget jäi ilman
+      # tietoja. Ad-hoc-leimaus (identiteetti "-", ei vaadi sertifikaattia)
+      # kirjaa oikeudet arkistoon; vienti korvaa allekirjoituksen oikealla ja
+      # poimii nämä oikeudet profiilista (jossa ne jo ovat).
+      - name: Leimaa entitlementit arkistoon (ad-hoc)
+        run: |
+          APP="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+          codesign -f -s - --entitlements appi/ios/App/VarallisuusWidget/VarallisuusWidget.entitlements "$APP/PlugIns/VarallisuusWidget.appex"
+          codesign -f -s - --entitlements appi/ios/App/App/App.entitlements "$APP"
+          echo "=== Appin leimatut entitlementit ==="
+          codesign -d --entitlements :- "$APP" || true
+          echo "=== Widgetin leimatut entitlementit ==="
+          codesign -d --entitlements :- "$APP/PlugIns/VarallisuusWidget.appex" || true
 
       - name: Vie ja lähetä TestFlightiin (pilviallekirjoitus)
         working-directory: appi/ios/App
