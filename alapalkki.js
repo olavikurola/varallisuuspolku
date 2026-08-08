@@ -157,16 +157,18 @@
     /* suunnitelmarivin nimi: kaksi riviä ellipsiksen sijaan kapealla */
     'body.vp-has-tabbar .ph-name .nm{white-space:normal;line-height:1.25;font-size:13px;',
     ' display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;}',
-    /* Suunnitelmani-dokumentin taitteet: osiot aukeavat tarpeeseen */
-    'body.vp-has-tabbar .sum-taite summary{list-style:none;cursor:pointer;-webkit-tap-highlight-color:transparent;}',
+    /* Suunnitelmani-dokumentin taitteet: osiot aukeavat tarpeeseen.
+       Flex pitää nuolen otsikon ensimmäisen rivin vieressä — inline-nuoli
+       putosi omalle rivilleen kun otsikko rivittyi (laitehavainto 8.8.) */
+    'body.vp-has-tabbar .sum-taite summary{display:flex;align-items:baseline;gap:9px;list-style:none;cursor:pointer;-webkit-tap-highlight-color:transparent;}',
     'body.vp-has-tabbar .sum-taite summary::-webkit-details-marker{display:none;}',
-    'body.vp-has-tabbar .sum-taite summary h2{display:inline-block;}',
-    'body.vp-has-tabbar .sum-taite summary::after{content:"▸";color:var(--text-dim,#93a1b8);margin-left:9px;font-size:14px;}',
+    'body.vp-has-tabbar .sum-taite summary h2{display:block;flex:0 1 auto;min-width:0;}',
+    'body.vp-has-tabbar .sum-taite summary::after{content:"▸";color:var(--text-dim,#93a1b8);font-size:14px;flex:0 0 auto;}',
     'body.vp-has-tabbar .sum-taite[open] summary::after{content:"▾";}',
     /* etusivun syöttökortit taittuvat otsikkoriveiksi: appiin tullaan
        katsomaan tilannetta — muokkaus avataan tarpeeseen (kuten tase) */
     'body.vp-has-tabbar .panel .card[data-card]{--vp-kortti:1;}',
-    'body.vp-has-tabbar .panel .card[data-card] > h2{cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;padding-right:20px;}',
+    'body.vp-has-tabbar .panel .card[data-card] > h2{cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;position:relative;padding-right:20px;}',
     'body.vp-has-tabbar .panel .card[data-card] > h2::after{content:"▾";position:absolute;right:0;top:1px;color:var(--text-faint,#6b7ba4);font-size:14px;font-weight:400;}',
     'body.vp-has-tabbar .panel .card.vp-kiinni > h2::after{content:"▸";}',
     'body.vp-has-tabbar .panel .card.vp-kiinni > h2{margin-bottom:0;}',
@@ -498,7 +500,17 @@
       var h2 = kortti.querySelector(':scope > h2');
       if (!h2) return;
       kortti.classList.toggle('vp-kiinni', auki.indexOf(nimi) === -1);
-      h2.addEventListener('click', function (e) {
+      // Pointer-tapahtumat clickin sijaan: WKWebView ei välitä tap-klikkiä
+      // luotettavasti ei-interaktiiviselle otsikolle (laitehavainto 8.8.) —
+      // pointerup toimii aina, ja skrolli katkaisee pointercancelilla.
+      // Vain pointerup (ei clickiä rinnalle) — kaksi kuuntelijaa togglaisi
+      // auki ja heti kiinni, mikä näyttäisi kuolleelta napilta.
+      var alkuY = null;
+      h2.addEventListener('pointerdown', function (e) { alkuY = e.clientY; });
+      h2.addEventListener('pointercancel', function () { alkuY = null; });
+      h2.addEventListener('pointerup', function (e) {
+        if (alkuY == null || Math.abs(e.clientY - alkuY) > 10) { alkuY = null; return; }
+        alkuY = null;
         // perhechipit elävät Perustiedot-otsikossa — niiden napautus ei taita
         if (e.target.closest('.fam-chips')) return;
         napsu('Light');
