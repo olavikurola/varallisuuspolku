@@ -691,6 +691,18 @@
     korttienTaitto();
     introAnimaatio();
 
+    /* Tilastojen esilämmitys: stats.json välimuistiin taustalla, jotta
+       Tilastot-tabi avautuu täytenä ilman verkkoviivettä (analytiikka.js
+       renderöi välimuistista ensin — stale-while-revalidate) */
+    if (onIndex) setTimeout(function () {
+      try {
+        fetch('https://varallisuuspolku-data.up.railway.app/stats.json')
+          .then(function (r) { return r.json(); })
+          .then(function (s) { if (s && s.groups) localStorage.setItem('vp-stats-cache', JSON.stringify(s)); })
+          .catch(function () {});
+      } catch (e) {}
+    }, 2500);
+
     /* Pikatoiminnot (kuvakkeen pitkä painallus) ja muut natiivipolut ajavat
        saman toiminnon kuin tabit — natiivilisat.js kutsuu tätä kun laite
        kertoo odottavasta oikotiestä */

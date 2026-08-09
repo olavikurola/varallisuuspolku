@@ -820,17 +820,15 @@ function takeaways(stats, me) {
   }
   $('anStatsLink').href = DATA_API + '/stats.json';
 
+  /* Välimuisti ensin, verkko taustalla (stale-while-revalidate; Olavin
+     laitehavainto 8.8.: tiilet ja edistymiskortti "räpsähtivät" paikoilleen
+     verkon viiveellä): sivu renderöityy heti edellisestä datasta täydessä
+     layoutissa, tuore data haetaan taustalla ja piirretään vain jos se
+     muuttui. Ensikäynnillä luurankotiilet varaavat tilan. */
+  const STATS_CACHE_KEY = 'vp-stats-cache';
   let stats = null;
-  try {
-    stats = await (await fetch(DATA_API + '/stats.json')).json();
-  } catch (e) { /* alla */ }
-  if (!stats || !stats.groups) {
-    $('anTiles').innerHTML = '';
-    for (const id of ['heroChart', 'ridgeline', 'savingsChart', 'stocksChart', 'retireHist', 'penCoverage', 'goalDonut', 'confDonut', 'homeLoan', 'ownedCard', 'realism', 'timeline']) {
-      empty(id, 'Datapalvelin ei ole juuri nyt tavoitettavissa — yritä hetken päästä uudelleen.');
-    }
-    return;
-  }
+
+  const renderStats = () => {
 
   $('anUpdated').textContent = `Päivitetty ${new Date(stats.updated).toLocaleDateString('fi-FI')}.`;
   const all = stats.groups.all || { n: stats.total };
@@ -923,6 +921,9 @@ function takeaways(stats, me) {
   const SHOWME_KEY = 'vp-an-me';
   let showMe = true;
   try { showMe = localStorage.getItem(SHOWME_KEY) !== '0'; } catch (e) {}
+  // uudelleenrenderöinti (välimuisti → tuore data) ei saa monistaa kytkintä
+  const vanhaMeToggle = document.querySelector('.an-me-toggle');
+  if (vanhaMeToggle) vanhaMeToggle.remove();
   if (me) {
     const lb = document.createElement('label');
     lb.className = 'toggle an-me-toggle';
@@ -951,4 +952,41 @@ function takeaways(stats, me) {
     const ok = n >= stats.kAnon;
     return `<span class="an-chip ${ok ? 'ok' : ''}" title="${ok ? 'jakaumat julkaistu' : 'kertyy vielä'}">${g} v · ${n}</span>`;
   }).join('');
+  };
+
+  // Luurankotiilet: oikean kokoiset paikat heti — data täyttyy ilman että
+  // mikään töksähtää alaspäin (vain ensikäynnillä, kun välimuistia ei ole)
+  const skeleton = () => {
+    // kaksirivinen otsikkopaikka: todelliset tiiliotsikot rivittyvät kapealla
+    // näytöllä kahdelle riville — sama korkeus, ei siirtymää datan saapuessa
+    $('anTiles').innerHTML = new Array(5).fill(
+      '<div class="sum-tile an-luuranko"><div class="k">&nbsp;<br>&nbsp;</div><div class="v">–</div></div>').join('');
+  };
+
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem(STATS_CACHE_KEY) || 'null'); } catch (e) {}
+  if (cached && cached.groups) {
+    stats = cached;
+    renderStats();
+  } else {
+    skeleton();
+  }
+
+  let fresh = null;
+  try {
+    fresh = await (await fetch(DATA_API + '/stats.json')).json();
+  } catch (e) { /* alla */ }
+  if (fresh && fresh.groups) {
+    try { localStorage.setItem(STATS_CACHE_KEY, JSON.stringify(fresh)); } catch (e) {}
+    // identtinen vastaus ei piirrä mitään uudelleen — ei välähdystä
+    if (!stats || JSON.stringify(fresh) !== JSON.stringify(stats)) {
+      stats = fresh;
+      renderStats();
+    }
+  } else if (!stats) {
+    $('anTiles').innerHTML = '';
+    for (const id of ['heroChart', 'ridgeline', 'savingsChart', 'stocksChart', 'retireHist', 'penCoverage', 'goalDonut', 'confDonut', 'homeLoan', 'ownedCard', 'realism', 'timeline']) {
+      empty(id, 'Datapalvelin ei ole juuri nyt tavoitettavissa — yritä hetken päästä uudelleen.');
+    }
+  }
 })();

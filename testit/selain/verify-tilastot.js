@@ -125,6 +125,42 @@ const STATS = {
   ok(!idx.includes('Vaurastumisen kartta'), 'vanha nimi poissa työtilasta');
   ok(idx.includes('Tilastot'), 'uusi nimi työtilan linkeissä');
 
+  console.log('Sulava avaus: välimuisti ensin, luurangot ensikäynnillä (8.8. korjaus)');
+  // (a) välimuistilla sivu on täysi heti vaikka verkko viipyy
+  const hidas = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await hidas.route('**/stats.json', async (route) => {
+    await new Promise((r) => setTimeout(r, 900));
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(STATS) });
+  });
+  await hidas.addInitScript((s) => { localStorage.setItem('vp-stats-cache', JSON.stringify(s)); }, STATS);
+  await hidas.goto('http://localhost:8123/analytiikka.html');
+  await hidas.waitForTimeout(250);
+  ok(await hidas.evaluate(() => document.querySelectorAll('#anTiles .sum-tile:not(.an-luuranko)').length) >= 4,
+    'välimuistilla tiilet täynnä heti (250 ms, verkko 900 ms)');
+  await hidas.waitForTimeout(1200);
+  ok(await hidas.evaluate(() => document.querySelectorAll('.an-me-toggle').length) <= 1, 'taustapäivitys ei monista kytkintä');
+  await hidas.close();
+  // (b) ilman välimuistia luurangot varaavat tilan eikä sisältö töki alaspäin
+  const eka = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await eka.route('**/stats.json', async (route) => {
+    await new Promise((r) => setTimeout(r, 700));
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(STATS) });
+  });
+  await eka.goto('http://localhost:8123/analytiikka.html');
+  await eka.waitForTimeout(250);
+  const lu = await eka.evaluate(() => ({
+    n: document.querySelectorAll('#anTiles .an-luuranko').length,
+    navY: Math.round(document.querySelector('.an-nav').getBoundingClientRect().top),
+  }));
+  ok(lu.n === 5, 'luurankotiilet heti ensikäynnillä (' + lu.n + ')');
+  await eka.waitForTimeout(1200);
+  const navY2 = await eka.evaluate(() => Math.round(document.querySelector('.an-nav').getBoundingClientRect().top));
+  // pieni toleranssi: fonttimetriikat eroavat moottoreittain — alle rivin-
+  // korkeuden jäävä ero häviää 0,18 s häivytykseen (WebKitissä mitattu 0 px)
+  ok(Math.abs(navY2 - lu.navY) <= 12, 'data täyttyy ilman havaittavaa pystysiirtymää (' + lu.navY + '→' + navY2 + ')');
+  ok(await eka.evaluate(() => localStorage.getItem('vp-stats-cache') !== null), 'tuore data talteen välimuistiin');
+  await eka.close();
+
   ok(errors.length === 0, 'ei konsolivirheitä', errors.join(' | '));
 
   await browser.close();

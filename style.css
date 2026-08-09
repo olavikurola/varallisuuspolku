@@ -2600,3 +2600,11 @@ html.light .tk-mailto:hover { color: #4f3fd0; }
   .tk-foot { font-size: 11px; }
   .tk-change { font-size: 13.5px; }
 }
+
+/* Tilastot: hallittu ilmestyminen — verkosta täyttyvä sisältö häivähtää
+   esiin räpsähdyksen sijaan, ja luurankotiili varaa tilan ensikäynnillä */
+.an-tiles .sum-tile, .an-chart > svg, .an-progress:not([hidden]) { animation: anTaytto 0.18s ease; }
+@keyframes anTaytto { from { opacity: 0.25; } to { opacity: 1; } }
+.an-luuranko { min-height: 64px; animation: anSyke 1.1s ease-in-out infinite alternate; }
+.an-luuranko .v { color: var(--text-faint); }
+@keyframes anSyke { from { opacity: 0.55; } to { opacity: 0.95; } }
