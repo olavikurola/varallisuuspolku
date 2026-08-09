@@ -388,7 +388,8 @@
     var vuosiNyt = new Date().getFullYear();
     if (sim.successProb != null) {
       data = {
-        otsikko: 'Onnistumistodennäköisyys',
+        // lyhyt otsikko — täysi sana katkesi pienessä widgetissä (laitehavainto)
+        otsikko: 'Onnistumis-%',
         arvo: Math.round(sim.successProb * 100) + ' %',
         alarivi: sim.retireAge != null
           ? 'Eläkkeelle ' + Math.round(sim.retireAge) + ' v (~' + (vuosiNyt + Math.round(sim.retireAge - state.ageNow)) + ')'
@@ -404,6 +405,20 @@
     // toteumakirjaus vie alarivin: polulla / edellä / jäljessä
     var tila = toteumaTila();
     if (tila) data.alarivi = tila.lyhyt;
+    // polkukäyrä widgetin taustalle: odotettu kehitys normalisoituna 0–100
+    // (25 pistettä riittää pieneen piirtoon; iOS piirtää, Android ohittaa)
+    if (sim.exp && sim.exp.length > 2) {
+      var huippu = 0;
+      for (var i = 0; i < sim.exp.length; i++) if (sim.exp[i] > huippu) huippu = sim.exp[i];
+      if (huippu > 0) {
+        var kayra = [];
+        for (var k = 0; k < 25; k++) {
+          var idx = Math.round(k * (sim.exp.length - 1) / 24);
+          kayra.push(Math.max(0, Math.round(sim.exp[idx] / huippu * 100)));
+        }
+        data.kayra = kayra;
+      }
+    }
     data.paivitetty = new Date().toLocaleDateString('fi-FI');
     var json = JSON.stringify(data);
     P.Preferences.set({ key: 'vp-widget', value: json }).then(function () {

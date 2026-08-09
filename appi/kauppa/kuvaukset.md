@@ -17,7 +17,7 @@ tuottolupauksia — kuvataan työkalu, ei tuloksia.
 | Hinta | Ilmainen, ei ostoja (v1) |
 | Tuki-URL | https://varallisuuspolku.com/ |
 | Markkinointi-URL | https://varallisuuspolku.com/ |
-| Tietosuojaseloste-URL | https://varallisuuspolku.com/ (Tietoa palvelusta -osio) |
+| Tietosuojaseloste-URL | https://varallisuuspolku.com/tietosuoja.html |
 | Tukisähköposti | info@varallisuuspolku.com |
 
 ## App Store

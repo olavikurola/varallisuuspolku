@@ -463,6 +463,10 @@ server.listen(8134, async () => {
   await pg.evaluate(() => window.vpNatiivi.widgetPaivita());
   await pg.waitForTimeout(300);
   ok(await pg.evaluate(() => (window.__prefs['vp-widget'] || '').includes('Toteuma:')), 'widget-alarivi kertoo toteuman tilan');
+  ok(await pg.evaluate(() => {
+    const w = JSON.parse(window.__prefs['vp-widget']);
+    return w.otsikko === 'Onnistumis-%' && Array.isArray(w.kayra) && w.kayra.length === 25 && Math.max(...w.kayra) === 100;
+  }), 'widget-JSON: lyhyt otsikko ja normalisoitu polkukäyrä');
   ok(await pg.evaluate(() => !!window.__widgetData && window.__widgetData.includes('Toteuma:')), 'iOS-silta saa saman JSONin argumenttina');
   await pg.click('.vpt-rivi .x');
   await pg.waitForTimeout(200);
