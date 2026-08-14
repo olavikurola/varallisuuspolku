@@ -108,9 +108,9 @@
     '@keyframes vp-page-in{from{transform:translateY(14px);opacity:0.4}to{transform:none;opacity:1}}',
     /* appin etusivu tiiviimmäksi: UKK-kortti on webin hakukonesisältöä (sama
        tieto valikon Tietoa-sivulla); Pro-kytkin on valikon Asetuksissa;
-       App Store -kortti on webin mainos — appissa ollaan jo perillä */
+       App Store -badge on webin mainos — appissa ollaan jo perillä */
     'body.vp-has-tabbar .card[data-card=about]{display:none;}',
-    'body.vp-has-tabbar .card[data-card=appi]{display:none;}',
+    'body.vp-has-tabbar .appstore-alue{display:none;}',
     'body.vp-has-tabbar .pro-switch{display:none;}',
     /* Lisää-sivun ryhmäkortit: Sivut ja Asetukset erottuvat kokonaisuuksina
        (Olavin havainto 8.8.) — kortti, sisäiset erotinviivat, kytkinrivit */
@@ -509,7 +509,7 @@
     try { auki = JSON.parse(localStorage.getItem(KORTIT_KEY)) || []; } catch (e) {}
     document.querySelectorAll('.panel .card[data-card]').forEach(function (kortti) {
       var nimi = kortti.dataset.card;
-      if (nimi === 'about' || nimi === 'appi') return; // piilossa appissa
+      if (nimi === 'about') return; // piilossa appissa
       var h2 = kortti.querySelector(':scope > h2');
       if (!h2) return;
       kortti.classList.toggle('vp-kiinni', auki.indexOf(nimi) === -1);

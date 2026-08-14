@@ -213,7 +213,7 @@ server.listen(8134, async () => {
   //     piilossa, tase kiinni oletuksena, Pro-kytkin valikossa, valikko sheetinä
   ({ ctx, pg } = await page({ native: true }));
   ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.card[data-card=about]')).display) === 'none', 'UKK-kortti piilossa appissa');
-  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.card[data-card=appi]')).display) === 'none', 'App Store -kortti piilossa appissa (ollaan jo perillä)');
+  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.appstore-alue')).display) === 'none', 'App Store -badge piilossa appissa (ollaan jo perillä)');
   ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.pro-switch')).display) === 'none', 'Pro-rivi piilossa appissa');
   ok(await pg.evaluate(() => document.getElementById('balancePanel').classList.contains('collapsed')), 'tase kiinni oletuksena appissa');
   ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.topbar-right')).display) === 'none', 'yläpalkin napit piilossa appissa (toiminnot alapalkissa)');
@@ -539,8 +539,8 @@ server.listen(8134, async () => {
   ok(await pg.evaluate(() => document.querySelector('.ph-foot').textContent.includes('Yksityisselaimessa')), 'webin alaviite ennallaan');
   // wow-erän appimuutokset eivät vuoda webiin
   ok(await pg.locator('.card.vp-kiinni').count() === 0, 'webin kortit avoinna (ei taittoa)');
-  // App Store -kortti näkyy webissä badgeineen
-  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.card[data-card=appi]')).display) !== 'none', 'App Store -kortti näkyy webissä');
+  // App Store -badge näkyy webissä paneelin pohjalla
+  ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.appstore-alue')).display) !== 'none', 'App Store -badge näkyy webissä');
   ok(await pg.evaluate(() => {
     const b = document.querySelector('.appstore-badge');
     return !!b && b.href.includes('id6798374499') && !!b.querySelector('img');
