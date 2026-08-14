@@ -28,6 +28,7 @@ const FILES = [
   'natiivilisat.js',
   // ikonit ja manifesti
   'favicon.svg', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-512-maskable.png',
+  'appstore-badge.svg', // etusivun App Store -kortti (piilossa appissa, mutta img latautuu)
 ];
 
 rmSync(WWW, { recursive: true, force: true });

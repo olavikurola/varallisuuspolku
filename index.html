@@ -6,6 +6,8 @@
   <title>Varallisuuspolku — ilmainen elinkaarilaskuri ja tekoälyavusteinen varallisuussuunnittelu</title>
   <meta name="description" content="Piirrä polkusi: tartu elinkaarikäyrään ja raahaa — kone laskee jokaisen vedon hinnan. Elämäntapahtumat, lainat, eläke- ja varallisuustavoitteet sekä Monte Carlo -todennäköisyys yhdellä näkymällä. AI-Tulkki selittää, vertailee ja kokeilee muutoksia puolestasi. Ilmainen, ei rekisteröitymistä — kaikki data pysyy omassa selaimessasi." />
   <meta name="theme-color" content="#0a0e1a" />
+  <!-- iOS-Safarin Smart App Banner: natiivi "avaa App Storessa" -palkki -->
+  <meta name="apple-itunes-app" content="app-id=6798374499" />
   <script>/* Vaalea teema käyttöön ennen ensimmäistä maalausta — ei välähdystä */try{if(localStorage.getItem("vp-theme")==="light"){document.documentElement.classList.add("light");document.querySelector("meta[name=theme-color]").content="#eef1f8"}}catch(e){}</script>
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="fi_FI" />
@@ -266,6 +268,19 @@
         <p class="hint" id="distHint">Jakauma seuraa graafin kohdistinta — oletuksena eläkeikä.</p>
       </section>
 
+      <section class="card" data-card="appi">
+        <h2>Sovellus iPhonelle</h2>
+        <div class="appi-body">
+          <p>Sama laskuri myös natiivisovelluksena: <strong>kotinäyttöwidget</strong> näyttää
+          suunnitelmasi tilan yhdellä vilkaisulla, <strong>toteumaseuranta</strong> kertoo oletko
+          polulla, ja muistutukset pitävät suunnitelman ajan tasalla. Toimii ilman verkkoyhteyttä
+          — eikä sovellus kerää mitään tietoja.</p>
+          <a class="appstore-badge" href="https://apps.apple.com/fi/app/varallisuuspolku/id6798374499" rel="noopener">
+            <img src="appstore-badge.svg" alt="Lataa App Storesta" width="143" height="40" loading="lazy" />
+          </a>
+        </div>
+      </section>
+
       <section class="card" data-card="about">
         <h2>Tietoa ja usein kysyttyä</h2>
         <div class="about-body">
@@ -341,6 +356,7 @@
             eikä palvelussa ole mainoksia.</p>
           </details>
           <p class="about-links">
+            <a href="https://apps.apple.com/fi/app/varallisuuspolku/id6798374499" rel="noopener">Sovellus App Storessa</a> ·
             <a href="analytiikka.html">Tilastot — miten muut suunnittelevat vaurastumista</a> ·
             <a href="validointi.html">Laskennan validointi</a> ·
             <a href="saavutettavuus.html">Saavutettavuus</a> ·

@@ -999,6 +999,12 @@ input[type="range"]::-moz-range-thumb {
   .cmp-row .cm { display: none; }
 }
 
+/* ---------- App Store -osio (etusivun kortti) ---------- */
+.appi-body p { margin: 0 0 12px; font-size: 13px; color: var(--text-dim); line-height: 1.55; }
+.appstore-badge { display: inline-block; line-height: 0; transition: opacity 0.15s ease; }
+.appstore-badge:hover { opacity: 0.85; }
+.appstore-badge img { height: 44px; width: auto; }
+
 /* ---------- Analytiikkasivu (analytiikka.html) ---------- */
 .an-body { display: block; overflow: auto; height: auto; min-height: 100%; }
 .an-main { max-width: 1020px; margin: 0 auto; padding: 22px 18px 20px; }
