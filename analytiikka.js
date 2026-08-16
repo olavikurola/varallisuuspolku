@@ -49,10 +49,10 @@ const text = (svg, x, y, str, cls, anchor) => {
   return t;
 };
 function empty(containerId, msg) {
-  $(containerId).innerHTML = `<div class="an-empty">📈 ${msg}</div>`;
+  $(containerId).innerHTML = `<div class="an-empty">📈 ${t(msg)}</div>`;
 }
 const needMsg = (total, k) =>
-  `Kertyy vielä — jaettuja suunnitelmia ${total}. Jakauma julkaistaan, kun ryhmässä on vähintään ${k}.`;
+  t('Kertyy vielä — jaettuja suunnitelmia {0}. Jakauma julkaistaan, kun ryhmässä on vähintään {1}.', total, k);
 
 /* Oma suunnitelma localStoragesta ("Sinä kartalla") */
 function readMe() {
@@ -755,10 +755,10 @@ function initZoom() {
 // ryhmän jakauma on julkaistu ja oma arvo on olemassa.
 
 function quartPos(v, q) {
-  if (v >= q.p75) return 'ylimmässä neljänneksessä';
-  if (v >= q.p50) return 'mediaanin yläpuolella';
-  if (v >= q.p25) return 'mediaanin alapuolella';
-  return 'alimmassa neljänneksessä';
+  if (v >= q.p75) return t('ylimmässä neljänneksessä');
+  if (v >= q.p50) return t('mediaanin yläpuolella');
+  if (v >= q.p25) return t('mediaanin alapuolella');
+  return t('alimmassa neljänneksessä');
 }
 
 function addTake(chartId, html) {
@@ -774,32 +774,34 @@ function takeaways(stats, me) {
   const g = me && me.group && stats.groups[me.group];
   const n = g && g.n ? ` <span class="an-take-n">n = ${g.n}</span>` : '';
   if (g && g.startCapital && me.startCapital != null) {
-    addTake('heroChart', `Ikäryhmäsi ${me.group} mediaanivarallisuus on <b>${fmtCompact(g.startCapital.p50)}</b> — sinun ${fmtCompact(me.startCapital)} on ${quartPos(me.startCapital, g.startCapital)}.${n}`);
+    addTake('heroChart', t('Ikäryhmäsi {0} mediaanivarallisuus on <b>{1}</b> — sinun {2} on {3}.', me.group, fmtCompact(g.startCapital.p50), fmtCompact(me.startCapital), quartPos(me.startCapital, g.startCapital)) + n);
   }
   if (g && g.monthly && me.monthly != null) {
-    addTake('savingsChart', `Ikäryhmäsi mediaanisäästö on <b>${fmtLuku(Math.round(g.monthly.p50))} €/kk</b> — sinun ${fmtLuku(Math.round(me.monthly))} €/kk on ${quartPos(me.monthly, g.monthly)}.${n}`);
+    addTake('savingsChart', t('Ikäryhmäsi mediaanisäästö on <b>{0} €/kk</b> — sinun {1} €/kk on {2}.', fmtLuku(Math.round(g.monthly.p50)), fmtLuku(Math.round(me.monthly)), quartPos(me.monthly, g.monthly)) + n);
   }
   if (g && g.stocks && me.stocks != null) {
-    addTake('stocksChart', `Ikäryhmäsi mediaaniosakepaino on <b>${Math.round(g.stocks.p50)} %</b> — sinulla ${Math.round(me.stocks)} %.${n}`);
+    addTake('stocksChart', t('Ikäryhmäsi mediaaniosakepaino on <b>{0} %</b> — sinulla {1} %.', Math.round(g.stocks.p50), Math.round(me.stocks)) + n);
   }
   // Ikäryhmä vielä kiinni mutta koko joukko auki: sama lause kaikista jakajista
   const all = stats.groups.all;
   const an = all && all.n ? ` <span class="an-take-n">n = ${all.n}</span>` : '';
   if (me && !(g && g.startCapital) && all && all.startCapital && me.startCapital != null) {
-    addTake('heroChart', `Kaikkien jakajien mediaanivarallisuus on <b>${fmtCompact(all.startCapital.p50)}</b> — sinun ${fmtCompact(me.startCapital)} on ${quartPos(me.startCapital, all.startCapital)}.${an}`);
+    addTake('heroChart', t('Kaikkien jakajien mediaanivarallisuus on <b>{0}</b> — sinun {1} on {2}.', fmtCompact(all.startCapital.p50), fmtCompact(me.startCapital), quartPos(me.startCapital, all.startCapital)) + an);
   }
   if (me && !(g && g.monthly) && all && all.monthly && me.monthly != null) {
-    addTake('savingsChart', `Kaikkien jakajien mediaanisäästö on <b>${fmtLuku(Math.round(all.monthly.p50))}&nbsp;€/kk</b> — sinun ${fmtLuku(Math.round(me.monthly))}&nbsp;€/kk on ${quartPos(me.monthly, all.monthly)}.${an}`);
+    addTake('savingsChart', t('Kaikkien jakajien mediaanisäästö on <b>{0}&nbsp;€/kk</b> — sinun {1}&nbsp;€/kk on {2}.', fmtLuku(Math.round(all.monthly.p50)), fmtLuku(Math.round(me.monthly)), quartPos(me.monthly, all.monthly)) + an);
   }
   if (me && !(g && g.stocks) && all && all.stocks && me.stocks != null) {
-    addTake('stocksChart', `Kaikkien jakajien mediaaniosakepaino on <b>${Math.round(all.stocks.p50)}&nbsp;%</b> — sinulla ${Math.round(me.stocks)}&nbsp;%.${an}`);
+    addTake('stocksChart', t('Kaikkien jakajien mediaaniosakepaino on <b>{0}&nbsp;%</b> — sinulla {1}&nbsp;%.', Math.round(all.stocks.p50), Math.round(me.stocks)) + an);
   }
   const rg = (g && g.retireAge) ? g : stats.groups.all;
   if (rg && rg.retireAge && me && me.ret) {
     const med = Math.round(rg.retireAge.p50);
     const d = Math.round(me.ret.age) - med;
     const rTxt = d === 0 ? 'sama kuin mediaani' : d < 0 ? `${-d} v mediaania aiemmin` : `${d} v mediaania myöhemmin`;
-    addTake('retireHist', `Mediaani eläkeikätavoite${rg === stats.groups.all ? '' : ' ikäryhmässäsi'} on <b>${med} v</b> — sinun ${Math.round(me.ret.age)} v on ${rTxt}.`);
+    addTake('retireHist', rg === stats.groups.all
+      ? t('Mediaani eläkeikätavoite on <b>{0} v</b> — sinun {1} v on {2}.', med, Math.round(me.ret.age), rTxt)
+      : t('Mediaani eläkeikätavoite ikäryhmässäsi on <b>{0} v</b> — sinun {1} v on {2}.', med, Math.round(me.ret.age), rTxt));
   }
 }
 
@@ -857,7 +859,7 @@ function takeaways(stats, me) {
     const top = Object.entries(all.events).filter(([t]) => t !== 'retirement' && LABELS[t]).sort((a, b) => b[1] - a[1])[0];
     if (top && top[1] > 0) tiles.push({ k: `Yleisin: ${LABELS[top[0]].toLowerCase()}`, v: `${ICONS[top[0]]} ${Math.round(top[1] * 100)} %` });
   }
-  $('anTiles').innerHTML = tiles.map((c) => `<div class="sum-tile"><div class="k">${c.k}</div><div class="v">${c.v}</div></div>`).join('');
+  $('anTiles').innerHTML = tiles.map((c) => `<div class="sum-tile"><div class="k">${t(c.k)}</div><div class="v">${c.v}</div></div>`).join('');
 
   // Rehellisyys jakaumien pohjasta: muokatut vs. esimerkkipohjat (v3-palvelin)
   const bn = $('anBasisNote');

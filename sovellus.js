@@ -1633,7 +1633,7 @@ function openPlanMenu(btn, p, rowEl) {
   menu.className = 'ph-menu';
   menu.dataset.pid = p.id;
   const d = new Date(p.muokattu || p.luotu || planNow());
-  menu.innerHTML = `<div class="info">${escapeHtml(p.nimi)} · ${PLAN_SRC_LABELS[p.alkupera] || 'oma'} · muokattu ${d.getDate()}.${d.getMonth() + 1}.</div>`;
+  menu.innerHTML = `<div class="info">${escapeHtml(p.nimi)} · ${t(PLAN_SRC_LABELS[p.alkupera] || 'oma')} · ${t('muokattu')} ${d.getDate()}.${d.getMonth() + 1}.</div>`;
   const add = (act, label, fn, cls) => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -1682,7 +1682,7 @@ function confirmDeletePlan(p, rowEl) {
   const menu = document.createElement('div');
   menu.className = 'ph-menu confirm';
   menu.dataset.pid = p.id;
-  menu.innerHTML = `<div class="q">Poistetaanko <b>${escapeHtml(p.nimi)}</b>? Tietoja ei voi palauttaa.</div><div class="row"></div>`;
+  menu.innerHTML = `<div class="q">${t('Poistetaanko <b>{0}</b>? Tietoja ei voi palauttaa.', escapeHtml(p.nimi))}</div><div class="row"></div>`;
   const row = menu.querySelector('.row');
   const mk = (label, cls, fn) => {
     const b = document.createElement('button');
@@ -1692,8 +1692,8 @@ function confirmDeletePlan(p, rowEl) {
     b.addEventListener('click', fn);
     row.appendChild(b);
   };
-  mk('Poista', 'btn danger-btn', () => { closePlanMenu(); deletePlan(p.id); });
-  mk('Peruuta', 'btn ghost', closePlanMenu);
+  mk(t('Poista'), 'btn danger-btn', () => { closePlanMenu(); deletePlan(p.id); });
+  mk(t('Peruuta'), 'btn ghost', closePlanMenu);
   rowEl.querySelector('.ph-acts').appendChild(menu);
   planMenuEl = menu;
   document.addEventListener('pointerdown', onPlanMenuDown, true);

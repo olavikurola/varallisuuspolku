@@ -106,10 +106,16 @@ tyyppi-label) EI käännetä — Plausible-datan jatkuvuus. MCP ja LLM-konteksti
 - [x] piirtopöydän a11y-tekstit (aria/announce/scrub, 15 lausetta) {0}-muotoon +
       chipRow-labelnielu — puhutut muodot ('euroa kuukaudessa') omina avaiminaan,
       visuaaliset €/kk-yksiköt ennallaan (NBSP-alueisiin ei koskettu)
-- [ ] jatko: tulkin FIELDS/quick-actionit, kaavion
-      openPopover-lomake (540 riviä), laajennusten Pro-paneelit ja dev()-taulu,
-      sovellus.js renderSummary-lauseet (uudelleenkirjoitus {0}-viesteiksi),
-      index.html + alasivujen staattinen HTML (vaihe 3:n generaattorin kautta)
+- [x] tulkin muutosesikatselun r.nimi-nielut (kortti/tiivistelmä/ohitettu)
+- [x] kaavion openPopover-lomake (84 käärintää: kentät, tavoitenapit sinkeinä,
+      note-builderit {0}-muotoon; NBSP-rivit 447/550/801 kierretty sinkeillä)
+- [x] analytiikan narratiivit {0}-muotoon (quartPos-fraasit omina avaiminaan),
+      needMsg, empty()- ja tiilinielut
+- [x] suunnitelmakodin valikon inforivi, poistovarmistus, lähdelabelit
+- [ ] jatko: laajennusten Pro-paneelit ja dev()-taulu, sovellus.js
+      renderSummary/summaryPoints/summaryTalks-lauseet ({0}-uudelleenkirjoitus),
+      kortit.js koostetut alaotsikot, index.html + alasivujen staattinen HTML
+      (vaihe 3:n generaattorin kautta)
 
 Tiedosto kerrallaan, testit joka välissä. Järjestys (helpoimmasta / perustavimmasta):
 1. apu.js (EVENT_TYPES-labelit + formatterit — kaiken perusta)
