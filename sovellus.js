@@ -267,7 +267,7 @@ function buildShareImage() {
     x.fillStyle = '#b9aefa';
     x.font = `600 20px ${F}`;
     x.textAlign = rx > W / 2 ? 'right' : 'left';
-    x.fillText(`Eläkkeelle ${Math.round(sim.retireAge)} v`, rx + (rx > W / 2 ? -10 : 10), T - 6);
+    x.fillText(t('Eläkkeelle {0} v', Math.round(sim.retireAge)), rx + (rx > W / 2 ? -10 : 10), T - 6);
   }
   x.strokeStyle = 'rgba(255, 255, 255, 0.10)';
   x.lineWidth = 1;
@@ -276,9 +276,9 @@ function buildShareImage() {
   x.fillStyle = '#66738f';
   x.font = `500 18px ${F}`;
   x.textAlign = 'left';
-  x.fillText(`${state.ageNow} v`, L + 2, B - 10);
+  x.fillText(t('{0} v', state.ageNow), L + 2, B - 10);
   x.textAlign = 'right';
-  x.fillText(`${state.ageEnd} v`, R - 2, B - 10);
+  x.fillText(t('{0} v', state.ageEnd), R - 2, B - 10);
 
   // Brändi: merkki (käyrä + piste) liukuvärilaatalla + nimi
   const mg = x.createLinearGradient(40, 36, 92, 88);
@@ -306,43 +306,43 @@ function buildShareImage() {
   const ret = state.events.find((e) => e.type === 'retirement');
   const eur0 = (v) => fmtEur(Math.round(v));
   const age1 = (v) => fmtLuku(Math.round(v * 10) / 10);
-  const succRow = ['Onnistumistodennäköisyys', sim.successProb != null ? `${Math.round(sim.successProb * 100)} %` : '–'];
+  const succRow = [t('Onnistumistodennäköisyys'), sim.successProb != null ? `${Math.round(sim.successProb * 100)} %` : '–'];
   let label, big, rows;
   if (ret && sim.goal === 'withdrawal' && sim.solvedWithdrawal != null) {
-    label = sim.conf ? `Kestävä kuukausitulo (varmuus ${Math.round(sim.conf * 100)} %)` : 'Kestävä kuukausitulo eläkkeellä';
-    big = `${eur0(sim.solvedWithdrawal)}/kk`;
+    label = sim.conf ? t('Kestävä kuukausitulo (varmuus {0} %)', Math.round(sim.conf * 100)) : t('Kestävä kuukausitulo eläkkeellä');
+    big = t('{0}/kk', eur0(sim.solvedWithdrawal));
     rows = [
-      ['Eläkkeelle', `${age1(sim.retireAge)} v`],
-      ['Sijoitukset eläkeiässä', sim.wAtRet != null ? fmtCompact(sim.wAtRet) : '–'],
-      ['Kuukausisäästö nyt', `${eur0(state.monthly)}/kk`],
+      [t('Eläkkeelle'), t('{0} v', age1(sim.retireAge))],
+      [t('Sijoitukset eläkeiässä'), sim.wAtRet != null ? fmtCompact(sim.wAtRet) : '–'],
+      [t('Kuukausisäästö nyt'), t('{0}/kk', eur0(state.monthly))],
     ];
     if (sim.conf) rows[0] = succRow;
   } else if (ret && sim.goal === 'age' && sim.solvedRetireAge != null) {
-    label = 'Aikaisin eläkeikä';
-    big = `${age1(sim.solvedRetireAge)} v`;
+    label = t('Aikaisin eläkeikä');
+    big = t('{0} v', age1(sim.solvedRetireAge));
     rows = [
-      ['Kuukausitulo eläkkeellä', `${eur0(ret.withdrawal)}/kk`],
-      ['Sijoitukset eläkeiässä', sim.wAtRet != null ? fmtCompact(sim.wAtRet) : '–'],
-      ['Kuukausisäästö nyt', `${eur0(state.monthly)}/kk`],
+      [t('Kuukausitulo eläkkeellä'), t('{0}/kk', eur0(ret.withdrawal))],
+      [t('Sijoitukset eläkeiässä'), sim.wAtRet != null ? fmtCompact(sim.wAtRet) : '–'],
+      [t('Kuukausisäästö nyt'), t('{0}/kk', eur0(state.monthly))],
     ];
   } else if (ret && sim.goal === 'saving' && sim.requiredMonthly != null) {
-    label = 'Tarvittava kuukausisäästö';
-    big = `${eur0(sim.requiredMonthly)}/kk`;
+    label = t('Tarvittava kuukausisäästö');
+    big = t('{0}/kk', eur0(sim.requiredMonthly));
     rows = [
-      ['Eläkkeelle', `${age1(sim.retireAge)} v`],
-      ['Kuukausitulo eläkkeellä', `${eur0(ret.withdrawal)}/kk`],
-      sim.conf ? succRow : ['Sijoitukset eläkeiässä', sim.wAtRet != null ? fmtCompact(sim.wAtRet) : '–'],
+      [t('Eläkkeelle'), t('{0} v', age1(sim.retireAge))],
+      [t('Kuukausitulo eläkkeellä'), t('{0}/kk', eur0(ret.withdrawal))],
+      sim.conf ? succRow : [t('Sijoitukset eläkeiässä'), sim.wAtRet != null ? fmtCompact(sim.wAtRet) : '–'],
     ];
   } else if (ret && sim.successProb != null) {
-    label = 'Onnistumistodennäköisyys';
+    label = t('Onnistumistodennäköisyys');
     big = `${Math.round(sim.successProb * 100)} %`;
     rows = [
-      ['Kuukausitulo eläkkeellä', `${eur0(ret.withdrawal)}/kk`],
-      ['Sijoitukset eläkeiässä', sim.wAtRet != null ? fmtCompact(sim.wAtRet) : '–'],
-      ['Kuukausisäästö nyt', `${eur0(state.monthly)}/kk`],
+      [t('Kuukausitulo eläkkeellä'), t('{0}/kk', eur0(ret.withdrawal))],
+      [t('Sijoitukset eläkeiässä'), sim.wAtRet != null ? fmtCompact(sim.wAtRet) : '–'],
+      [t('Kuukausisäästö nyt'), t('{0}/kk', eur0(state.monthly))],
     ];
   } else {
-    label = `Sijoitusvarallisuus ${state.ageEnd} vuoden iässä`;
+    label = t('Sijoitusvarallisuus {0} vuoden iässä', state.ageEnd);
     big = fmtCompact(sim.wEnd);
     rows = [];
   }
@@ -365,17 +365,17 @@ function buildShareImage() {
   if (state.real) {
     x.fillStyle = '#66738f';
     x.font = `500 18px ${F}`;
-    x.fillText('reaalieuroina (inflaatiokorjattu)', 70, 176);
+    x.fillText(t('reaalieuroina (inflaatiokorjattu)'), 70, 176);
   }
 
   x.fillStyle = '#2dd4bf';
   x.font = `600 22px ${F}`;
   x.textAlign = 'left';
-  x.fillText('Piirrä oma polkusi — varallisuuspolku.com', 70, H - 18);
+  x.fillText(t('Piirrä oma polkusi — varallisuuspolku.com'), 70, H - 18);
   x.fillStyle = '#66738f';
   x.font = `500 16px ${F}`;
   x.textAlign = 'right';
-  x.fillText('Havainnollistus, ei sijoitusneuvontaa', W - 70, H - 18);
+  x.fillText(t('Havainnollistus, ei sijoitusneuvontaa'), W - 70, H - 18);
   return c;
 }
 
@@ -390,7 +390,7 @@ async function shareResultImage(lahde) {
     // Mobiilissa natiivi jakoarkki; muuten lataus — molemmat ilman palvelinta
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
-        await navigator.share({ files: [file], title: 'Varallisuuspolku', text: 'Minun polkuni — varallisuuspolku.com' });
+        await navigator.share({ files: [file], title: 'Varallisuuspolku', text: t('Minun polkuni — varallisuuspolku.com') });
         return;
       } catch (e) { if (e && e.name === 'AbortError') return; }
     }
@@ -774,7 +774,7 @@ function updateAcctUI() {
       cum += state.monthly * 12 * Math.pow(1 + g, y);
       if (cum >= 100000) yr = new Date().getFullYear() + y + 1;
     }
-    if (cum >= 100000) note += yr ? ` · ylittyy ~${yr}` : ' · talletuksesi ylittävät katon';
+    if (cum >= 100000) note += yr ? t(' · ylittyy ~{0}', yr) : t(' · talletuksesi ylittävät katon');
     note += '.';
   }
   $('acctNote').textContent = note;
@@ -971,61 +971,61 @@ function summaryPoints(s) {
   const pts = [];
 
   if (s.goal === 'saving' && s.requiredMonthly != null && s.requiredMonthly > state.monthly) {
-    pts.push({ warn: true, html: `Säästän <b>${fmtEur(s.requiredMonthly)}/kk</b> — nykyinen ${fmtEur(state.monthly)}/kk ei riitä tavoitteeseeni.` });
+    pts.push({ warn: true, html: t('Säästän <b>{0}/kk</b> — nykyinen {1}/kk ei riitä tavoitteeseeni.', fmtEur(s.requiredMonthly), fmtEur(state.monthly)) });
   } else if (s.goal === 'saving' && s.requiredMonthly != null) {
-    pts.push({ html: `Säästän <b>${fmtEur(state.monthly)}/kk</b> — tavoitteeni laskennallinen minimi on ${fmtEur(s.requiredMonthly)}/kk.` });
+    pts.push({ html: t('Säästän <b>{0}/kk</b> — tavoitteeni laskennallinen minimi on {1}/kk.', fmtEur(state.monthly), fmtEur(s.requiredMonthly)) });
   } else {
-    const grow = state.savingsGrowth > 0 ? `, kasvatan säästöä ${fmtLuku(state.savingsGrowth)} %/v` : '';
-    pts.push({ html: `Sijoitan <b>${fmtEur(state.monthly)}/kk</b>${s.retireAge != null ? ' eläkkeelle jäämiseen asti' : ' koko suunnitelman ajan'}${grow} (alkupääoma ${fmtEur(state.startCapital)}).` });
+    const grow = state.savingsGrowth > 0 ? t(', kasvatan säästöä {0} %/v', fmtLuku(state.savingsGrowth)) : '';
+    pts.push({ html: t('Sijoitan <b>{0}/kk</b>', fmtEur(state.monthly)) + (s.retireAge != null ? t(' eläkkeelle jäämiseen asti') : t(' koko suunnitelman ajan')) + grow + t(' (alkupääoma {0}).', fmtEur(state.startCapital)) });
   }
 
   const a = baseAlloc(state);
   const { mu } = portfolioStats(a);
-  pts.push({ html: `Riskiprofiilini: <b>${Math.round(a.s * 100)} % osakkeita</b>, ${Math.round(a.b * 100)} % korkoja, ${Math.round(a.c * 100)} % käteistä — tuotto-oletus ${pctFmt(mu)}/v${state.glide ? '; riskiä vähennetään eläkettä lähestyttäessä' : ''}.` });
+  pts.push({ html: t('Riskiprofiilini: <b>{0} % osakkeita</b>, {1} % korkoja, {2} % käteistä — tuotto-oletus {3}/v', Math.round(a.s * 100), Math.round(a.b * 100), Math.round(a.c * 100), pctFmt(mu)) + (state.glide ? t('; riskiä vähennetään eläkettä lähestyttäessä') : '') + '.' });
 
   for (const e of [...state.events].sort((x, y) => x.age - y.age)) {
     if (e.type === 'retirement') continue;
-    const age = `<b>${Math.round(e.age)} v</b> (${yearOf(e.age)})`;
+    const age = t('<b>{0} v</b> ({1})', Math.round(e.age), yearOf(e.age));
     const nm = escapeHtml(evLabel(e));
     if (e.type === 'goal') {
-      pts.push({ html: `Tavoitteeni: <b>${fmtEur(e.amount)}</b> varallisuutta iässä ${age}.` });
+      pts.push({ html: t('Tavoitteeni: <b>{0}</b> varallisuutta iässä {1}.', fmtEur(e.amount), age) });
       continue;
     }
     if (e.amount < 0 && e.financing === 'loan') {
       const price = -e.amount;
       const down = clamp(e.down || 0, 0, price);
       const pmt = loanPayment(price - down, e.rate || 0, e.years || 10);
-      pts.push({ html: `Ikään ${age} mennessä: käsiraha <b>${fmtEur(down)}</b> — ${nm} ${fmtEur(price)}; lainanhoito ${fmtEur(pmt)}/kk ${Math.round(e.years || 10)} v ajan.` });
+      pts.push({ html: t('Ikään {0} mennessä: käsiraha <b>{1}</b> — {2} {3}; lainanhoito {4}/kk {5} v ajan.', age, fmtEur(down), nm, fmtEur(price), fmtEur(pmt), Math.round(e.years || 10)) });
     } else if (e.amount < 0) {
-      pts.push({ html: `Iässä ${age}: ${nm} <b>${fmtEur(-e.amount)}</b> — irrotetaan sijoituksista.` });
+      pts.push({ html: t('Iässä {0}: {1} <b>{2}</b> — irrotetaan sijoituksista.', age, nm, fmtEur(-e.amount)) });
     } else if (e.amount > 0) {
-      pts.push({ html: `Iässä ${age}: ${nm} <b>+${fmtEur(e.amount)}</b> — sijoitetaan salkkuun.` });
+      pts.push({ html: t('Iässä {0}: {1} <b>+{2}</b> — sijoitetaan salkkuun.', age, nm, fmtEur(e.amount)) });
     } else if (e.recMonthly) {
-      pts.push({ html: `Iästä ${age} alkaen: ${nm} <b>${e.recMonthly > 0 ? '+' : ''}${fmtEur(e.recMonthly)}/kk</b> ${Math.round(e.recYears || 0)} vuoden ajan.` });
+      pts.push({ html: t('Iästä {0} alkaen: {1} <b>{2}{3}/kk</b> {4} vuoden ajan.', age, nm, e.recMonthly > 0 ? '+' : '', fmtEur(e.recMonthly), Math.round(e.recYears || 0)) });
     }
     if (e.recMonthly && e.amount) {
-      pts.push({ html: `${nm} lisäksi <b>${e.recMonthly > 0 ? '+' : ''}${fmtEur(e.recMonthly)}/kk</b> ${Math.round(e.recYears || 0)} vuoden ajan.` });
+      pts.push({ html: t('{0} lisäksi <b>{1}{2}/kk</b> {3} vuoden ajan.', nm, e.recMonthly > 0 ? '+' : '', fmtEur(e.recMonthly), Math.round(e.recYears || 0)) });
     }
     const si = e.sellAge != null && (s.saleInfos || []).find((x) => x.id === e.id);
     if (si) {
-      pts.push({ html: `Iässä <b>${Math.round(si.age)} v</b> (${yearOf(si.age)}) myyn: ${nm} ~<b>${fmtEur(si.value)}</b>` +
-        `${si.payoff > 0.5 ? `, lainaa pois ${fmtEur(si.payoff)}` : ''}${si.tax > 0.5 ? `, vero ${fmtEur(si.tax)}` : ''} — sijoituksiin ${fmtEur(si.value - si.payoff - si.tax)}.` });
+      pts.push({ html: t('Iässä <b>{0} v</b> ({1}) myyn: {2} ~<b>{3}</b>', Math.round(si.age), yearOf(si.age), nm, fmtEur(si.value)) +
+        (si.payoff > 0.5 ? t(', lainaa pois {0}', fmtEur(si.payoff)) : '') + (si.tax > 0.5 ? t(', vero {0}', fmtEur(si.tax)) : '') + t(' — sijoituksiin {0}.', fmtEur(si.value - si.payoff - si.tax)) });
     }
   }
 
   if (s.retireAge != null) {
-    const wd = `<b>${fmtEur(s.withdrawal)}/kk</b>`;
-    const ageStr = `<b>${s.goal === 'age' && s.solvedRetireAge != null ? fmtAge(s.solvedRetireAge) : Math.round(s.retireAge) + ' v'}</b> (${yearOf(s.retireAge)})`;
-    const confSuffix = s.conf ? ` — mitoitettu ${Math.round(s.conf * 100)} % onnistumisvarmuudelle` : '';
-    if (s.goal === 'withdrawal') pts.push({ html: `Jään eläkkeelle iässä ${ageStr} ja käytän sijoitusvarat tasaisesti loppuun — kestävä kuukausitulo ${wd}${confSuffix}.` });
-    else if (s.goal === 'age') pts.push({ html: `Jään eläkkeelle heti kun kuukausituloni ${wd} on kestävä — laskennallisesti iässä ${ageStr}${confSuffix}.` });
-    else pts.push({ html: `Jään eläkkeelle iässä ${ageStr}, tavoitteena ${wd} kuukausitulo${confSuffix}.` });
+    const wd = t('<b>{0}/kk</b>', fmtEur(s.withdrawal));
+    const ageStr = `<b>${s.goal === 'age' && s.solvedRetireAge != null ? fmtAge(s.solvedRetireAge) : t('{0} v', Math.round(s.retireAge))}</b> (${yearOf(s.retireAge)})`;
+    const confSuffix = s.conf ? t(' — mitoitettu {0} % onnistumisvarmuudelle', Math.round(s.conf * 100)) : '';
+    if (s.goal === 'withdrawal') pts.push({ html: t('Jään eläkkeelle iässä {0} ja käytän sijoitusvarat tasaisesti loppuun — kestävä kuukausitulo {1}{2}.', ageStr, wd, confSuffix) });
+    else if (s.goal === 'age') pts.push({ html: t('Jään eläkkeelle heti kun kuukausituloni {0} on kestävä — laskennallisesti iässä {1}{2}.', wd, ageStr, confSuffix) });
+    else pts.push({ html: t('Jään eläkkeelle iässä {0}, tavoitteena {1} kuukausitulo{2}.', ageStr, wd, confSuffix) });
     if (s.pension > 0) {
       const draw = Math.max(0, s.withdrawal - s.pension);
-      pts.push({ html: `Lakisääteinen työeläkkeeni on <b>${fmtEur(s.pension)}/kk</b> (alk. ${Math.round(s.pensionAge)} v) — sijoituksista nostan noin <b>${fmtEur(draw)}/kk</b>${state.tax ? ' (+ myyntivoittovero)' : ''}.` });
+      pts.push({ html: t('Lakisääteinen työeläkkeeni on <b>{0}/kk</b> (alk. {1} v) — sijoituksista nostan noin <b>{2}/kk</b>', fmtEur(s.pension), Math.round(s.pensionAge), fmtEur(draw)) + (state.tax ? t(' (+ myyntivoittovero)') : '') + '.' });
     }
     if (state.tax && s.taxPaid > 0.5) {
-      pts.push({ html: `Varaudun eläkeaikana yhteensä noin <b>${fmtEur(s.taxPaid)}</b> myyntivoittoveroon (30/34&nbsp;% nostojen voitto-osuudesta).` });
+      pts.push({ html: t('Varaudun eläkeaikana yhteensä noin <b>{0}</b> myyntivoittoveroon (30/34&nbsp;% nostojen voitto-osuudesta).', fmtEur(s.taxPaid)) });
     }
   }
   return pts;
@@ -1035,27 +1035,27 @@ function summaryTalks(s) {
   const talks = [];
   const p = Math.round((s.successProb || 0) * 100);
   if (s.goalUnreachable) {
-    const confNote = s.conf ? ` ${Math.round(s.conf * 100)} % varmuustavoitteella` : '';
+    const confNote = s.conf ? t(' {0} % varmuustavoitteella', Math.round(s.conf * 100)) : '';
     talks.push({ warn: true, html: s.goal === 'age'
-      ? `Eläkeikätavoitteeni ei toteudu nykyisillä oletuksilla${confNote} — tulotavoite ei onnistu edes suunnitelman lopussa.`
+      ? t('Eläkeikätavoitteeni ei toteudu nykyisillä oletuksilla{0} — tulotavoite ei onnistu edes suunnitelman lopussa.', confNote)
       : s.goal === 'withdrawal'
-        ? `Kestävää kuukausituloa ei löydy${confNote} — suunnitelma kaipaa lisää säästöä tai myöhemmän eläkeiän.`
-        : `Säästötavoitteeni ei toteudu nykyisillä oletuksilla${confNote} — tulotavoite on liian suuri.` });
+        ? t('Kestävää kuukausituloa ei löydy{0} — suunnitelma kaipaa lisää säästöä tai myöhemmän eläkeiän.', confNote)
+        : t('Säästötavoitteeni ei toteudu nykyisillä oletuksilla{0} — tulotavoite on liian suuri.', confNote) });
   }
   if (s.requiredMonthly != null && s.requiredMonthly > state.monthly) {
-    talks.push({ warn: true, html: `Säästökykyni ja tavoitteeni välillä on <b>${fmtEur(s.requiredMonthly - state.monthly)}/kk</b> ero — miten se katetaan?` });
+    talks.push({ warn: true, html: t('Säästökykyni ja tavoitteeni välillä on <b>{0}/kk</b> ero — miten se katetaan?', fmtEur(s.requiredMonthly - state.monthly)) });
   }
   if (s.depletionAge != null && s.depletionAge < s.a1 - 1) {
-    talks.push({ warn: true, html: `Laskelmassa varani ehtyvät noin <b>${Math.round(s.depletionAge)} v</b> iässä — miten loppuvuodet katetaan?` });
+    talks.push({ warn: true, html: t('Laskelmassa varani ehtyvät noin <b>{0} v</b> iässä — miten loppuvuodet katetaan?', Math.round(s.depletionAge)) });
   }
   if (s.successProb != null && p < 65) {
-    talks.push({ html: `Onnistumistodennäköisyys on <b>${p} %</b> — haluan keskustella keinoista: suurempi säästö, maltillisempi nosto tai myöhäisempi eläköityminen.` });
+    talks.push({ html: t('Onnistumistodennäköisyys on <b>{0} %</b> — haluan keskustella keinoista: suurempi säästö, maltillisempi nosto tai myöhäisempi eläköityminen.', p) });
   }
   if (!state.events.some((e) => e.type === 'retirement')) {
-    talks.push({ html: 'Suunnitelmastani puuttuu vielä eläketavoite — haluan hahmottaa, milloin ja millaisella kuukausitulolla voisin jäädä eläkkeelle.' });
+    talks.push({ html: t('Suunnitelmastani puuttuu vielä eläketavoite — haluan hahmottaa, milloin ja millaisella kuukausitulolla voisin jäädä eläkkeelle.') });
   }
   if (!talks.length) {
-    talks.push({ html: `Suunnitelmani on laskennallisesti kestävä loppuun asti (onnistumistodennäköisyys <b>${p} %</b>) — haluan varmistaa, että toteutus vastaa sitä.` });
+    talks.push({ html: t('Suunnitelmani on laskennallisesti kestävä loppuun asti (onnistumistodennäköisyys <b>{0} %</b>) — haluan varmistaa, että toteutus vastaa sitä.', p) });
   }
   return talks;
 }
@@ -1069,15 +1069,15 @@ function renderSummary() {
 
   const tiles = [
     { k: 'Nykyinen varallisuus', v: fmtEur(state.startCapital) },
-    { k: 'Kuukausisäästö', v: `${fmtEur(state.monthly)}/kk`, s: state.savingsGrowth > 0 ? `kasvu ${fmtLuku(state.savingsGrowth)} %/v` : '' },
+    { k: 'Kuukausisäästö', v: `${fmtEur(state.monthly)}/kk`, s: state.savingsGrowth > 0 ? t('kasvu {0} %/v', fmtLuku(state.savingsGrowth)) : '' },
     { k: s.goal === 'age' ? 'Aikaisin eläkeikä' : 'Eläkeikä',
       v: s.retireAge != null ? (s.goal === 'age' && s.solvedRetireAge != null ? fmtAge(s.solvedRetireAge) : `${Math.round(s.retireAge)} v`) : '—',
       s: s.retireAge != null ? yearOf(s.retireAge) : 'ei eläketapahtumaa' },
     { k: 'Kuukausitulo eläkkeellä', v: retire ? `${fmtEur(s.withdrawal)}/kk` : '—',
-      s: retire ? (s.pension > 0 ? `sis. työeläke ${fmtEur(s.pension)}/kk` : (s.goal === 'withdrawal' ? 'kestävä tulo — varat loppuun' : 'sijoituksista')) : '' },
+      s: retire ? (s.pension > 0 ? t('sis. työeläke {0}/kk', fmtEur(s.pension)) : (s.goal === 'withdrawal' ? 'kestävä tulo — varat loppuun' : 'sijoituksista')) : '' },
     { k: 'Varallisuus eläkkeellä', v: s.wAtRet != null ? fmtEur(s.wAtRet) : '—', cls: 'accent' },
     // appissa lyhyt label — täysi sana rivittyi rumasti kapeassa tiilessä
-    { k: vpNativeApp ? 'Onnistumis-%' : 'Onnistumistodennäköisyys', v: p != null ? `${p} %` : '—', cls: p >= 80 ? 'ok' : p >= 55 ? '' : 'bad', s: `${fmtLuku(s.mcPaths || MC_LIVE)} markkinapolkua` },
+    { k: vpNativeApp ? 'Onnistumis-%' : 'Onnistumistodennäköisyys', v: p != null ? `${p} %` : '—', cls: p >= 80 ? 'ok' : p >= 55 ? '' : 'bad', s: t('{0} markkinapolkua', fmtLuku(s.mcPaths || MC_LIVE)) },
   ];
 
   const evRows = [...state.events].sort((x, y) => x.age - y.age).map((e) => {
@@ -1085,33 +1085,33 @@ function renderSummary() {
     let sum, fin = '', note = '';
     if (e.type === 'retirement') {
       sum = `−${fmtEur(s.goal === 'withdrawal' && s.solvedWithdrawal != null ? s.solvedWithdrawal : e.withdrawal)}/kk`;
-      fin = { manual: 'kuukausitulon tarve', withdrawal: 'kestävä tulo — varat loppuun', age: 'aikaisin mahdollinen ikä', saving: 'säästötavoite' }[retGoal(e)];
-      if (e.pension > 0) note = `työeläke ${fmtEur(e.pension)}/kk alk. ${Math.round(e.pensionAge != null ? e.pensionAge : 65)} v`;
+      fin = t({ manual: 'kuukausitulon tarve', withdrawal: 'kestävä tulo — varat loppuun', age: 'aikaisin mahdollinen ikä', saving: 'säästötavoite' }[retGoal(e)]);
+      if (e.pension > 0) note = t('työeläke {0}/kk alk. {1} v', fmtEur(e.pension), Math.round(e.pensionAge != null ? e.pensionAge : 65));
     } else if (e.type === 'goal') {
       sum = fmtEur(e.amount);
-      fin = 'tavoitepiste';
-      note = 'mittari — ei kassavirtaa';
+      fin = t('tavoitepiste');
+      note = t('mittari — ei kassavirtaa');
     } else if (e.owned) {
       const left = Math.max(0, e.loanLeft || 0);
       sum = fmtEur(-e.amount);
       fin = left > 0
-        ? `omistan — lainaa ${fmtEur(left)}, erä ${fmtEur(loanPayment(left, e.rate || 0, Math.max(1, e.years || 10)))}/kk · ${Math.round(e.years || 10)} v · ${fmtLuku(e.rate || 0)} %`
-        : 'omistan velattomana';
+        ? t('omistan — lainaa {0}, erä {1}/kk · {2} v · {3} %', fmtEur(left), fmtEur(loanPayment(left, e.rate || 0, Math.max(1, e.years || 10))), Math.round(e.years || 10), fmtLuku(e.rate || 0))
+        : t('omistan velattomana');
     } else if (e.amount < 0 && e.financing === 'loan') {
       const price = -e.amount;
       const down = clamp(e.down || 0, 0, price);
       const pmt = loanPayment(price - down, e.rate || 0, e.years || 10);
       sum = fmtEur(e.amount);
-      fin = `laina: käsiraha ${fmtEur(down)}, erä ${fmtEur(pmt)}/kk · ${Math.round(e.years || 10)} v · ${fmtLuku(e.rate || 0)} %`;
+      fin = t('laina: käsiraha {0}, erä {1}/kk · {2} v · {3} %', fmtEur(down), fmtEur(pmt), Math.round(e.years || 10), fmtLuku(e.rate || 0));
     } else {
       sum = (e.amount >= 0 ? '+' : '') + fmtEur(e.amount);
-      fin = e.amount < 0 ? 'säästöistä' : 'tulo';
+      fin = e.amount < 0 ? t('säästöistä') : t('tulo');
     }
-    if (e.isAsset) note = `omaisuuseräksi, arvonmuutos ${fmtLuku(e.appr || 0)} %/v`;
-    if (e.type !== 'retirement' && e.recMonthly) note += `${note ? '; ' : ''}toistuva ${e.recMonthly > 0 ? '+' : ''}${fmtEur(e.recMonthly)}/kk ${Math.round(e.recYears || 0)} v`;
-    if (e.sellAge != null && e.isAsset) note += `${note ? '; ' : ''}myynti ${Math.round(e.sellAge)} v iässä${e.sellTaxFree ? ' (verovapaa)' : ''}`;
+    if (e.isAsset) note = t('omaisuuseräksi, arvonmuutos {0} %/v', fmtLuku(e.appr || 0));
+    if (e.type !== 'retirement' && e.recMonthly) note += (note ? '; ' : '') + t('toistuva {0}{1}/kk {2} v', e.recMonthly > 0 ? '+' : '', fmtEur(e.recMonthly), Math.round(e.recYears || 0));
+    if (e.sellAge != null && e.isAsset) note += (note ? '; ' : '') + t('myynti {0} v iässä', Math.round(e.sellAge)) + (e.sellTaxFree ? t(' (verovapaa)') : '');
     return `<tr><td>${def.icon} ${escapeHtml(evLabel(e))}</td>` +
-      `<td class="num">${e.owned ? 'nyt' : Math.round(e.age) + ' v · ' + yearOf(e.age).slice(1)}</td>` +
+      `<td class="num">${e.owned ? t('nyt') : t('{0} v · {1}', Math.round(e.age), yearOf(e.age).slice(1))}</td>` +
       `<td class="num">${sum}</td><td>${fin}</td><td>${note}</td></tr>`;
   }).join('');
 
@@ -1126,25 +1126,25 @@ function renderSummary() {
 
   $('sumSheet').innerHTML =
     `<div class="sum-head">` +
-    `<div><h1>Varallisuussuunnitelma</h1><div class="sum-sub">Tavoitteeni ja suunnitelmani elämäni taloudelle</div></div>` +
-    `<div class="sum-meta">${fmtPvm(new Date())}<br>Ikä ${state.ageNow} v · suunnitelma ${Math.round(s.a1)} v ikään asti<br>${state.real ? 'inflaatiokorjattu, nykyrahassa' : 'nimellisarvoin'}</div>` +
+    `<div><h1>${t('Varallisuussuunnitelma')}</h1><div class="sum-sub">${t('Tavoitteeni ja suunnitelmani elämäni taloudelle')}</div></div>` +
+    `<div class="sum-meta">${fmtPvm(new Date())}<br>${t('Ikä {0} v', state.ageNow)} · ${t('suunnitelma {0} v ikään asti', Math.round(s.a1))}<br>${state.real ? t('inflaatiokorjattu, nykyrahassa') : t('nimellisarvoin')}</div>` +
     `</div>` +
     `<div class="sum-tiles">${tiles.map((c) =>
       `<div class="sum-tile"><div class="k">${t(c.k)}</div><div class="v ${c.cls || ''}">${t(c.v)}</div>${c.s ? `<div class="s">${t(c.s)}</div>` : ''}</div>`).join('')}</div>` +
-    osio('Varallisuuden odotettu kehitys',
+    osio(t('Varallisuuden odotettu kehitys'),
       `<div class="sum-chart">${summaryChartSVG(s)}</div>` +
-      `<div class="sum-legend"><span><i class="sw sum-lg-line"></i>Sijoitusvarallisuus</span><span><i class="sw sum-lg-band"></i>Vaihteluväli</span><span><i class="sw sum-lg-inv"></i>Sijoitettu pääoma</span></div>`, true) +
-    osio('Suunnitelmani kulmakivet',
+      `<div class="sum-legend"><span><i class="sw sum-lg-line"></i>${t('Sijoitusvarallisuus')}</span><span><i class="sw sum-lg-band"></i>${t('Vaihteluväli')}</span><span><i class="sw sum-lg-inv"></i>${t('Sijoitettu pääoma')}</span></div>`, true) +
+    osio(t('Suunnitelmani kulmakivet'),
       `<ol class="sum-points">${summaryPoints(s).map(li).join('')}</ol>`, false) +
-    osio('Elämäntapahtumat aikajanalla',
-      `<div class="table-scroll"><table class="sum-table"><thead><tr><th>Tapahtuma</th><th>Ajankohta</th><th>Summa</th><th>Rahoitus</th><th>Huom.</th></tr></thead><tbody>${evRows}</tbody></table></div>`, false) +
-    osio('Keskusteltavaa esim. varainhoitajan kanssa',
+    osio(t('Elämäntapahtumat aikajanalla'),
+      `<div class="table-scroll"><table class="sum-table"><thead><tr><th>${t('Tapahtuma')}</th><th>${t('Ajankohta')}</th><th>${t('Summa')}</th><th>${t('Rahoitus')}</th><th>${t('Huom.')}</th></tr></thead><tbody>${evRows}</tbody></table></div>`, false) +
+    osio(t('Keskusteltavaa esim. varainhoitajan kanssa'),
       `<ul class="sum-points">${summaryTalks(s).map(li).join('')}</ul>`, false) +
     (familyOn() ? familySummaryHtml() : '') +
     (state.proOn ? proSummaryHtml(s) : '') +
-    `<p class="sum-assump">Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa${state.savingsGrowth > 0 ? `; säästön kasvu ${fmtLuku(state.savingsGrowth)} %/v` : ''}${state.real ? `; inflaatio ${fmtLuku(state.inflation)} %/v, luvut nykyrahassa` : ''}${state.glide ? '; ikäsidonnainen allokaatio' : ''}${s.pension > 0 ? '; lakisääteinen työeläke huomioitu eläketulona' : ''}${state.tax ? '; myyntivoittovero 30/34 % nostojen voitto-osuudesta' : ''}${state.acct === 'ost' ? '; osakesäästötili (osingot ja myynnit tilillä verotta, nostosta vero voitto-osuudesta)' : state.acct === 'ins' ? `; vakuutuskuori (tuotot kuoressa verotta, nostosta vero voitto-osuudesta${state.wrapFee > 0 ? `, kuoren kulu ${fmtLuku(state.wrapFee)} %/v` : ''})` : ''}${state.feePct > 0 ? `; sijoituskulut ${fmtLuku(state.feePct)} %/v` : ''}${state.acct === 'aot' && state.tax && state.divYield > 0 ? `; suorien osakkeiden osinkotuotto ${fmtLuku(state.divYield)} %/v verotettuna vuosittain` : ''}${(s.saleInfos || []).some((x) => x.tax > 0.5) ? '; omaisuuden myynnissä hankintameno-olettama' : ''}. ` +
-    `Lainat annuiteettilainoina. Onnistumistodennäköisyys perustuu ${fmtLuku(s.mcPaths || MC_LIVE)} satunnaiseen markkinapolkuun${s.conf ? `; tavoitteet mitoitettu ${Math.round(s.conf * 100)} % onnistumisvarmuudelle` : ''}. Laadittu Varallisuuspolku-työkalulla.</p>` +
-    `<p class="sum-disclaimer">Tämä yhteenveto kuvaa laatijansa omia tavoitteita, valintoja ja oletuksia. Se ei ole sijoitusneuvontaa eikä sijoitussuositus — sen voi antaa esimerkiksi varainhoitajalle keskustelun pohjaksi.</p>`;
+    `<p class="sum-assump">${t('Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa')}${state.savingsGrowth > 0 ? t('; säästön kasvu {0} %/v', fmtLuku(state.savingsGrowth)) : ''}${state.real ? t('; inflaatio {0} %/v, luvut nykyrahassa', fmtLuku(state.inflation)) : ''}${state.glide ? t('; ikäsidonnainen allokaatio') : ''}${s.pension > 0 ? t('; lakisääteinen työeläke huomioitu eläketulona') : ''}${state.tax ? t('; myyntivoittovero 30/34 % nostojen voitto-osuudesta') : ''}${state.acct === 'ost' ? t('; osakesäästötili (osingot ja myynnit tilillä verotta, nostosta vero voitto-osuudesta)') : state.acct === 'ins' ? t('; vakuutuskuori (tuotot kuoressa verotta, nostosta vero voitto-osuudesta{0})', state.wrapFee > 0 ? t(', kuoren kulu {0} %/v', fmtLuku(state.wrapFee)) : '') : ''}${state.feePct > 0 ? t('; sijoituskulut {0} %/v', fmtLuku(state.feePct)) : ''}${state.acct === 'aot' && state.tax && state.divYield > 0 ? t('; suorien osakkeiden osinkotuotto {0} %/v verotettuna vuosittain', fmtLuku(state.divYield)) : ''}${(s.saleInfos || []).some((x) => x.tax > 0.5) ? t('; omaisuuden myynnissä hankintameno-olettama') : ''}. ` +
+    `${t('Lainat annuiteettilainoina. Onnistumistodennäköisyys perustuu {0} satunnaiseen markkinapolkuun', fmtLuku(s.mcPaths || MC_LIVE))}${s.conf ? t('; tavoitteet mitoitettu {0} % onnistumisvarmuudelle', Math.round(s.conf * 100)) : ''}${t('. Laadittu Varallisuuspolku-työkalulla.')}</p>` +
+    `<p class="sum-disclaimer">${t('Tämä yhteenveto kuvaa laatijansa omia tavoitteita, valintoja ja oletuksia. Se ei ole sijoitusneuvontaa eikä sijoitussuositus — sen voi antaa esimerkiksi varainhoitajalle keskustelun pohjaksi.')}</p>`;
 }
 
 function openSummary() {
@@ -1235,7 +1235,7 @@ function planRowFromCurrent(nimi, alkupera) {
 }
 
 function addPlanRow(data, fam, nimi, alkupera) {
-  if (plans.length >= PLAN_MAX) { toast(`Enintään ${PLAN_MAX} suunnitelmaa — poista jokin ensin`); return null; }
+  if (plans.length >= PLAN_MAX) { toast(t('Enintään {0} suunnitelmaa — poista jokin ensin', PLAN_MAX)); return null; }
   const row = { id: planId(), nimi, data, family: fam || null, luotu: planNow(), muokattu: planNow(), alkupera: alkupera || 'oma' };
   plans.push(row);
   persistPlans(true);
@@ -1562,7 +1562,7 @@ function openPlanCompare() {
   renderChart();
   renderStats();
   track('Suunnitelmavertailu');
-  toast(`Vertailussa: ${b.nimi} — erot näkyvät käyrällä ja tunnusluvuissa`);
+  toast(t('Vertailussa: {0} — erot näkyvät käyrällä ja tunnusluvuissa', b.nimi));
 }
 
 function handlePlanAct(act) {
@@ -1791,7 +1791,7 @@ function pickPlanFile() {
         } else if (o && Array.isArray(o.events)) {
           if (addOne(o, null, null)) n = 1;
         }
-        if (n) { renderPlans(); toast(n === 1 ? 'Suunnitelma tuotu' : `${n} suunnitelmaa tuotu`); }
+        if (n) { renderPlans(); toast(n === 1 ? 'Suunnitelma tuotu' : t('{0} suunnitelmaa tuotu', n)); }
         else toast('Tiedostosta ei löytynyt suunnitelmaa');
       } catch (e) { toast('Tiedostoa ei voitu lukea'); }
     };
@@ -2158,7 +2158,7 @@ function rampResult(retA) {
     `<button class="btn ghost" id="rampShare">📸 Jaa tuloskuva</button>` +
     `<button class="btn ghost" id="rampTour">Esittelykierros</button>` +
     `</div>`;
-  $('rampOpen').addEventListener('click', () => { closeRamp(); showVetoHint(); toast(`Vinkki: Esittelykierros löytyy ${vpNativeApp ? 'Lisää' : '☰'}-valikosta`); });
+  $('rampOpen').addEventListener('click', () => { closeRamp(); showVetoHint(); toast(t('Vinkki: Esittelykierros löytyy {0}-valikosta', vpNativeApp ? t('Lisää') : '☰')); });
   // Jakonappi ei sulje ramppia — jakoarkki avautuu päälle ja käyttäjä jatkaa siitä
   $('rampShare').addEventListener('click', () => shareResultImage('ramppi'));
   // Omistuksen sisäänkäynti: jo omistettu asunto lainoineen puuttuu muuten

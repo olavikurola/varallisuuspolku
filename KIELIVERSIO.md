@@ -112,10 +112,16 @@ tyyppi-label) EI käännetä — Plausible-datan jatkuvuus. MCP ja LLM-konteksti
 - [x] analytiikan narratiivit {0}-muotoon (quartPos-fraasit omina avaiminaan),
       needMsg, empty()- ja tiilinielut
 - [x] suunnitelmakodin valikon inforivi, poistovarmistus, lähdelabelit
-- [ ] jatko: laajennusten Pro-paneelit ja dev()-taulu, sovellus.js
-      renderSummary/summaryPoints/summaryTalks-lauseet ({0}-uudelleenkirjoitus),
-      kortit.js koostetut alaotsikot, index.html + alasivujen staattinen HTML
-      (vaihe 3:n generaattorin kautta)
+- [x] laajennusten Pro-paneelit + perheominaisuudet (160 käärintää; dev()-taulun
+      arvo/oletus/yksikköpuolet tavut säilyttäen koskematta), kortit.js alaotsikot
+- [x] sovellus.js renderSummary/summaryPoints/summaryTalks + buildShareImage
+      (134 käärintää): r. 1145 fragmenttilause EI uudelleenkirjoitettu vaan
+      jokainen '; '-alkuinen itsenäinen lauseke on oma avaimensa (NBSP:t
+      avaimissa tallella); tavuidenttisyys todistettu ajamalla vanha ja uusi
+      funktio 5 tilayhdistelmällä
+- [ ] jatko (vaihe 1 loppusuora): tulkin in-template title/aria-attribuutit ja
+      quick-actionit, summaryChartSVG-akselit (lokaali t → window.t), kaavion
+      HUD/legenda index.html:ssä; staattinen HTML vaihe 3:n generaattorin kautta
 
 Tiedosto kerrallaan, testit joka välissä. Järjestys (helpoimmasta / perustavimmasta):
 1. apu.js (EVENT_TYPES-labelit + formatterit — kaiken perusta)
