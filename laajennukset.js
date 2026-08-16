@@ -604,7 +604,7 @@ function renderProAna() {
     box.innerHTML = rows.map((r) => {
       const pct = Math.round(Math.abs(r.delta) / maxD * 100);
       const pos = r.delta >= 0;
-      return `<div class="tor-row"><span class="tor-l" title="${escapeHtml(r.label)}">${r.label}</span>`
+      return `<div class="tor-row"><span class="tor-l" title="${escapeHtml(t(r.label))}">${t(r.label)}</span>`
         + `<span class="tor-bar"><i class="${pos ? 'pos' : 'neg'}" style="width:${pct}%"></i></span>`
         + `<span class="tor-v ${pos ? 'pos' : 'neg'}">${pos ? '+' : '−'}${fmtCompact(Math.abs(r.delta))}</span></div>`;
     }).join('');

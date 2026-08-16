@@ -394,7 +394,7 @@ function openDonateModal() {
         e.sellAge != null ? `myynti ${e.sellAge} v` : null,
       ].filter(Boolean).join(' · ') || '—';
     }
-    html += row(`${def.icon} ${def.label} · ${e.age} v`, desc);
+    html += row(`${def.icon} ${t(def.label)} · ${e.age} v`, desc);
   }
   if (p.derived) {
     html += `<h2>Laskennan tulokset</h2>` +
@@ -514,7 +514,7 @@ async function openCompareModal() {
       .filter(([t, share]) => share > 0 && t !== 'retirement')
       .sort((a, b) => b[1] - a[1]).slice(0, 6);
     evHtml = `<h2>Yleisimmät suunnitelmien tapahtumat (${gLabel.toLowerCase()})</h2><div class="cmp-events">` +
-      top.map(([t, share]) => `<span class="cmp-chip">${EVENT_TYPES[t].icon} ${EVENT_TYPES[t].label} <b>${Math.round(share * 100)} %</b></span>`).join('') +
+      top.map(([tp, share]) => `<span class="cmp-chip">${EVENT_TYPES[tp].icon} ${t(EVENT_TYPES[tp].label)} <b>${Math.round(share * 100)} %</b></span>`).join('') +
       `</div>`;
   }
 

@@ -84,7 +84,7 @@ const $ = (id) => document.getElementById(id);
 
 const NAME_MAX = 40;
 // Tapahtuman näyttönimi: oma nimi tai tyypin oletusnimi
-const evLabel = (ev) => (ev.name && ev.name.trim()) || EVENT_TYPES[ev.type].label;
+const evLabel = (ev) => (ev.name && ev.name.trim()) || t(EVENT_TYPES[ev.type].label);
 
 // Eläketapahtuman tavoitetila: manual | withdrawal | age | saving
 const retGoal = (ev) => ev.goal || 'manual';

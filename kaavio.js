@@ -611,10 +611,10 @@ function buildPalette() {
     const chip = document.createElement('div');
     chip.className = 'chip';
     chip.dataset.type = type; // rakenteellinen kahva (testit, ei kielisidontaa)
-    chip.title = def.label;
+    chip.title = t(def.label);
     chip.tabIndex = 0;
     chip.setAttribute('role', 'button');
-    chip.innerHTML = `<span class="ic" aria-hidden="true">${def.icon}</span><span>${def.label}</span>`;
+    chip.innerHTML = `<span class="ic" aria-hidden="true">${def.icon}</span><span>${t(def.label)}</span>`;
     chip.addEventListener('pointerdown', (e) => startPaletteDrag(e, type));
     // Näppäimistöllä: Enter/välilyönti lisää tapahtuman kuten napautus
     chip.addEventListener('keydown', (e) => {
@@ -641,7 +641,7 @@ function startPaletteDrag(e, type) {
   let moved = false;
   const ghost = document.createElement('div');
   ghost.className = 'drag-ghost';
-  ghost.innerHTML = `<span class="ic">${def.icon}</span><span>${def.label}</span>`;
+  ghost.innerHTML = `<span class="ic">${def.icon}</span><span>${t(def.label)}</span>`;
   document.body.appendChild(ghost);
   const dropHint = $('dropHint');
 
@@ -959,7 +959,7 @@ function openPopover(id) {
 
   const nameField =
     `<label class="field"><span class="field-label">Nimi</span>` +
-    `<span class="input"><input id="pv-name" type="text" maxlength="${NAME_MAX}" placeholder="${escapeHtml(def.label)}" /></span></label>`;
+    `<span class="input"><input id="pv-name" type="text" maxlength="${NAME_MAX}" placeholder="${escapeHtml(t(def.label))}" /></span></label>`;
 
   popover.innerHTML =
     `<h3><span aria-hidden="true">${def.icon}</span><span id="pv-title">${escapeHtml(evLabel(ev))}</span><button class="close" id="pv-close" aria-label="Sulje">✕</button></h3>` +

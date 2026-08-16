@@ -1012,7 +1012,7 @@ function openFsAddMenu(anchor) {
     if (def.owned) continue; // nykytilan syöttö kuuluu kojelaudalle, ei tulevaisuuspintaan
     if (def.familyOnly && !familyOn()) continue; // siirrot vain perhetilassa
     if (def.unique && state.events.some((e) => e.type === type)) continue; // esim. eläke jo graafilla
-    add(def.icon, def.label, () => addFromFs(type));
+    add(def.icon, t(def.label), () => addFromFs(type));
   }
   document.body.appendChild(menu);
   const r = anchor.getBoundingClientRect();

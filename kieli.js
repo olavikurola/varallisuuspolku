@@ -10,6 +10,19 @@
 
 const VP_LOCALE = 'fi-FI';
 
+/* Viestikatalogi, gettext-tyyli: suomenkielinen teksti on itse avain.
+   Kun kieli on fi (oletus, ainoa toistaiseksi), t() palauttaa syötteen
+   sellaisenaan — suomi ei koskaan kulje sanakirjan kautta eikä voi hajota.
+   Englanti tulee vaiheessa 2 fi→en-sanakirjana (VP_SANASTO).
+   Parametrit {0}/{1}-paikkamerkein: t('Ikä {0} v', ika). */
+let VP_KIELI = 'fi';
+const VP_SANASTO = {}; // vaihe 2: en-käännökset { 'fi-teksti': 'en text' }
+function t(s, ...args) {
+  let m = VP_KIELI === 'fi' ? s : (VP_SANASTO[s] || s);
+  for (let i = 0; i < args.length; i++) m = m.split('{' + i + '}').join(args[i]);
+  return m;
+}
+
 // Raakaluku localen mukaan — ei pyöristä, kutsuja päättää tarkkuuden opts:lla
 const fmtLuku = (v, opts) => Number(v).toLocaleString(VP_LOCALE, opts);
 

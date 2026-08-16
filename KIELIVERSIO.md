@@ -59,10 +59,25 @@ Ei olemassa olevaa i18n-infraa.
       (laskenta.js ~496) — Pro-verokannan muutos ei vaikuta osinkoveroon. Korjaus
       omana committinaan.
 
-### Vaihe 1 — tekstien ekstraktio katalogiin
-Uusi katalogitiedosto (classic script, ladataan ennen apu.js:ää; sync-whitelistiin +
-sw.js CORE + CACHE-bump). Tiedosto kerrallaan, testit joka välissä. Järjestys
-(helpoimmasta / perustavimmasta):
+### Vaihe 1 — tekstien ekstraktio katalogiin ⬅ TYÖN ALLA
+**VALITTU MALLI (16.8.2026): gettext-tyyli.** Suomenkielinen teksti on itse avain:
+`t('Opiskelu')` palauttaa fi-kielellä syötteen sellaisenaan (suomi ei kulje
+sanakirjan kautta eikä voi hajota), en-kielellä VP_SANASTO-haun (fi→en).
+Parametrit `t('Ikä {0} v', ika)` -paikkamerkein. Mekanismi kieli.js:ssä
+(VP_KIELI, VP_SANASTO, t). "Ekstraktio" = render-kohtien kääriminen t():hen —
+tekstejä ei siirretä, diff pysyy pienenä, en-sanasto generoidaan vaiheessa 2
+skannaamalla t()-kutsut. VAROITUS: `t` on yleinen muuttujanimi — tarkista
+varjostukset ennen käärintää (esim. kortit.js:in `[t, share]` → `[tp, share]`).
+LINJAUS: telemetria (track()-propsit, esim. kaavio.js 'Tapahtuma lisätty'
+tyyppi-label) EI käännetä — Plausible-datan jatkuvuus. MCP ja LLM-konteksti fi.
+
+- [x] t()-mekanismi kieli.js:ään (16.8.2026)
+- [x] EVENT_TYPES-labelien renderöintiketju: evLabel (apu.js, kattaa 43 kutsupaikkaa)
+      + suorat def.label-luvut (kaavio paletti/ghost/placeholder, kortit ×2,
+      piirtopoyta fs-valikko, laajennukset tornado-labelit)
+- [ ] jatko tiedosto kerrallaan alla olevassa järjestyksessä
+
+Tiedosto kerrallaan, testit joka välissä. Järjestys (helpoimmasta / perustavimmasta):
 1. apu.js (EVENT_TYPES-labelit + formatterit — kaiken perusta)
 2. laskenta.js (3 pientä labeltaulua), natiivilisat.js (flat), alapalkki.js (parametrisoitu valmiiksi)
 3. kortit.js, piirtopoyta.js (huom: a11y-announce tarvitsee puhutun muodon "euroa kuukaudessa")
