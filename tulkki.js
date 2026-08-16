@@ -1044,7 +1044,7 @@
     if (!applied.length) {
       // Kerro MIKSI mikään ei mennyt läpi — mykkä virhe ei auta ketään
       const miksi = rows.length
-        ? rows.map((r) => `<div class="tk-ch-row tk-ch-skip">${esc(r.nimi)} · ${esc(r.ohitettu || '')}</div>`).join('')
+        ? rows.map((r) => `<div class="tk-ch-row tk-ch-skip">${esc(t(r.nimi))} · ${esc(r.ohitettu || '')}</div>`).join('')
         : '';
       const vihje = rows.some((r) => r.ohitettu === 'ei tällaista tapahtumaa')
         ? '<div class="tk-ch-note">Vinkki: pyydä ensin lisäämään tapahtuma (esim. “lisää mökki 65-vuotiaana 150 000 €”), niin luon sen ja säädän summat samalla.</div>'
@@ -1065,10 +1065,10 @@
       `<div class="tk-ch-lab">Kokeilu käytössä — vertailu haamuna graafissa</div>` +
       (change.selite ? `<div class="tk-ch-sel">${esc(change.selite)}</div>` : '') +
       rows.map((r) => r.ohitettu
-        ? `<div class="tk-ch-row tk-ch-skip">${esc(r.nimi)} · ohitettu (${esc(r.ohitettu)})</div>`
+        ? `<div class="tk-ch-row tk-ch-skip">${esc(t(r.nimi))} · ${t('ohitettu')} (${esc(r.ohitettu)})</div>`
         : r.desc
-        ? `<div class="tk-ch-row">${esc(r.nimi)}: <b>${esc(r.desc)}</b></div>`
-        : `<div class="tk-ch-row">${esc(r.nimi)}: <s>${fmt(r.vanha)}</s> → <b>${fmt(r.uusi)}</b> ${esc(r.yks)}</div>`).join('') +
+        ? `<div class="tk-ch-row">${esc(t(r.nimi))}: <b>${esc(r.desc)}</b></div>`
+        : `<div class="tk-ch-row">${esc(t(r.nimi))}: <s>${fmt(r.vanha)}</s> → <b>${fmt(r.uusi)}</b> ${esc(r.yks)}</div>`).join('') +
       `<div class="tk-ch-acts">
         <button type="button" class="tk-keep">Pidä muutos</button>
         <button type="button" class="tk-mini tk-revert" title="Palauttaa tilanteen ennen kokeilua">Palauta</button>
@@ -1205,8 +1205,8 @@
         const idx = list.length - 1 - ri;
         const when = e.t ? e.t.slice(0, 16).replace('T', ' klo ') : '';
         const chg = (e.rows || []).map((r) => r.desc
-          ? `${esc(r.nimi)}: ${esc(r.desc)}`
-          : `${esc(r.nimi)}: ${fmtFi(r.vanha)} → ${fmtFi(r.uusi)} ${esc(r.yks || '')}`).join('; ');
+          ? `${esc(t(r.nimi))}: ${esc(r.desc)}`
+          : `${esc(t(r.nimi))}: ${fmtFi(r.vanha)} → ${fmtFi(r.uusi)} ${esc(r.yks || '')}`).join('; ');
         return `<div class="tk-act-row"><div class="tk-act-top"><span class="tk-act-when">${esc(when)}</span>` +
           `<button type="button" class="tk-mini tk-act-revert" data-i="${idx}" title="Palauta suunnitelma tätä muutosta edeltäneeseen tilaan">Palauta tähän</button></div>` +
           `<div class="tk-act-q">${esc(e.q || '')}</div><div class="tk-act-chg">${chg}</div></div>`;
