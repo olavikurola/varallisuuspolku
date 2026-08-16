@@ -15,8 +15,20 @@ const VP_LOCALE = 'fi-FI';
    sellaisenaan — suomi ei koskaan kulje sanakirjan kautta eikä voi hajota.
    Englanti tulee vaiheessa 2 fi→en-sanakirjana (VP_SANASTO).
    Parametrit {0}/{1}-paikkamerkein: t('Ikä {0} v', ika). */
+/* Kielen valinta (vaihe 2): oletus fi. Englanti aukeaa toistaiseksi VAIN
+   eksplisiittisesti: ?lang=en (tallentuu) tai localStorage vp-kieli.
+   HUOM: laitteen kielen automaattitunnistus kytketään vasta vaiheessa 3,
+   kun myös staattinen HTML-sisältö on englanniksi — muuten en-laitteet
+   saisivat sekakielisen näkymän (KIELIVERSIO.md). */
 let VP_KIELI = 'fi';
-const VP_SANASTO = {}; // vaihe 2: en-käännökset { 'fi-teksti': 'en text' }
+try {
+  const urlKieli = new URLSearchParams(location.search).get('lang');
+  if (urlKieli === 'en' || urlKieli === 'fi') localStorage.setItem('vp-kieli', urlKieli);
+  const valittu = localStorage.getItem('vp-kieli');
+  if (valittu === 'en') VP_KIELI = 'en';
+  if (VP_KIELI !== 'fi') document.documentElement.lang = VP_KIELI;
+} catch (e) { /* private mode tms. — pysytään suomessa */ }
+const VP_SANASTO = {}; // kieli-en.js täyttää kun VP_KIELI === 'en'
 function t(s, ...args) {
   let m = VP_KIELI === 'fi' ? s : (VP_SANASTO[s] || s);
   for (let i = 0; i < args.length; i++) m = m.split('{' + i + '}').join(args[i]);

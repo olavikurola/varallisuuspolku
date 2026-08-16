@@ -141,7 +141,20 @@ Tiedosto kerrallaan, testit joka välissä. Järjestys (helpoimmasta / perustavi
 7. sovellus.js — työläin: EXAMPLES (7 suunnitelmaa), 29 toastia, buildShareImage-canvas,
    ja renderSummary r. ~1145 fragmenttilause kirjoitettava kokonaisiksi lauseviesteiksi
 
-### Vaihe 2 — englanti käyttöön
+### Vaihe 2 — englanti käyttöön ⬅ TYÖN ALLA
+- [x] tyokalut/kieli-avaimet.js: t()-avainten + labeltaulujen skanneri (idempotentti;
+      lookbehind estää createElement/getContext/$t-väärät osumat)
+- [x] Koko en-sanasto käännetty: 502 avainta (tyokalut/kieli-en.luonnos.json);
+      Olavi katselmoi 8 epävarminta ("vaikuttaa ok" 16.8.2026)
+- [x] tyokalut/kieli-en-buildi.js → kieli-en.js (37 KB, generoitu — älä käsin);
+      whitelist + SW CORE + CACHE v51; ladataan kaikilla JS-sivuilla, täyttää
+      VP_SANASTON vain kun VP_KIELI==='en'
+- [x] Kielenvalinta kieli.js:ssä: VAIN eksplisiittinen ?lang=en / localStorage
+      vp-kieli — EI autodetectia ennen vaihetta 3 (staattinen HTML yhä suomeksi,
+      sekakielisyys estetty); ?lang=fi palauttaa; html lang päivittyy
+- [x] testit/selain/verify-kieli.js: en aukeaa, fi-oletus koskematon, paluu toimii
+- [ ] Yksiköiden muotoilukuviot (fmtCompact t€/M€, fmtAge v/kk, €/kk-liitteet en:ksi)
+- [ ] Kielivalitsin asetuksiin (alapalkin kytkin appiin + webin ☰-valikko)
 - Käännös (viralliset termit: osakesäästötili = equity savings account [vero.fi],
   arvo-osuustili = book-entry account, hankintameno-olettama = deemed acquisition cost)
 - Kielentunnistus + asetusten valitsin
