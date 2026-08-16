@@ -99,9 +99,14 @@ tyyppi-label) EI käännetä — Plausible-datan jatkuvuus. MCP ja LLM-konteksti
       MIINA PURETTU ARKKITEHTUURILLA: natiiviblokin .replace()/mutaatiot ovat
       gettext-mallissa turvallisia — muunneltu KOKO teksti on avain, web- ja
       appiversiot ovat vain eri sanakirjarivejä (kommentti laajennukset.js:ssä)
-- [ ] jatko tiedosto kerrallaan alla olevassa järjestyksessä (seuraavaksi:
-      natiivilisat.js flat-stringit, laskenta.js-labelien renderöintipaikat,
-      tulkki.js ERRORS/FIELDS-taulut)
+- [x] EXAMPLES-valikon nimet/kuvaukset + toast()-NIELU (kattaa ~29 kutsupaikan
+      staattiset viestit kerralla; tupla-t() on harmiton — miss palauttaa syötteen)
+      + ACCT_NOTES-luenta. Koostetut toastit ja OST-katon häntäliitteet valuvat
+      suomena kunnes {0}-muoto
+- [ ] jatko: piirtopöydän announce/chipit, tulkin FIELDS/quick-actionit, kaavion
+      openPopover-lomake (540 riviä), laajennusten Pro-paneelit ja dev()-taulu,
+      sovellus.js renderSummary-lauseet (uudelleenkirjoitus {0}-viesteiksi),
+      index.html + alasivujen staattinen HTML (vaihe 3:n generaattorin kautta)
 
 Tiedosto kerrallaan, testit joka välissä. Järjestys (helpoimmasta / perustavimmasta):
 1. apu.js (EVENT_TYPES-labelit + formatterit — kaiken perusta)

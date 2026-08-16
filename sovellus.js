@@ -11,7 +11,7 @@ function toast(msg) {
     toastEl.className = 'toast';
     document.body.appendChild(toastEl);
   }
-  toastEl.textContent = msg;
+  toastEl.textContent = t(msg); // nielukäärintä: staattiset viestit kääntyvät, koostetut valuvat suomena (KIELIVERSIO.md)
   toastEl.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400);
@@ -166,7 +166,7 @@ function openExamplesMenu(anchor) {
   menu.className = 'menu';
   for (const ex of EXAMPLES) {
     const b = document.createElement('button');
-    b.innerHTML = `<div>${ex.name}</div><div class="mdesc">${ex.desc}</div>`;
+    b.innerHTML = `<div>${t(ex.name)}</div><div class="mdesc">${t(ex.desc)}</div>`;
     b.addEventListener('click', () => {
       closeExamplesMenu();
       pushUndoNow(); // nykyinen suunnitelma talteen ennen korvaamista
@@ -174,7 +174,7 @@ function openExamplesMenu(anchor) {
       syncInputs();
       closePopover();
       renderAll();
-      toast(`Esimerkki ladattu — Ctrl+Z palauttaa omasi`);
+      toast(t('Esimerkki ladattu — Ctrl+Z palauttaa omasi'));
     });
     menu.appendChild(b);
   }
@@ -765,7 +765,7 @@ function updateAcctUI() {
   if (!sel) return;
   sel.value = state.acct;
   $('wrapFeeField').hidden = state.acct !== 'ins';
-  let note = ACCT_NOTES[state.acct];
+  let note = t(ACCT_NOTES[state.acct]);
   if (state.acct === 'ost') {
     // Talletuskatto 100 000 €: karkea arvio ylitysvuodesta (talletukset, ei tuotto)
     const g = (state.savingsGrowth || 0) / 100;
