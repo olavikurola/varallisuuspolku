@@ -121,10 +121,14 @@ tyyppi-label) EI käännetä — Plausible-datan jatkuvuus. MCP ja LLM-konteksti
       funktio 5 tilayhdistelmällä
 - [x] tulkin in-template title/aria/placeholder-attribuutit ja paneeliotsikot
       (14 kpl; yksityisyysrivin web/appi-variantit omina avaiminaan)
-- [ ] jatko (vaihe 1 loppusuora): summaryChartSVG-akselit (lokaali t → window.t),
-      kaavion HUD/legenda index.html:ssä; staattinen HTML vaihe 3:n generaattorin
-      kautta. Lisäksi iOS-kielimetadata korjattu (dev region fi + CFBundleLocalizations)
-      — App Store näyttää FI seuraavasta buildista alkaen.
+- [x] piirtopöydän HUD-mittarinielu (metric() kääntää k/v-kentät)
+- [x] iOS-kielimetadata: dev region fi + CFBundleLocalizations=[fi] + pbxproj —
+      App Store näyttää FI seuraavasta buildista (Olavin havainto: näytti EN)
+
+**VAIHE 1 JS-OSUUS VALMIS (16.8.2026).** Tietoisesti käännöksen ulkopuolella:
+yksikköliitteet (€/kk, ' v', t€/M€ — muotoilukuviot vaiheessa 2), summaryChartSVG-
+akselit (pelkkiä yksiköitä), telemetria, MCP, LLM-tekstit (lang-param vaiheessa 2),
+brändinimi. Staattinen HTML (index + 5 alasivua) hoidetaan vaihe 3:n generaattorilla.
 
 Tiedosto kerrallaan, testit joka välissä. Järjestys (helpoimmasta / perustavimmasta):
 1. apu.js (EVENT_TYPES-labelit + formatterit — kaiken perusta)

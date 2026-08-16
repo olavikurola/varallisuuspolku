@@ -81,7 +81,7 @@ updateHud = function () {
       const up = d > 0;
       dh = `<div class="d ${up ? 'up' : 'down'}">${up ? '▲ +' : '▼ −'}${fmt(Math.abs(d))}</div>`;
     }
-    items.push(`<div class="hud-m${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div>${dh}</div>`);
+    items.push(`<div class="hud-m${cls || ''}"><div class="k">${t(k)}</div><div class="v">${t(v)}</div>${dh}</div>`);
   };
   metric('Onnistuminen',
     curP != null ? Math.round(curP * 100) + ' %' : '–',
