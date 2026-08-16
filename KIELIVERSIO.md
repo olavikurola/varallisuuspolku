@@ -95,6 +95,10 @@ tyyppi-label) EI käännetä — Plausible-datan jatkuvuus. MCP ja LLM-konteksti
       'Ei toteudu'…) kääntyvät heti, koostetut alaotsikot valuvat suomena läpi
       kunnes ne muutetaan {0}-muotoon (inkrementaalinen malli, ei riko mitään)
 - [x] kaavio.js tooltip-rivien labelit (9 kpl: Sijoitukset, Vaihteluväli, …)
+- [x] TOUR_STEPS (~1600 sanaa): renderöinti (tourShow + announce) kääntää t():llä.
+      MIINA PURETTU ARKKITEHTUURILLA: natiiviblokin .replace()/mutaatiot ovat
+      gettext-mallissa turvallisia — muunneltu KOKO teksti on avain, web- ja
+      appiversiot ovat vain eri sanakirjarivejä (kommentti laajennukset.js:ssä)
 - [ ] jatko tiedosto kerrallaan alla olevassa järjestyksessä (seuraavaksi:
       natiivilisat.js flat-stringit, laskenta.js-labelien renderöintipaikat,
       tulkki.js ERRORS/FIELDS-taulut)

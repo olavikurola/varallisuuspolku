@@ -39,6 +39,8 @@ const TOUR_STEPS = [
 // webin piilotettujen nappien sijaan (kelluke, Pro-rivi, yläpalkki, ☰), ja
 // tekstit puhuvat laitteesta, eivät selaimesta. Webissä lohko ei tee mitään.
 // Tabien ID:t (#vpTabAi ym.) syntyvät alapalkki.js:ssä ennen kierroksen alkua.
+// i18n: mutaatiot ovat turvallisia — renderöinti kääntää t():llä, ja muunneltu
+// KOKO teksti on gettext-avain (web- ja appiversio ovat eri sanakirjarivit).
 if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
   TOUR_STEPS[0].x = TOUR_STEPS[0].x.replace('omassa selaimessasi', 'omalla laitteellasi');
   for (const st of TOUR_STEPS) {
@@ -75,7 +77,7 @@ function tourShow(i) {
   const last = i === TOUR_STEPS.length - 1;
   card.innerHTML =
     `<div class="tour-dots">${TOUR_STEPS.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>` +
-    `<h3>${st.t}</h3><p>${st.x}</p>` +
+    `<h3>${t(st.t)}</h3><p>${t(st.x)}</p>` +
     `<div class="tour-actions">` +
     `<button class="btn ghost" id="tourSkip">${last ? 'Sulje' : 'Ohita kierros'}</button>` +
     `<button class="btn" id="tourNext">${last ? 'Aloita: täytä omat tietosi' : `Seuraava (${i + 1}/${TOUR_STEPS.length})`}</button>` +
@@ -123,7 +125,7 @@ function tourShow(i) {
     card.style.top = Math.round(top) + 'px';
     card.style.left = Math.round(left) + 'px';
   });
-  announce(`${st.t}. ${st.x}`);
+  announce(`${t(st.t)}. ${t(st.x)}`);
 }
 
 // Kierroksen päätös: työ alkaa Perustiedoista — vieritetään korttiin,
