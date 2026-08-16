@@ -592,7 +592,7 @@
       if (!r.ok) {
         const data = await r.json().catch(() => ({}));
         aEl.className = 'tk-a tk-err';
-        aEl.textContent = ERRORS[data.error] || `Tulkki-virhe (${r.status}).`;
+        aEl.textContent = t(ERRORS[data.error] || 'Tulkki-virhe ({0}).', r.status);
         if (data.error === 'quota') {
           // Palvelimen IP-takaraja täyttyi ennen paikallista laskuria (esim.
           // useampi selain samasta verkosta) — synkkaa laskuri ja kerro polku.
@@ -632,7 +632,7 @@
         }
         if (!full && !toolCalls.length && !toolErr) {
           aEl.className = 'tk-a tk-err';
-          aEl.textContent = ERRORS[streamErr] || 'Tulkki ei vastannut — kokeile uudelleen.';
+          aEl.textContent = t(ERRORS[streamErr] || 'Tulkki ei vastannut — kokeile uudelleen.');
         } else {
           // Ensisijainen kanava: palvelimen jäsentämät työkalukutsut. Tekstiin
           // upotetut rivit jäävät varapoluksi (siirtymävaihe, vanha palvelin).
@@ -1543,10 +1543,10 @@
             } catch (e) { /* ohita rikkinäinen rivi */ }
           }
           raw = full.trim() || null;
-          if (!raw && !nlTool) st.textContent = ERRORS[streamErr] || 'Tulkki ei vastannut — kokeile uudelleen tai täytä kentät yllä.';
+          if (!raw && !nlTool) st.textContent = t(ERRORS[streamErr] || 'Tulkki ei vastannut — kokeile uudelleen tai täytä kentät yllä.');
         } else {
           const data = await r.json().catch(() => ({}));
-          st.textContent = ERRORS[data.error] || `Tulkki-virhe (${r.status}).`;
+          st.textContent = t(ERRORS[data.error] || 'Tulkki-virhe ({0}).', r.status);
         }
       } catch (e) { st.textContent = ERRORS.unreachable; }
 

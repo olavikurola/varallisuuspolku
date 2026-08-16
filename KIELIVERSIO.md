@@ -84,6 +84,12 @@ tyyppi-label) EI käännetä — Plausible-datan jatkuvuus. MCP ja LLM-konteksti
       toteumalomakkeen virhetekstit (~349-353, 'Anna varallisuus euroina' ym.)
       — kääri window.t:llä tai nimeä lokaali uudelleen seuraavassa erässä.
       Kytkinrivien tekstit (473-489) lokalisoituivat jo alapalkin apurin kautta.
+- [x] natiivilisat.js loppuun: toteumalomakkeen virhetekstit window.t:llä
+- [x] tulkki.js ERRORS-luennat (4 kpl) fallback-teksteineen — t() lukupaikassa,
+      ERRORS-taulun fi-arvot toimivat avaimina. LINJAUS: NOQ ei käärity — arvot
+      menevät palvelimelle LLM-kysymyksinä (kieli ratkeaa vaiheen 2 lang-paramilla)
+- [x] STRESS_DEFS-nimet + from-tekstit stressiskenaariolistassa (laajennukset.js;
+      laskenta.js pysyy koskemattomana — labelit käännetään renderöintipaikassa)
 - [ ] jatko tiedosto kerrallaan alla olevassa järjestyksessä (seuraavaksi:
       natiivilisat.js flat-stringit, laskenta.js-labelien renderöintipaikat,
       tulkki.js ERRORS/FIELDS-taulut)

@@ -347,11 +347,12 @@
     toteumaEl.querySelector('#vptTallenna').addEventListener('click', function () {
       var inp = toteumaEl.querySelector('#vptEur');
       var v = parseFloat(inp.value);
-      if (!(v >= 0)) { ilmoita('Anna varallisuus euroina'); return; }
-      if (typeof sim === 'undefined' || !sim || !sim.exp) { ilmoita('Suunnitelma ei ole vielä laskenut — hetki'); return; }
+      // window.t: renderToteuman "var t" varjostaa käännösfunktion (ks. KIELIVERSIO.md)
+      if (!(v >= 0)) { ilmoita(window.t('Anna varallisuus euroina')); return; }
+      if (typeof sim === 'undefined' || !sim || !sim.exp) { ilmoita(window.t('Suunnitelma ei ole vielä laskenut — hetki')); return; }
       toteumaKirjaa(Math.round(v));
       renderToteuma();
-      ilmoita('Kirjattu — ' + (toteumaTila() || {}).teksti);
+      ilmoita(window.t('Kirjattu — {0}', (toteumaTila() || {}).teksti));
     });
     toteumaEl.querySelectorAll('.vpt-rivi .x').forEach(function (b) {
       b.addEventListener('click', function () {
