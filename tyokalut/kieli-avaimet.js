@@ -24,7 +24,9 @@ const lisaa = (avain, lahde) => {
 };
 
 // 1) Staattiset t('...')-avaimet (myös window.t). Kattaa \'-escapet.
-const T_RE = /(?:window\.)?t\(\s*'((?:[^'\\]|\\.)+)'/g;
+// Lookbehind estää väärät osumat: createElement('div'), getContext('2d'),
+// $t('tkQuota') ym. päättyvät "t("-merkkeihin mutta eivät ole käännöskutsuja.
+const T_RE = /(?<![\w$.])(?:window\.)?t\(\s*'((?:[^'\\]|\\.)+)'/g;
 
 // 2) Labeltaulut, joiden arvot toimivat avaimina (käännös lukupaikassa) —
 //    lohko poimitaan nimellä ja arvot sen sisältä. Lista: KIELIVERSIO.md.
