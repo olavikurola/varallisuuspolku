@@ -1,6 +1,7 @@
 'use strict';
 /* Hionta 2: otsikon katkeamattomuus, ?-chippi, vertailun mahtuvuus, kestävä tulo. */
 const { chromium } = require('playwright');
+const { norm } = require('./normi');
 const { spawn } = require('child_process');
 
 let failed = 0;
@@ -122,7 +123,7 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
     await page.waitForFunction((n) => document.querySelectorAll('.tk-a').length > n, nMsg);
     await page.waitForTimeout(300);
     // täysi euroarvo kysymykseen, vaikka kortissa näkyy tiivis (v-alt)
-    ok(asked && /Verot yhteensä/.test(asked) && /85\s?575|85.575/.test(asked.replace(/[  ]/g, ' ')), 'kysymyksessä ehjä otsikko ja täysi arvo', JSON.stringify(asked));
+    ok(asked && /Verot yhteensä/.test(asked) && /85\s?575|85.575/.test(norm(asked)), 'kysymyksessä ehjä otsikko ja täysi arvo', JSON.stringify(asked));
   }
 
   await page.screenshot({ path: require('path').join(require('os').tmpdir(), 'tulkki-hionta2.png') });

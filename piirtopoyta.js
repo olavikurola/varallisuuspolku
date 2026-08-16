@@ -92,9 +92,9 @@ updateHud = function () {
     sim.wAtRet != null && g && g.wAtRet != null ? sim.wAtRet - g.wAtRet : null,
     500, fmtCompact, '');
   metric('Kestävä tulo',
-    sim.sustainableWd != null ? `${Math.round(sim.sustainableWd).toLocaleString('fi-FI')} €/kk` : '–',
+    sim.sustainableWd != null ? `${fmtNum(sim.sustainableWd)} €/kk` : '–',
     sim.sustainableWd != null && g && g.sustainableWd != null ? sim.sustainableWd - g.sustainableWd : null,
-    20, (x) => `${Math.round(x).toLocaleString('fi-FI')} €/kk`, '');
+    20, (x) => `${fmtNum(x)} €/kk`, '');
   if (familyOn()) {
     metric('Perheen onnistumis-%',
       jointMc ? Math.round(jointMc.successProb * 100) + ' %' : '…',
@@ -118,7 +118,7 @@ let delArm = null;
 let lastTapT = 0, lastTapKey = '';
 
 const retireEv = () => state.events.find((e) => e.type === 'retirement') || null;
-const fmtNum = (v) => Math.round(v).toLocaleString('fi-FI');
+const fmtNum = (v) => fmtLuku(Math.round(v)); // pyöristävä pikakäsi (kieli.js)
 
 /* Chippi: syy sormessa — muuttuva parametri, vanha → uusi, delta */
 

@@ -610,6 +610,7 @@ function buildPalette() {
     if (def.familyOnly && !familyOn()) continue; // siirrot vain perhetilassa
     const chip = document.createElement('div');
     chip.className = 'chip';
+    chip.dataset.type = type; // rakenteellinen kahva (testit, ei kielisidontaa)
     chip.title = def.label;
     chip.tabIndex = 0;
     chip.setAttribute('role', 'button');

@@ -23,7 +23,7 @@ const FILES = [
   // tyylit ja fontit
   'style.css', 'fonts.css', 'fonts/inter-latin.woff2', 'fonts/inter-latin-ext.woff2',
   // ajonaikainen JS (sw.js tarkoituksella pois)
-  'apu.js', 'kaavio.js', 'piirtopoyta.js', 'kortit.js', 'laajennukset.js',
+  'kieli.js', 'apu.js', 'kaavio.js', 'piirtopoyta.js', 'kortit.js', 'laajennukset.js',
   'sovellus.js', 'laskenta.js', 'mc-worker.js', 'tulkki.js', 'analytiikka.js', 'alapalkki.js',
   'natiivilisat.js',
   // ikonit ja manifesti

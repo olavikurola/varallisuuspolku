@@ -64,7 +64,7 @@ function renderStats() {
     v: fmtEur(s.deposits),
     va: fmtCompact(s.deposits),
     cls: '',
-    s: `${fmtEur(state.monthly)}/kk${state.savingsGrowth > 0 ? ` (+${state.savingsGrowth.toLocaleString('fi-FI')} %/v)` : ''} + alkupääoma${s.investedPay > 0.5 ? ` − lainanhoito ${fmtCompact(s.investedPay)}` : ''}`,
+    s: `${fmtEur(state.monthly)}/kk${state.savingsGrowth > 0 ? ` (+${fmtLuku(state.savingsGrowth)} %/v)` : ''} + alkupääoma${s.investedPay > 0.5 ? ` − lainanhoito ${fmtCompact(s.investedPay)}` : ''}`,
   });
   const confTxt = s.conf ? `${Math.round(s.conf * 100)} % varmuudella` : null;
   const p = s.successProb != null ? Math.round(s.successProb * 100) : null;
@@ -86,7 +86,7 @@ function renderStats() {
   } else if (s.solvedWithdrawal != null && (s.depletionAge == null || s.depletionAge >= s.a1 - 1)) {
     cards.push({ k: 'Kestävä kuukausitulo', v: `${fmtEur(s.solvedWithdrawal)}/kk`, cls: 'accent',
       s: [s.pension > 0 ? `sis. työeläke ${fmtEur(s.pension)}/kk` : null, confTxt || pTxt].filter(Boolean).join(' · ') || `varat loppuun ${Math.round(s.a1)} v mennessä`,
-      d: dRow(s.solvedWithdrawal, g && (g.solvedWithdrawal != null ? g.solvedWithdrawal : g.sustainableWd), (x) => `${Math.round(x).toLocaleString('fi-FI')} €/kk`, 20) });
+      d: dRow(s.solvedWithdrawal, g && (g.solvedWithdrawal != null ? g.solvedWithdrawal : g.sustainableWd), (x) => `${fmtLuku(Math.round(x))} €/kk`, 20) });
   } else if (s.depletionAge != null) {
     // %-nostossa "ehtyminen" tarkoittaa tulotarpeen alittumista (salkku ei ehdy)
     const pmWd = proOf(state);
@@ -375,7 +375,7 @@ function openDonateModal() {
   let html = `<h2>Perustiedot</h2>` +
     row('Ikä nyt / suunnitelman loppu', `${p.ageNow} v / ${p.ageEnd} v`) +
     row('Varallisuus nyt', fmtEur(p.startCapital)) +
-    row('Kuukausisäästö', `${fmtEur(p.monthly)}/kk` + (p.savingsGrowth ? ` (+${p.savingsGrowth.toLocaleString('fi-FI')} %/v)` : '')) +
+    row('Kuukausisäästö', `${fmtEur(p.monthly)}/kk` + (p.savingsGrowth ? ` (+${fmtLuku(p.savingsGrowth)} %/v)` : '')) +
     row('Allokaatio', `${p.alloc.stocks} % osakkeet · ${p.alloc.bonds} % korot`) +
     row('Kytkimet', [p.glide && 'ikäsidonnainen', p.real && 'inflaatiokorjattu', p.tax && 'myyntivoittovero'].filter(Boolean).join(' · ') || '—');
   html += `<h2>Tapahtumat (vain tyyppi, ikä ja summat — ei nimiä)</h2>`;

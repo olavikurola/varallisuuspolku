@@ -42,13 +42,7 @@ function svgIn(container, W, H) {
   container.appendChild(s);
   return s;
 }
-function fmtCompact(v) {
-  const a = Math.abs(v);
-  const sign = v < 0 ? '−' : '';
-  if (a >= 1e6) return sign + (a / 1e6).toLocaleString('fi-FI', { maximumFractionDigits: 1 }) + ' M€';
-  if (a >= 1e3) return sign + Math.round(a / 1e3) + ' t€';
-  return sign + Math.round(a) + ' €';
-}
+// fmtCompact: kieli.js (ladataan ennen tätä; huom. M€-desimaalit ≥10 M€:ssa 0 kuten muuallakin)
 const text = (svg, x, y, str, cls, anchor) => {
   const t = el('text', { x, y, class: cls || 'an-tick', 'text-anchor': anchor || 'start' }, svg);
   t.textContent = str;
@@ -578,7 +572,7 @@ function renderRetirePlan(stats, me) {
   const g = (me && me.group && stats.groups[me.group] && stats.groups[me.group].withdrawal)
     ? stats.groups[me.group] : stats.groups.all;
   if (!g || (!g.withdrawal && !g.wAtRet)) return empty('retirePlan', needMsg(stats.total, stats.kAnon));
-  const eurKk = (v) => Math.round(v).toLocaleString('fi-FI') + ' €/kk';
+  const eurKk = (v) => fmtLuku(Math.round(v)) + ' €/kk';
   const row = (k, q, fmt, mine) =>
     `<div class="an-hl-row"><span class="k">${k}</span><b>${fmt(q.p50)}</b>` +
     `<span class="rng">P25–P75: ${fmt(q.p25)} – ${fmt(q.p75)}</span>` +
@@ -606,7 +600,7 @@ function renderHomeLoan(stats, me) {
     row('Asunnon hinta', hl.price, fmtCompact, myHome ? -myHome.amount : null) +
     (hl.downShare ? row('Käsirahan osuus', hl.downShare, pct, myHome && myHome.down != null ? myHome.down / -myHome.amount : null) : '') +
     (hl.years ? row('Laina-aika', hl.years, (v) => Math.round(v) + ' v', myHome ? myHome.years : null) : '') +
-    (hl.rate ? row('Korko-oletus', hl.rate, (v) => v.toLocaleString('fi-FI', { maximumFractionDigits: 1 }) + ' %', myHome ? myHome.rate : null) : '') +
+    (hl.rate ? row('Korko-oletus', hl.rate, (v) => fmtLuku(v, { maximumFractionDigits: 1 }) + ' %', myHome ? myHome.rate : null) : '') +
     `<p class="an-note" style="margin-top:10px">Suunnitelmien asunnonostot lainalla (n = ${hl.n}).</p>`;
 }
 
@@ -656,7 +650,7 @@ function renderTimeline(stats) {
   // Parin kuukauden kertymä yhtenä möhkälepalkkina näyttäisi rikkinäiseltä —
   // lukuteksti kunnes kuukausia on vertailtavaksi asti
   if (tl.length < 3) {
-    const since = new Date(tl[0].m + '-01T00:00:00').toLocaleDateString('fi-FI', { month: 'long', year: 'numeric' });
+    const since = fmtPvm(new Date(tl[0].m + '-01T00:00:00'), { month: 'long', year: 'numeric' });
     $('timeline').innerHTML =
       `<div class="an-hl-row"><span class="k">Jaettuja suunnitelmia yhteensä</span><b>${stats.total}</b>` +
       `<span class="rng">alkaen ${since}</span></div>` +
@@ -783,7 +777,7 @@ function takeaways(stats, me) {
     addTake('heroChart', `Ikäryhmäsi ${me.group} mediaanivarallisuus on <b>${fmtCompact(g.startCapital.p50)}</b> — sinun ${fmtCompact(me.startCapital)} on ${quartPos(me.startCapital, g.startCapital)}.${n}`);
   }
   if (g && g.monthly && me.monthly != null) {
-    addTake('savingsChart', `Ikäryhmäsi mediaanisäästö on <b>${Math.round(g.monthly.p50).toLocaleString('fi-FI')} €/kk</b> — sinun ${Math.round(me.monthly).toLocaleString('fi-FI')} €/kk on ${quartPos(me.monthly, g.monthly)}.${n}`);
+    addTake('savingsChart', `Ikäryhmäsi mediaanisäästö on <b>${fmtLuku(Math.round(g.monthly.p50))} €/kk</b> — sinun ${fmtLuku(Math.round(me.monthly))} €/kk on ${quartPos(me.monthly, g.monthly)}.${n}`);
   }
   if (g && g.stocks && me.stocks != null) {
     addTake('stocksChart', `Ikäryhmäsi mediaaniosakepaino on <b>${Math.round(g.stocks.p50)} %</b> — sinulla ${Math.round(me.stocks)} %.${n}`);
@@ -795,7 +789,7 @@ function takeaways(stats, me) {
     addTake('heroChart', `Kaikkien jakajien mediaanivarallisuus on <b>${fmtCompact(all.startCapital.p50)}</b> — sinun ${fmtCompact(me.startCapital)} on ${quartPos(me.startCapital, all.startCapital)}.${an}`);
   }
   if (me && !(g && g.monthly) && all && all.monthly && me.monthly != null) {
-    addTake('savingsChart', `Kaikkien jakajien mediaanisäästö on <b>${Math.round(all.monthly.p50).toLocaleString('fi-FI')}&nbsp;€/kk</b> — sinun ${Math.round(me.monthly).toLocaleString('fi-FI')}&nbsp;€/kk on ${quartPos(me.monthly, all.monthly)}.${an}`);
+    addTake('savingsChart', `Kaikkien jakajien mediaanisäästö on <b>${fmtLuku(Math.round(all.monthly.p50))}&nbsp;€/kk</b> — sinun ${fmtLuku(Math.round(me.monthly))}&nbsp;€/kk on ${quartPos(me.monthly, all.monthly)}.${an}`);
   }
   if (me && !(g && g.stocks) && all && all.stocks && me.stocks != null) {
     addTake('stocksChart', `Kaikkien jakajien mediaaniosakepaino on <b>${Math.round(all.stocks.p50)}&nbsp;%</b> — sinulla ${Math.round(me.stocks)}&nbsp;%.${an}`);
@@ -830,7 +824,7 @@ function takeaways(stats, me) {
 
   const renderStats = () => {
 
-  $('anUpdated').textContent = `Päivitetty ${new Date(stats.updated).toLocaleDateString('fi-FI')}.`;
+  $('anUpdated').textContent = `Päivitetty ${fmtPvm(new Date(stats.updated))}.`;
   const all = stats.groups.all || { n: stats.total };
 
   // Edistymismittari: kun mikään ikäryhmä ei vielä yllä k-anon-rajaan,
@@ -856,7 +850,7 @@ function takeaways(stats, me) {
 
   // Tunnuslukutiilet
   const tiles = [{ k: 'Jaettuja suunnitelmia', v: String(stats.total) }];
-  if (all.monthly) tiles.push({ k: 'Mediaani kk-säästö', v: `${Math.round(all.monthly.p50).toLocaleString('fi-FI')} €/kk` });
+  if (all.monthly) tiles.push({ k: 'Mediaani kk-säästö', v: `${fmtLuku(Math.round(all.monthly.p50))} €/kk` });
   if (all.retireAge) tiles.push({ k: 'Mediaani eläkeikätavoite', v: `${Math.round(all.retireAge.p50)} v` });
   if (all.wAtRet) tiles.push({ k: 'Mediaani varallisuus eläkkeellä', v: fmtCompact(all.wAtRet.p50) });
   if (all.events) {

@@ -27,9 +27,9 @@ const { chromium } = require('playwright');
   }
 
   // 1) Paletti: Tavoite-chip näkyy ja lisää pisteen oletuksiin (eläkeikä, pyöreä summa)
-  ok((await page.locator('#palette .chip', { hasText: 'Tavoite' }).count()) === 1, 'Tavoite paletissa');
+  ok((await page.locator('#palette .chip[data-type="goal"]').count()) === 1, 'Tavoite paletissa');
   await page.evaluate(() => document.querySelector('.panel .card[data-card="events"]').scrollIntoView());
-  await page.locator('#palette .chip', { hasText: 'Tavoite' }).click();
+  await page.locator('#palette .chip[data-type="goal"]').click();
   await page.waitForTimeout(400);
   const g1 = await page.evaluate(() => state.events.find((e) => e.type === 'goal'));
   ok(!!g1, 'napautus lisää tavoitepisteen');

@@ -1,0 +1,109 @@
+# Kieliversio (fi/en) — suunnitelma ja tilanne
+
+Tavoite: englanninkielinen versio Suomessa asuville englanninkielisille. Sisältö pysyy
+Suomi-spesifinä (euro, osakesäästötili, Suomen verotus) — vain kieli käännetään.
+Suomenkielinen kokemus ei saa muuttua missään vaiheessa.
+
+Kartoitus tehty 16.8.2026 (neljä rinnakkaista koodipohja-analyysiä). Laajuus:
+**~2 100–2 200 käännösyksikköä** — ~1 450 JS-stringiä kymmenessä tiedostossa,
+~600 HTML-tekstisolmua, ~60 attribuuttia (title/aria-label/placeholder), ~36 JSON-LD-stringiä.
+Ei olemassa olevaa i18n-infraa.
+
+## Periaatteet
+
+1. **Kieli ja maa ovat eri akselit.** Tämä hanke tekee kielikerroksen (fi/en).
+   Maaprofiili (toisen maan verosäännöt) on eri hanke; nyt riittää, ettei
+   Suomi-logiikkaa upoteta syvemmälle ja domain-vakiot pysyvät erillään kieliavaimista.
+2. **Suomi on oletus ja lähde.** JS-tekstit siirretään avainpohjaiseen katalogiin, jossa
+   fi-arvo on suoraan katalogissa — kun kieli on fi, renderöity lopputulos on merkilleen
+   sama kuin ennen. Testisuite vartioi tätä.
+3. **Staattiset sivut generoidaan.** Englanninkieliset HTML-sivut tuotetaan
+   generaattorilla (tyokalut/-tyyliin) — suomenkielisiin HTML-tiedostoihin ei kosketa,
+   ja SEO saa oikeat en-sivut hreflang-pareineen.
+4. **Kielivalinta:** appi seuraa laitteen kieltä, web ?lang/localStorage-arvoa;
+   asetuksissa valitsin ohitukseksi. Jakolinkit/tallenteet: kielikenttä additiivinen,
+   puuttuva = fi (taaksepäinyhteensopivuus ei rikkoudu).
+5. **MCP-paketti pysyy suomeksi** (julkaistu julkinen API, työkalunimet ym.).
+
+## Vaiheet
+
+### Vaihe 0 — valmistelu, nolla näkyvää muutosta ⬅ TYÖN ALLA
+- [x] **kieli.js luotu** (16.8.2026): locale-sidonnainen muotoilu yhdessä paikassa —
+      VP_LOCALE, fmtLuku (raakaluku), fmtPvm (pvm), fmtEur, fmtCompact, pctFmt, fmtAge
+      siirretty apu.js:stä tavut säilyttäen. Ladataan ensimmäisenä index/analytiikka/
+      agentit-sivuilla. Lisätty sync-whitelistiin + SW CORE:en, CACHE v49→v50.
+      ⚠ HAVAINTO: fmtCompactin ' M€'/' t€'/' €' ja pctFmt:n ' %' sisältävät
+      LITERAALIN NBSP:n (U+00A0) — inventaarion väite "ei NBSP-literaaleja" oli
+      väärä; JS-tiedostoissa on ~109 NBSP:tä. Editointi vain tavutietoisesti
+      (Edit-työkalu ei erota NBSP:tä välilyönnistä — käytä node-skriptiä).
+- [x] Raa'at `toLocaleString/toLocaleDateString('fi-FI')`-kutsut (42 kpl) → fmtLuku/fmtPvm.
+      Ainoat jäljelle jääneet 'fi-FI'-maininnat: kieli.js (VP_LOCALE), offline-työkalut
+      (tyokalut/), testien locale-pinnit.
+- [x] Duplikaattiformatterit pois: analytiikka.js fmtCompact (huom: ≥10 M€ näyttää nyt
+      0 desimaalia kuten muuallakin — ero mahdollinen vain >10 M€ tilastoissa),
+      piirtopoyta.js fmtNum → ohut pyöristävä wrapperi fmtLuvun päälle,
+      tulkki.js fmtFi → fmtLuku sisällä. analytiikka.html lataa nyt kieli.js:n.
+- [x] Testien hasText-klikkiajurit → rakenteelliset kahvat: paletin chipit
+      `data-type` (kaavio.js buildPalette), suunnitelmavalikon napit `data-act`
+      (sovellus.js openPlanMenu), vihjechipit `data-vihje` (sovellus.js showEventHint),
+      perhevalikko `data-rooli` (laajennukset.js openFamAddMenu). 15 ajuria muutettu
+      8 testitiedostossa. JÄTETTY TARKOITUKSELLA: verify-profiilit .ph-row-nimimatchit
+      (käyttäjäsisältöä; 'Oma polkuni'/'Tuotu suunnitelma' -oletusnimet katalogiin
+      vaiheessa 1) ja verify-vertailu .tk-sug (sisältöassertio, vaihe 1).
+- [x] NBSP-normalisoija: testit/selain/normi.js (norm), 6 kopiota korvattu requirella.
+      verify-tulkki.js:n oma stripperi jätetty (eri semantiikka: poistaa kaikki välit).
+- [ ] Duplikaatti-labeltaulut: tulkki.js EVENT_NAMES, analytiikka.js tapahtumakartta
+      → EVENT_TYPES (sanamuodot eroavat tarkoituksella — tarkista) — SIIRRETTY VAIHEESEEN 1
+      (EVENT_TYPES asuu apu.js:ssä jota analytiikka.html ei lataa; ratkeaa katalogin myötä)
+- [ ] ERIKSEEN (muuttaa Pro-käytöstä): osinkovero lukee TAX_LOW-vakiota ohi ctx:n
+      (laskenta.js ~496) — Pro-verokannan muutos ei vaikuta osinkoveroon. Korjaus
+      omana committinaan.
+
+### Vaihe 1 — tekstien ekstraktio katalogiin
+Uusi katalogitiedosto (classic script, ladataan ennen apu.js:ää; sync-whitelistiin +
+sw.js CORE + CACHE-bump). Tiedosto kerrallaan, testit joka välissä. Järjestys
+(helpoimmasta / perustavimmasta):
+1. apu.js (EVENT_TYPES-labelit + formatterit — kaiken perusta)
+2. laskenta.js (3 pientä labeltaulua), natiivilisat.js (flat), alapalkki.js (parametrisoitu valmiiksi)
+3. kortit.js, piirtopoyta.js (huom: a11y-announce tarvitsee puhutun muodon "euroa kuukaudessa")
+4. kaavio.js (openPopover ~540 riviä HTML-buildausta), analytiikka.js
+5. laajennukset.js — TOUR_STEPS helppo, MUTTA r. 42 `.replace('omassa selaimessasi', …)`
+   -hack korvattava web/native-avaimilla
+6. tulkki.js (4 labeltaulua, 18 in-template-attribuuttia)
+7. sovellus.js — työläin: EXAMPLES (7 suunnitelmaa), 29 toastia, buildShareImage-canvas,
+   ja renderSummary r. ~1145 fragmenttilause kirjoitettava kokonaisiksi lauseviesteiksi
+
+### Vaihe 2 — englanti käyttöön
+- Käännös (viralliset termit: osakesäästötili = equity savings account [vero.fi],
+  arvo-osuustili = book-entry account, hankintameno-olettama = deemed acquisition cost)
+- Kielentunnistus + asetusten valitsin
+- Tulkki: lang-parametri /tulkki-APIin + englanninkielinen TULKKI_SYSTEM
+  (palvelin/server.js ~399; nyt "Vastaa suomeksi")
+- Natiivit ~16 stringiä: iOS Localizable.strings + InfoPlist.strings + knownRegions
+  (pbxproj käsin tehty — varo), Android values-en/strings.xml
+  ⚠ Lokalisointi kääntää en-laitteet automaattisesti → shipataan vasta kun kattava
+- App Store: englanninkielinen listaus ASC:hen (en-US), TestFlight-beta X-toivojille
+- Widget + notifikaatiot lokalisoituvat JS:n mukana ilmaiseksi (sisällöt natiivilisat.js:stä)
+
+### Vaihe 3 — web-SEO
+- Generoidut /en-sivut kaikista kuudesta + hreflang-parit + sitemap + en-JSON-LD
+  (UKK duplikoitu näkyvän ja JSON-LD:n välillä — generoitava samasta lähteestä)
+- SW: offline-navigointifallback on kovakoodattu ./index.html → en-reitille oma käsittely
+- Huom: tietosuoja.html ei ole sync-whitelistissä eikä SW CORE:ssa (korjattava ohessa)
+
+## Ansat (älä unohda)
+
+- **appi/sync-web.mjs**: kova 30 tiedoston whitelist; jokaisessa listan HTML:ssä
+  OLTAVA Plausible-blokki tai synkka kaatuu tahallaan (fail-fast-guard).
+- **sw.js**: uudet tiedostot CORE-listaan + CACHE-bump (nyt v49); offline-fallback → fi-etusivu.
+- **Yksiköt teksteissä**: €/kk (38×), %/v (29×), t€/M€ ovat suomen lyhenteitä → muotoilukuviot.
+- **Desimaalipilkut proosassa** (1,5 %) kulkevat käännöksen mukana; validointi.html:n
+  36 käsin kirjoitettua &nbsp;-tuhaterotinta muotoiltava en-versioon käsin.
+- **Testit**: 865 assertiosta ~17 % tekstisidonnaisia, keskittyvät ~8 tiedostoon
+  (verify-natiivilisat, verify-tulkki, verify-tilastot* pahimmat). evalit.js:n
+  numerokuri-parseri olettaa fi-muotoilua.
+- **Julkaisurutiini** (YLLAPITO.md) pätee joka vaiheessa: aja-kaikki.js vihreä ennen pushia.
+
+## Tilanne
+
+- 16.8.2026: Kartoitus valmis, suunnitelma kirjattu. Vaihe 0 aloitettu.

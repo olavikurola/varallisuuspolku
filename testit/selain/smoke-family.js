@@ -2,6 +2,7 @@
 // perhe-MC, #f=-linkki, poisto; apuri, säästöaste, eläkeoletus, Sivutulo
 'use strict';
 const { chromium } = require('playwright');
+const { norm } = require('./normi');
 
 (async () => {
   const browser = await chromium.launch();
@@ -29,7 +30,7 @@ const { chromium } = require('playwright');
   await page.fill('#savExpenses', '2800');
   await page.dispatchEvent('#savExpenses', 'input');
   await page.waitForTimeout(200);
-  const note = (await page.evaluate(() => document.getElementById('savNote').textContent)).replace(/[  ]/g, ' ');
+  const note = norm(await page.evaluate(() => document.getElementById('savNote').textContent));
   ok(note.includes('1 400'), 'säästövara lasketaan', note);
   ok(/säästöaste\s*\d+\s*%/.test(note.replace(/ /g, ' ')), 'säästöaste näkyy', note);
   await page.click('#savApply');
@@ -47,7 +48,7 @@ const { chromium } = require('playwright');
     'eläketarpeen oletus = nykyiset menot');
 
   // Sivutulo-chip paletissa
-  ok((await page.locator('#palette .chip', { hasText: 'Sivutulo' }).count()) === 1, 'Sivutulo paletissa');
+  ok((await page.locator('#palette .chip[data-type="sidegig"]').count()) === 1, 'Sivutulo paletissa');
   await page.evaluate(() => { addEvent('sidegig', 40); closePopover(); });
   await page.waitForTimeout(300);
   ok(await page.evaluate(() => {
@@ -61,7 +62,7 @@ const { chromium } = require('playwright');
   const soloP = await page.evaluate(() => sim.successProb);
   await page.click('#familyChips .fam-add');
   await page.waitForTimeout(300);
-  await page.click('.menu button:has-text("Puoliso")'); // ＋ avaa valikon (Puoliso/Lapsi)
+  await page.click('.menu button[data-rooli="spouse"]'); // ＋ avaa valikon (Puoliso/Lapsi)
   await page.waitForTimeout(600);
   ok(await page.evaluate(() => familyOn() && family.persons.length === 2), 'puoliso lisätty');
   ok(await page.evaluate(() => family.active === 1), 'vaihto puolisoon lisättäessä');
@@ -106,7 +107,7 @@ const { chromium } = require('playwright');
   ok(statTxt.includes('Perheen onnistumis-%'), 'perhekortti tunnusluvuissa');
 
   // siirrot: pari syntyy, peilautuu ja siivoutuu
-  ok((await page.locator('#palette .chip', { hasText: 'Siirto läheiselle' }).count()) === 1, 'siirtochipit paletissa perhetilassa');
+  ok((await page.locator('#palette .chip[data-type="transferOut"]').count()) === 1, 'siirtochipit paletissa perhetilassa');
   await page.evaluate(() => { addEvent('transferOut', 45); closePopover(); });
   await page.waitForTimeout(400);
   const pair = await page.evaluate(() => {
@@ -214,7 +215,7 @@ const { chromium } = require('playwright');
   // viimeisenä nappina rasti valui kortin reunan yli eikä koskaan näkynyt)
   await page.click('#familyChips .fam-add');
   await page.waitForTimeout(300);
-  await page.click('.menu button:has-text("Lapsi")');
+  await page.click('.menu button[data-rooli="child"]');
   await page.waitForTimeout(600);
   ok(await page.evaluate(() => family.persons.length === 3 && family.active === 2), 'lapsi lisätty (3 henkilöä)');
   ok(await page.evaluate(() => {

@@ -7,7 +7,7 @@ const { spawn } = require('child_process');
 
 let failed = 0;
 const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { failed++; console.error('  ✗ ' + name + (d ? ' — ' + d : '')); } };
-const norm = (s) => (s || '').replace(/[  ]/g, ' ');
+const { norm } = require('./normi');
 
 const q = (a, b, c) => ({ p25: a, p50: b, p75: c });
 const STATS = {

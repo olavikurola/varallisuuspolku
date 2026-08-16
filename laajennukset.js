@@ -381,7 +381,7 @@ function buildProWd() {
 function buildProMc() {
   const p = proOf(state) || defaultPro();
   const pathsOpt = [300, 1000, 5000, 10000, 20000]
-    .map((n) => `<option value="${n}"${p.mc.paths === n ? ' selected' : ''}>${n.toLocaleString('fi-FI')}</option>`).join('');
+    .map((n) => `<option value="${n}"${p.mc.paths === n ? ' selected' : ''}>${fmtLuku(n)}</option>`).join('');
   const pctVal = `${p.mc.pctLo}-${p.mc.pctHi}`;
   const pctsOpt = [['10-90', 'P10–P90'], ['5-95', 'P5–P95'], ['25-75', 'P25–P75']]
     .map(([v, l]) => `<option value="${v}"${pctVal === v ? ' selected' : ''}>${l}</option>`).join('');
@@ -646,16 +646,16 @@ function proSummaryHtml(s) {
   };
   const names = { stocks: 'Osakkeet', bonds: 'Korot', cash: 'Käteinen' };
   for (const k of ['stocks', 'bonds', 'cash']) {
-    dev(`${names[k]}: tuotto-odotus`, p.mu[k].toLocaleString('fi-FI'), d.mu[k].toLocaleString('fi-FI'), ' %/v');
-    dev(`${names[k]}: heilunta`, p.sigma[k].toLocaleString('fi-FI'), d.sigma[k].toLocaleString('fi-FI'), ' %');
+    dev(`${names[k]}: tuotto-odotus`, fmtLuku(p.mu[k]), fmtLuku(d.mu[k]), ' %/v');
+    dev(`${names[k]}: heilunta`, fmtLuku(p.sigma[k]), fmtLuku(d.sigma[k]), ' %');
   }
   p.assets.forEach((a) => {
     rows.push(`<tr><td>Oma luokka: ${escapeHtml(a.name)}</td><td class="num">${a.mu} %/v · ±${a.sigma} % · paino ${a.weight} %</td><td class="num">—</td></tr>`);
   });
-  dev('Inflaatio-oletus', p.infl.toLocaleString('fi-FI'), d.infl.toLocaleString('fi-FI'), ' %/v');
-  dev('Juoksevat kulut (TER)', p.ter.toLocaleString('fi-FI'), '0', ' %/v');
+  dev('Inflaatio-oletus', fmtLuku(p.infl), fmtLuku(d.infl), ' %/v');
+  dev('Juoksevat kulut (TER)', fmtLuku(p.ter), '0', ' %/v');
   dev('Pääomatulovero', `${p.tax.low}/${p.tax.high}`, '30/34', ' %');
-  dev('Veroraja', p.tax.bracket.toLocaleString('fi-FI'), '30 000', ' €');
+  dev('Veroraja', fmtLuku(p.tax.bracket), '30 000', ' €');
   if (p.tax.acq) rows.push('<tr><td>Hankintameno-olettama nostoihin</td><td class="num">käytössä</td><td class="num">ei</td></tr>');
   if (p.glide) rows.push(`<tr><td>Oma glidepath</td><td class="num">${p.glide.from}–${p.glide.to} v → ${p.glide.endF} %</td><td class="num">—</td></tr>`);
   if (p.corr) {
@@ -666,7 +666,7 @@ function proSummaryHtml(s) {
     rows.push(`<tr><td>Nostostrategia</td><td class="num">${p.wd.mode === 'pct' ? p.wd.pct + ' % salkusta/v' : `guardrails ±${p.wd.band} % / ${p.wd.adj} %`}</td><td class="num">kiinteä</td></tr>`);
   }
   if (p.phases) rows.push(`<tr><td>Kulutuksen vaiheistus</td><td class="num">${p.phases.map((r) => `${r.mult} %${r.to < 150 ? ' → ' + r.to + ' v' : ''}`).join(' · ')}</td><td class="num">—</td></tr>`);
-  dev('MC-polkuja', p.mc.paths.toLocaleString('fi-FI'), '5 000');
+  dev('MC-polkuja', fmtLuku(p.mc.paths), '5 000');
   if (p.mc.dist === 't') rows.push(`<tr><td>Tuottojakauma</td><td class="num">Studentin t (df ${p.mc.df})</td><td class="num">normaali</td></tr>`);
   dev('MC-siemen', p.mc.seed, '1337');
   dev('Viuhka', `P${p.mc.pctLo}–P${p.mc.pctHi}`, 'P10–P90');
@@ -868,14 +868,15 @@ function openFamAddMenu(anchor) {
   if (family && family.persons.length >= FAM_MAX) { toast('Perheessä on jo neljä henkilöä.'); return; }
   const menu = document.createElement('div');
   menu.className = 'menu';
-  const add = (icon, name, desc, fn) => {
+  const add = (rooli, icon, name, desc, fn) => {
     const b = document.createElement('button');
+    b.dataset.rooli = rooli; // rakenteellinen kahva (testit, ei kielisidontaa)
     b.innerHTML = `<div>${icon} ${name}</div><div class="mdesc">${desc}</div>`;
     b.addEventListener('click', fn);
     menu.appendChild(b);
   };
-  if (!hasSpouse()) add('🧑‍🤝‍🧑', 'Puoliso', 'Oma suunnitelma ja yhteinen käyrä', () => addPerson('spouse'));
-  add('🧒', 'Lapsi', 'Oma käyrä jo syntyneelle — lahjarahat ja siirrot', () => addPerson('child'));
+  if (!hasSpouse()) add('spouse', '🧑‍🤝‍🧑', 'Puoliso', 'Oma suunnitelma ja yhteinen käyrä', () => addPerson('spouse'));
+  add('child', '🧒', 'Lapsi', 'Oma käyrä jo syntyneelle — lahjarahat ja siirrot', () => addPerson('child'));
   document.body.appendChild(menu);
   const r = anchor.getBoundingClientRect();
   menu.style.top = r.bottom + 8 + 'px';

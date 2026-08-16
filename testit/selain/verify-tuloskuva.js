@@ -45,7 +45,7 @@ const ok = (c, n, d = '') => { if (c) console.log('  ✓ ' + n); else { failed++
   await page.click('#summaryBtn');
   await page.waitForSelector('.ph-more', { timeout: 8000 });
   await page.click('.ph-more');
-  const kohta = page.locator('.ph-menu button', { hasText: 'Jaa tuloskuvana' });
+  const kohta = page.locator('.ph-menu button[data-act="jaa-kuva"]');
   ok(await kohta.count() === 1, 'rivin ⋯-valikossa Jaa tuloskuvana');
   const menuBox = await page.locator('.ph-menu').boundingBox();
   const vp = page.viewportSize();

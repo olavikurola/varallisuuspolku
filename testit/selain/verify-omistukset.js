@@ -23,7 +23,7 @@ const BASE = process.env.VP_BASE || 'http://localhost:8123/';
   await page.waitForTimeout(300);
 
   // 1) Paletissa Oma asunto -chip; napautus lisää nykyhetkeen ja avaa popoverin
-  const chip = page.locator('#palette .chip', { hasText: 'Oma asunto' });
+  const chip = page.locator('#palette .chip[data-type="ownHome"]');
   ok(await chip.count() === 1, 'paletissa 🔑 Oma asunto');
   await chip.scrollIntoViewIfNeeded();
   await chip.click();

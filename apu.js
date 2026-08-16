@@ -79,18 +79,8 @@ const state = {
 
 const $ = (id) => document.getElementById(id);
 
-const eurFmt = new Intl.NumberFormat('fi-FI', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
-const fmtEur = (v) => eurFmt.format(Math.round(v));
-
-function fmtCompact(v) {
-  const a = Math.abs(v);
-  const sign = v < 0 ? '−' : '';
-  if (a >= 1e6) return sign + (a / 1e6).toLocaleString('fi-FI', { maximumFractionDigits: a >= 1e7 ? 0 : 1 }) + ' M€';
-  if (a >= 1e3) return sign + Math.round(a / 1e3) + ' t€';
-  return sign + Math.round(a) + ' €';
-}
-
-const pctFmt = (v) => (v * 100).toLocaleString('fi-FI', { maximumFractionDigits: 1 }) + ' %';
+// Muotoiluapurit (fmtEur, fmtCompact, pctFmt, fmtAge, fmtLuku, fmtPvm): kieli.js —
+// ladataan ennen tätä tiedostoa; locale-sidonnainen muotoilu vain siellä.
 
 const NAME_MAX = 40;
 // Tapahtuman näyttönimi: oma nimi tai tyypin oletusnimi
@@ -99,12 +89,6 @@ const evLabel = (ev) => (ev.name && ev.name.trim()) || EVENT_TYPES[ev.type].labe
 // Eläketapahtuman tavoitetila: manual | withdrawal | age | saving
 const retGoal = (ev) => ev.goal || 'manual';
 
-function fmtAge(a) {
-  const y = Math.floor(a);
-  const mo = Math.round((a - y) * 12);
-  if (mo >= 12) return `${y + 1} v`;
-  return mo === 0 ? `${y} v` : `${y} v ${mo} kk`;
-}
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 

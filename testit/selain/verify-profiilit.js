@@ -4,7 +4,7 @@
 const { chromium } = require('playwright');
 
 const BASE = process.env.VP_BASE || 'http://localhost:8123';
-const nb = (s) => String(s).replace(/[  ]/g, ' ');
+const nb = require('./normi').norm;
 
 (async () => {
   const browser = await chromium.launch();
@@ -152,14 +152,14 @@ const nb = (s) => String(s).replace(/[  ]/g, ' ');
   await page.locator('.ph-row').first().locator('.ph-more').click();
   await page.waitForTimeout(150);
   ok(await page.locator('.ph-menu').isVisible(), '⋯-valikko aukeaa');
-  const [dl2] = await Promise.all([page.waitForEvent('download'), page.locator('.ph-menu button', { hasText: 'Lataa tiedostona' }).click()]);
+  const [dl2] = await Promise.all([page.waitForEvent('download'), page.locator('.ph-menu button[data-act="lataa"]').click()]);
   ok(/varallisuuspolku-.*\.json/.test(dl2.suggestedFilename()), 'rivin tiedostonimi', dl2.suggestedFilename());
 
   // 13) Jaa linkkinä (leikepöytä)
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.locator('.ph-row', { hasText: 'Tuotu suunnitelma' }).locator('.ph-more').click();
   await page.waitForTimeout(150);
-  await page.locator('.ph-menu button', { hasText: 'Jaa linkkinä' }).click();
+  await page.locator('.ph-menu button[data-act="jaa-linkki"]').click();
   await page.waitForTimeout(250);
   const clip = await page.evaluate(() => navigator.clipboard.readText());
   ok(/#s=/.test(clip), 'jakolinkki leikepöydälle', clip.slice(0, 50));
@@ -168,7 +168,7 @@ const nb = (s) => String(s).replace(/[  ]/g, ' ');
   const nBefore = (await plansLS()).length;
   await page.locator('.ph-row', { hasText: 'Tuotu suunnitelma' }).locator('.ph-more').click();
   await page.waitForTimeout(150);
-  await page.locator('.ph-menu button', { hasText: 'Poista…' }).click();
+  await page.locator('.ph-menu button[data-act="poista"]').click();
   await page.waitForTimeout(150);
   ok(await page.locator('.ph-menu.confirm').isVisible(), 'poisto kysyy varmistuksen');
   await page.locator('.ph-menu.confirm .danger-btn').click();
@@ -178,7 +178,7 @@ const nb = (s) => String(s).replace(/[  ]/g, ' ');
   const actRow = (await plansLS()).find((p) => p.id === actId);
   await page.locator(`.ph-row.active .ph-more`).click();
   await page.waitForTimeout(150);
-  await page.locator('.ph-menu button', { hasText: 'Poista…' }).click();
+  await page.locator('.ph-menu button[data-act="poista"]').click();
   await page.waitForTimeout(150);
   await page.locator('.ph-menu.confirm .danger-btn').click();
   await page.waitForTimeout(500);

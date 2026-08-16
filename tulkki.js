@@ -67,7 +67,7 @@
 
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtFi = (v) => v == null ? '–' : (typeof v === 'number' ? v.toLocaleString('fi-FI') : String(v));
+  const fmtFi = (v) => v == null ? '–' : (typeof v === 'number' ? fmtLuku(v) : String(v));
   // Plausible-telemetria app.js:n apureilla — vain tapahtuman nimi (+ tila),
   // ei sisältöä, ei tunnisteita. Suppilon mittarointi: avattu → kysymys → pidetty.
   const tkTrack = (n, p) => { try { if (typeof track === 'function') track(n, p); } catch (e) {} };
@@ -293,7 +293,7 @@
 
   // Tekstimuotoinen korvaus (ramppi ym. paikat ilman HTML-renderöintiä)
   const plainBinds = (t, map) => String(t).replace(/\[\[([\w.]+)\]\]/g, (m, p) =>
-    (map && typeof map[p] === 'number') ? map[p].toLocaleString('fi-FI') : '?');
+    (map && typeof map[p] === 'number') ? fmtLuku(map[p]) : '?');
 
   // Yhteinen renderöijä: escape → **b** → sidontatokenit talteen (PUA-merkein,
   // etteivät polkujen numerot osu numSpansiin) → numSpans → tokenit spaneiksi.
@@ -311,7 +311,7 @@
         const path = marks[ch.charCodeAt(0) - 0xE000];
         const v = bmap ? bmap[path] : undefined;
         return (typeof v === 'number')
-          ? `<span class="tk-num tk-bound" title="Moottorin luku (${esc(path)})">${v.toLocaleString('fi-FI')}</span>`
+          ? `<span class="tk-num tk-bound" title="Moottorin luku (${esc(path)})">${fmtLuku(v)}</span>`
           : `<span class="tk-num tk-doubt" title="Viittausta (${esc(path)}) ei löydy moottorin luvuista">?</span>`;
       });
       return `<p>${s}</p>`;

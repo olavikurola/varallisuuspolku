@@ -419,7 +419,7 @@
         data.kayra = kayra;
       }
     }
-    data.paivitetty = new Date().toLocaleDateString('fi-FI');
+    data.paivitetty = fmtPvm(new Date());
     var json = JSON.stringify(data);
     P.Preferences.set({ key: 'vp-widget', value: json }).then(function () {
       // Pikkusilta päivittää widgetin heti: Android lukee Preferencesin,

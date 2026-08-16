@@ -4,7 +4,7 @@
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
 
-const norm = (s) => s.replace(/[  ]/g, ' ');
+const { norm } = require('./normi');
 let failed = 0;
 const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { failed++; console.error('  ✗ ' + name + (d ? ' — ' + d : '')); } };
 

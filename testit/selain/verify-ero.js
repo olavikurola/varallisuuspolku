@@ -3,6 +3,7 @@
 // tallennus-roundtrip ja anonyymin jaon payload
 'use strict';
 const { chromium } = require('playwright');
+const { norm } = require('./normi');
 
 (async () => {
   const browser = await chromium.launch();
@@ -24,9 +25,9 @@ const { chromium } = require('playwright');
   }
 
   // 1) Paletti: chip näkyy ja napautus lisää tapahtuman oletuksilla
-  ok((await page.locator('#palette .chip', { hasText: 'Ero / iso muutos' }).count()) === 1, 'Ero / iso muutos paletissa');
+  ok((await page.locator('#palette .chip[data-type="divorce"]').count()) === 1, 'Ero / iso muutos paletissa');
   await page.evaluate(() => document.querySelector('.panel .card[data-card="events"]').scrollIntoView());
-  await page.locator('#palette .chip', { hasText: 'Ero / iso muutos' }).click();
+  await page.locator('#palette .chip[data-type="divorce"]').click();
   await page.waitForTimeout(400);
   const ev = await page.evaluate(() => state.events.find((e) => e.type === 'divorce'));
   ok(!!ev, 'napautus lisää ero-tapahtuman');
@@ -43,7 +44,7 @@ const { chromium } = require('playwright');
   await page.waitForTimeout(300);
 
   // 3) Aikajana: rivi näkyy toistuvan kulun kera
-  const tl = await page.evaluate(() => document.getElementById('eventList').textContent.replace(/[  ]/g, ' '));
+  const tl = norm(await page.evaluate(() => document.getElementById('eventList').textContent));
   ok(/Ero \/ iso muutos/.test(tl), 'aikajanarivi näkyy');
   ok(/Ero \/ iso muutos\s*toistuva/.test(tl), 'toistuva-merkintä kuvauksessa', tl.slice(0, 200));
 
