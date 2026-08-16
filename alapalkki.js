@@ -399,7 +399,7 @@
       r.className = 'vp-ryhma';
       var s = document.createElement('div');
       s.className = 'msect';
-      s.textContent = label;
+      s.textContent = t(label); // käännös apurissa — kutsupaikat pysyvät suomena (KIELIVERSIO.md)
       r.appendChild(s);
       menu.appendChild(r);
       ryhmaEl = r;
@@ -408,7 +408,7 @@
       var b = document.createElement('button');
       b.id = id;
       if (o && o.danger) b.classList.add('danger');
-      b.innerHTML = '<div>' + name + '</div><div class="mdesc">' + desc + '</div>';
+      b.innerHTML = '<div>' + t(name) + '</div><div class="mdesc">' + t(desc) + '</div>';
       b.addEventListener('click', function () {
         if (o && o.pysy) { if (fn) fn(b); return; } // nollaus vahvistetaan sheetissä
         suljeSheet();
@@ -427,7 +427,7 @@
       // flex asuu sisäkääreessä: <button> flex-kontainerina on WebKitissä
       // epäluotettava (Chromiumissa ok, laitteella switch vuoti kortista yli)
       b.innerHTML = '<span class="vp-krow">' +
-        '<span class="vp-kr"><span class="vp-kr-nimi">' + name + '</span><span class="mdesc">' + desc + '</span></span>' +
+        '<span class="vp-kr"><span class="vp-kr-nimi">' + t(name) + '</span><span class="mdesc">' + t(desc) + '</span></span>' +
         '<span class="toggle vp-kr-sw"><input type="checkbox" tabindex="-1" aria-hidden="true"><span class="switch"></span></span>' +
         '</span>';
       var input = b.querySelector('input');
@@ -625,7 +625,7 @@
     var el = document.createElement('button');
     el.type = 'button';
     el.className = 'vp-tab' + (act ? ' act' : '');
-    el.innerHTML = ICONS[id] + '<span>' + label + '</span>';
+    el.innerHTML = ICONS[id] + '<span>' + t(label) + '</span>';
     return el;
   }
 

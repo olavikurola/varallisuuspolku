@@ -75,7 +75,11 @@ tyyppi-label) EI käännetä — Plausible-datan jatkuvuus. MCP ja LLM-konteksti
 - [x] EVENT_TYPES-labelien renderöintiketju: evLabel (apu.js, kattaa 43 kutsupaikkaa)
       + suorat def.label-luvut (kaavio paletti/ghost/placeholder, kortit ×2,
       piirtopoyta fs-valikko, laajennukset tornado-labelit)
-- [ ] jatko tiedosto kerrallaan alla olevassa järjestyksessä
+- [x] alapalkki.js kokonaan: käännös apuritasolla (ryhma/add/kytkin/tab) —
+      kaikki valikkorivit, kytkimet ja tabbar kerralla, kutsupaikat pysyvät suomena
+- [ ] jatko tiedosto kerrallaan alla olevassa järjestyksessä (seuraavaksi:
+      natiivilisat.js flat-stringit, laskenta.js-labelien renderöintipaikat,
+      tulkki.js ERRORS/FIELDS-taulut)
 
 Tiedosto kerrallaan, testit joka välissä. Järjestys (helpoimmasta / perustavimmasta):
 1. apu.js (EVENT_TYPES-labelit + formatterit — kaiken perusta)
