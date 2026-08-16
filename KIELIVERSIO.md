@@ -103,7 +103,10 @@ tyyppi-label) EI käännetä — Plausible-datan jatkuvuus. MCP ja LLM-konteksti
       staattiset viestit kerralla; tupla-t() on harmiton — miss palauttaa syötteen)
       + ACCT_NOTES-luenta. Koostetut toastit ja OST-katon häntäliitteet valuvat
       suomena kunnes {0}-muoto
-- [ ] jatko: piirtopöydän announce/chipit, tulkin FIELDS/quick-actionit, kaavion
+- [x] piirtopöydän a11y-tekstit (aria/announce/scrub, 15 lausetta) {0}-muotoon +
+      chipRow-labelnielu — puhutut muodot ('euroa kuukaudessa') omina avaiminaan,
+      visuaaliset €/kk-yksiköt ennallaan (NBSP-alueisiin ei koskettu)
+- [ ] jatko: tulkin FIELDS/quick-actionit, kaavion
       openPopover-lomake (540 riviä), laajennusten Pro-paneelit ja dev()-taulu,
       sovellus.js renderSummary-lauseet (uudelleenkirjoitus {0}-viesteiksi),
       index.html + alasivujen staattinen HTML (vaihe 3:n generaattorin kautta)

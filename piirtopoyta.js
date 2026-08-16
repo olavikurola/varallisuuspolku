@@ -137,7 +137,7 @@ function chipHide() { $('dchip').hidden = true; }
 function chipRow(label, from, to, unit) {
   const d = to - from;
   const dTxt = Math.abs(d) < 0.5 ? '±0' : `${d > 0 ? '+' : '−'}${fmtNum(Math.abs(d))}`;
-  return `<div class="dchip-row"><b>${label}</b> ${fmtNum(from)} → ${fmtNum(to)} ${unit} <em class="${d >= 0 ? 'up' : 'down'}">${dTxt}</em></div>`;
+  return `<div class="dchip-row"><b>${t(label)}</b> ${fmtNum(from)} → ${fmtNum(to)} ${unit} <em class="${d >= 0 ? 'up' : 'down'}">${dTxt}</em></div>`;
 }
 
 const chipWrap = (rows, constraint, note) => rows
@@ -155,23 +155,23 @@ function selInfo() {
   const hint = '<div class="dchip-note">Raahaa — tai nuolet, Enter muokkaa</div>';
   if (s.kind === 'acc') {
     return { ...at(Math.max(6, Math.round(mRet / 2))),
-      aria: `Kuukausisäästö ${fmtNum(state.monthly)} euroa kuukaudessa`,
+      aria: t('Kuukausisäästö {0} euroa kuukaudessa', fmtNum(state.monthly)),
       html: `<div class="dchip-row"><b>Kuukausisäästö</b> ${fmtNum(state.monthly)} €/kk</div>${hint}` };
   }
   if (s.kind === 'wd') {
     return { ...at(mRet + Math.round((months - mRet) / 2)),
-      aria: `Kuukausitulo eläkkeellä ${fmtNum(sim.withdrawal)} euroa kuukaudessa`,
+      aria: t('Kuukausitulo eläkkeellä {0} euroa kuukaudessa', fmtNum(sim.withdrawal)),
       html: `<div class="dchip-row"><b>Kuukausitulo</b> ${fmtNum(sim.withdrawal)} €/kk</div>${hint}` };
   }
   if (s.kind === 'end') {
     return { ...at(months),
-      aria: `Pääomaa jäljellä suunnitelman lopussa ${fmtNum(sim.wEnd)} euroa`,
+      aria: t('Pääomaa jäljellä suunnitelman lopussa {0} euroa', fmtNum(sim.wEnd)),
       html: `<div class="dchip-row"><b>Pääomaa jäljellä</b> ${fmtCompact(sim.wEnd)}</div>`
         + '<div class="dchip-note">Raahaa pystysuunnassa — kuukausitulo joustaa</div>' };
   }
   if (s.kind === 'retline' && retA != null) {
     return { x: scaleX(retA), y: plot.t + 64,
-      aria: `Eläkeikä ${Math.round(retA)} vuotta`,
+      aria: t('Eläkeikä {0} vuotta', Math.round(retA)),
       html: `<div class="dchip-row"><b>Eläkeikä</b> ${Math.round(retA)} v</div>${hint}` };
   }
   if (s.kind === 'famtotal' && famTotalCache) {
@@ -187,7 +187,7 @@ function selInfo() {
     const p = at(clamp(Math.round((ev.age - a0) * 12), 0, months));
     if (s.kind === 'goal') return goalSelInfo(ev);
     return { ...p,
-      aria: `${evLabel(ev)}, ikä ${Math.round(ev.age)} vuotta${ev.amount != null ? `, summa ${fmtNum(ev.amount)} euroa` : ''}`,
+      aria: t('{0}, ikä {1} vuotta', evLabel(ev), Math.round(ev.age)) + (ev.amount != null ? t(', summa {0} euroa', fmtNum(ev.amount)) : ''),
       html: `<div class="dchip-row"><b>${escapeHtml(evLabel(ev))}</b> ${Math.round(ev.age)} v${ev.amount != null ? ` · ${fmtCompact(ev.amount)}` : ''}</div>`
         + '<div class="dchip-note">←→ ikä · ↑↓ summa · Enter muokkaa · Delete poistaa</div>' };
   }
@@ -447,11 +447,11 @@ function drawDragUp() {
 function dragAnnounce(d) {
   const p = sim && sim.successProb != null && !sim.successStale
     ? `, onnistumistodennäköisyys ${Math.round(sim.successProb * 100)} prosenttia` : '';
-  if (d.kind === 'famtotal') return `Perheen säästö ${fmtNum(familyOn() ? family.persons.reduce((s, pp, pi) => s + (pi === family.active ? state : pp.data).monthly, 0) : state.monthly)} euroa kuukaudessa${p}`;
-  if (d.kind === 'acc') return `Kuukausisäästö ${fmtNum(state.monthly)} euroa kuukaudessa${p}`;
-  if (d.kind === 'wd' || d.kind === 'end') return `Kuukausitulo ${fmtNum(d.ev ? d.ev.withdrawal : 0)} euroa kuukaudessa${p}`;
-  if (d.kind === 'retline') return `Eläkeikä ${fmtNum(d.ev ? d.ev.age : 0)} vuotta${p}`;
-  if (d.ev) return `${evLabel(d.ev)}: ikä ${fmtNum(d.ev.age)} vuotta${d.ev.amount != null ? `, summa ${fmtNum(d.ev.amount)} euroa` : ''}${p}`;
+  if (d.kind === 'famtotal') return t('Perheen säästö {0} euroa kuukaudessa', fmtNum(familyOn() ? family.persons.reduce((s, pp, pi) => s + (pi === family.active ? state : pp.data).monthly, 0) : state.monthly)) + p;
+  if (d.kind === 'acc') return t('Kuukausisäästö {0} euroa kuukaudessa', fmtNum(state.monthly)) + p;
+  if (d.kind === 'wd' || d.kind === 'end') return t('Kuukausitulo {0} euroa kuukaudessa', fmtNum(d.ev ? d.ev.withdrawal : 0)) + p;
+  if (d.kind === 'retline') return t('Eläkeikä {0} vuotta', fmtNum(d.ev ? d.ev.age : 0)) + p;
+  if (d.ev) return evLabel(d.ev) + t(': ikä {0} vuotta', fmtNum(d.ev.age)) + (d.ev.amount != null ? t(', summa {0} euroa', fmtNum(d.ev.amount)) : '') + p;
   return 'Muutos tehty' + p;
 }
 
@@ -615,11 +615,11 @@ function drawNudge(axis, dir, big) {
     const lo = s.kind === 'event' ? state.ageNow : state.ageNow + 1;
     ev.age = clamp(Math.round(ev.age) + dir * mult, lo, state.ageEnd);
     if (ev.sellAge != null && ev.sellAge <= ev.age) ev.sellAge = ev.age + 1;
-    text = `${s.kind === 'retline' ? 'Eläkeikä' : evLabel(ev)} ${Math.round(ev.age)} vuotta`;
+    text = t('{0} {1} vuotta', s.kind === 'retline' ? t('Eläkeikä') : evLabel(ev), Math.round(ev.age));
   } else if (s.kind === 'acc') {
     state.monthly = clamp(snapTo(state.monthly + dir * 10 * mult, 10), 0, 1e6);
     $('monthly').value = state.monthly;
-    text = `Kuukausisäästö ${fmtNum(state.monthly)} euroa kuukaudessa`;
+    text = t('Kuukausisäästö {0} euroa kuukaudessa', fmtNum(state.monthly));
   } else if (s.kind === 'famtotal') {
     // sama askel jokaiselle aikuiselle
     let sum = 0;
@@ -629,7 +629,7 @@ function drawNudge(axis, dir, big) {
       sum += data.monthly;
     });
     $('monthly').value = state.monthly;
-    text = `Perheen säästö ${fmtNum(sum)} euroa kuukaudessa`;
+    text = t('Perheen säästö {0} euroa kuukaudessa', fmtNum(sum));
   } else if (s.kind === 'wd' || s.kind === 'end') {
     if (!ev) return;
     const pmN = proOf(state);
@@ -639,19 +639,19 @@ function drawNudge(axis, dir, big) {
       ev.goal = 'manual';
     }
     ev.withdrawal = clamp(snapTo(ev.withdrawal + dir * 10 * mult, 10), 0, 1e7);
-    text = `Kuukausitulo ${fmtNum(ev.withdrawal)} euroa kuukaudessa`;
+    text = t('Kuukausitulo {0} euroa kuukaudessa', fmtNum(ev.withdrawal));
   } else if (s.kind === 'goal' && ev) {
     ev.amount = clamp(snapTo(ev.amount + dir * 5000 * mult, 5000), 0, 1e9);
-    text = `Tavoite ${fmtNum(ev.amount)} euroa`;
+    text = t('Tavoite {0} euroa', fmtNum(ev.amount));
   } else if (s.kind === 'event' && ev && ev.amount != null) {
     if (ev.owned) {
       // Ylös = arvokkaampi: nuolet säätävät nykyarvoa, eivät kulusummaa
       ev.amount = -clamp(snapTo(-ev.amount + dir * 1000 * mult, 1000), 0, 1e9);
-      text = `${evLabel(ev)} nykyarvo ${fmtNum(-ev.amount)} euroa`;
+      text = t('{0} nykyarvo {1} euroa', evLabel(ev), fmtNum(-ev.amount));
     } else {
       ev.amount = clamp(snapTo(ev.amount + dir * 1000 * mult, 1000), -1e9, 1e9);
       if (ev.financing === 'loan') ev.down = clamp(ev.down || 0, 0, Math.max(0, -ev.amount));
-      text = `${evLabel(ev)} summa ${fmtNum(ev.amount)} euroa`;
+      text = t('{0} summa {1} euroa', evLabel(ev), fmtNum(ev.amount));
     }
   } else return;
   nudgeCommit(text);
@@ -666,7 +666,7 @@ function drawEnter() {
     if (ev) openPopover(ev.id);
     return;
   }
-  announce(`Kuukausisäästö ${fmtNum(state.monthly)} euroa kuukaudessa — säädä nuolinäppäimillä ylös ja alas`);
+  announce(t('Kuukausisäästö {0} euroa kuukaudessa — säädä nuolinäppäimillä ylös ja alas', fmtNum(state.monthly)));
 }
 
 // Poisto vahvistetaan toisella Delete-painalluksella (3 s ikkuna)
@@ -874,7 +874,7 @@ function goalSelInfo(ev) {
     '<div class="dchip-actions"><button data-act="solve">Ratkaise</button>' +
     '<button data-act="edit">Muokkaa</button><button data-act="del" class="danger">Poista</button></div>';
   return { x, y,
-    aria: `${evLabel(ev)}: tavoite ${fmtNum(ev.amount)} euroa iässä ${Math.round(ev.age)}` +
+    aria: evLabel(ev) + t(': tavoite {0} euroa iässä {1}', fmtNum(ev.amount), Math.round(ev.age)) +
       (share != null ? `, ${Math.round(share * 100)} prosenttia poluista ylittää` : ''),
     html };
 }
