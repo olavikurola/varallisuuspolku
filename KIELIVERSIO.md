@@ -119,9 +119,12 @@ tyyppi-label) EI käännetä — Plausible-datan jatkuvuus. MCP ja LLM-konteksti
       jokainen '; '-alkuinen itsenäinen lauseke on oma avaimensa (NBSP:t
       avaimissa tallella); tavuidenttisyys todistettu ajamalla vanha ja uusi
       funktio 5 tilayhdistelmällä
-- [ ] jatko (vaihe 1 loppusuora): tulkin in-template title/aria-attribuutit ja
-      quick-actionit, summaryChartSVG-akselit (lokaali t → window.t), kaavion
-      HUD/legenda index.html:ssä; staattinen HTML vaihe 3:n generaattorin kautta
+- [x] tulkin in-template title/aria/placeholder-attribuutit ja paneeliotsikot
+      (14 kpl; yksityisyysrivin web/appi-variantit omina avaiminaan)
+- [ ] jatko (vaihe 1 loppusuora): summaryChartSVG-akselit (lokaali t → window.t),
+      kaavion HUD/legenda index.html:ssä; staattinen HTML vaihe 3:n generaattorin
+      kautta. Lisäksi iOS-kielimetadata korjattu (dev region fi + CFBundleLocalizations)
+      — App Store näyttää FI seuraavasta buildista alkaen.
 
 Tiedosto kerrallaan, testit joka välissä. Järjestys (helpoimmasta / perustavimmasta):
 1. apu.js (EVENT_TYPES-labelit + formatterit — kaiken perusta)

@@ -254,7 +254,7 @@
       });
       if (ok) return `<span class="tk-num">${m}</span>`;
       if (val < 10 && !unit) return m; // "kolme asiaa" -tyyppiset pikkuluvut rauhaan
-      return `<span class="tk-num tk-doubt" title="Lukua ei löydy moottorin luvuista — suhtaudu varauksella">${m}</span>`;
+      return `<span class="tk-num tk-doubt" title="${t('Lukua ei löydy moottorin luvuista — suhtaudu varauksella')}">${m}</span>`;
     });
   }
 
@@ -311,8 +311,8 @@
         const path = marks[ch.charCodeAt(0) - 0xE000];
         const v = bmap ? bmap[path] : undefined;
         return (typeof v === 'number')
-          ? `<span class="tk-num tk-bound" title="Moottorin luku (${esc(path)})">${fmtLuku(v)}</span>`
-          : `<span class="tk-num tk-doubt" title="Viittausta (${esc(path)}) ei löydy moottorin luvuista">?</span>`;
+          ? `<span class="tk-num tk-bound" title="${t('Moottorin luku ({0})', esc(path))}">${fmtLuku(v)}</span>`
+          : `<span class="tk-num tk-doubt" title="${t('Viittausta ({0}) ei löydy moottorin luvuista', esc(path))}">?</span>`;
       });
       return `<p>${s}</p>`;
     }).join('');
@@ -357,20 +357,20 @@
     `<header class="tk-head">
       <span class="tk-dot" aria-hidden="true">✦</span>
       <b>Tulkki</b><small>tekoälyapuri</small>
-      <button type="button" class="tk-x" id="tkClose" aria-label="Sulje Tulkki">✕</button>
+      <button type="button" class="tk-x" id="tkClose" aria-label="${t('Sulje Tulkki')}">✕</button>
     </header>
-    <div class="tk-privacy" title="Vain suunnitelman anonyymi muoto ja kysymys välitetään selitystä varten — ei nimiä eikä tunnisteita.">🔒 Laskelmasi ei lähde ${APPI ? 'laitteeltasi' : 'selaimestasi'} — palvelin ei tallenna mitään.</div>
+    <div class="tk-privacy" title="${t('Vain suunnitelman anonyymi muoto ja kysymys välitetään selitystä varten — ei nimiä eikä tunnisteita.')}">${APPI ? t('🔒 Laskelmasi ei lähde laitteeltasi — palvelin ei tallenna mitään.') : t('🔒 Laskelmasi ei lähde selaimestasi — palvelin ei tallenna mitään.')}</div>
     <div class="tk-log" id="tkLog" aria-live="polite"></div>
     <div class="tk-sugs" id="tkSugs"></div>
     <form class="tk-ask" id="tkForm">
       <input id="tkInput" type="text" maxlength="600" autocomplete="off"
-        placeholder="Kysy tai kokeile: ”kokeile eläkeikää 62”" aria-label="Kysymys Tulkille" />
-      <button type="submit" aria-label="Lähetä kysymys">↑</button>
+        placeholder="${t('Kysy tai kokeile: ”kokeile eläkeikää 62”')}" aria-label="${t('Kysymys Tulkille')}" />
+      <button type="submit" aria-label="${t('Lähetä kysymys')}">↑</button>
     </form>
     <div class="tk-foot">
       <button type="button" class="tk-mini" id="tkLogBtn">Tulkin toimet (0)</button>
       <button type="button" class="tk-mini" id="tkEvalCopy"></button>
-      <span class="tk-quota" id="tkQuota" title="Ilmaiskäytön päiväkiintiö — nollautuu keskiyöllä"></span>
+      <span class="tk-quota" id="tkQuota" title="${t('Ilmaiskäytön päiväkiintiö — nollautuu keskiyöllä')}"></span>
       <span class="tk-cost" id="tkCost"></span>
     </div>`;
 
@@ -676,8 +676,8 @@
             `<span>✓ luvut moottorista${bound ? ` · ${bound} sidottu` : ''}${doubts ? ` · <b class="tk-doubt-n">${doubts} tarkistamatonta</b>` : ''}</span>` +
             // Palaute: vain arvio Plausibleen (ylos/alas) — EI sisältöä, ei
             // tunnisteita. Avaimella arvio tallentuu myös paikalliseen evaliin.
-            `<span class="tk-fb"><button type="button" class="tk-mini tk-fb-b" data-arvio="ylos" title="Hyvä vastaus" aria-label="Hyvä vastaus">👍</button>` +
-            `<button type="button" class="tk-mini tk-fb-b" data-arvio="alas" title="Huono tai epäselvä vastaus" aria-label="Huono tai epäselvä vastaus">👎</button></span>` +
+            `<span class="tk-fb"><button type="button" class="tk-mini tk-fb-b" data-arvio="ylos" title="${t('Hyvä vastaus')}" aria-label="${t('Hyvä vastaus')}">👍</button>` +
+            `<button type="button" class="tk-mini tk-fb-b" data-arvio="alas" title="${t('Huono tai epäselvä vastaus')}" aria-label="${t('Huono tai epäselvä vastaus')}">👎</button></span>` +
             (tkKey ? `<button type="button" class="tk-mini tk-eval-b">Tallenna evaliksi</button>` : '');
           mEl.querySelectorAll('.tk-fb-b').forEach((b) => b.addEventListener('click', () => {
             tkTrack('Tulkki palaute', { arvio: b.dataset.arvio });
@@ -1071,7 +1071,7 @@
         : `<div class="tk-ch-row">${esc(t(r.nimi))}: <s>${fmt(r.vanha)}</s> → <b>${fmt(r.uusi)}</b> ${esc(r.yks)}</div>`).join('') +
       `<div class="tk-ch-acts">
         <button type="button" class="tk-keep">Pidä muutos</button>
-        <button type="button" class="tk-mini tk-revert" title="Palauttaa tilanteen ennen kokeilua">Palauta</button>
+        <button type="button" class="tk-mini tk-revert" title="${t('Palauttaa tilanteen ennen kokeilua')}">${t('Palauta')}</button>
       </div>`;
     card.querySelector('.tk-keep').addEventListener('click', () => {
       // Kirjaa pidetty muutos paikalliseen lokiin ennen previewBeforen nollausta
@@ -1196,7 +1196,7 @@
     const list = tkActions();
     const card = document.createElement('div');
     card.className = 'tk-actions';
-    let html = `<div class="tk-kats-head"><span>Tulkin toimet</span><button type="button" class="tk-kats-x" aria-label="Sulje">✕</button></div>`;
+    let html = `<div class="tk-kats-head"><span>${t('Tulkin toimet')}</span><button type="button" class="tk-kats-x" aria-label="${t('Sulje')}">✕</button></div>`;
     if (!list.length) {
       html += '<div class="tk-ch-note">Tulkki ei ole vielä muuttanut suunnitelmaasi. Pidetyt muutokset kirjautuvat tähän — vain sinun ' + (APPI ? 'laitteellesi' : 'selaimeesi') + ', ei minnekään muualle.</div>';
     } else {
@@ -1208,7 +1208,7 @@
           ? `${esc(t(r.nimi))}: ${esc(r.desc)}`
           : `${esc(t(r.nimi))}: ${fmtFi(r.vanha)} → ${fmtFi(r.uusi)} ${esc(r.yks || '')}`).join('; ');
         return `<div class="tk-act-row"><div class="tk-act-top"><span class="tk-act-when">${esc(when)}</span>` +
-          `<button type="button" class="tk-mini tk-act-revert" data-i="${idx}" title="Palauta suunnitelma tätä muutosta edeltäneeseen tilaan">Palauta tähän</button></div>` +
+          `<button type="button" class="tk-mini tk-act-revert" data-i="${idx}" title="${t('Palauta suunnitelma tätä muutosta edeltäneeseen tilaan')}">${t('Palauta tähän')}</button></div>` +
           `<div class="tk-act-q">${esc(e.q || '')}</div><div class="tk-act-chg">${chg}</div></div>`;
       }).join('');
     }
@@ -1355,7 +1355,7 @@
     // Tekoälymaininta (tässä ja otsikon tekoälyapuri-rivillä) on AI-asetuksen
     // art. 50 läpinäkyvyysvaatimus — ei saa pudottaa.
     card.innerHTML =
-      `<div class="tk-kats-head"><span>Tervetuloa — Tulkki</span><button type="button" class="tk-kats-x" aria-label="Sulje">✕</button></div>` +
+      `<div class="tk-kats-head"><span>${t('Tervetuloa — Tulkki')}</span><button type="button" class="tk-kats-x" aria-label="${t('Sulje')}">✕</button></div>` +
       `<div class="tk-intro-body">Olen tekoälyavustaja: selitän suunnitelmasi luvut selkokielellä ja autan kokeilemaan muutoksia — ` +
       `<b>en anna sijoitusneuvontaa</b>: moottori laskee, minä tulkkaan, ja voin erehtyä.` +
       (tkKey ? '' : ` Ilmaiskäytössä ${QUOTA_MAX} kysymystä päivässä.`) + `</div>`;
@@ -1433,7 +1433,7 @@
     const card = document.createElement('div');
     card.className = 'tk-kats';
     card.innerHTML =
-      `<div class="tk-kats-head"><span>Huomiot</span><button type="button" class="tk-kats-x" aria-label="Piilota huomiot">✕</button></div>` +
+      `<div class="tk-kats-head"><span>${t('Huomiot')}</span><button type="button" class="tk-kats-x" aria-label="${t('Piilota huomiot')}">✕</button></div>` +
       items.map((it, i) => `<div class="tk-kats-row tk-kats-${it.sev}">${esc(it.text)}` +
         (it.q ? ` <button type="button" class="tk-kats-ask" data-i="${i}">Selitä</button>` : '') + `</div>`).join('');
     card.querySelector('.tk-kats-x').addEventListener('click', () => { card.remove(); katsastusDismissed = true; });
