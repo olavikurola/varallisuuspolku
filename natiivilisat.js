@@ -65,8 +65,8 @@
       }).then(function () {
         var lista = [{
           id: KK_ID,
-          title: 'Kuukausikatsaus',
-          body: 'Kirjaa toteutunut varallisuutesi — ollaanko yhä polulla?',
+          title: t('Kuukausikatsaus'),
+          body: t('Kirjaa toteutunut varallisuutesi — ollaanko yhä polulla?'),
           schedule: { on: { day: 1, hour: 9, minute: 0 }, allowWhileIdle: true },
         }];
         if (typeof state !== 'undefined' && state && state.events && typeof evLabel === 'function') {
@@ -81,7 +81,7 @@
             lista.push({
               id: TAPAHTUMA_ID + i,
               title: evLabel(r.e),
-              body: 'Suunnitelmasi mukaan tämä tapahtuu nyt (' + Math.round(r.e.age) + ' v). Toteutuiko? Käy päivittämässä suunnitelma.',
+              body: t('Suunnitelmasi mukaan tämä tapahtuu nyt ({0} v). Toteutuiko? Käy päivittämässä suunnitelma.', Math.round(r.e.age)),
               // kuunvaihteen ylivuoto vältetään rajaamalla päivä ≤ 28
               schedule: { at: new Date(nyt.getFullYear(), nyt.getMonth() + r.kk, Math.min(nyt.getDate(), 28), 9, 0), allowWhileIdle: true },
             });
@@ -94,28 +94,28 @@
 
   function toggleMuistutukset(valmis) {
     var done = function () { if (valmis) valmis(); };
-    if (!LN) { ilmoita('Ilmoitukset eivät ole käytettävissä tässä versiossa'); done(); return; }
+    if (!LN) { ilmoita(t('Ilmoitukset eivät ole käytettävissä tässä versiossa')); done(); return; }
     if (paalla(MUISTUTUS_KEY)) {
       aseta(MUISTUTUS_KEY, false);
       LN.getPending().then(function (res) {
         var pend = (res && res.notifications) || [];
         if (pend.length) LN.cancel({ notifications: pend.map(function (n) { return { id: n.id }; }) });
       }).catch(function () {});
-      ilmoita('Muistutukset pois päältä');
+      ilmoita(t('Muistutukset pois päältä'));
       done();
       return;
     }
     LN.requestPermissions().then(function (perm) {
       if (perm.display !== 'granted') {
-        ilmoita('Ilmoituslupa puuttuu — salli ilmoitukset laitteen asetuksista');
+        ilmoita(t('Ilmoituslupa puuttuu — salli ilmoitukset laitteen asetuksista'));
         done();
         return;
       }
       aseta(MUISTUTUS_KEY, true);
       ajastaMuistutukset();
-      ilmoita('Muistutukset päällä — kuukausikatsaus ja suunnitelmasi tapahtumat');
+      ilmoita(t('Muistutukset päällä — kuukausikatsaus ja suunnitelmasi tapahtumat'));
       done();
-    }).catch(function () { ilmoita('Ilmoituslupaa ei saatu'); done(); });
+    }).catch(function () { ilmoita(t('Ilmoituslupaa ei saatu')); done(); });
   }
 
   /* ===================== Logoruutu ja sovelluksen lukitus ===================== */
@@ -157,7 +157,7 @@
       '<img src="./icon-192.png" alt="" width="84" height="84" style="border-radius:20px;box-shadow:0 12px 40px rgba(45,212,191,0.22)" />' +
       '<div style="font-weight:700;font-size:22px;letter-spacing:-0.3px;color:#e8ecf8">Varallisuuspolku</div>' +
       '<div style="font-size:13px;color:#93a1b8">' +
-      (lukossa ? 'Lukittu — avaa tunnistautumalla' : 'Koko elinkaaresi vaurastuminen yhdellä näkymällä') +
+      (lukossa ? t('Lukittu — avaa tunnistautumalla') : t('Koko elinkaaresi vaurastuminen yhdellä näkymällä')) +
       '</div>' +
       '<button id="vpAvaaLukko" type="button" style="position:absolute;left:50%;transform:translateX(-50%);' +
       'bottom:calc(40px + env(safe-area-inset-bottom,0px));font:inherit;font-weight:600;font-size:15px;padding:12px 32px;border:0;border-radius:12px;' +
@@ -183,37 +183,37 @@
     // (ei jätetä käyttäjää loukkuun)
     if (!paalla(LUKITUS_KEY) || !NB) { piilotaLukko(); return; }
     NB.verifyIdentity({
-      reason: 'Avaa Varallisuuspolku',
-      title: 'Varallisuuspolku on lukittu',
+      reason: t('Avaa Varallisuuspolku'),
+      title: t('Varallisuuspolku on lukittu'),
       useFallback: true,
     }).then(piilotaLukko).catch(function () { /* peruttu → peite jää, Avaa yrittää uudelleen */ });
   }
 
   function toggleLukitus(valmis) {
     var done = function () { if (valmis) valmis(); };
-    if (!NB) { ilmoita('Lukitus ei ole käytettävissä tässä versiossa'); done(); return; }
+    if (!NB) { ilmoita(t('Lukitus ei ole käytettävissä tässä versiossa')); done(); return; }
     if (paalla(LUKITUS_KEY)) {
       aseta(LUKITUS_KEY, false);
-      ilmoita('Lukitus pois päältä');
+      ilmoita(t('Lukitus pois päältä'));
       done();
       return;
     }
     NB.isAvailable({ useFallback: true }).then(function (r) {
       if (!r || !r.isAvailable) {
-        ilmoita('Laitteessa ei ole käytettävissä olevaa lukitustapaa');
+        ilmoita(t('Laitteessa ei ole käytettävissä olevaa lukitustapaa'));
         done();
         return;
       }
       return NB.verifyIdentity({
-        reason: 'Vahvista lukituksen käyttöönotto',
-        title: 'Sovelluksen lukitus',
+        reason: t('Vahvista lukituksen käyttöönotto'),
+        title: t('Sovelluksen lukitus'),
         useFallback: true,
       }).then(function () {
         aseta(LUKITUS_KEY, true);
-        ilmoita('Lukitus päällä — appi vaatii avauksen jatkossa');
+        ilmoita(t('Lukitus päällä — appi vaatii avauksen jatkossa'));
         done();
-      }).catch(function () { ilmoita('Tunnistautuminen peruttiin'); done(); });
-    }).catch(function () { ilmoita('Lukitustavan tarkistus epäonnistui'); done(); });
+      }).catch(function () { ilmoita(t('Tunnistautuminen peruttiin')); done(); });
+    }).catch(function () { ilmoita(t('Lukitustavan tarkistus epäonnistui')); done(); });
   }
 
   /* ===================== Jakoarkki ===================== */
@@ -227,7 +227,7 @@
       title: opts.title || 'Varallisuuspolku',
       text: opts.text || '',
       url: opts.url,
-      dialogTitle: opts.title || 'Jaa',
+      dialogTitle: opts.title || t('Jaa'),
     }).then(function () { return true; }).catch(function () { return true; });
   }
 
@@ -278,9 +278,10 @@
     var delta = r.eur - odotus;
     var suhde = odotus > 0 ? delta / odotus : 0;
     var teksti, lyhyt;
-    if (Math.abs(suhde) < 0.05) { teksti = 'Polulla ✓'; lyhyt = 'Toteuma: polulla ✓'; }
-    else if (delta > 0) { teksti = 'Edellä ' + fmtCompact(delta); lyhyt = 'Toteuma: ' + fmtCompact(delta) + ' edellä'; }
-    else { teksti = 'Jäljessä ' + fmtCompact(-delta); lyhyt = 'Toteuma: ' + fmtCompact(-delta) + ' jäljessä'; }
+    // window.t: paikallinen "var t = toteumaLue()" varjostaa käännösfunktion tässä skoopissa
+    if (Math.abs(suhde) < 0.05) { teksti = window.t('Polulla ✓'); lyhyt = window.t('Toteuma: polulla ✓'); }
+    else if (delta > 0) { teksti = window.t('Edellä {0}', fmtCompact(delta)); lyhyt = window.t('Toteuma: {0} edellä', fmtCompact(delta)); }
+    else { teksti = window.t('Jäljessä {0}', fmtCompact(-delta)); lyhyt = window.t('Toteuma: {0} jäljessä', fmtCompact(-delta)); }
     return { teksti: teksti, lyhyt: lyhyt, kk: r.kk, eur: r.eur, odotus: odotus, delta: delta };
   }
 
@@ -337,8 +338,8 @@
     }).join('');
     if (rivit) html += '<div class="vpt-lista">' + rivit + '</div>';
     html += '<div class="vpt-info">Kirjaukset ja vertailukohta pysyvät vain tällä laitteella. ' +
-      (t.viite ? 'Vertailukohta on jäädytetty suunnitelmastasi ' + kkNimi(t.viite.pvm) + ' — kaikkien kirjausten poisto nollaa sen.' :
-        'Kuukausimuistutus muistuttaa kirjaamisesta, kun muistutukset ovat päällä.') +
+      (t.viite ? window.t('Vertailukohta on jäädytetty suunnitelmastasi {0} — kaikkien kirjausten poisto nollaa sen.', kkNimi(t.viite.pvm)) :
+        window.t('Kuukausimuistutus muistuttaa kirjaamisesta, kun muistutukset ovat päällä.')) +
       (widgetDiag && widgetDiag !== 'ok' ? '<br>Widget-silta: ' + widgetDiag + ' — kotinäyttöwidget ei saa tietoja.' : '') +
       '</div>';
     toteumaEl.innerHTML = html;
@@ -389,17 +390,17 @@
     if (sim.successProb != null) {
       data = {
         // lyhyt otsikko — täysi sana katkesi pienessä widgetissä (laitehavainto)
-        otsikko: 'Onnistumis-%',
+        otsikko: t('Onnistumis-%'),
         arvo: Math.round(sim.successProb * 100) + ' %',
         alarivi: sim.retireAge != null
-          ? 'Eläkkeelle ' + Math.round(sim.retireAge) + ' v (~' + (vuosiNyt + Math.round(sim.retireAge - state.ageNow)) + ')'
-          : 'Suunnitelma ' + Math.round(state.ageEnd) + ' v ikään',
+          ? t('Eläkkeelle {0} v (~{1})', Math.round(sim.retireAge), vuosiNyt + Math.round(sim.retireAge - state.ageNow))
+          : t('Suunnitelma {0} v ikään', Math.round(state.ageEnd)),
       };
     } else if (sim.wEnd != null && typeof fmtCompact === 'function') {
       data = {
-        otsikko: 'Loppuvarallisuus',
+        otsikko: t('Loppuvarallisuus'),
         arvo: fmtCompact(sim.wEnd),
-        alarivi: 'Suunnitelma ' + Math.round(state.ageEnd) + ' v ikään',
+        alarivi: t('Suunnitelma {0} v ikään', Math.round(state.ageEnd)),
       };
     } else return;
     // toteumakirjaus vie alarivin: polulla / edellä / jäljessä

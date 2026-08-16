@@ -77,6 +77,13 @@ tyyppi-label) EI käännetä — Plausible-datan jatkuvuus. MCP ja LLM-konteksti
       piirtopoyta fs-valikko, laajennukset tornado-labelit)
 - [x] alapalkki.js kokonaan: käännös apuritasolla (ryhma/add/kytkin/tab) —
       kaikki valikkorivit, kytkimet ja tabbar kerralla, kutsupaikat pysyvät suomena
+- [x] natiivilisat.js: ilmoitukset, lukitusdialogit ja -näyttö, jakolomake,
+      toteumatekstit, widget-payload — koostetut lauseet {0}-paikkamerkein.
+      HUOM: toteumafunktioissa paikallinen `var t = toteumaLue()` varjostaa
+      käännösfunktion → niissä window.t(...). JÄLJELLÄ samasta syystä:
+      toteumalomakkeen virhetekstit (~349-353, 'Anna varallisuus euroina' ym.)
+      — kääri window.t:llä tai nimeä lokaali uudelleen seuraavassa erässä.
+      Kytkinrivien tekstit (473-489) lokalisoituivat jo alapalkin apurin kautta.
 - [ ] jatko tiedosto kerrallaan alla olevassa järjestyksessä (seuraavaksi:
       natiivilisat.js flat-stringit, laskenta.js-labelien renderöintipaikat,
       tulkki.js ERRORS/FIELDS-taulut)
