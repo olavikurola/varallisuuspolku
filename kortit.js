@@ -66,13 +66,13 @@ function renderStats() {
     cls: '',
     s: `${fmtEur(state.monthly)}/kk${state.savingsGrowth > 0 ? ` (+${fmtLuku(state.savingsGrowth)} %/v)` : ''} + alkupääoma${s.investedPay > 0.5 ? ` − lainanhoito ${fmtCompact(s.investedPay)}` : ''}`,
   });
-  const confTxt = s.conf ? `${Math.round(s.conf * 100)} % varmuudella` : null;
+  const confTxt = s.conf ? t('{0} % varmuudella', Math.round(s.conf * 100)) : null;
   const p = s.successProb != null ? Math.round(s.successProb * 100) : null;
-  const pTxt = p != null ? `onnistumis-% ${p}` : null;
+  const pTxt = p != null ? t('onnistumis-% {0}', p) : null;
   if (s.goal === 'age') {
     cards.push(s.solvedRetireAge != null
-      ? { k: 'Aikaisin eläkeikä', v: fmtAge(s.solvedRetireAge), cls: 'accent', s: `kuukausitulolla ${fmtEur(s.withdrawal)}/kk` + (confTxt ? ` · ${confTxt}` : '') }
-      : { k: 'Aikaisin eläkeikä', v: 'Ei toteudu', cls: 'bad', s: confTxt ? `tulotarve ei onnistu ${confTxt}` : 'tulotarve ei onnistu edes suunnitelman lopussa' });
+      ? { k: 'Aikaisin eläkeikä', v: fmtAge(s.solvedRetireAge), cls: 'accent', s: t('kuukausitulolla {0}/kk', fmtEur(s.withdrawal)) + (confTxt ? ` · ${confTxt}` : '') }
+      : { k: 'Aikaisin eläkeikä', v: 'Ei toteudu', cls: 'bad', s: confTxt ? t('tulotarve ei onnistu {0}', confTxt) : 'tulotarve ei onnistu edes suunnitelman lopussa' });
   }
   if (s.goal === 'saving') {
     cards.push(s.requiredMonthly != null
@@ -82,10 +82,10 @@ function renderStats() {
   // Riittävyys ja onnistumis-% samassa kortissa — kertovat samaa asiaa
   const pDelta = p != null && ghostP != null ? dRow(p, Math.round(ghostP * 100), (x) => `${x} %-yks`, 1) : '';
   if (s.goal === 'withdrawal' && s.goalUnreachable) {
-    cards.push({ k: 'Kestävä kuukausitulo', v: 'Ei toteudu', cls: 'bad', s: `edes 0 €/kk ei riitä ${confTxt || ''}`.trim() });
+    cards.push({ k: 'Kestävä kuukausitulo', v: 'Ei toteudu', cls: 'bad', s: t('edes 0 €/kk ei riitä {0}', confTxt || '').trim() });
   } else if (s.solvedWithdrawal != null && (s.depletionAge == null || s.depletionAge >= s.a1 - 1)) {
     cards.push({ k: 'Kestävä kuukausitulo', v: `${fmtEur(s.solvedWithdrawal)}/kk`, cls: 'accent',
-      s: [s.pension > 0 ? `sis. työeläke ${fmtEur(s.pension)}/kk` : null, confTxt || pTxt].filter(Boolean).join(' · ') || `varat loppuun ${Math.round(s.a1)} v mennessä`,
+      s: [s.pension > 0 ? t('sis. työeläke {0}/kk', fmtEur(s.pension)) : null, confTxt || pTxt].filter(Boolean).join(' · ') || t('varat loppuun {0} v mennessä', Math.round(s.a1)),
       d: dRow(s.solvedWithdrawal, g && (g.solvedWithdrawal != null ? g.solvedWithdrawal : g.sustainableWd), (x) => `${fmtLuku(Math.round(x))} €/kk`, 20) });
   } else if (s.depletionAge != null) {
     // %-nostossa "ehtyminen" tarkoittaa tulotarpeen alittumista (salkku ei ehdy)

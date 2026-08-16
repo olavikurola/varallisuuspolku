@@ -79,8 +79,8 @@ function tourShow(i) {
     `<div class="tour-dots">${TOUR_STEPS.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>` +
     `<h3>${t(st.t)}</h3><p>${t(st.x)}</p>` +
     `<div class="tour-actions">` +
-    `<button class="btn ghost" id="tourSkip">${last ? 'Sulje' : 'Ohita kierros'}</button>` +
-    `<button class="btn" id="tourNext">${last ? 'Aloita: täytä omat tietosi' : `Seuraava (${i + 1}/${TOUR_STEPS.length})`}</button>` +
+    `<button class="btn ghost" id="tourSkip">${last ? t('Sulje') : t('Ohita kierros')}</button>` +
+    `<button class="btn" id="tourNext">${last ? t('Aloita: täytä omat tietosi') : t('Seuraava ({0}/{1})', i + 1, TOUR_STEPS.length)}</button>` +
     `</div>`;
   $('tourSkip').addEventListener('click', (e) => { e.stopPropagation(); endTour(); });
   $('tourNext').addEventListener('click', (e) => {
@@ -138,7 +138,7 @@ function focusBasics() {
   card.classList.add('basics-glow');
   setTimeout(() => card.classList.remove('basics-glow'), 2400);
   setTimeout(() => { try { $('ageNow').focus({ preventScroll: true }); } catch (e) {} }, 450);
-  announce('Aloita täyttämällä perustiedot: ikä, varallisuus ja kuukausisäästö');
+  announce(t('Aloita täyttämällä perustiedot: ikä, varallisuus ja kuukausisäästö'));
 }
 
 function startTour() {
@@ -216,7 +216,7 @@ function setPro(on) {
   if (on) ensureProShape();
   applyProUI();
   renderAll();
-  announce(on ? 'Pro-tila käytössä — uudet kortit paneelissa' : 'Pro-tila pois käytöstä');
+  announce(on ? t('Pro-tila käytössä — uudet kortit paneelissa') : t('Pro-tila pois käytöstä'));
 }
 
 function applyProUI() {
@@ -274,7 +274,7 @@ function updatePsdNote() {
   if (!p || !p.corr) { note.textContent = ''; return; }
   const { shrunk } = ensurePSD(corrMatrixOf(classesOf(state).length, p.corr));
   note.textContent = shrunk
-    ? '⚠ Matriisi ei ollut matemaattisesti kelvollinen — laskennassa käytetään lähintä kelvollista (kutistettu kohti riippumattomuutta).'
+    ? t('⚠ Matriisi ei ollut matemaattisesti kelvollinen — laskennassa käytetään lähintä kelvollista (kutistettu kohti riippumattomuutta).')
     : '';
 }
 
@@ -287,41 +287,41 @@ function buildProMkt() {
   const classes = classesOf(state);
   const custom = state.pro.assets || [];
   const wC = Math.max(0, 100 - state.allocStocks - state.allocBonds - proCustomSum());
-  let h = '<div class="pgrid phead"><span>Luokka</span><span>Tuotto %</span><span>Heilunta %</span><span>Paino %</span><span></span></div>';
+  let h = `<div class="pgrid phead"><span>${t('Luokka')}</span><span>${t('Tuotto %')}</span><span>${t('Heilunta %')}</span><span>${t('Paino %')}</span><span></span></div>`;
   const baseW = [state.allocStocks + '', state.allocBonds + '', wC + ''];
   ['stocks', 'bonds', 'cash'].forEach((k, i) => {
     h += `<div class="pgrid"><span class="pl">${classes[i].name}</span>`
       + pin(`mu.${k}`, p.mu[k], -10, 25, 0.1)
       + pin(`sigma.${k}`, p.sigma[k], 0, 60, 0.5)
-      + `<span class="pw" title="${i === 2 ? 'jäännös' : 'Allokaatio-kortin liukurista'}">${baseW[i]}${i === 2 ? '·' : '↖'}</span><span></span></div>`;
+      + `<span class="pw" title="${i === 2 ? t('jäännös') : t('Allokaatio-kortin liukurista')}">${baseW[i]}${i === 2 ? '·' : '↖'}</span><span></span></div>`;
   });
   custom.forEach((a, i) => {
     h += `<div class="pgrid"><input class="pin pname" type="text" maxlength="24" value="${escapeHtml(a.name)}" data-ppt="assets.${i}.name" />`
       + pin(`assets.${i}.mu`, a.mu, -10, 25, 0.1)
       + pin(`assets.${i}.sigma`, a.sigma, 0, 60, 0.5)
       + pin(`assets.${i}.weight`, a.weight, 0, 100, 1)
-      + `<button class="pdel" data-pact="class-del" data-i="${i}" title="Poista luokka">✕</button></div>`;
+      + `<button class="pdel" data-pact="class-del" data-i="${i}" title="${t('Poista luokka')}">✕</button></div>`;
   });
-  if (custom.length < 3) h += '<button class="btn ghost btn-mini" data-pact="class-add">＋ Oma omaisuusluokka</button>';
+  if (custom.length < 3) h += `<button class="btn ghost btn-mini" data-pact="class-add">＋ ${t('Oma omaisuusluokka')}</button>`;
 
-  h += `<div class="prow"><label class="pinline">Inflaatio-oletus ${pin('infl', p.infl, 0, 10, 0.1)} %/v</label>`
-    + `<label class="pinline">Jakauma <select class="pin psel" data-pact="dist">`
-    + `<option value="normal"${p.mc.dist === 'normal' ? ' selected' : ''}>Normaali</option>`
-    + `<option value="t"${p.mc.dist === 't' ? ' selected' : ''}>Paksuhäntäinen (t)</option></select></label>`
-    + (p.mc.dist === 't' ? `<label class="pinline">Vapausasteet ${pin('mc.df', p.mc.df, 3, 30, 1)}</label>` : '')
+  h += `<div class="prow"><label class="pinline">${t('Inflaatio-oletus')} ${pin('infl', p.infl, 0, 10, 0.1)} %/v</label>`
+    + `<label class="pinline">${t('Jakauma')} <select class="pin psel" data-pact="dist">`
+    + `<option value="normal"${p.mc.dist === 'normal' ? ' selected' : ''}>${t('Normaali')}</option>`
+    + `<option value="t"${p.mc.dist === 't' ? ' selected' : ''}>${t('Paksuhäntäinen (t)')}</option></select></label>`
+    + (p.mc.dist === 't' ? `<label class="pinline">${t('Vapausasteet')} ${pin('mc.df', p.mc.df, 3, 30, 1)}</label>` : '')
     + '</div>';
 
   h += `<label class="toggle ptog"><input type="checkbox" ${state.pro.glide ? 'checked' : ''} data-pact="glide-on" /><span class="switch"></span>`
-    + '<span>Oma glidepath <small>korvaa Allokaatio-kortin ikäsidonnaisen kytkimen</small></span></label>';
+    + `<span>${t('Oma glidepath')} <small>${t('korvaa Allokaatio-kortin ikäsidonnaisen kytkimen')}</small></span></label>`;
   if (state.pro.glide) {
     const g = p.glide;
-    h += `<div class="prow"><label class="pinline">Alkaa ${pin('glide.from', g.from, 18, 100, 1)} v</label>`
-      + `<label class="pinline">Päättyy ${pin('glide.to', g.to, 19, 105, 1)} v</label>`
-      + `<label class="pinline">Osakepainosta jäljellä ${pin('glide.endF', g.endF, 0, 100, 5)} %</label></div>`;
+    h += `<div class="prow"><label class="pinline">${t('Alkaa')} ${pin('glide.from', g.from, 18, 100, 1)} v</label>`
+      + `<label class="pinline">${t('Päättyy')} ${pin('glide.to', g.to, 19, 105, 1)} v</label>`
+      + `<label class="pinline">${t('Osakepainosta jäljellä')} ${pin('glide.endF', g.endF, 0, 100, 5)} %</label></div>`;
   }
 
   h += `<label class="toggle ptog"><input type="checkbox" ${state.pro.corr ? 'checked' : ''} data-pact="corr-on" /><span class="switch"></span>`
-    + '<span>Hajautushyöty <small>korrelaatiomatriisi — perustila olettaa täyskorrelaation</small></span></label>';
+    + `<span>${t('Hajautushyöty')} <small>${t('korrelaatiomatriisi — perustila olettaa täyskorrelaation')}</small></span></label>`;
   if (state.pro.corr && p.corr) {
     const n = classes.length;
     let k = 0;
@@ -344,37 +344,37 @@ function buildProMkt() {
 function buildProTax() {
   const p = proOf(state) || defaultPro();
   $('proTax').innerHTML =
-    `<div class="prow"><label class="pinline">Juoksevat kulut (TER) ${pin('ter', p.ter, 0, 3, 0.05)} %/v</label></div>`
-    + `<div class="prow"><label class="pinline">Pääomatulovero ${pin('tax.low', p.tax.low, 0, 70, 1)} %</label>`
-    + `<label class="pinline">korotettu ${pin('tax.high', p.tax.high, 0, 70, 1)} %</label>`
-    + `<label class="pinline">rajalta ${pin('tax.bracket', p.tax.bracket, 0, 1000000, 1000)} €/v</label></div>`
+    `<div class="prow"><label class="pinline">${t('Juoksevat kulut (TER)')} ${pin('ter', p.ter, 0, 3, 0.05)} %/v</label></div>`
+    + `<div class="prow"><label class="pinline">${t('Pääomatulovero')} ${pin('tax.low', p.tax.low, 0, 70, 1)} %</label>`
+    + `<label class="pinline">${t('korotettu')} ${pin('tax.high', p.tax.high, 0, 70, 1)} %</label>`
+    + `<label class="pinline">${t('rajalta')} ${pin('tax.bracket', p.tax.bracket, 0, 1000000, 1000)} €/v</label></div>`
     + `<label class="toggle ptog"><input type="checkbox" ${p.tax.acq ? 'checked' : ''} data-pp="tax.acq" /><span class="switch"></span>`
-    + '<span>Hankintameno-olettama nostoihin <small>verotettavaa voittoa rajaa 40/20 %-olettama — vain arvo-osuustilillä</small></span></label>';
+    + `<span>${t('Hankintameno-olettama nostoihin')} <small>${t('verotettavaa voittoa rajaa 40/20 %-olettama — vain arvo-osuustilillä')}</small></span></label>`;
 }
 
 function buildProWd() {
   const p = proOf(state) || defaultPro();
   const seg = [['fixed', 'Kiinteä'], ['pct', '% salkusta'], ['guard', 'Guardrails']]
-    .map(([k, l]) => `<button type="button" class="${p.wd.mode === k ? 'on' : ''}" data-pact="wd-mode" data-mode="${k}">${l}</button>`).join('');
-  let h = `<div class="field"><span class="field-label">Strategia</span><div class="seg seg-goal">${seg}</div></div>`;
+    .map(([k, l]) => `<button type="button" class="${p.wd.mode === k ? 'on' : ''}" data-pact="wd-mode" data-mode="${k}">${t(l)}</button>`).join('');
+  let h = `<div class="field"><span class="field-label">${t('Strategia')}</span><div class="seg seg-goal">${seg}</div></div>`;
   if (p.wd.mode === 'pct') {
-    h += `<div class="prow"><label class="pinline">Nosto ${pin('wd.pct', p.wd.pct, 0.5, 20, 0.1)} % salkusta /v</label></div>`
-      + '<p class="note">Tulo joustaa markkinoiden mukana eikä salkku ehdy. Onnistumis-% mittaa siksi tulotarpeen täyttymistä: suunnitelma epäonnistuu, jos nosto + työeläke alittaa eläketapahtuman kuukausitulon tarpeen. Tarve 0 € = ei rajaa. Eläketavoitteet ja Kestävä tulo ovat tässä strategiassa mittareita, eivät ratkaisuja.</p>';
+    h += `<div class="prow"><label class="pinline">${t('Nosto')} ${pin('wd.pct', p.wd.pct, 0.5, 20, 0.1)}${t(' % salkusta /v')}</label></div>`
+      + `<p class="note">${t('Tulo joustaa markkinoiden mukana eikä salkku ehdy. Onnistumis-% mittaa siksi tulotarpeen täyttymistä: suunnitelma epäonnistuu, jos nosto + työeläke alittaa eläketapahtuman kuukausitulon tarpeen. Tarve 0 € = ei rajaa. Eläketavoitteet ja Kestävä tulo ovat tässä strategiassa mittareita, eivät ratkaisuja.')}</p>`;
   } else if (p.wd.mode === 'guard') {
-    h += `<div class="prow"><label class="pinline">Putki ±${pin('wd.band', p.wd.band, 5, 50, 1)} %</label>`
-      + `<label class="pinline">Säätöaskel ${pin('wd.adj', p.wd.adj, 1, 30, 1)} %</label></div>`
-      + '<p class="note">Kuukausituloa leikataan tai korotetaan kerran vuodessa, jos nostoprosentti karkaa aloitustason putkesta. Perustaso on eläketapahtuman kuukausitulo.</p>';
+    h += `<div class="prow"><label class="pinline">${t('Putki')} ±${pin('wd.band', p.wd.band, 5, 50, 1)} %</label>`
+      + `<label class="pinline">${t('Säätöaskel')} ${pin('wd.adj', p.wd.adj, 1, 30, 1)} %</label></div>`
+      + `<p class="note">${t('Kuukausituloa leikataan tai korotetaan kerran vuodessa, jos nostoprosentti karkaa aloitustason putkesta. Perustaso on eläketapahtuman kuukausitulo.')}</p>`;
   } else {
-    h += '<p class="note">Kiinteä kuukausitulo — perusversion käytös. Eläketavoitteet ja piirtopöydän vedot toimivat täysillään.</p>';
+    h += `<p class="note">${t('Kiinteä kuukausitulo — perusversion käytös. Eläketavoitteet ja piirtopöydän vedot toimivat täysillään.')}</p>`;
   }
   h += `<label class="toggle ptog"><input type="checkbox" ${state.pro.phases ? 'checked' : ''} data-pact="phases-on" /><span class="switch"></span>`
-    + '<span>Kulutuksen vaiheistus <small>go-go · slow-go · no-go</small></span></label>';
+    + `<span>${t('Kulutuksen vaiheistus')} <small>go-go · slow-go · no-go</small></span></label>`;
   if (state.pro.phases) {
     const labels = ['Aktiivivuodet', 'Rauhallisemmat', 'Loppuvuodet'];
     (proOf(state).phases || []).forEach((r, i) => {
-      h += `<div class="prow"><span class="pl phl">${labels[i] || ''}</span>`
-        + (i < 2 ? `<label class="pinline">ikään ${pin(`phases.${i}.to`, r.to, 18, 200, 1)} v</label>` : '<span class="pinline">siitä eteenpäin</span>')
-        + `<label class="pinline">taso ${pin(`phases.${i}.mult`, r.mult, 10, 150, 5)} %</label></div>`;
+      h += `<div class="prow"><span class="pl phl">${labels[i] ? t(labels[i]) : ''}</span>`
+        + (i < 2 ? `<label class="pinline">${t('ikään')} ${pin(`phases.${i}.to`, r.to, 18, 200, 1)} v</label>` : `<span class="pinline">${t('siitä eteenpäin')}</span>`)
+        + `<label class="pinline">${t('taso')} ${pin(`phases.${i}.mult`, r.mult, 10, 150, 5)} %</label></div>`;
     });
   }
   $('proWd').innerHTML = h;
@@ -387,12 +387,12 @@ function buildProMc() {
   const pctVal = `${p.mc.pctLo}-${p.mc.pctHi}`;
   const pctsOpt = [['10-90', 'P10–P90'], ['5-95', 'P5–P95'], ['25-75', 'P25–P75']]
     .map(([v, l]) => `<option value="${v}"${pctVal === v ? ' selected' : ''}>${l}</option>`).join('');
-  let h = `<div class="prow"><label class="pinline">Polkuja <select class="pin psel" data-pact="paths">${pathsOpt}</select></label>`
-    + `<label class="pinline">Viuhka <select class="pin psel" data-pact="pcts">${pctsOpt}</select></label></div>`
-    + `<div class="prow"><label class="pinline">Siemen ${pin('mc.seed', p.mc.seed, 1, 999999999, 1)}</label>`
-    + '<button class="btn ghost btn-mini" data-pact="seed-new">Uusi siemen</button></div>'
-    + '<p class="note">Sama siemen antaa aina samat markkinapolut — siksi viuhka ei väpätä säätöjen välillä. Uusi siemen näyttää toisen "maailmanhistorian".</p>'
-    + '<div class="field"><span class="field-label">Stressiskenaariot graafiin</span></div>';
+  let h = `<div class="prow"><label class="pinline">${t('Polkuja')} <select class="pin psel" data-pact="paths">${pathsOpt}</select></label>`
+    + `<label class="pinline">${t('Viuhka')} <select class="pin psel" data-pact="pcts">${pctsOpt}</select></label></div>`
+    + `<div class="prow"><label class="pinline">${t('Siemen')} ${pin('mc.seed', p.mc.seed, 1, 999999999, 1)}</label>`
+    + `<button class="btn ghost btn-mini" data-pact="seed-new">${t('Uusi siemen')}</button></div>`
+    + `<p class="note">${t('Sama siemen antaa aina samat markkinapolut — siksi viuhka ei väpätä säätöjen välillä. Uusi siemen näyttää toisen "maailmanhistorian".')}</p>`
+    + `<div class="field"><span class="field-label">${t('Stressiskenaariot graafiin')}</span></div>`;
   for (const [key, def] of Object.entries(STRESS_DEFS)) {
     h += `<label class="toggle ptog"><input type="checkbox" ${p.mc.stress.includes(key) ? 'checked' : ''} data-pact="stress" data-key="${key}" /><span class="switch"></span>`
       + `<span>${t(def.name)} <small>${def.months / 12} v · ${Math.round(def.annual * 100)} %/v ${def.from === 'now' ? t('heti nykyhetkestä') : t('eläkkeelle jäännistä')}</small></span></label>`;
@@ -401,19 +401,19 @@ function buildProMc() {
 }
 
 function buildProAna() {
-  let h = '<div class="field"><span class="field-label">Skenaariot <small>enintään 3 haamukäyrää nykyisen rinnalle</small></span></div>';
+  let h = `<div class="field"><span class="field-label">${t('Skenaariot')} <small>${t('enintään 3 haamukäyrää nykyisen rinnalle')}</small></span></div>`;
   proScenarios.forEach((sc, i) => {
     h += `<div class="scen-row"><span class="scen-dot" style="background:${SCEN_COLORS[i % 3]}"></span>`
       + `<span class="scen-name">${escapeHtml(sc.name)}</span>`
-      + `<button class="pdel" data-pact="scen-del" data-i="${i}" title="Poista skenaario">✕</button></div>`;
+      + `<button class="pdel" data-pact="scen-del" data-i="${i}" title="${t('Poista skenaario')}">✕</button></div>`;
   });
   if (proScenarios.length < 3) {
-    h += `<div class="scen-add"><input class="pin pname" id="scenName" type="text" maxlength="20" placeholder="esim. Varovainen" />`
-      + '<button class="btn ghost btn-mini" data-pact="scen-save">Tallenna nykyinen skenaarioksi</button></div>';
+    h += `<div class="scen-add"><input class="pin pname" id="scenName" type="text" maxlength="20" placeholder="${t('esim. Varovainen')}" />`
+      + `<button class="btn ghost btn-mini" data-pact="scen-save">${t('Tallenna nykyinen skenaarioksi')}</button></div>`;
   }
-  h += '<h3 class="ana-h">Ehtymiskäyrä <small>P(varat lopussa ikään mennessä)</small></h3><svg id="ruinSvg" viewBox="0 0 300 92"></svg>'
-    + '<h3 class="ana-h">Herkkyys <small>vaikutus loppuvarallisuuteen</small></h3><div id="tornadoBox"></div>'
-    + '<h3 class="ana-h">Kestävä tulo eläkei\'ittäin</h3><svg id="susSvg" viewBox="0 0 300 92"></svg>';
+  h += `<h3 class="ana-h">${t('Ehtymiskäyrä')} <small>${t('P(varat lopussa ikään mennessä)')}</small></h3><svg id="ruinSvg" viewBox="0 0 300 92"></svg>`
+    + `<h3 class="ana-h">${t('Herkkyys')} <small>${t('vaikutus loppuvarallisuuteen')}</small></h3><div id="tornadoBox"></div>`
+    + `<h3 class="ana-h">${t('Kestävä tulo eläkei\'ittäin')}</h3><svg id="susSvg" viewBox="0 0 300 92"></svg>`;
   $('proAna').innerHTML = h;
 }
 
@@ -434,7 +434,7 @@ function proAction(act, el) {
   const rebuild = () => { renderProCards(); renderAll(); };
   if (act === 'class-add') {
     p.assets = p.assets || [];
-    if (p.assets.length < 3) p.assets.push({ name: 'Oma luokka', mu: 5, sigma: 10, weight: 5 });
+    if (p.assets.length < 3) p.assets.push({ name: t('Oma luokka'), mu: 5, sigma: 10, weight: 5 });
     if (p.corr) p.corr = initCorrTri(3 + p.assets.length, p.corr);
     rebuild();
   } else if (act === 'class-del') {
@@ -476,12 +476,12 @@ function proAction(act, el) {
     p.mc.stress = [...set];
     renderAll();
   } else if (act === 'scen-save') {
-    const name = ($('scenName') && $('scenName').value.trim()) || `Skenaario ${proScenarios.length + 1}`;
+    const name = ($('scenName') && $('scenName').value.trim()) || t('Skenaario {0}', proScenarios.length + 1);
     proScenarios.push({ name: name.slice(0, 20), data: JSON.parse(JSON.stringify(serialize())) });
     saveScenarios();
     buildProAna();
     renderAll();
-    toast(`Skenaario "${name}" tallennettu haamukäyräksi`);
+    toast(t('Skenaario "{0}" tallennettu haamukäyräksi', name));
   } else if (act === 'scen-del') {
     proScenarios.splice(+el.dataset.i, 1);
     scenSimCache.clear();
@@ -648,42 +648,42 @@ function proSummaryHtml(s) {
   };
   const names = { stocks: 'Osakkeet', bonds: 'Korot', cash: 'Käteinen' };
   for (const k of ['stocks', 'bonds', 'cash']) {
-    dev(`${names[k]}: tuotto-odotus`, fmtLuku(p.mu[k]), fmtLuku(d.mu[k]), ' %/v');
-    dev(`${names[k]}: heilunta`, fmtLuku(p.sigma[k]), fmtLuku(d.sigma[k]), ' %');
+    dev(t('{0}: tuotto-odotus', t(names[k])), fmtLuku(p.mu[k]), fmtLuku(d.mu[k]), ' %/v');
+    dev(t('{0}: heilunta', t(names[k])), fmtLuku(p.sigma[k]), fmtLuku(d.sigma[k]), ' %');
   }
   p.assets.forEach((a) => {
-    rows.push(`<tr><td>Oma luokka: ${escapeHtml(a.name)}</td><td class="num">${a.mu} %/v · ±${a.sigma} % · paino ${a.weight} %</td><td class="num">—</td></tr>`);
+    rows.push(`<tr><td>${t('Oma luokka: {0}', escapeHtml(a.name))}</td><td class="num">${t('{0} %/v · ±{1} % · paino {2} %', a.mu, a.sigma, a.weight)}</td><td class="num">—</td></tr>`);
   });
-  dev('Inflaatio-oletus', fmtLuku(p.infl), fmtLuku(d.infl), ' %/v');
-  dev('Juoksevat kulut (TER)', fmtLuku(p.ter), '0', ' %/v');
-  dev('Pääomatulovero', `${p.tax.low}/${p.tax.high}`, '30/34', ' %');
-  dev('Veroraja', fmtLuku(p.tax.bracket), '30 000', ' €');
-  if (p.tax.acq) rows.push('<tr><td>Hankintameno-olettama nostoihin</td><td class="num">käytössä</td><td class="num">ei</td></tr>');
-  if (p.glide) rows.push(`<tr><td>Oma glidepath</td><td class="num">${p.glide.from}–${p.glide.to} v → ${p.glide.endF} %</td><td class="num">—</td></tr>`);
+  dev(t('Inflaatio-oletus'), fmtLuku(p.infl), fmtLuku(d.infl), ' %/v');
+  dev(t('Juoksevat kulut (TER)'), fmtLuku(p.ter), '0', ' %/v');
+  dev(t('Pääomatulovero'), `${p.tax.low}/${p.tax.high}`, '30/34', ' %');
+  dev(t('Veroraja'), fmtLuku(p.tax.bracket), '30 000', ' €');
+  if (p.tax.acq) rows.push(`<tr><td>${t('Hankintameno-olettama nostoihin')}</td><td class="num">${t('käytössä')}</td><td class="num">${t('ei')}</td></tr>`);
+  if (p.glide) rows.push(`<tr><td>${t('Oma glidepath')}</td><td class="num">${p.glide.from}–${p.glide.to} v → ${p.glide.endF} %</td><td class="num">—</td></tr>`);
   if (p.corr) {
     const { shrunk } = ensurePSD(corrMatrixOf(classesOf(state).length, p.corr));
-    rows.push(`<tr><td>Korrelaatiomatriisi</td><td class="num">käytössä${shrunk ? ' (kutistettu)' : ''}</td><td class="num">täyskorrelaatio</td></tr>`);
+    rows.push(`<tr><td>${t('Korrelaatiomatriisi')}</td><td class="num">${shrunk ? t('käytössä (kutistettu)') : t('käytössä')}</td><td class="num">${t('täyskorrelaatio')}</td></tr>`);
   }
   if (p.wd.mode !== 'fixed') {
-    rows.push(`<tr><td>Nostostrategia</td><td class="num">${p.wd.mode === 'pct' ? p.wd.pct + ' % salkusta/v' : `guardrails ±${p.wd.band} % / ${p.wd.adj} %`}</td><td class="num">kiinteä</td></tr>`);
+    rows.push(`<tr><td>${t('Nostostrategia')}</td><td class="num">${p.wd.mode === 'pct' ? t('{0} % salkusta/v', p.wd.pct) : t('guardrails ±{0} % / {1} %', p.wd.band, p.wd.adj)}</td><td class="num">${t('kiinteä')}</td></tr>`);
   }
-  if (p.phases) rows.push(`<tr><td>Kulutuksen vaiheistus</td><td class="num">${p.phases.map((r) => `${r.mult} %${r.to < 150 ? ' → ' + r.to + ' v' : ''}`).join(' · ')}</td><td class="num">—</td></tr>`);
-  dev('MC-polkuja', fmtLuku(p.mc.paths), '5 000');
-  if (p.mc.dist === 't') rows.push(`<tr><td>Tuottojakauma</td><td class="num">Studentin t (df ${p.mc.df})</td><td class="num">normaali</td></tr>`);
-  dev('MC-siemen', p.mc.seed, '1337');
-  dev('Viuhka', `P${p.mc.pctLo}–P${p.mc.pctHi}`, 'P10–P90');
+  if (p.phases) rows.push(`<tr><td>${t('Kulutuksen vaiheistus')}</td><td class="num">${p.phases.map((r) => `${r.mult} %${r.to < 150 ? ' → ' + r.to + ' v' : ''}`).join(' · ')}</td><td class="num">—</td></tr>`);
+  dev(t('MC-polkuja'), fmtLuku(p.mc.paths), '5 000');
+  if (p.mc.dist === 't') rows.push(`<tr><td>${t('Tuottojakauma')}</td><td class="num">${t('Studentin t (df {0})', p.mc.df)}</td><td class="num">${t('normaali')}</td></tr>`);
+  dev(t('MC-siemen'), p.mc.seed, '1337');
+  dev(t('Viuhka'), `P${p.mc.pctLo}–P${p.mc.pctHi}`, 'P10–P90');
 
   let stressHtml = '';
   if (s.stress && s.stress.length) {
-    stressHtml = '<p><b>Stressiskenaariot:</b> ' + s.stress.map((sc) =>
-      `${sc.name}: ${sc.depletion != null ? `varat ehtyvät ~${Math.round(sc.depletion)} v` : 'kestää suunnitelman loppuun'}`).join(' · ') + '.</p>';
+    stressHtml = `<p><b>${t('Stressiskenaariot:')}</b> ` + s.stress.map((sc) =>
+      `${t(sc.name)}: ${sc.depletion != null ? t('varat ehtyvät ~{0} v', Math.round(sc.depletion)) : t('kestää suunnitelman loppuun')}`).join(' · ') + '.</p>';
   }
-  return '<h2>Pro-oletukset</h2>'
+  return `<h2>${t('Pro-oletukset')}</h2>`
     + (rows.length
-      ? `<table class="sum-table"><thead><tr><th>Oletus</th><th>Arvo</th><th>Perusversio</th></tr></thead><tbody>${rows.join('')}</tbody></table>`
-      : '<p>Pro-tila käytössä ilman poikkeamia perusoletuksista.</p>')
+      ? `<table class="sum-table"><thead><tr><th>${t('Oletus')}</th><th>${t('Arvo')}</th><th>${t('Perusversio')}</th></tr></thead><tbody>${rows.join('')}</tbody></table>`
+      : `<p>${t('Pro-tila käytössä ilman poikkeamia perusoletuksista.')}</p>`)
     + stressHtml
-    + '<p class="sum-disclaimer">Pro-oletukset ovat laatijan omia — eivät palvelun suosituksia.</p>';
+    + `<p class="sum-disclaimer">${t('Pro-oletukset ovat laatijan omia — eivät palvelun suosituksia.')}</p>`;
 }
 
 /* ===================== Perhevirta v1: puoliso ja yhteiskäyrä ===================== */
@@ -705,7 +705,7 @@ const famSimCache = new Map(); // henkilöiden simit (avain: idx, validointi: da
 const familyOn = () => !!(family && family.persons.length > 1);
 // Kahden hengen polut ja testit: "se toinen" = ensimmäinen ei-aktiivinen
 const otherIdx = () => family.persons.findIndex((_, i) => i !== family.active);
-const currentName = () => (family ? family.persons[family.active].name : 'Minä');
+const currentName = () => (family ? family.persons[family.active].name : t('Minä'));
 const activePid = () => (family ? family.persons[family.active].pid : null);
 const idxOfPid = (pid) => (family ? family.persons.findIndex((p) => p.pid === pid) : -1);
 const hasSpouse = () => !!(family && family.persons.some((p) => p.role === 'spouse'));
@@ -753,7 +753,7 @@ function loadFamily() {
     const raw = JSON.parse(localStorage.getItem(FAMILY_KEY));
     if (validFamily(raw)) {
       family = {
-        persons: raw.persons.map((p) => ({ pid: p.pid, name: String(p.name || 'Henkilö').slice(0, 16), role: p.role, child: !!p.child, data: p.data })),
+        persons: raw.persons.map((p) => ({ pid: p.pid, name: String(p.name || t('Henkilö')).slice(0, 16), role: p.role, child: !!p.child, data: p.data })),
         active: clamp(Math.round(raw.active || 0), 0, raw.persons.length - 1),
       };
       migrateFamily();
@@ -769,7 +769,7 @@ function addPerson(role) {
   if (role === 'spouse' && hasSpouse()) return;
   pushUndoNow();
   if (!family) {
-    family = { persons: [{ pid: 'p0', name: 'Minä', role: 'me', child: false, data: JSON.parse(JSON.stringify(serialize())) }], active: 0 };
+    family = { persons: [{ pid: 'p0', name: t('Minä'), role: 'me', child: false, data: JSON.parse(JSON.stringify(serialize())) }], active: 0 };
   }
   const d = JSON.parse(JSON.stringify(serialize()));
   d.startCapital = 0;
@@ -790,7 +790,7 @@ function addPerson(role) {
   const ownerIdx = family.active; // jakodialogin tarjoaja = lisääjä
   family.persons.push({
     pid: 'p' + (Date.now() % 1e8),
-    name: role === 'spouse' ? 'Puoliso' : (kidCount ? `Lapsi ${kidCount + 1}` : 'Lapsi'),
+    name: role === 'spouse' ? t('Puoliso') : (kidCount ? t('Lapsi {0}', kidCount + 1) : t('Lapsi')),
     role, child: role === 'child', data: d,
   });
   saveActiveIntoFamily();
@@ -813,15 +813,13 @@ function maybeOfferShareSplit(ownerIdx) {
   if (!cands.length) return;
   const wrap = document.createElement('div');
   wrap.className = 'share-ask';
-  wrap.innerHTML = `<div class="share-card" role="dialog" aria-label="Jaetaanko yhteiset hankinnat">
-    <h3>Jaetaanko yhteiset hankinnat?</h3>
-    <p class="note">Valitut kulut puolitetaan teille kahdelle — puolikkaat pysyvät synkassa
-    ja näkyvät molempien suunnitelmissa samassa kalenterihetkessä. Valintaa voi muuttaa
-    myöhemmin tapahtuman Jaettu-kytkimestä.</p>
+  wrap.innerHTML = `<div class="share-card" role="dialog" aria-label="${t('Jaetaanko yhteiset hankinnat')}">
+    <h3>${t('Jaetaanko yhteiset hankinnat?')}</h3>
+    <p class="note">${t('Valitut kulut puolitetaan teille kahdelle — puolikkaat pysyvät synkassa ja näkyvät molempien suunnitelmissa samassa kalenterihetkessä. Valintaa voi muuttaa myöhemmin tapahtuman Jaettu-kytkimestä.')}</p>
     ${cands.map((e) => `<label class="toggle"><input type="checkbox" data-share="${e.id}" ${SHARE_PRESET.has(e.type) ? 'checked' : ''} /><span class="switch"></span>
       <span>${EVENT_TYPES[e.type].icon} ${escapeHtml(evLabel(e))} <small>${Math.round(e.age)} v · ${fmtEur(Math.abs(e.amount))}${e.recMonthly ? ` + ${fmtEur(Math.abs(e.recMonthly))}/kk` : ''}</small></span></label>`).join('')}
-    <div class="actions"><button class="btn" id="shareApply">Jaa valitut puoliksi</button>
-    <button class="btn ghost" id="shareSkip">Ei kiitos</button></div>
+    <div class="actions"><button class="btn" id="shareApply">${t('Jaa valitut puoliksi')}</button>
+    <button class="btn ghost" id="shareSkip">${t('Ei kiitos')}</button></div>
   </div>`;
   document.body.appendChild(wrap);
   $('shareSkip').addEventListener('click', () => wrap.remove());
@@ -861,8 +859,8 @@ function applyShareSplit(ownerIdx, ids) {
   }
   persistFamily();
   renderAll();
-  toast(`${n} hankintaa jaettu puoliksi — puolikkaat näkyvät molempien suunnitelmissa`);
-  announce(`${n} hankintaa jaettu puoliksi`);
+  toast(t('{0} hankintaa jaettu puoliksi — puolikkaat näkyvät molempien suunnitelmissa', n));
+  announce(t('{0} hankintaa jaettu puoliksi', n));
 }
 
 function openFamAddMenu(anchor) {
@@ -873,7 +871,7 @@ function openFamAddMenu(anchor) {
   const add = (rooli, icon, name, desc, fn) => {
     const b = document.createElement('button');
     b.dataset.rooli = rooli; // rakenteellinen kahva (testit, ei kielisidontaa)
-    b.innerHTML = `<div>${icon} ${name}</div><div class="mdesc">${desc}</div>`;
+    b.innerHTML = `<div>${icon} ${t(name)}</div><div class="mdesc">${t(desc)}</div>`;
     b.addEventListener('click', fn);
     menu.appendChild(b);
   };
@@ -901,7 +899,7 @@ function switchPerson(i) {
   persistFamily();
   renderFamilyChips();
   renderAll();
-  announce(`${family.persons[i].name} valittu`);
+  announce(t('{0} valittu', family.persons[i].name));
 }
 
 // ✕ poistaa AKTIIVISEN henkilön (paitsi ensimmäisen) — vaihda ensin
@@ -912,7 +910,7 @@ function removePerson() {
   if (!famRemoveArm) {
     famRemoveArm = true;
     renderFamilyChips();
-    toast(`Poistetaanko ${me.name}? Napauta ✕ uudestaan.`);
+    toast(t('Poistetaanko {0}? Napauta ✕ uudestaan.', me.name));
     setTimeout(() => { famRemoveArm = false; renderFamilyChips(); }, 3000);
     return;
   }
@@ -933,8 +931,8 @@ function removePerson() {
   persistFamily();
   renderFamilyChips();
   renderAll();
-  toast(`${me.name} poistettu — jakolinkki palauttaa tarvittaessa`);
-  announce(`${me.name} poistettu`);
+  toast(t('{0} poistettu — jakolinkki palauttaa tarvittaessa', me.name));
+  announce(t('{0} poistettu', me.name));
 }
 
 function renderFamilyChips() {
@@ -942,7 +940,7 @@ function renderFamilyChips() {
   if (!box) return;
   buildPalette(); // siirtochipit näkyvät vain perhetilassa
   if (!familyOn()) {
-    box.innerHTML = '<button class="fam-add" data-fam="add" title="Lisää puoliso tai lapsi — perheen yhteiskäyrä piirtyy graafiin">＋</button>';
+    box.innerHTML = `<button class="fam-add" data-fam="add" title="${t('Lisää puoliso tai lapsi — perheen yhteiskäyrä piirtyy graafiin')}">＋</button>`;
     return;
   }
   box.innerHTML = family.persons.map((p, ci) => {
@@ -951,11 +949,11 @@ function renderFamilyChips() {
     // Poistorasti asuu aktiivisen chipin sisällä — rivin viimeisenä nappina se
     // valui kortin reunan yli kolmella henkilöllä eikä koskaan näkynyt
     const del = ci === family.active && ci > 0
-      ? `<span class="fam-del${famRemoveArm ? ' armed' : ''}" data-fam="del" role="button" tabindex="0" aria-label="Poista ${escapeHtml(p.name)}" title="Poista ${escapeHtml(p.name)}">✕</span>`
+      ? `<span class="fam-del${famRemoveArm ? ' armed' : ''}" data-fam="del" role="button" tabindex="0" aria-label="${t('Poista {0}', escapeHtml(p.name))}" title="${t('Poista {0}', escapeHtml(p.name))}">✕</span>`
       : '';
-    return `<button class="fam-chip${ci === family.active ? ' on' : ''}${p.child ? ' kid' : ''}" data-fam="p${ci}"${style} title="${ci === family.active ? 'Kaksoisnapautus nimeää' : 'Vaihda: ' + escapeHtml(p.name)}">${escapeHtml(p.name)}${del}</button>`;
+    return `<button class="fam-chip${ci === family.active ? ' on' : ''}${p.child ? ' kid' : ''}" data-fam="p${ci}"${style} title="${ci === family.active ? t('Kaksoisnapautus nimeää') : t('Vaihda: {0}', escapeHtml(p.name))}">${escapeHtml(p.name)}${del}</button>`;
   }).join('')
-    + (family.persons.length < FAM_MAX ? '<button class="fam-add" data-fam="add" title="Lisää puoliso tai lapsi">＋</button>' : '');
+    + (family.persons.length < FAM_MAX ? `<button class="fam-add" data-fam="add" title="${t('Lisää puoliso tai lapsi')}">＋</button>` : '');
 }
 
 function bindFamily() {
@@ -991,7 +989,7 @@ function bindFamily() {
     const k = b.dataset.fam;
     if (!k.startsWith('p')) return;
     const i = +k.slice(1);
-    const name = prompt('Nimi:', family.persons[i].name);
+    const name = prompt(t('Nimi:'), family.persons[i].name);
     if (name && name.trim()) {
       family.persons[i].name = name.trim().slice(0, 16);
       persistFamily();
@@ -1192,22 +1190,22 @@ function familySummaryHtml() {
       const dAge = ret ? Math.round(ret.age) : 70;
       const surv = adults.find((x) => x.i !== i);
       const w = widowCheck(i, dAge, surv.i);
-      widowRows += `<li>Jos <b>${escapeHtml(p.name)}</b> kuolee ${dAge} v iässä: ${escapeHtml(surv.p.name)} perii sijoitusvarallisuuden ~<b>${fmtCompact(w.inherit)}</b> — `
+      widowRows += `<li>${t('Jos <b>{0}</b> kuolee {1} v iässä: {2} perii sijoitusvarallisuuden ~<b>{3}</b> — ', escapeHtml(p.name), dAge, escapeHtml(surv.p.name), fmtCompact(w.inherit))}`
         + (w.depletionAge != null && w.depletionAge < w.a1 - 1
-          ? `lesken varat ehtyvät noin <b class="wr">${Math.round(w.depletionAge)} v</b> iässä.`
-          : `lesken varat riittävät suunnitelman loppuun.`) + '</li>';
+          ? t('lesken varat ehtyvät noin <b class="wr">{0} v</b> iässä.', Math.round(w.depletionAge))
+          : t('lesken varat riittävät suunnitelman loppuun.')) + '</li>';
     });
   }
 
-  return `<h2>Perheen suunnitelma</h2>`
+  return `<h2>${t('Perheen suunnitelma')}</h2>`
     + `<div class="sum-tiles">`
-    + `<div class="sum-tile"><div class="k">Perheen onnistumistodennäköisyys</div><div class="v accent">${Math.round(joint.successProb * 100)} %</div><div class="s">sama markkinahistoria molemmille</div></div>`
-    + `<div class="sum-tile"><div class="k">Yhteisvarallisuus lopussa</div><div class="v">${fmtCompact(total[total.length - 1])}</div><div class="s">koko perheen sijoitukset yhteensä</div></div>`
+    + `<div class="sum-tile"><div class="k">${t('Perheen onnistumistodennäköisyys')}</div><div class="v accent">${Math.round(joint.successProb * 100)} %</div><div class="s">${t('sama markkinahistoria molemmille')}</div></div>`
+    + `<div class="sum-tile"><div class="k">${t('Yhteisvarallisuus lopussa')}</div><div class="v">${fmtCompact(total[total.length - 1])}</div><div class="s">${t('koko perheen sijoitukset yhteensä')}</div></div>`
     + `</div>`
-    + `<table class="sum-table"><thead><tr><th>Henkilö</th><th>Säästö</th><th>Eläkeikä</th><th>Eläkkeellä</th><th>Onnistumis-%</th></tr></thead><tbody>${rows}</tbody></table>`
-    + (trRows ? `<h2>Siirrot perheessä</h2><table class="sum-table"><thead><tr><th>Siirto</th><th>Ajankohta</th><th>Summa</th></tr></thead><tbody>${trRows}</tbody></table>` : '')
-    + (widowRows ? `<h2>Leskiturvatarkastelu</h2><ul class="sum-points">${widowRows}</ul>`
-      + `<p class="sum-disclaimer">Leskiturva on karkea tarkastelu: perintö siirtyy leskelle sellaisenaan, perhe-eläkettä tai perintöveroa ei mallinneta. Jaetut hankinnat säilyvät leskellä omana osuutenaan.</p>` : '');
+    + `<table class="sum-table"><thead><tr><th>${t('Henkilö')}</th><th>${t('Säästö')}</th><th>${t('Eläkeikä')}</th><th>${t('Eläkkeellä')}</th><th>${t('Onnistumis-%')}</th></tr></thead><tbody>${rows}</tbody></table>`
+    + (trRows ? `<h2>${t('Siirrot perheessä')}</h2><table class="sum-table"><thead><tr><th>${t('Siirto')}</th><th>${t('Ajankohta')}</th><th>${t('Summa')}</th></tr></thead><tbody>${trRows}</tbody></table>` : '')
+    + (widowRows ? `<h2>${t('Leskiturvatarkastelu')}</h2><ul class="sum-points">${widowRows}</ul>`
+      + `<p class="sum-disclaimer">${t('Leskiturva on karkea tarkastelu: perintö siirtyy leskelle sellaisenaan, perhe-eläkettä tai perintöveroa ei mallinneta. Jaetut hankinnat säilyvät leskellä omana osuutenaan.')}</p>` : '');
 }
 
 /* --- Perhevuoristo: 2.5D-katselunäkymä --- */
@@ -1219,7 +1217,7 @@ function openMountain() {
   const months = total.length - 1;
   const W = 760, rowH = 130, pad = 46, offX = 26, offY = 34;
   const series = [
-    { name: 'Yhteensä', arr: total, color: '#e8edf8' },
+    { name: t('Yhteensä'), arr: total, color: '#e8edf8' },
     ...family.persons.map((p, i) => {
       const kidIdx = family.persons.slice(0, i).filter((x) => x.child).length;
       return { name: p.name, arr: sims[i].exp, color: i === family.active ? '#2dd4bf' : (p.child ? kidColor(kidIdx) : '#64748b') };
@@ -1258,14 +1256,14 @@ function updateSaverNote() {
   const note = $('savNote');
   if (!note) return;
   const inc = state.income, exp = state.expenses;
-  if (inc == null && exp == null) { note.textContent = 'Vapaaehtoinen: lukuja ei jaeta mihinkään.'; return; }
+  if (inc == null && exp == null) { note.textContent = t('Vapaaehtoinen: lukuja ei jaeta mihinkään.'); return; }
   const parts = [];
   if (inc != null && exp != null) {
     const room = Math.max(0, inc - exp);
-    parts.push(`Säästövara <b>${fmtEur(room)}/kk</b>`);
+    parts.push(t('Säästövara <b>{0}/kk</b>', fmtEur(room)));
   }
-  if (inc > 0) parts.push(`nykyinen säästöaste <b>${Math.round(state.monthly / inc * 100)} %</b> nettotuloista`);
-  note.innerHTML = parts.join(' · ') || 'Täytä molemmat kentät.';
+  if (inc > 0) parts.push(t('nykyinen säästöaste <b>{0} %</b> nettotuloista', Math.round(state.monthly / inc * 100)));
+  note.innerHTML = parts.join(' · ') || t('Täytä molemmat kentät.');
 }
 
 function bindSaver() {
@@ -1293,7 +1291,7 @@ function bindSaver() {
     $('monthly').value = state.monthly;
     renderAll();
     updateSaverNote();
-    toast(`Kuukausisäästö ${fmtEur(state.monthly)}/kk säästövarasta`);
+    toast(t('Kuukausisäästö {0}/kk säästövarasta', fmtEur(state.monthly)));
   });
 
   // Porrastettu säästö: kytkin, lisäys, poisto
@@ -1320,10 +1318,10 @@ function renderSavePhaseRows() {
   const ph = state.savePhases || [];
   box.innerHTML = ph.map((p, i) =>
     `<div class="savephase-row">` +
-    `<span class="sp-lab">alle</span>` +
+    `<span class="sp-lab">${t('alle')}</span>` +
     `<span class="input sp-age"><input type="number" class="sp-to" data-i="${i}" min="1" max="105" step="1" value="${p.to}" /><em>v</em></span>` +
     `<span class="input sp-amt-w"><input type="number" class="sp-amt" data-i="${i}" min="0" step="50" value="${Math.round(p.amount)}" /><em>€/kk</em></span>` +
-    (ph.length > 1 ? `<button type="button" class="sp-del" data-i="${i}" aria-label="Poista vaihe" title="Poista vaihe">✕</button>` : '<span class="sp-del-x"></span>') +
+    (ph.length > 1 ? `<button type="button" class="sp-del" data-i="${i}" aria-label="${t('Poista vaihe')}" title="${t('Poista vaihe')}">✕</button>` : '<span class="sp-del-x"></span>') +
     `</div>`).join('');
   box.querySelectorAll('.sp-to').forEach((el) => el.addEventListener('input', (e) => {
     const i = +e.target.dataset.i, v = parseFloat(e.target.value);
@@ -1341,8 +1339,8 @@ function renderSavePhaseRows() {
   }));
   const g = state.savingsGrowth || 0;
   $('savePhaseGrowth').textContent = g > 0
-    ? `Summat kasvavat lisäksi ${pctFmt(g / 100)} vuodessa (palkkakehitys). Aseta säästön vuosikasvu 0 %:iin, jos haluat tarkat summat.`
-    : 'Viimeinen vaihe jatkuu suunnitelman loppuun.';
+    ? t('Summat kasvavat lisäksi {0} vuodessa (palkkakehitys). Aseta säästön vuosikasvu 0 %:iin, jos haluat tarkat summat.', pctFmt(g / 100))
+    : t('Viimeinen vaihe jatkuu suunnitelman loppuun.');
 }
 
 function syncSavePhaseUI() {
