@@ -90,6 +90,11 @@ tyyppi-label) EI käännetä — Plausible-datan jatkuvuus. MCP ja LLM-konteksti
       menevät palvelimelle LLM-kysymyksinä (kieli ratkeaa vaiheen 2 lang-paramilla)
 - [x] STRESS_DEFS-nimet + from-tekstit stressiskenaariolistassa (laajennukset.js;
       laskenta.js pysyy koskemattomana — labelit käännetään renderöintipaikassa)
+- [x] kortit.js tilastotiilet + sovellus.js yhteenvetotiilet NIELUKÄÄRINTÄNÄ:
+      renderöinti kääntää k/v/s-kentät — staattiset labelit ('Verot yhteensä',
+      'Ei toteudu'…) kääntyvät heti, koostetut alaotsikot valuvat suomena läpi
+      kunnes ne muutetaan {0}-muotoon (inkrementaalinen malli, ei riko mitään)
+- [x] kaavio.js tooltip-rivien labelit (9 kpl: Sijoitukset, Vaihteluväli, …)
 - [ ] jatko tiedosto kerrallaan alla olevassa järjestyksessä (seuraavaksi:
       natiivilisat.js flat-stringit, laskenta.js-labelien renderöintipaikat,
       tulkki.js ERRORS/FIELDS-taulut)

@@ -371,23 +371,23 @@ function updateCrosshair(px, localY) {
     const gv = ghostSim.exp[Math.min(m, ghostSim.months)];
     const d = sim.exp[m] - gv;
     if (Math.abs(d) >= 500) {
-      gRow = `<div class="tt-row"><span>Vertailu</span><b>${fmtCompact(gv)} · <span class="${d >= 0 ? 'ok' : 'dbt'}">${d >= 0 ? '+' : '−'}${fmtCompact(Math.abs(d))}</span></b></div>`;
+      gRow = `<div class="tt-row"><span>${t('Vertailu')}</span><b>${fmtCompact(gv)} · <span class="${d >= 0 ? 'ok' : 'dbt'}">${d >= 0 ? '+' : '−'}${fmtCompact(Math.abs(d))}</span></b></div>`;
     }
   }
 
   tooltip.innerHTML =
     `<div class="tt-age">Ikä ${Math.round(age)} v · ${yearNow + Math.round(age - a0)}</div>` +
-    `<div class="tt-row"><span>Sijoitukset</span><b class="hl">${fmtEur(sim.exp[m])}</b></div>` +
+    `<div class="tt-row"><span>${t('Sijoitukset')}</span><b class="hl">${fmtEur(sim.exp[m])}</b></div>` +
     gRow +
-    `<div class="tt-row"><span>Vaihteluväli</span><b>${fmtCompact(sim.pess[m])} – ${fmtCompact(sim.opt[m])}</b></div>` +
-    `<div class="tt-row"><span>Sijoitettu</span><b>${fmtEur(sim.invested[m])}</b></div>` +
-    (sim.assets[m] > 0.5 ? `<div class="tt-row"><span>Omaisuus</span><b class="ast">${fmtEur(sim.assets[m])}</b></div>` : '') +
-    (sim.debt[m] > 0.5 ? `<div class="tt-row"><span>Velkaa</span><b class="dbt">−${fmtEur(sim.debt[m])}</b></div>` : '') +
+    `<div class="tt-row"><span>${t('Vaihteluväli')}</span><b>${fmtCompact(sim.pess[m])} – ${fmtCompact(sim.opt[m])}</b></div>` +
+    `<div class="tt-row"><span>${t('Sijoitettu')}</span><b>${fmtEur(sim.invested[m])}</b></div>` +
+    (sim.assets[m] > 0.5 ? `<div class="tt-row"><span>${t('Omaisuus')}</span><b class="ast">${fmtEur(sim.assets[m])}</b></div>` : '') +
+    (sim.debt[m] > 0.5 ? `<div class="tt-row"><span>${t('Velkaa')}</span><b class="dbt">−${fmtEur(sim.debt[m])}</b></div>` : '') +
     (Math.abs(sim.payments[m]) > 0.5
-      ? `<div class="tt-row"><span>Kk-erät</span><b class="${sim.payments[m] > 0 ? 'dbt' : 'ok'}">${sim.payments[m] > 0 ? fmtEur(sim.payments[m]) : '+' + fmtEur(-sim.payments[m])}/kk</b></div>` : '') +
+      ? `<div class="tt-row"><span>${t('Kk-erät')}</span><b class="${sim.payments[m] > 0 ? 'dbt' : 'ok'}">${sim.payments[m] > 0 ? fmtEur(sim.payments[m]) : '+' + fmtEur(-sim.payments[m])}/kk</b></div>` : '') +
     (sim.retireAge != null && age > sim.retireAge && sim.pension > 0 && age >= sim.pensionAge
-      ? `<div class="tt-row"><span>Työeläke</span><b class="ok">+${fmtEur(sim.pension)}/kk</b></div>` : '') +
-    (sim.hasNet ? `<div class="tt-row tt-net"><span>Netto yhteensä</span><b class="net">${fmtEur(sim.net[m])}</b></div>` : '');
+      ? `<div class="tt-row"><span>${t('Työeläke')}</span><b class="ok">+${fmtEur(sim.pension)}/kk</b></div>` : '') +
+    (sim.hasNet ? `<div class="tt-row tt-net"><span>${t('Netto yhteensä')}</span><b class="net">${fmtEur(sim.net[m])}</b></div>` : '');
   tooltip.hidden = false;
   const tw = tooltip.offsetWidth;
   let tx = x + 16;

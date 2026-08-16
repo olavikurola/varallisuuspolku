@@ -1130,7 +1130,7 @@ function renderSummary() {
     `<div class="sum-meta">${fmtPvm(new Date())}<br>Ikä ${state.ageNow} v · suunnitelma ${Math.round(s.a1)} v ikään asti<br>${state.real ? 'inflaatiokorjattu, nykyrahassa' : 'nimellisarvoin'}</div>` +
     `</div>` +
     `<div class="sum-tiles">${tiles.map((c) =>
-      `<div class="sum-tile"><div class="k">${c.k}</div><div class="v ${c.cls || ''}">${c.v}</div>${c.s ? `<div class="s">${c.s}</div>` : ''}</div>`).join('')}</div>` +
+      `<div class="sum-tile"><div class="k">${t(c.k)}</div><div class="v ${c.cls || ''}">${t(c.v)}</div>${c.s ? `<div class="s">${t(c.s)}</div>` : ''}</div>`).join('')}</div>` +
     osio('Varallisuuden odotettu kehitys',
       `<div class="sum-chart">${summaryChartSVG(s)}</div>` +
       `<div class="sum-legend"><span><i class="sw sum-lg-line"></i>Sijoitusvarallisuus</span><span><i class="sw sum-lg-band"></i>Vaihteluväli</span><span><i class="sw sum-lg-inv"></i>Sijoitettu pääoma</span></div>`, true) +

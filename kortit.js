@@ -114,7 +114,7 @@ function renderStats() {
   // va = tiivis rinnakkaisarvo (esim. 7,1 M€): CSS näyttää sen täyden sijaan
   // vain kapeassa telakkanäkymässä, jotta viisi korttia mahtuu yhdelle riville
   $('stats').innerHTML = cards.map((c) =>
-    `<div class="stat"><div class="k">${c.k}</div><div class="v ${c.cls}">${c.va ? `<span class="v-full">${c.v}</span><span class="v-alt">${c.va}</span>` : c.v}</div><div class="s">${c.s}</div>${c.d || ''}</div>`
+    `<div class="stat"><div class="k">${t(c.k)}</div><div class="v ${c.cls}">${c.va ? `<span class="v-full">${t(c.v)}</span><span class="v-alt">${c.va}</span>` : t(c.v)}</div><div class="s">${t(c.s)}</div>${c.d || ''}</div>`
   ).join('');
   updateCmpPill();
 }
