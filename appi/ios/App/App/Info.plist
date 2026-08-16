@@ -4,8 +4,15 @@
 <dict>
     <key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
+	<!-- fi: appi on suomenkielinen — App Storen "Kielet"-rivi päätellään tästä ja
+	     lokalisoinneista (oli "en" → kauppa näytti EN). EN-lokalisointi lisätään
+	     KIELIVERSIO.md:n vaiheessa 2, jolloin riviin tulee FI ja EN. -->
 	<key>CFBundleDevelopmentRegion</key>
-	<string>en</string>
+	<string>fi</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>fi</string>
+	</array>
 	<!-- Kotinäytön nimi lyhyenä — "Varallisuuspolku" katkeaa ikonin alla (~11 merkkiä).
 	     Kaupan nimi pysyy täytenä App Store Connectissa. -->
 	<key>CFBundleDisplayName</key>
