@@ -162,8 +162,11 @@ Tiedosto kerrallaan, testit joka välissä. Järjestys (helpoimmasta / perustavi
 - Käännös (viralliset termit: osakesäästötili = equity savings account [vero.fi],
   arvo-osuustili = book-entry account, hankintameno-olettama = deemed acquisition cost)
 - Kielentunnistus + asetusten valitsin
-- Tulkki: lang-parametri /tulkki-APIin + englanninkielinen TULKKI_SYSTEM
-  (palvelin/server.js ~399; nyt "Vastaa suomeksi")
+- [x] Tulkki: lang-parametri /tulkki-APIin (validaattorin whitelistin läpi,
+      fi oletus) + TULKKI_SYSTEM_EN/TULKKI_TASKS_EN (tunnistepariteetti todennettu)
+      + viestilabelit CONTEXT/QUESTION/DESCRIPTION. ⚠ VAATII RAILWAY-DEPLOYN.
+      OPPI: node --check ei näe skooppien välisiä ReferenceErroreita — palvelin-
+      muutokset testattava aina oikealla pyynnöllä (tulkki-proxy.test.js).
 - Natiivit ~16 stringiä: iOS Localizable.strings + InfoPlist.strings + knownRegions
   (pbxproj käsin tehty — varo), Android values-en/strings.xml
   ⚠ Lokalisointi kääntää en-laitteet automaattisesti → shipataan vasta kun kattava
