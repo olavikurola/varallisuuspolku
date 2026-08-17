@@ -584,6 +584,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           key: tkKey, mode: mode || 'explain',
+          lang: VP_KIELI, // palvelin valitsee promptin kielen (fi oletus)
           question: NOQ[mode] ? undefined : q,
           context: ctx,
           history: chat.slice(-3),
@@ -1526,6 +1527,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             key: tkKey, mode: 'ramppi', question: text,
+            lang: VP_KIELI, // palvelin valitsee promptin kielen (fi oletus)
             context: { plan: base, stats: { verovuosi: new Date().getFullYear() } },
           }),
         });
