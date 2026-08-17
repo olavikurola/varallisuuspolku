@@ -153,8 +153,12 @@ Tiedosto kerrallaan, testit joka välissä. Järjestys (helpoimmasta / perustavi
       vp-kieli — EI autodetectia ennen vaihetta 3 (staattinen HTML yhä suomeksi,
       sekakielisyys estetty); ?lang=fi palauttaa; html lang päivittyy
 - [x] testit/selain/verify-kieli.js: en aukeaa, fi-oletus koskematon, paluu toimii
-- [ ] Yksiköiden muotoilukuviot (fmtCompact t€/M€, fmtAge v/kk, €/kk-liitteet en:ksi)
-- [ ] Kielivalitsin asetuksiin (alapalkin kytkin appiin + webin ☰-valikko)
+- [x] Yksiköt ja locale kielen mukaan: en → en-GB (1,234.5 / €1,234), t€→k€,
+      v/kk→y/mo (fmtAge); M€ ja € yhteiset. kieli.js:n NBSP-literaalit muunnettu
+       -escapeiksi (fi-tulos tavulleen sama, editointi jatkossa turvallista)
+- [x] Kielivalitsin apin asetuksiin (alapalkin kytkin 'In English'/'Suomeksi' —
+      näytetään kohdekielellä, siksi ei t():tä; reload vaihtaa). Webin valitsin
+      tulee vaiheen 3 sivujen yhteydessä (siihen asti ?lang=en-linkit)
 - Käännös (viralliset termit: osakesäästötili = equity savings account [vero.fi],
   arvo-osuustili = book-entry account, hankintameno-olettama = deemed acquisition cost)
 - Kielentunnistus + asetusten valitsin

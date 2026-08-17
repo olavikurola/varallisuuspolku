@@ -462,6 +462,17 @@
     kytkin('mi-theme', 'Vaalea teema', 'Vaihda värimaailma — valinta muistetaan',
       function () { return document.documentElement.classList.contains('light'); },
       function (paivita) { vaihdaTeema(); paivita(); });
+    // Kielivalitsin näytetään KOHDEKIELELLÄ (englanninkielinen löytää sen
+    // suomenkielisestä valikosta ja päinvastoin) — siksi ei t():tä vaan haara.
+    // Kieli vaihtuu sivulatauksessa: tallenna valinta ja lataa uudelleen.
+    kytkin('mi-kieli',
+      VP_KIELI === 'en' ? 'Suomeksi' : 'In English',
+      VP_KIELI === 'en' ? 'Vaihda sovelluksen kieli suomeen' : 'Switch the app language to English',
+      function () { return VP_KIELI === 'en'; },
+      function () {
+        try { localStorage.setItem('vp-kieli', VP_KIELI === 'en' ? 'fi' : 'en'); } catch (e) {}
+        location.reload();
+      });
     kytkin('mi-pro', 'Pro-tila', 'Ammattilaisen säädöt ja analyysit',
       function () { return onIndex && typeof state !== 'undefined' && !!state.proOn; },
       function (paivita) {

@@ -226,7 +226,7 @@ server.listen(8134, async () => {
   ok(await pg.locator('#mi-taulukko').count() === 1, 'Vuositaulukko valikossa appissa');
   // kaksijako: Sivut + Asetukset ryhmäkortteina, asetukset kytkiminä
   ok(await pg.evaluate(() => [...document.querySelectorAll('.menu .vp-ryhma .msect')].map((s) => s.textContent).join(',')) === 'Sivut,Asetukset', 'ryhmät: Sivut + Asetukset');
-  ok(await pg.locator('.menu .vp-kytkinrivi').count() === 5, 'viisi kytkinriviä (vertailu, teema, pro, muistutukset, lukitus)');
+  ok(await pg.locator('.menu .vp-kytkinrivi').count() === 6, 'kuusi kytkinriviä (vertailu, teema, kieli, pro, muistutukset, lukitus)');
   // kytkimen kääntö: tila vaihtuu switchissä, rivin teksti EI elä (updateCompareBtn-vahti)
   await pg.click('#mi-compare');
   await pg.waitForTimeout(400);
