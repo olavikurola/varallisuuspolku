@@ -4,9 +4,13 @@ import SwiftUI
 // Varallisuuspolun kotinäyttöwidget (iOS): näyttää natiivilisat.js:n
 // App Group -tallennukseen kirjoittaman valmiin tiivistelmän — widget ei
 // laske mitään, kuten Android-vastineensakaan (VarallisuusWidget.java).
-// Tiedot: {otsikko, arvo, alarivi, paivitetty, kayra} suomeksi valmiiksi
+// Tiedot: {otsikko, arvo, alarivi, paivitetty, kayra} appin kielellä valmiiksi
 // muotoiltuna; kayra on odotettu kehitys normalisoituna 0–100 ja piirtyy
 // brändipolkuna tekstin taustalle.
+
+// Widgetin omat tekstit (galleria, fallback) laitteen kielellä — sisältö
+// tulee appista käännettynä, joten .strings-lokalisointia ei tarvita (KIELIVERSIO.md)
+let vpEnglanti = !(Locale.preferredLanguages.first ?? "fi").hasPrefix("fi")
 
 struct VpTiedot: Decodable {
     var otsikko: String
@@ -29,7 +33,9 @@ struct VpProvider: TimelineProvider {
         return try? JSONDecoder().decode(VpTiedot.self, from: data)
     }
     func placeholder(in context: Context) -> VpEntry {
-        VpEntry(date: Date(), tiedot: VpTiedot(otsikko: "Onnistumis-%", arvo: "99 %", alarivi: "Eläkkeelle 65 v", paivitetty: nil, kayra: [4, 5, 7, 9, 11, 14, 17, 20, 24, 28, 33, 38, 43, 49, 55, 61, 67, 73, 79, 84, 89, 93, 96, 98, 100]))
+        // Galleriaesikatselu laitteen kielellä; sisältötekstit tulevat appista
+        // valmiiksi käännettyinä (natiivilisat.js → vp-widget-JSON)
+        VpEntry(date: Date(), tiedot: VpTiedot(otsikko: vpEnglanti ? "Success %" : "Onnistumis-%", arvo: "99 %", alarivi: vpEnglanti ? "Retirement at 65" : "Eläkkeelle 65 v", paivitetty: nil, kayra: [4, 5, 7, 9, 11, 14, 17, 20, 24, 28, 33, 38, 43, 49, 55, 61, 67, 73, 79, 84, 89, 93, 96, 98, 100]))
     }
     func getSnapshot(in context: Context, completion: @escaping (VpEntry) -> Void) {
         completion(VpEntry(date: Date(), tiedot: lue()))
@@ -108,7 +114,7 @@ struct VarallisuusWidgetView: View {
                         .lineLimit(2)
                 }
                 if entry.tiedot == nil {
-                    Text("Avaa sovellus kerran")
+                    Text(vpEnglanti ? "Open the app once" : "Avaa sovellus kerran")
                         .font(.caption2)
                         .foregroundColor(himmea)
                 }
@@ -137,7 +143,7 @@ struct VarallisuusWidget: Widget {
             VarallisuusWidgetView(entry: entry)
         }
         .configurationDisplayName("Varallisuuspolku")
-        .description("Suunnitelmasi tila yhdellä vilkaisulla")
+        .description(vpEnglanti ? "Your plan at a glance" : "Suunnitelmasi tila yhdellä vilkaisulla")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

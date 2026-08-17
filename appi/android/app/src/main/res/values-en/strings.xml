@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- Englanninkielisten laitteiden tekstit (KIELIVERSIO.md, vaihe 2).
+         app_name/package/scheme perivät values/-oletukset (eivät käänny). -->
+    <string name="widget_kuvaus">Your plan at a glance</string>
+    <string name="widget_oletus_alarivi">Open the app once</string>
+    <string name="oikotie_tulkki">Ask AI</string>
+    <string name="oikotie_toteuma">Actuals</string>
+    <string name="oikotie_suunnitelma">Plan</string>
+</resources>

@@ -167,9 +167,14 @@ Tiedosto kerrallaan, testit joka välissä. Järjestys (helpoimmasta / perustavi
       + viestilabelit CONTEXT/QUESTION/DESCRIPTION. ⚠ VAATII RAILWAY-DEPLOYN.
       OPPI: node --check ei näe skooppien välisiä ReferenceErroreita — palvelin-
       muutokset testattava aina oikealla pyynnöllä (tulkki-proxy.test.js).
-- Natiivit ~16 stringiä: iOS Localizable.strings + InfoPlist.strings + knownRegions
-  (pbxproj käsin tehty — varo), Android values-en/strings.xml
-  ⚠ Lokalisointi kääntää en-laitteet automaattisesti → shipataan vasta kun kattava
+- [x] Natiivitekstit ilman .strings-kirurgiaa: iOS-widgetin galleria/fallback-tekstit
+      Swift-kielihaaralla (vpEnglanti, Locale.preferredLanguages — sisältö tulee
+      appista käännettynä), Android values-en/strings.xml (widget + pikatoiminnot;
+      app_name/package perivät oletukset)
+- [ ] JULKAISUA EDELTÄVÄ ASKEL (CI validoi, ei Xcodea): iOS InfoPlist-lokalisointi
+      pbxproj-variantteina — 3 tekstiä: NSFaceIDUsageDescription + 3 pikavalinnan
+      titlet (App/Info.plist:69/76/84). Vaihtoehto: jättää suomeksi v1:een
+      (FaceID-dialogi ja pitkäpainallusvalikko — pieni haitta, nollariski)
 - App Store: englanninkielinen listaus ASC:hen (en-US), TestFlight-beta X-toivojille
 - Widget + notifikaatiot lokalisoituvat JS:n mukana ilmaiseksi (sisällöt natiivilisat.js:stä)
 
