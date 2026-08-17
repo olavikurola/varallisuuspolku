@@ -128,3 +128,106 @@ Laitekoot: `iphone69` 1320×2868 (6,9" — pakollinen), `iphone67` 1290×2796
 (6,7"), `ipad13` 2064×2752 (iPad 13"), `play` 1080×2400 (Play-puhelin).
 Lavastus: esimerkkipersoona "Perhe ja asunto (35 v)" — realistiset luvut,
 vahva mutta ei täydellinen onnistumis-%.
+
+## App Store — englanninkielinen listaus (en-US)
+
+Kohderyhmä: Suomessa asuvat englanninkieliset (KIELIVERSIO.md) — Suomi-spesifisyys
+on ominaisuus, ei rajoite. Linja sama kuin suomeksi: ei sijoitusneuvontaa, ei
+tuottolupauksia. Viralliset termit vero.fi:n mukaan: equity savings account
+(osakesäästötili), deemed acquisition cost (hankintameno-olettama),
+earnings-related pension (työeläke), book-entry account (arvo-osuustili).
+Tulkki ja Varallisuuspolku ovat tuotenimiä — ei käännetä.
+
+**Nimi (max 30 merkkiä):**
+`Varallisuuspolku` (16) — sama brändinimi kaikilla kielillä
+
+**Alaotsikko (max 30 merkkiä):**
+`Draw your path to wealth` (24)
+
+**Promoteksti (max 170 merkkiä):**
+`Try life decisions before you make them: retirement age, home, family. All calculations run on your device — no account, no tracking.` (133)
+
+**Avainsanat (max 100 merkkiä, pilkuin ilman välilyöntejä):**
+`retirement,pension,savings,investing,fire,wealth,planner,calculator,finland,budget,loan,simulator` (97)
+
+**Kuvaus (max 4000 merkkiä; alla 2549):**
+
+```
+Varallisuuspolku is a lifetime financial planning tool made in Finland —
+you don't fill in a form, you draw your plan. Drag the curve with your
+finger: when you retire, how much you save, what happens if you buy a
+home or a child joins the family. With every stroke the app runs
+thousands of market paths and shows how likely your money is to last.
+
+BUILT FOR FINLAND — IN ENGLISH
+If you live in Finland, generic international calculators miss the
+things that decide your outcome: earnings-related pension, capital
+income tax, the deemed acquisition cost, and Finnish account types such
+as the equity savings account (osakesäästötili). Varallisuuspolku
+models them natively — in English.
+
+WHAT THE APP DOES
+• Drawing board: edit your plan directly on the curve — try a decision
+  before you make it
+• Monte Carlo simulation: a success probability from thousands of
+  random market paths, not the false certainty of a single curve
+• Finnish modelling: earnings-related pension, capital income tax,
+  deemed acquisition cost, investment accounts (equity savings account
+  / book-entry account)
+• Life events: a home with its loan, children, cars, renovations,
+  sales, a shared family plan
+• Goals with a confidence level: "retire with 85% certainty" — the app
+  solves the required savings, the retirement age or a sustainable
+  monthly income
+• My Plan document: your whole plan and its assumptions as readable
+  text you can take to your bank or advisor
+
+APP EXTRAS
+• Progress tracking: log your actual net worth monthly and see whether
+  you are on, ahead of or behind your plan
+• Home screen widget: your plan's status at a glance
+• Reminders (optional): a monthly check-in and your plan's own events —
+  "this was supposed to happen now, did it?"
+• App lock (optional): Face ID, Touch ID or your device passcode
+• Quick actions: long-press the app icon to jump straight to Ask AI,
+  Progress or My Plan
+
+TULKKI — AI THAT EXPLAINS, NEVER ADVISES
+Ask why your numbers look the way they do. Tulkki explains your own
+plan and its assumptions in plain language. It does not recommend
+products and does not predict returns.
+
+PRIVACY FIRST
+All calculations and data stay on your device, and the app works
+offline. No account, no sign-up, no ads, no tracking. Nothing is sent
+anywhere without a separate action of your own.
+
+Varallisuuspolku is not investment advice: it shows and explains the
+consequences of your own assumptions, but it does not recommend
+products or promise returns. The calculation model and its assumptions
+are openly documented at varallisuuspolku.com.
+```
+
+**What's New -pohja (englanninkielisen version julkaisuun):**
+
+```
+Varallisuuspolku now speaks English.
+
+The full app is available in English: the drawing board, Monte Carlo
+simulation, Finnish pension and tax modelling, the Tulkki explainer,
+the widget, reminders and progress tracking. The app follows your
+device language, and you can switch between English and Finnish in the
+app's settings at any time.
+
+As always: no account, no tracking — all data stays on your device.
+```
+
+**ASC-kentät jotka tämä osio täyttää** (lisää ensin kieli: App Information →
+Localizable Information → English (U.S.)):
+- App Information → Localizable Information (en-US): Name, Subtitle
+- Versiosivu (en-US): Promotional Text, Description, Keywords, What's New,
+  Support URL / Marketing URL (samat kuin fi: varallisuuspolku.com)
+- Kuvakaappaukset per kieli: en-US voi aluksi käyttää fi-settiä (ASC sallii;
+  englanninkieliset kuvat generoidaan myöhemmin kun UI-käännös on buildissa)
+- Ei-lokalisoituvat (jo täytetty fi-julkaisussa): kategoria, ikäraja, hinta,
+  App Privacy, tietosuoja-URL
