@@ -178,7 +178,32 @@ Tiedosto kerrallaan, testit joka välissä. Järjestys (helpoimmasta / perustavi
 - App Store: englanninkielinen listaus ASC:hen (en-US), TestFlight-beta X-toivojille
 - Widget + notifikaatiot lokalisoituvat JS:n mukana ilmaiseksi (sisällöt natiivilisat.js:stä)
 
-### Vaihe 3 — web-SEO
+### Vaihe 3 — web-SEO ⬅ TYÖN ALLA
+- [x] tyokalut/kieli-html-avaimet.js: 410 segmentin poiminta (tekstit inline-
+      markupeineen, attribuutit, JSON-LD; idempotentti; &nbsp;-entiteetit tallella)
+- [x] tyokalut/kieli-sivut-buildi.js: -en.html-generointi (pisin-ensin-korvaus
+      kirjainrajavartioin, sisälinkit -en-muotoon, lang/og:locale/inLanguage,
+      hreflang-tripletit, canonical+og:url en-URLiin; fi-lähteet koskemattomia)
+- [x] Kielireititys kieli.js:ssä: sivun lang = identiteetti (en-käynti EI
+      tallenna), tallennettu valinta ohjaa redirectin sivuparien välillä,
+      fi-etusivun kohtelias banneri en-selaimille (kerran; ei kovaa redirectiä
+      — Googlen ohje). LINJAUS: ei erillistä footer-kielilinkkiä fi-sivuille —
+      löydettävyys hoituu bannerilla, ?lang-linkeillä ja apin kytkimellä.
+- [x] sitemap.xml hreflang-parit; 5 en-sivua sync-whitelistiin, SW v52
+- [x] verify-kieli: redirect + banneri + kertaluonteisuus (13 tarkistusta).
+      OPPI: Playwrightin oletuslocale perii koneen kielen (fi) — bannertestit
+      vaativat eksplisiittisen locale: 'en-US':n
+- [x] 410 segmentin käännös (agentti; validoitu: avaimet tavuidenttiset, tagi/
+      href/&nbsp;-pariteetit 0 poikkeamaa; 15 epävarminta odottaa Olavin silmäystä)
+      → generoitu: 509 korvausta kuudelle sivulle, jäljelle jääneet "fi-sanat"
+      pelkkää brändinimeä. Suite vihreä (33/33).
+
+**KIELIVERSIO TOTEUTETTU (vaiheet 0–3) 18.8.2026.** Julkaisu vaatii: Olavin
+käännössilmäys (agenttien epävarmuuslistat) → web-push + Railway-deploy +
+appijulkaisu nippuna (TestFlight ensin X-toivojille) + ASC en-US-lomakkeet
+(luonnos kuvaukset.md:ssä) + InfoPlist-kolmikon päätös. Ylläpito: uudet tekstit
+aina t():n/sanastojen kautta; skannerit+buildit idempotentteja (aja järjestyksessä
+kieli-avaimet → kieli-en-buildi, kieli-html-avaimet → kieli-sivut-buildi).
 - Generoidut /en-sivut kaikista kuudesta + hreflang-parit + sitemap + en-JSON-LD
   (UKK duplikoitu näkyvän ja JSON-LD:n välillä — generoitava samasta lähteestä)
 - SW: offline-navigointifallback on kovakoodattu ./index.html → en-reitille oma käsittely

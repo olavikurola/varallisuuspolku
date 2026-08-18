@@ -4,14 +4,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Agentit — Varallisuuspolku</title>
-  <meta name="description" content="Kytke oma tekoälyavustajasi Varallisuuspolun laskentamoottoriin: paikallinen MCP-palvelin, kuusi työkalua ja jakolinkit rajapintana. Deterministinen laskenta ilman verkkoa — ei sijoitusneuvontaa." />
+  <title>Agents — Varallisuuspolku</title>
+  <meta name="description" content="Connect your own AI assistant to Varallisuuspolku's calculation engine: a local MCP server, six tools and share links as the interface. Deterministic calculation with no network — not investment advice." />
   <meta name="theme-color" content="#0a0e1a" />
   <script>/* Vaalea teema käyttöön ennen ensimmäistä maalausta — ei välähdystä */try{if(localStorage.getItem("vp-theme")==="light"){document.documentElement.classList.add("light");document.querySelector("meta[name=theme-color]").content="#eef1f8"}}catch(e){}</script>
   <meta property="og:locale" content="en_GB" />
   <meta property="og:site_name" content="Varallisuuspolku" />
-  <meta property="og:title" content="Agentit — Varallisuuspolku" />
-  <meta property="og:description" content="Laskentamoottori tekoälyagentin työkaluna: paikallinen MCP-palvelin, jakolinkit rajapintana, deterministinen laskenta." />
+  <meta property="og:title" content="Agents — Varallisuuspolku" />
+  <meta property="og:description" content="The calculation engine as an AI agent's tool: a local MCP server, share links as the interface, deterministic calculation." />
   <meta property="og:url" content="https://varallisuuspolku.com/agentit-en.html" />
   <link rel="canonical" href="https://varallisuuspolku.com/agentit-en.html" />
   <link rel="alternate" hreflang="fi" href="https://varallisuuspolku.com/agentit.html" />
@@ -67,59 +67,46 @@
         </svg>
       </div>
       <div>
-        <div class="brand-name">Agentit</div>
-        <div class="brand-tag">Varallisuuspolku tekoälyagenteille</div>
+        <div class="brand-name">Agents</div>
+        <div class="brand-tag">Varallisuuspolku for AI agents</div>
       </div>
     </a>
     <div class="topbar-right">
-      <a class="btn" href="./index-en.html">Avaa suunnittelutyökalu</a>
+      <a class="btn" href="./index-en.html">Open the planning tool</a>
     </div>
   </header>
 
   <main class="an-main">
-    <p class="an-intro">Varallisuuspolun laskentamoottoria voi käyttää oman tekoälyavustajan
-    työkaluna. Sama deterministinen moottori, joka pyörii tällä sivustolla — lakisääteinen
-    työeläke, suomalainen myyntivoittoverotus, lainat annuiteetteina, Monte Carlo kiintein
-    siemenin — on saatavilla paikallisena <b>MCP-palvelimena</b> (Model Context Protocol),
-    jota esimerkiksi Claude ja muut MCP-yhteensopivat agentit osaavat käyttää. Agentti keskustelee,
-    moottori laskee: luvut eivät koskaan tule kielimallilta.</p>
+    <p class="an-intro">Varallisuuspolku's calculation engine can be used as a tool for your own AI assistant. The same deterministic engine that runs on this site — statutory earnings-related pension, Finnish capital gains taxation, loans as annuities, Monte Carlo with fixed seeds — is available as a local <b>MCP server</b> (Model Context Protocol) that Claude and other MCP-compatible agents can use. The agent converses, the engine computes: the numbers never come from the language model.</p>
 
     <section class="an-card">
-      <h2>Mitä agenttituki mahdollistaa</h2>
-      <p class="ag-quote">&rdquo;Tässä suunnitelmani: varallisuuspolku.com#s=&hellip; —
-      <b>pärjäänkö, jos jään eläkkeelle 60-vuotiaana?</b>&rdquo;</p>
-      <p class="ag-quote">&rdquo;Olen 34-vuotias, säästän 600&nbsp;€/kk ja asunnossani on
-      120&nbsp;000&nbsp;€ lainaa. <b>Rakenna suunnitelma ja kerro, milloin voin jäädä
-      eläkkeelle 85&nbsp;%:n varmuudella.</b>&rdquo;</p>
-      <p class="ag-quote">&rdquo;<b>Vertaile kolmea vaihtoehtoa:</b> eläkkeelle 58, 62 vai 65 —
-      mitä kestävää kuukausituloa kukin tarkoittaa?&rdquo;</p>
-      <p class="ag-quote">&rdquo;Tässä perheemme linkki: varallisuuspolku.com#f=&hellip; —
-      <b>kestääkö taloutemme, jos toinen meistä siirtyy osa-aikatyöhön?</b>&rdquo;</p>
-      <p class="an-intro" style="margin:12px 0 0">Agentti lukee suunnitelman jakolinkistä tai
-      rakentaa sen keskustelusta tyhjästä (<code>suunnitelman_skeema</code> kertoo sille kaikki
-      kentät ja tapahtumatyypit). Vastausten luvut lasketaan moottorilla — samat tulokset saa
-      tarkistettua avaamalla saman jakolinkin tällä sivustolla.</p>
+      <h2>What agent support makes possible</h2>
+      <p class="ag-quote">&ldquo;Here's my plan: varallisuuspolku.com#s=&hellip; — <b>will I manage if I retire at 60?</b>&rdquo;</p>
+      <p class="ag-quote">&ldquo;I'm 34, I save 600&nbsp;€/mo and I have 120&nbsp;000&nbsp;€ left on my mortgage. <b>Build a plan and tell me when I can retire with 85&nbsp;% certainty.</b>&rdquo;</p>
+      <p class="ag-quote">&ldquo;<b>Compare three options:</b> retiring at 58, 62 or 65 — what sustainable monthly income does each one mean?&rdquo;</p>
+      <p class="ag-quote">&ldquo;Here's our family's link: varallisuuspolku.com#f=&hellip; — <b>can our finances take it if one of us switches to part-time work?</b>&rdquo;</p>
+      <p class="an-intro" style="margin:12px 0 0">The agent reads a plan from a share link or builds one from scratch out of the conversation (<code>suunnitelman_skeema</code> tells it every field and event type). The numbers in the answers are computed by the engine — you can verify the same results by opening the same share link on this site.</p>
     </section>
 
     <section class="an-card">
-      <h2>Työkalut</h2>
+      <h2>Tools</h2>
       <table class="sum-table">
         <tbody>
-          <tr><td><code>simuloi_suunnitelma</code></td><td>Koko elinkaari: onnistumis-%, varallisuus eläkeiässä ja lopussa (P10–P90), kestävä tulo, verot, ehtymisriskit ja vuositaulukko.</td></tr>
-          <tr><td><code>ratkaise_elakeika</code></td><td>Aikaisin mahdollinen eläkeikä annetulla kuukausitulolla — halutessa Monte Carlo -varmuustasolla (75/85/95&nbsp;%).</td></tr>
-          <tr><td><code>ratkaise_saasto</code></td><td>Tarvittava kuukausisäästö annetulla eläkeiällä ja tulotarpeella.</td></tr>
-          <tr><td><code>vertaa_suunnitelmia</code></td><td>2–4 vaihtoehdon vertailutaulukko, paras arvo merkittynä.</td></tr>
-          <tr><td><code>simuloi_perhe</code></td><td>Koko kotitalous (enintään 4 henkilöä) perhelinkistä: henkilökohtaiset tunnusluvut ja perheen yhteinen onnistumis-% koherentilla Monte Carlolla.</td></tr>
-          <tr><td><code>suunnitelman_skeema</code></td><td>Suunnitelma-JSON:n kenttädokumentaatio ja esimerkit — agentti voi rakentaa suunnitelman ilman jakolinkkiä.</td></tr>
+          <tr><td><code>simuloi_suunnitelma</code></td><td>The whole lifecycle: success %, wealth at retirement age and at the end (P10–P90), sustainable income, taxes, depletion risks and the annual table.</td></tr>
+          <tr><td><code>ratkaise_elakeika</code></td><td>The earliest possible retirement age at a given monthly income — optionally at a Monte Carlo confidence level (75/85/95&nbsp;%).</td></tr>
+          <tr><td><code>ratkaise_saasto</code></td><td>The required monthly savings at a given retirement age and income need.</td></tr>
+          <tr><td><code>vertaa_suunnitelmia</code></td><td>A comparison table of 2–4 options, with the best value marked.</td></tr>
+          <tr><td><code>simuloi_perhe</code></td><td>The whole household (up to 4 people) from a family link: personal key figures and the family's combined success % with coherent Monte Carlo.</td></tr>
+          <tr><td><code>suunnitelman_skeema</code></td><td>Field documentation and examples for the plan JSON — an agent can build a plan without a share link.</td></tr>
         </tbody>
       </table>
     </section>
 
     <section class="an-card">
-      <h2>Käyttöönotto</h2>
+      <h2>Setup</h2>
       <p class="an-intro" style="margin:0"><b>Claude Code:</b></p>
       <pre class="ag-pre">claude mcp add varallisuuspolku -- npx -y varallisuuspolku-mcp</pre>
-      <p class="an-intro" style="margin:14px 0 0"><b>Claude Desktop</b> (Asetukset → Kehittäjä → Muokkaa asetuksia):</p>
+      <p class="an-intro" style="margin:14px 0 0"><b>Claude Desktop</b> (Settings → Developer → Edit config):</p>
       <pre class="ag-pre">{
   "mcpServers": {
     "varallisuuspolku": {
@@ -128,42 +115,30 @@
     }
   }
 }</pre>
-      <p class="an-intro" style="margin:14px 0 0">Muut MCP-yhteensopivat asiakkaat: käynnistä
-      <code>npx -y varallisuuspolku-mcp</code> stdio-palvelimena. Vaatii
-      <a href="https://nodejs.org" rel="noopener">Node.js</a>&nbsp;≥&nbsp;18. Paketti:
-      <a href="https://www.npmjs.com/package/varallisuuspolku-mcp" rel="noopener">varallisuuspolku-mcp
-      npm:ssä</a>.</p>
+      <p class="an-intro" style="margin:14px 0 0">Other MCP-compatible clients: launch <code>npx -y varallisuuspolku-mcp</code> as a stdio server. Requires <a href="https://nodejs.org" rel="noopener">Node.js</a>&nbsp;≥&nbsp;18. Package: <a href="https://www.npmjs.com/package/varallisuuspolku-mcp" rel="noopener">varallisuuspolku-mcp on npm</a>.</p>
     </section>
 
     <section class="an-card">
-      <h2>Jakolinkki on rajapinta</h2>
-      <p class="an-intro" style="margin:0">Suunnitelma liikkuu ihmisen, sivuston ja agentin
-      välillä jakolinkkinä: <code>#s=</code>-linkki kantaa yhden henkilön suunnitelman ja
-      <code>#f=</code>-linkki koko perheen. Linkin saa työkalusta kohdasta
-      <b>Suunnitelmani&nbsp;→ Jaa linkkinä</b> — liitä se agentille sellaisenaan. Sama linkki
-      aukeaa aina myös selaimessa, joten agentin käsittelemän suunnitelman voi milloin tahansa
-      tarkistaa silmin.</p>
+      <h2>The share link is the interface</h2>
+      <p class="an-intro" style="margin:0">A plan moves between a person, the site and an agent as a share link: an <code>#s=</code> link carries one person's plan and an <code>#f=</code> link the whole family's. You get the link from the tool under <b>My plan&nbsp;→ Share as link</b> — paste it to the agent as-is. The same link always opens in a browser too, so you can check the plan an agent is working on with your own eyes at any time.</p>
     </section>
 
     <section class="an-card">
-      <h2>Periaatteet</h2>
+      <h2>Principles</h2>
       <table class="sum-table">
         <tbody>
-          <tr><td>Paikallinen</td><td>MCP-palvelin toimii agentin koneella, ei käytä verkkoa eikä tallenna mitään — sama tietosuojalupaus kuin sivustolla, nyt myös agenttikäytössä.</td></tr>
-          <tr><td>Deterministinen</td><td>Kiinteät Monte Carlo -siemenet: sama syöte antaa aina täsmälleen saman vastauksen, ja laskennan voi tarkistaa <a href="validointi-en.html">validointisivulta</a>.</td></tr>
-          <tr><td>Ei sijoitusneuvontaa</td><td>Työkalut laskevat ja vertailevat — ne eivät suosittele tuotteita tai toimia, ja jokainen vastaus kantaa tämän muistutuksen.</td></tr>
-          <tr><td>Avoin</td><td>Lähdekoodi <a href="https://github.com/olavikurola/varallisuuspolku" rel="noopener">GitHubissa</a> (MIT). Koneluettava palvelukuvaus indeksoijille: <a href="llms.txt">llms.txt</a>.</td></tr>
+          <tr><td>Local</td><td>The MCP server runs on the agent's machine, uses no network and stores nothing — the same privacy promise as on the site, now in agent use too.</td></tr>
+          <tr><td>Deterministic</td><td>Fixed Monte Carlo seeds: the same input always gives exactly the same answer, and the calculation can be checked on the <a href="validointi-en.html">validation page</a>.</td></tr>
+          <tr><td>Not investment advice</td><td>The tools compute and compare — they don't recommend products or actions, and every answer carries this reminder.</td></tr>
+          <tr><td>Open</td><td>Source code on <a href="https://github.com/olavikurola/varallisuuspolku" rel="noopener">GitHub</a> (MIT). Machine-readable service description for indexers: <a href="llms.txt">llms.txt</a>.</td></tr>
         </tbody>
       </table>
-      <p class="ag-note">Tulkki — sivuston sisäänrakennettu tekoälyavustaja — on eri asia kuin
-      agenttituki: Tulkki asuu tässä palvelussa, agenttituki tuo moottorin sinun avustajaasi.
-      Molemmissa pätee sama työnjako: tekoäly selittää, moottori laskee.</p>
+      <p class="ag-note">Tulkki — the site's built-in AI assistant — is a different thing from agent support: Tulkki lives in this service, agent support brings the engine to your assistant. The same division of labour applies to both: the AI explains, the engine computes.</p>
     </section>
 
-    <p class="sum-assump" style="max-width:860px;margin:0 auto 24px"><a href="./index-en.html">Takaisin
-    suunnittelutyökaluun</a> · <a href="validointi-en.html">Laskennan validointi</a> ·
-    <a href="https://www.npmjs.com/package/varallisuuspolku-mcp" rel="noopener">npm-paketti</a> ·
-    <a href="https://github.com/olavikurola/varallisuuspolku" rel="noopener">Lähdekoodi</a></p>
+    <p class="sum-assump" style="max-width:860px;margin:0 auto 24px"><a href="./index-en.html">Back to the planning tool</a> · <a href="validointi-en.html">Calculation validation</a> ·
+    <a href="https://www.npmjs.com/package/varallisuuspolku-mcp" rel="noopener">npm package</a> ·
+    <a href="https://github.com/olavikurola/varallisuuspolku" rel="noopener">Source code</a></p>
   </main>
   <!-- Natiiviappi: alapalkki + natiivilisät (selaimessa no-op) — ilman näitä
        sivu olisi appissa umpikuja ilman navigointia -->

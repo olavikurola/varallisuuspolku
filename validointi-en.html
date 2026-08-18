@@ -4,15 +4,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Laskennan validointi — Varallisuuspolku</title>
-  <meta name="description" content="Näin Varallisuuspolun laskenta on tarkistettu: käsinlaskettavat vertailuesimerkit, verolaskennan esimerkit, oletusten versiointi ja tunnetut yksinkertaistukset. Jokainen luku on laskettu kahdella riippumattomalla tavalla." />
+  <title>Calculation validation — Varallisuuspolku</title>
+  <meta name="description" content="How Varallisuuspolku's calculation is verified: hand-checkable comparison examples, worked tax examples, assumption versioning and known simplifications. Every number is computed in two independent ways." />
   <meta name="theme-color" content="#0a0e1a" />
   <script>/* Vaalea teema käyttöön ennen ensimmäistä maalausta — ei välähdystä */try{if(localStorage.getItem("vp-theme")==="light"){document.documentElement.classList.add("light");document.querySelector("meta[name=theme-color]").content="#eef1f8"}}catch(e){}</script>
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="en_GB" />
   <meta property="og:site_name" content="Varallisuuspolku" />
-  <meta property="og:title" content="Laskennan validointi — näin luvut on tarkistettu" />
-  <meta property="og:description" content="Käsinlaskettavat vertailuesimerkit, verolaskennan esimerkit ja tunnetut yksinkertaistukset — avoimesti dokumentoituna." />
+  <meta property="og:title" content="Calculation validation — how the numbers are verified" />
+  <meta property="og:description" content="Hand-checkable comparison examples, worked tax examples and known simplifications — openly documented." />
   <meta property="og:url" content="https://varallisuuspolku.com/validointi-en.html" />
   <meta property="og:image" content="https://varallisuuspolku.com/og.png" />
   <meta name="twitter:card" content="summary_large_image" />
@@ -43,155 +43,123 @@
         </svg>
       </div>
       <div>
-        <div class="brand-name">Laskennan validointi</div>
-        <div class="brand-tag">Näin Varallisuuspolun luvut on tarkistettu</div>
+        <div class="brand-name">Calculation validation</div>
+        <div class="brand-tag">How Varallisuuspolku's numbers are verified</div>
       </div>
     </a>
     <div class="topbar-right">
-      <a class="btn" href="./index-en.html">Avaa suunnittelutyökalu</a>
+      <a class="btn" href="./index-en.html">Open the planning tool</a>
     </div>
   </header>
 
   <main class="an-main">
-    <p class="an-intro">Laskuriin pitää voida luottaa, joten tällä sivulla laskenta näytetään
-    auki: jokainen alla oleva luku on laskettu <b>kahdella toisistaan riippumattomalla
-    tavalla</b> — suljetun muodon korkolaskukaavalla käsin ja Varallisuuspolun
-    laskentamoottorilla (<code>laskenta.js</code>). Tulokset täsmäävät liukulukutarkkuudella
-    (ero alle miljoonasosasentin). Samat tarkistukset ajetaan automaattisesti
-    yksikkötesteinä jokaisen muutoksen yhteydessä, ja kuka tahansa voi toistaa ne
-    itse — ohjeet sivun lopussa.</p>
+    <p class="an-intro">You have to be able to trust a calculator, so this page shows the calculation in the open: every number below has been computed <b>in two independent ways</b> — by hand with a closed-form compound interest formula, and with Varallisuuspolku's calculation engine (<code>laskenta.js</code>). The results match to floating-point precision (a difference of less than a millionth of a cent). The same checks run automatically as unit tests with every change, and anyone can repeat them — instructions at the end of the page.</p>
 
     <section class="an-card">
-      <h2>Oletukset ja versiointi</h2>
+      <h2>Assumptions and versioning</h2>
       <table class="sum-table">
         <tbody>
-          <tr><td>Verosäännöt</td><td>Suomen pääomatuloverotus, <b>verovuoden 2026 parametrit</b>: 30&nbsp;% vuotuisista voitoista 30&nbsp;000&nbsp;€:oon asti, 34&nbsp;% ylimenevältä osalta. Hankintameno-olettama 40&nbsp;% (omistus ≥&nbsp;10&nbsp;v) / 20&nbsp;%.</td></tr>
-          <tr><td>Tuotto-oletukset</td><td>Osakkeet 7&nbsp;%, korot 3&nbsp;%, käteinen 1,5&nbsp;% vuodessa (nimellisinä). Pro-tilassa muokattavissa.</td></tr>
-          <tr><td>Inflaatio-oletus</td><td>2&nbsp;%/v (muokattavissa). Inflaatiokorjaus tarkalla Fisher-kaavalla (1+r)/(1+i).</td></tr>
-          <tr><td>Monte Carlo</td><td>5&nbsp;000 polkua, kiinteät polkukohtaiset siemenet (CRN) — sama tulos joka ajolla, deltat vertailukelpoisia.</td></tr>
-          <tr><td>Tarkistettu</td><td>25.7.2026 — verosäännöt ja oletukset tarkistetaan vähintään verovuosittain. Muutos 25.7.2026: Pro-tilan hankintameno-olettaman leikatessa kuukausinostoa verotettava voitto kirjataan olettaman mukaisesta osuudesta (aiemmin todellisesta voitosta — raportoitu vero ja 34&nbsp;%:n portaan vuosikertymä liioittelivat; varallisuuskäyrä oli oikein). Muutos 25.7.2026: jo omistetut kohteet (nykyarvo + jäljellä oleva laina) mukaan laskentaan; verollinen myynti hankintameno-olettamalla. Muutos 24.7.2026: säästön ylittävä lainanhoito rahoitetaan sijoituksista (aiemmin malli oletti erotuksen tulevan mallin ulkopuolelta, mikä aliarvioi ison lainan kustannuksen).</td></tr>
-          <tr><td>Lähdekoodi</td><td><a href="https://github.com/olavikurola/varallisuuspolku/blob/main/laskenta.js" rel="noopener">laskenta.js</a> (moottori) · <a href="https://github.com/olavikurola/varallisuuspolku/tree/main/testit" rel="noopener">testit/</a> (automaattiset tarkistukset)</td></tr>
+          <tr><td>Tax rules</td><td>Finnish capital income taxation, <b>tax year 2026 parameters</b>: 30&nbsp;% of annual gains up to 30&nbsp;000&nbsp;€, 34&nbsp;% above that. Deemed acquisition cost 40&nbsp;% (ownership ≥&nbsp;10&nbsp;y) / 20&nbsp;%.</td></tr>
+          <tr><td>Return assumptions</td><td>Stocks 7&nbsp;%, bonds 3&nbsp;%, cash 1.5&nbsp;% per year (nominal). Editable in Pro mode.</td></tr>
+          <tr><td>Inflation assumption</td><td>2&nbsp;%/yr (editable). Inflation adjustment with the exact Fisher formula (1+r)/(1+i).</td></tr>
+          <tr><td>Monte Carlo</td><td>5&nbsp;000 paths, fixed per-path seeds (CRN) — the same result on every run, deltas comparable.</td></tr>
+          <tr><td>Verified</td><td>25 July 2026 — tax rules and assumptions are reviewed at least every tax year. Change on 25 July 2026: when Pro mode's deemed acquisition cost trims a monthly withdrawal, the taxable gain is now booked from the deemed share (previously from the actual gain — the reported tax and the 34&nbsp;% bracket's annual accrual were overstated; the wealth curve was correct). Change on 25 July 2026: assets already owned (current value + remaining loan) are included in the calculation; taxable sales use the deemed acquisition cost. Change on 24 July 2026: loan payments exceeding savings are financed from investments (previously the model assumed the difference came from outside the model, which underestimated the cost of a large loan).</td></tr>
+          <tr><td>Source code</td><td><a href="https://github.com/olavikurola/varallisuuspolku/blob/main/laskenta.js" rel="noopener">laskenta.js</a> (the engine) · <a href="https://github.com/olavikurola/varallisuuspolku/tree/main/testit" rel="noopener">testit/</a> (automated checks)</td></tr>
         </tbody>
       </table>
     </section>
 
     <section class="an-card">
-      <h2>Korkolaskun tarkistukset <small>suljetun muodon kaava vs. moottori</small></h2>
-      <p class="an-intro" style="margin-top:0">Merkinnät: k&nbsp;=&nbsp;1,07<sup>1/12</sup> (kuukausikerroin 7&nbsp;%:n vuosituotolla), n&nbsp;=&nbsp;kuukausien määrä. Kaikissa esimerkeissä 100&nbsp;% osakepaino, ei veroja eikä kuluja, jotta suljettu kaava on olemassa.</p>
+      <h2>Compound interest checks <small>closed-form formula vs. the engine</small></h2>
+      <p class="an-intro" style="margin-top:0">Notation: k&nbsp;=&nbsp;1.07<sup>1/12</sup> (the monthly factor at a 7&nbsp;% annual return), n&nbsp;=&nbsp;number of months. All examples use a 100&nbsp;% equity weight with no taxes or costs, so that a closed-form formula exists.</p>
       <div class="table-scroll">
         <table class="sum-table">
           <thead>
-            <tr><th>Tarkistus</th><th>Kaava</th><th class="num">Käsin</th><th class="num">Moottori</th></tr>
+            <tr><th>Check</th><th>Formula</th><th class="num">By hand</th><th class="num">Engine</th></tr>
           </thead>
           <tbody>
-            <tr><td>Kertasijoitus 50&nbsp;000&nbsp;€, 10&nbsp;v</td><td>S·1,07<sup>10</sup></td><td class="num">98&nbsp;357,57&nbsp;€</td><td class="num">98&nbsp;357,57&nbsp;€</td></tr>
-            <tr><td>Kuukausisäästö 500&nbsp;€/kk, 10&nbsp;v</td><td>C·(k<sup>120</sup>−1)/(k−1)</td><td class="num">85&nbsp;525,87&nbsp;€</td><td class="num">85&nbsp;525,87&nbsp;€</td></tr>
-            <tr><td>Kasvava säästö, +1,5&nbsp;%/v palkkakehitys</td><td>C·Σ&nbsp;1,015<sup>(j−1)/12</sup>·k<sup>120−j</sup></td><td class="num">91&nbsp;397,36&nbsp;€</td><td class="num">91&nbsp;397,36&nbsp;€</td></tr>
-            <tr><td>Nostovaihe: 1&nbsp;M€, nosto 2&nbsp;000&nbsp;€/kk, 10&nbsp;v</td><td>S·k<sup>120</sup>&nbsp;−&nbsp;W·(k<sup>120</sup>−1)/(k−1)</td><td class="num">1&nbsp;625&nbsp;047,89&nbsp;€</td><td class="num">1&nbsp;625&nbsp;047,89&nbsp;€</td></tr>
-            <tr><td>Inflaatiokorjaus (Fisher), 50&nbsp;000&nbsp;€, 10&nbsp;v</td><td>S·(1,07/1,02)<sup>10</sup></td><td class="num">80&nbsp;687,46&nbsp;€</td><td class="num">80&nbsp;687,46&nbsp;€</td></tr>
-            <tr><td>Omaisuuserä 220&nbsp;000&nbsp;€, +2&nbsp;%/v, 10&nbsp;v</td><td>P·1,02<sup>10</sup></td><td class="num">268&nbsp;178,77&nbsp;€</td><td class="num">268&nbsp;178,77&nbsp;€</td></tr>
-            <tr><td>Annuiteettilaina 187&nbsp;000&nbsp;€, 3,5&nbsp;%, 25&nbsp;v</td><td>P·r/(1−(1+r)<sup>−300</sup>)</td><td class="num">936,17&nbsp;€/kk</td><td class="num">936,17&nbsp;€/kk</td></tr>
+            <tr><td>Lump sum of 50&nbsp;000&nbsp;€, 10&nbsp;y</td><td>S·1,07<sup>10</sup></td><td class="num">98&nbsp;357,57&nbsp;€</td><td class="num">98&nbsp;357,57&nbsp;€</td></tr>
+            <tr><td>Monthly savings of 500&nbsp;€/mo, 10&nbsp;y</td><td>C·(k<sup>120</sup>−1)/(k−1)</td><td class="num">85&nbsp;525,87&nbsp;€</td><td class="num">85&nbsp;525,87&nbsp;€</td></tr>
+            <tr><td>Growing savings, +1.5&nbsp;%/yr wage growth</td><td>C·Σ&nbsp;1,015<sup>(j−1)/12</sup>·k<sup>120−j</sup></td><td class="num">91&nbsp;397,36&nbsp;€</td><td class="num">91&nbsp;397,36&nbsp;€</td></tr>
+            <tr><td>Withdrawal phase: 1&nbsp;M€, withdrawing 2&nbsp;000&nbsp;€/mo, 10&nbsp;y</td><td>S·k<sup>120</sup>&nbsp;−&nbsp;W·(k<sup>120</sup>−1)/(k−1)</td><td class="num">1&nbsp;625&nbsp;047,89&nbsp;€</td><td class="num">1&nbsp;625&nbsp;047,89&nbsp;€</td></tr>
+            <tr><td>Inflation adjustment (Fisher), 50&nbsp;000&nbsp;€, 10&nbsp;y</td><td>S·(1,07/1,02)<sup>10</sup></td><td class="num">80&nbsp;687,46&nbsp;€</td><td class="num">80&nbsp;687,46&nbsp;€</td></tr>
+            <tr><td>Asset of 220&nbsp;000&nbsp;€, +2&nbsp;%/yr, 10&nbsp;y</td><td>P·1,02<sup>10</sup></td><td class="num">268&nbsp;178,77&nbsp;€</td><td class="num">268&nbsp;178,77&nbsp;€</td></tr>
+            <tr><td>Annuity loan of 187&nbsp;000&nbsp;€, 3.5&nbsp;%, 25&nbsp;y</td><td>P·r/(1−(1+r)<sup>−300</sup>)</td><td class="num">936,17&nbsp;€/kk</td><td class="num">936,17&nbsp;€/kk</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="sum-assump">Annuiteettikaava on sama, jota pankkien lainalaskurit käyttävät —
-      voit tarkistaa kuukausierän minkä tahansa pankin laskurilla tai taulukkolaskennan
-      MAKSU/PMT-funktiolla: PMT(3,5&nbsp;%/12;&nbsp;300;&nbsp;−187000)&nbsp;=&nbsp;936,17&nbsp;€.
-      Säästö- ja nostovaiheen kaavat vastaavat taulukkolaskennan TULEVA.ARVO/FV-funktiota
-      kuukausikoroilla.</p>
+      <p class="sum-assump">The annuity formula is the same one banks' loan calculators use — you can verify the monthly payment with any bank's calculator or a spreadsheet's PMT function: PMT(3.5&nbsp;%/12;&nbsp;300;&nbsp;−187000)&nbsp;=&nbsp;936.17&nbsp;€. The saving and withdrawal phase formulas match the spreadsheet's FV function with monthly interest rates.</p>
     </section>
 
     <section class="an-card">
-      <h2>Verolaskennan esimerkit <small>lasketaan auki askel askeleelta</small></h2>
+      <h2>Worked tax examples <small>computed step by step</small></h2>
 
-      <h3>Myyntivoittovero ja hankintameno-olettama (omaisuuden myynti)</h3>
-      <p class="an-intro" style="margin-top:0">Asunto ostetaan 220&nbsp;000&nbsp;€:lla ja myydään
-      10 vuoden kuluttua, arvonnousu 2&nbsp;%/v. Ei merkitty verovapaaksi omaksi asunnoksi.</p>
+      <h3>Capital gains tax and deemed acquisition cost (asset sales)</h3>
+      <p class="an-intro" style="margin-top:0">A home is bought for 220&nbsp;000&nbsp;€ and sold 10 years later, appreciating 2&nbsp;%/yr. Not marked as a tax-free own home.</p>
       <table class="sum-table">
         <tbody>
-          <tr><td>Myyntihinta</td><td class="num">220&nbsp;000&nbsp;€ · 1,02<sup>10</sup> = 268&nbsp;178,77&nbsp;€</td></tr>
-          <tr><td>Todellinen voitto</td><td class="num">268&nbsp;178,77 − 220&nbsp;000 = 48&nbsp;178,77&nbsp;€</td></tr>
-          <tr><td>Hankintameno-olettama (omistus ≥ 10 v)</td><td class="num">verotettava enintään 60&nbsp;% myyntihinnasta = 160&nbsp;907,26&nbsp;€ → todellinen voitto pienempi, verotetaan 48&nbsp;178,77&nbsp;€</td></tr>
-          <tr><td>Vero portaittain</td><td class="num">30&nbsp;000 · 30&nbsp;% + 18&nbsp;178,77 · 34&nbsp;% = 9&nbsp;000,00 + 6&nbsp;180,78 = <b>15&nbsp;180,78&nbsp;€</b></td></tr>
-          <tr><td>Moottorin tulos</td><td class="num"><b>15&nbsp;180,78&nbsp;€</b> — täsmää</td></tr>
+          <tr><td>Sale price</td><td class="num">220&nbsp;000&nbsp;€ · 1,02<sup>10</sup> = 268&nbsp;178,77&nbsp;€</td></tr>
+          <tr><td>Actual gain</td><td class="num">268&nbsp;178,77 − 220&nbsp;000 = 48&nbsp;178,77&nbsp;€</td></tr>
+          <tr><td>Deemed acquisition cost (ownership ≥ 10 y)</td><td class="num">taxable at most 60&nbsp;% of the sale price = 160&nbsp;907.26&nbsp;€ → the actual gain is smaller, so 48&nbsp;178.77&nbsp;€ is taxed</td></tr>
+          <tr><td>Tax by bracket</td><td class="num">30&nbsp;000 · 30&nbsp;% + 18&nbsp;178,77 · 34&nbsp;% = 9&nbsp;000,00 + 6&nbsp;180,78 = <b>15&nbsp;180,78&nbsp;€</b></td></tr>
+          <tr><td>Engine result</td><td class="num"><b>15&nbsp;180,78&nbsp;€</b> — matches</td></tr>
         </tbody>
       </table>
 
-      <h3 style="margin-top:18px">Eläkeajan nosto: brutto → netto (voitto-osuusvero)</h3>
-      <p class="an-intro" style="margin-top:0">Nostoista verotetaan vain voiton osuus. Esimerkki:
-      salkun arvo 500&nbsp;000&nbsp;€, josta hankintahintaa 250&nbsp;000&nbsp;€ (voitto-osuus 50&nbsp;%),
-      ja eläkeläinen tarvitsee 2&nbsp;000&nbsp;€ käteen.</p>
+      <h3 style="margin-top:18px">Retirement withdrawal: gross → net (profit-share tax)</h3>
+      <p class="an-intro" style="margin-top:0">Only the profit share of a withdrawal is taxed. Example: portfolio value 500&nbsp;000&nbsp;€, of which 250&nbsp;000&nbsp;€ is acquisition cost (profit share 50&nbsp;%), and the retiree needs 2&nbsp;000&nbsp;€ in hand.</p>
       <table class="sum-table">
         <tbody>
-          <tr><td>Bruttomyynti</td><td class="num">tarve / (1 − voitto-osuus · vero) = 2&nbsp;000 / (1 − 0,5 · 0,30) = <b>2&nbsp;352,94&nbsp;€</b></td></tr>
-          <tr><td>Vero</td><td class="num">voitto-osuus · brutto · 30&nbsp;% = 0,5 · 2&nbsp;352,94 · 0,30 = <b>352,94&nbsp;€</b></td></tr>
-          <tr><td>Käteen</td><td class="num">2&nbsp;352,94 − 352,94 = <b>2&nbsp;000,00&nbsp;€</b> — täsmälleen tarve</td></tr>
+          <tr><td>Gross sale</td><td class="num">need / (1 − profit share · tax) = 2&nbsp;000 / (1 − 0.5 · 0.30) = <b>2&nbsp;352,94&nbsp;€</b></td></tr>
+          <tr><td>Tax</td><td class="num">profit share · gross · 30&nbsp;% = 0.5 · 2&nbsp;352.94 · 0.30 = <b>352,94&nbsp;€</b></td></tr>
+          <tr><td>In hand</td><td class="num">2&nbsp;352.94 − 352.94 = <b>2&nbsp;000.00&nbsp;€</b> — exactly the need</td></tr>
         </tbody>
       </table>
-      <p class="sum-assump">Moottori seuraa salkun hankintahintaa kuukausittain: säästöt kasvattavat
-      sitä, myynnit pienentävät suhteessa, ja tuotto kasvattaa vain arvoa. Vuotuiset realisoidut
-      voitot lasketaan yhteen 30&nbsp;000&nbsp;€:n verorajaa varten, ja laskuri nollaa ne
-      kalenterivuosittain.</p>
+      <p class="sum-assump">The engine tracks the portfolio's acquisition cost month by month: savings increase it, sales decrease it proportionally, and returns only grow the value. Annual realised gains are summed up for the 30&nbsp;000&nbsp;€ tax threshold, and the calculator resets them every calendar year.</p>
 
-      <h3 style="margin-top:18px">Osinkoverojarru arvo-osuustilillä</h3>
-      <p class="an-intro" style="margin-top:0">Suorien osakkeiden osingoista 85&nbsp;% on veronalaista
-      pääomatuloa. Jos osinkotuotoksi asetetaan 3,5&nbsp;%/v, arvo-osuustilillä vuosituotosta vähenee
-      3,5&nbsp;% · 85&nbsp;% · 30&nbsp;% ≈ <b>0,89&nbsp;prosenttiyksikköä</b> osakepainon osalta.
-      Osakesäästötilillä ja vakuutuskuoressa osingot kertyvät verotta — tämä ero on tilivertailun ydin.</p>
+      <h3 style="margin-top:18px">The dividend tax drag in a book-entry account</h3>
+      <p class="an-intro" style="margin-top:0">Of the dividends from directly held shares, 85&nbsp;% is taxable capital income. If the dividend yield is set to 3.5&nbsp;%/yr, a book-entry account loses 3.5&nbsp;% · 85&nbsp;% · 30&nbsp;% ≈ <b>0.89&nbsp;percentage points</b> of annual return on the equity portion. In an equity savings account and an insurance wrapper dividends accrue untaxed — this difference is the heart of the account comparison.</p>
     </section>
 
     <section class="an-card">
-      <h2>Monte Carlo: toistettavuus ja ominaisuudet</h2>
-      <p class="an-intro" style="margin-top:0">Onnistumistodennäköisyys lasketaan tuhansista
-      satunnaisista markkinapoluista. Satunnaisuus on <b>siemennettyä</b> (polku i saa aina saman
-      shokkijonon), joten sama suunnitelma antaa täsmälleen saman tuloksen joka ajolla ja eri
-      suunnitelmien vertailut ovat reiluja — molemmat kokevat samat markkinahistoriat. Automaattiset
-      testit varmistavat lisäksi, että viuhkan alaraja (P10) ei koskaan ylitä ylärajaa (P90),
-      että viuhka alkaa alkupääomasta ja että ehtymiskäyrän loppuarvo on täsmälleen
-      1&nbsp;−&nbsp;onnistumistodennäköisyys.</p>
-      <p class="sum-assump">Esimerkki: oletussuunnitelman onnistumistodennäköisyys 99,0&nbsp;% —
-      bitilleen sama jokaisella ajolla ja jokaisella laitteella.</p>
+      <h2>Monte Carlo: repeatability and properties</h2>
+      <p class="an-intro" style="margin-top:0">The success probability is computed from thousands of random market paths. The randomness is <b>seeded</b> (path i always gets the same shock sequence), so the same plan gives exactly the same result on every run, and comparisons between plans are fair — both experience the same market histories. Automated tests additionally verify that the range's lower bound (P10) never exceeds the upper bound (P90), that the range starts from the initial capital, and that the depletion curve's final value is exactly 1&nbsp;−&nbsp;success probability.</p>
+      <p class="sum-assump">Example: the default plan's success probability is 99.0&nbsp;% — bit-for-bit the same on every run and on every device.</p>
     </section>
 
     <section class="an-card">
-      <h2>Tunnetut yksinkertaistukset <small>mitä malli EI huomioi</small></h2>
-      <p class="an-intro" style="margin-top:0">Jokainen malli yksinkertaistaa. Nämä ovat tiedossa
-      olevat poikkeamat todellisuudesta — laskelma on suuntaa antava havainnollistus, ei veroilmoitus:</p>
+      <h2>Known simplifications <small>what the model does NOT account for</small></h2>
+      <p class="an-intro" style="margin-top:0">Every model simplifies. These are the known deviations from reality — the calculation is an indicative illustration, not a tax return:</p>
       <table class="sum-table">
         <tbody>
-          <tr><td>Osakesäästötilin talletuskatto</td><td>100&nbsp;000&nbsp;€:n kattoa ei mallinneta laskennassa (käyttöliittymä varoittaa, kun se ylittyy).</td></tr>
-          <tr><td>Tappioiden vähennysoikeus</td><td>Ei mallinneta — vain voittoja verotetaan, tappiovuosien vähennyksiä ei hyvitetä.</td></tr>
-          <tr><td>Hankintameno-olettama nostoissa</td><td>Pro-tilan olettama eläkeajan kuukausinostoissa arvioi omistusajan suunnitelman alusta, ei eräkohtaisesti.</td></tr>
-          <tr><td>Kertaerien rahoitus</td><td>Sijoituksista rahoitetut kertamenot (esim. remontti) eivät realisoi myyntivoittoveroa — vero lasketaan vain eläkeajan nostoista ja omaisuuden myynneistä.</td></tr>
-          <tr><td>Lainanhoito yli säästökyvyn</td><td>Kun lainanhoitoerät ylittävät kuukausisäästön, erotus rahoitetaan sijoituksista (kertaerien tapaan verotta). Malli ei siis oleta lisätuloja mistään — kuukausisäästö on ainoa mallinnettu tulovirta työuralla.</td></tr>
-          <tr><td>Omistukset (nykytila)</td><td>Jo omistettu asunto tai mökki syötetään nykyarvona ja jäljellä olevana lainana — ostohintaa ei kysytä, joten verollisessa myynnissä verotettava osuus lasketaan aina hankintameno-olettamalla (20&nbsp;% / 40&nbsp;% omistusajan mukaan; valinnainen ostovuosi kasvattaa omistusaikaa, ilman sitä omistusaika lasketaan vasta nykyhetkestä). Oma vakituinen asunto on myynnissä oletuksena verovapaa.</td></tr>
-          <tr><td>Odotettu polku vs. mediaani</td><td>Graafin päälinja on tuoton <b>odotusarvopolku</b> (aritmeettinen keskiarvo). Kun tuotto heiluu, tyypillinen eli mediaanilopputulos jää tätä matalammaksi (ns. volatility drag, σ²/2 ≈ 1–2&nbsp;%-yks/v osakepainolla). Ero on tarkoituksella näkyvissä eikä piilossa: epävarmuusviuhka (P10–P90) ja onnistumistodennäköisyys lasketaan Monte&nbsp;Carlo -jakaumasta, jossa drag on täysimääräisesti mukana — mediaanin näet viuhkan keskeltä, ja tavoitteet voi mitoittaa 75–95&nbsp;%:n varmuustasolle pelkän odotusarvon sijaan.</td></tr>
-          <tr><td>Työeläke</td><td>Käyttäjän oma arvio kuukausitulona — ei ETK:n laskelma. Työeläkkeen ansiotuloverotusta, kansaneläkettä ja takuueläkettä ei mallinneta.</td></tr>
-          <tr><td>Omaisuusluokkien korrelaatio</td><td>Perusversion epävarmuusviuhka olettaa täyskorrelaation (konservatiivinen yksinkertaistus — todellinen hajautushyöty on suurempi). Pro-tilassa korrelaatiot voi asettaa itse.</td></tr>
-          <tr><td>Tuottojen jakauma</td><td>Kuukausituotot normaalijakaumasta ilman autokorrelaatiota (Pro: paksuhäntäinen Studentin&nbsp;t). Todelliset markkinat voivat poiketa tästä.</td></tr>
-          <tr><td>Inflaatio</td><td>Vakio-oletus koko suunnitelman ajan — todellinen inflaatio vaihtelee.</td></tr>
-          <tr><td>Verosääntöjen muutokset</td><td>Laskenta käyttää nykyisiä sääntöjä koko elinkaarelle — tulevia lakimuutoksia ei ennusteta.</td></tr>
+          <tr><td>Equity savings account deposit cap</td><td>The 100&nbsp;000&nbsp;€ cap isn't modelled in the calculation (the interface warns when it's exceeded).</td></tr>
+          <tr><td>Loss deduction</td><td>Not modelled — only gains are taxed; deductions for loss years aren't credited.</td></tr>
+          <tr><td>Deemed acquisition cost on withdrawals</td><td>Pro mode's deemed-cost rule for monthly retirement withdrawals estimates the holding period from the start of the plan, not per lot.</td></tr>
+          <tr><td>Financing one-off items</td><td>One-off expenses financed from investments (e.g. a renovation) don't realise capital gains tax — tax is computed only on retirement withdrawals and asset sales.</td></tr>
+          <tr><td>Loan payments beyond savings capacity</td><td>When loan payments exceed the monthly savings, the difference is financed from investments (tax-free, like one-off items). So the model doesn't assume extra income from anywhere — monthly savings are the only modelled income stream during the working years.</td></tr>
+          <tr><td>Holdings (current state)</td><td>A home or cottage you already own is entered as its current value and remaining loan — the purchase price isn't asked, so in a taxable sale the taxable share is always computed with the deemed acquisition cost (20&nbsp;% / 40&nbsp;% by holding period; an optional purchase year extends the holding period, without it the holding period counts only from today). Your own permanent home is tax-free to sell by default.</td></tr>
+          <tr><td>Expected path vs. median</td><td>The chart's main line is the <b>expected-value path</b> of returns (arithmetic mean). When returns fluctuate, the typical — i.e. median — outcome ends up below it (so-called volatility drag, σ²/2 ≈ 1–2&nbsp;pp/yr at typical equity weights). The gap is deliberately visible rather than hidden: the uncertainty range (P10–P90) and the success probability are computed from the Monte&nbsp;Carlo distribution, where the drag is fully included — you can see the median in the middle of the range, and goals can be sized to a 75–95&nbsp;% confidence level instead of the expected value alone.</td></tr>
+          <tr><td>Earnings-related pension</td><td>Your own estimate as monthly income — not an ETK calculation. Income tax on the earnings-related pension, the national pension and the guarantee pension aren't modelled.</td></tr>
+          <tr><td>Asset class correlation</td><td>The basic version's uncertainty range assumes full correlation (a conservative simplification — the real diversification benefit is larger). In Pro mode you can set the correlations yourself.</td></tr>
+          <tr><td>Return distribution</td><td>Monthly returns from a normal distribution with no autocorrelation (Pro: fat-tailed Student's&nbsp;t). Real markets can deviate from this.</td></tr>
+          <tr><td>Inflation</td><td>A constant assumption for the whole plan — real inflation varies.</td></tr>
+          <tr><td>Changes to tax rules</td><td>The calculation applies today's rules across the whole lifecycle — future law changes aren't predicted.</td></tr>
         </tbody>
       </table>
     </section>
 
     <section class="an-card">
-      <h2>Tarkista itse</h2>
-      <p class="an-intro" style="margin-top:0">Kaikki tämän sivun tarkistukset — ja kymmeniä muita —
-      ajetaan automaattisesti jokaisen koodimuutoksen yhteydessä. Voit toistaa ne itse:</p>
+      <h2>Check it yourself</h2>
+      <p class="an-intro" style="margin-top:0">All the checks on this page — and dozens more — run automatically with every code change. You can repeat them yourself:</p>
       <ol style="font-size:14px;line-height:1.8;color:var(--text-dim);margin:0 0 10px;padding-left:22px">
-        <li>Lataa lähdekoodi: <a href="https://github.com/olavikurola/varallisuuspolku" rel="noopener">github.com/olavikurola/varallisuuspolku</a></li>
-        <li>Aja yksikkötestit: <code>node testit/laskenta.test.js</code> — ei riippuvuuksia, pelkkä Node.js riittää.</li>
-        <li>Vertaa itse: sovelluksen <b>Vuositaulukko</b> (graafin alla) näyttää luvut vuosi vuodelta ja vie ne CSV:nä taulukkolaskentaan, jossa voit rakentaa oman vertailulaskelman.</li>
+        <li>Get the source code: <a href="https://github.com/olavikurola/varallisuuspolku" rel="noopener">github.com/olavikurola/varallisuuspolku</a></li>
+        <li>Run the unit tests: <code>node testit/laskenta.test.js</code> — no dependencies, plain Node.js is enough.</li>
+        <li>Compare for yourself: the app's <b>annual table</b> (below the chart) shows the numbers year by year and exports them as CSV to a spreadsheet, where you can build your own comparison.</li>
       </ol>
-      <p class="sum-assump">Testit kattavat mm. korkolaskuidentiteetit, verolaskennan, annuiteettilainat,
-      Monte Carlon determinismin, käänteisratkaisijat (bisektio), tavoitepisteet, varmuustasot,
-      perhelaskennan koherenssin ja Pro-tilan oletusarvojen bittitason yhtäpitävyyden perustilan kanssa.</p>
+      <p class="sum-assump">The tests cover, among other things, compound-interest identities, tax calculation, annuity loans, Monte Carlo determinism, the inverse solvers (bisection), goal points, confidence levels, family calculation coherence and the bit-level equality of Pro mode's defaults with the basic state.</p>
     </section>
 
-    <p class="sum-assump" style="max-width:860px;margin:0 auto 24px">Laskelma on suuntaa antava
-    havainnollistus, ei sijoitusneuvontaa eikä veroneuvontaa. Historiallinen tuotto ei ole tae
-    tulevasta. <a href="./index-en.html">Takaisin suunnittelutyökaluun</a> · <a href="saavutettavuus-en.html">Saavutettavuus</a></p>
+    <p class="sum-assump" style="max-width:860px;margin:0 auto 24px">The calculation is an indicative illustration, not investment advice or tax advice. Past returns are no guarantee of future returns. <a href="./index-en.html">Back to the planning tool</a> · <a href="saavutettavuus-en.html">Accessibility</a></p>
   </main>
 </body>
 </html>
