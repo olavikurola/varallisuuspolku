@@ -34,6 +34,7 @@ const server = http.createServer((req, res) => {
   p1.on('pageerror', (e) => errs.push(e.message));
   await p1.goto(`http://localhost:${PORT}/?lang=en`);
   await p1.waitForTimeout(2500);
+  ok(p1.url().includes('index-en.html'), '?lang=en ohjaa en-sivulle', p1.url());
   const kieli = await p1.evaluate(() => ({ vk: VP_KIELI, lang: document.documentElement.lang, sanasto: Object.keys(VP_SANASTO).length }));
   ok(kieli.vk === 'en', 'VP_KIELI=en', JSON.stringify(kieli));
   ok(kieli.sanasto > 450, `sanasto ladattu (${kieli.sanasto})`);
@@ -53,6 +54,17 @@ const server = http.createServer((req, res) => {
   ok(kieli2.vk === 'fi' && kieli2.sanasto === 0, 'fi-oletus ja tyhjä sanasto', JSON.stringify(kieli2));
   const chip2 = await p2.locator('#palette .chip[data-type="study"] span').last().textContent();
   ok(chip2 === 'Opiskelu', 'paletin chippi suomeksi', JSON.stringify(chip2));
+  ok(await p2.locator('#vpKieliEhdotus').count() === 0, 'ei banneria fi-selaimelle');
+
+  // Banneri en-selaimelle: eksplisiittinen locale (oletus perii koneen kielen)
+  const ctx3 = await b.newContext({ locale: 'en-US' });
+  const p3 = await ctx3.newPage();
+  await p3.goto(`http://localhost:${PORT}/`);
+  await p3.waitForTimeout(2000);
+  ok(await p3.locator('#vpKieliEhdotus').count() === 1, 'kielibanneri en-selaimelle fi-etusivulla');
+  await p3.reload();
+  await p3.waitForTimeout(1500);
+  ok(await p3.locator('#vpKieliEhdotus').count() === 0, 'banneri vain kerran (vp-kieli-ehdotettu)');
 
   // Paluu: ?lang=fi nollaa en-valinnan pysyvästi
   await p1.goto(`http://localhost:${PORT}/?lang=fi`);
