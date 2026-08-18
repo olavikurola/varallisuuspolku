@@ -58,6 +58,19 @@ server.listen(8131, async () => {
   ok(await pg.evaluate(() => localStorage.getItem('vp-theme')) === 'dark', 'valinta talteen');
   await ctx.close();
 
+  // 1b) Kaavion tooltip vaalealla: perustyyli kovakoodaa tumman lasin,
+  //     html.light-ohituksen pitää kääntää se valkoiseksi
+  ({ ctx, pg } = await page({ theme: 'light' }));
+  const chartBox = await pg.locator('#chart').boundingBox();
+  await pg.mouse.move(chartBox.x + chartBox.width / 2, chartBox.y + chartBox.height / 2);
+  await pg.waitForTimeout(400);
+  const ttBg = await pg.evaluate(() => {
+    const el = document.getElementById('tooltip');
+    return el && !el.hidden ? getComputedStyle(el).backgroundColor : null;
+  });
+  ok(ttBg && /255, 255, 255/.test(ttBg), 'tooltip valkoinen vaalealla (' + ttBg + ')');
+  await ctx.close();
+
   // 2) Tumma työpöytä (regressio)
   ({ ctx, pg } = await page({ theme: 'dark' }));
   ok(await pg.evaluate(() => !document.documentElement.classList.contains('light')), 'tumma oletuksena');

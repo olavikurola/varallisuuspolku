@@ -2549,6 +2549,15 @@ html.light .sw-net { background: #d97706; }
 html.light svg [stroke="#fbbf24"] { stroke: #d97706; }
 html.light svg [fill="#fbbf24"] { fill: #d97706; }
 
+/* Kaavion tooltip: perustyyli kovakoodaa tumman pohjan (rgba-lasi), joten
+   pelkkä muuttujakäännös ei riitä — vaaleassa valkoinen lasi ja pehmeä varjo.
+   Omaisuus-rivin sininen (#60a5fa) tummennetaan valkoista pohjaa vasten. */
+html.light .tooltip {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 8px 24px rgba(35, 50, 95, 0.22);
+}
+html.light .tooltip .tt-row b.ast { color: #2563eb; }
+
 /* Kohotettujen pintojen varjot pehmeämmiksi vaalealla pohjalla */
 html.light .popover,
 html.light .menu,
