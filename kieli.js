@@ -13,18 +13,47 @@
    sellaisenaan — suomi ei koskaan kulje sanakirjan kautta eikä voi hajota.
    Englanti tulee vaiheessa 2 fi→en-sanakirjana (VP_SANASTO).
    Parametrit {0}/{1}-paikkamerkein: t('Ikä {0} v', ika). */
-/* Kielen valinta (vaihe 2): oletus fi. Englanti aukeaa toistaiseksi VAIN
-   eksplisiittisesti: ?lang=en (tallentuu) tai localStorage vp-kieli.
-   HUOM: laitteen kielen automaattitunnistus kytketään vasta vaiheessa 3,
-   kun myös staattinen HTML-sisältö on englanniksi — muuten en-laitteet
-   saisivat sekakielisen näkymän (KIELIVERSIO.md). */
+/* Kielen valinta (vaihe 3): SIVUN lang-attribuutti on sivun identiteetti
+   (generoidut -en.html-sivut ovat lang="en"), tallennettu valinta (?lang=…
+   → localStorage vp-kieli) ohjaa vain UUDELLEENOHJAUSTA sivuparien välillä.
+   Pelkkä en-sivulla käynti EI tallenna mitään — suomenkielinen voi kurkata
+   en-linkkiä jäämättä englantiin. Automaattista redirectiä selaimen kielestä
+   EI tehdä (Googlen ohje + testit); sen sijaan fi-etusivu näyttää
+   englanninkieliselle selaimelle kohteliaan bannerin. */
 let VP_KIELI = 'fi';
 try {
+  const sivuEn = document.documentElement.lang === 'en';
   const urlKieli = new URLSearchParams(location.search).get('lang');
   if (urlKieli === 'en' || urlKieli === 'fi') localStorage.setItem('vp-kieli', urlKieli);
   const valittu = localStorage.getItem('vp-kieli');
-  if (valittu === 'en') VP_KIELI = 'en';
-  if (VP_KIELI !== 'fi') document.documentElement.lang = VP_KIELI;
+  VP_KIELI = sivuEn || valittu === 'en' ? 'en' : 'fi';
+  // Sivuparien uudelleenohjaus (hash säilyy; toimii myös appissa, koska
+  // -en-sivut ovat sync-whitelistissä). Ei koskaan fi-sivulta ilman valintaa.
+  const SIVUPARIT = ['index.html', 'analytiikka.html', 'agentit.html', 'validointi.html', 'saavutettavuus.html', 'tietosuoja.html'];
+  const tiedosto = (location.pathname.split('/').pop() || 'index.html');
+  if (!sivuEn && valittu === 'en' && SIVUPARIT.includes(tiedosto)) {
+    location.replace(tiedosto.replace(/\.html$/, '-en.html') + location.hash);
+  } else if (sivuEn && valittu === 'fi') {
+    const fiNimi = tiedosto.replace(/-en\.html$/, '.html');
+    location.replace((fiNimi === 'index.html' ? './' : fiNimi) + location.hash);
+  } else if (!sivuEn && !valittu && tiedosto === 'index.html'
+    && /^en\b/i.test(navigator.language || '') && !localStorage.getItem('vp-kieli-ehdotettu')) {
+    // Kohtelias ehdotus englanninkieliselle selaimelle — kerran, ei koskaan uudestaan
+    document.addEventListener('DOMContentLoaded', () => {
+      try { localStorage.setItem('vp-kieli-ehdotettu', '1'); } catch (e) {}
+      const b = document.createElement('div');
+      b.id = 'vpKieliEhdotus';
+      b.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:300;' +
+        'background:var(--bg-2,#141b2e);color:var(--text,#e8ecf6);border:1px solid var(--line,#2a3350);' +
+        'border-radius:12px;padding:10px 14px;font-size:14px;display:flex;gap:12px;align-items:center;' +
+        'box-shadow:0 6px 24px rgba(0,0,0,.35)';
+      b.innerHTML = 'Varallisuuspolku is also available in English. ' +
+        '<a href="index-en.html" style="color:var(--accent,#2dd4bf);font-weight:600">Switch →</a>' +
+        '<button type="button" aria-label="Dismiss" style="background:none;border:0;color:inherit;cursor:pointer;font-size:16px">✕</button>';
+      b.querySelector('button').addEventListener('click', () => b.remove());
+      document.body.appendChild(b);
+    });
+  }
 } catch (e) { /* private mode tms. — pysytään suomessa */ }
 
 /* Locale ja yksiköt kielen mukaan. en-GB: 1,234.5 ja €1,234 — käännetyt

@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<!-- GENEROITU TIEDOSTO — älä muokkaa käsin. Lähde: index.html + tyokalut/kieli-en-html.json, buildi: tyokalut/kieli-sivut-buildi.js -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Varallisuuspolku — ilmainen elinkaarilaskuri ja tekoälyavusteinen varallisuussuunnittelu</title>
+  <meta name="description" content="Piirrä polkusi: tartu elinkaarikäyrään ja raahaa — kone laskee jokaisen vedon hinnan. Elämäntapahtumat, lainat, eläke- ja varallisuustavoitteet sekä Monte Carlo -todennäköisyys yhdellä näkymällä. AI-Tulkki selittää, vertailee ja kokeilee muutoksia puolestasi. Ilmainen, ei rekisteröitymistä — kaikki data pysyy omassa selaimessasi." />
+  <meta name="theme-color" content="#0a0e1a" />
+  <!-- iOS-Safarin Smart App Banner: natiivi "avaa App Storessa" -palkki -->
+  <meta name="apple-itunes-app" content="app-id=6798374499" />
+  <script>/* Vaalea teema käyttöön ennen ensimmäistä maalausta — ei välähdystä */try{if(localStorage.getItem("vp-theme")==="light"){document.documentElement.classList.add("light");document.querySelector("meta[name=theme-color]").content="#eef1f8"}}catch(e){}</script>
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="en_GB" />
+  <meta property="og:site_name" content="Varallisuuspolku" />
+  <meta property="og:title" content="Varallisuuspolku · Wealth Path" />
+  <meta property="og:description" content="Sinä vedät, kone laskee. Tartu elinkaarikäyrään ja raahaa — säästö, eläkeikä ja onnistumistodennäköisyys näkyvät heti, ja AI-Tulkki selittää lukusi selkokielellä. Ilmainen, data pysyy selaimessasi." />
+  <meta property="og:url" content="https://varallisuuspolku.com/index-en.html" />
+  <meta property="og:image" content="https://varallisuuspolku.com/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="canonical" href="https://varallisuuspolku.com/index-en.html" />
+  <link rel="alternate" hreflang="fi" href="https://varallisuuspolku.com/" />
+  <link rel="alternate" hreflang="en" href="https://varallisuuspolku.com/index-en.html" />
+  <link rel="alternate" hreflang="x-default" href="https://varallisuuspolku.com/" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="stylesheet" href="fonts.css" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Privacy-friendly analytics by Plausible -->
+  <script async src="https://plausible.io/js/pa-gxRZu9FAu8RyeQ_oaNFz0.js"></script>
+  <script>
+    window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+    plausible.init()
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Varallisuuspolku",
+    "alternateName": "Wealth Path",
+    "url": "https://varallisuuspolku.com/index-en.html",
+    "description": "Ilmainen visuaalinen elinkaarilaskuri: eläke, säästäminen, isot hankinnat lainoineen ja koko perheen talous yhdessä näkymässä. Monte Carlo -simulaatio, suomalainen verotus (myyntivoittovero, osakesäästötili, vakuutuskuori) ja työeläke. Kaikki data pysyy omassa selaimessa.",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Web",
+    "inLanguage": "en",
+    "isAccessibleForFree": true,
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+    "featureList": [
+      "Elinkaarigraafi ja piirtopöytä: tartu käyrään ja vedä — laskenta reagoi heti",
+      "Monte Carlo -simulaatio ja onnistumistodennäköisyys",
+      "Suomalainen verotus: myyntivoittovero, hankintameno-olettama, osakesäästötili ja vakuutuskuori",
+      "Lakisääteinen työeläke ja varhaiseläke (FIRE)",
+      "Elämäntapahtumat lainoineen: asunto, auto, lapsi, remontti",
+      "Perhesuunnittelu: puoliso ja lapset, yhteinen onnistumis-%, leskiturva",
+      "Skenaariovertailu haamukäyränä ja euroeroina",
+      "AI-Tulkki: selittää tulokset selkokielellä, vertailee vaihtoehtoja ja kokeilee muutoksia — laskenta aina laskentamoottorista",
+      "Useita suunnitelmia samassa selaimessa: omat ja lähipiirin, rinnakkaisvertailu ja vienti",
+      "Avoin anonyymi vertailudata: miten muut suunnittelevat vaurastumista ikäryhmittäin",
+      "Toimii ilman rekisteröitymistä — data pysyy selaimessa"
+    ],
+    "creator": { "@type": "Person", "name": "Olavi Kurola" }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "Minne tietoni tallentuvat?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Vain omaan selaimeesi. Varallisuuspolku ei käytä pilvipalvelua, rekisteröitymistä eikä evästeitä — suunnitelma ei lähde laitteeltasi mihinkään ilman erillistä lupaa. Kävijämäärät mitataan anonyymillä, evästeettömällä Plausible-analytiikalla, joka ei näe suunnitelmasi sisältöä eikä yksilöi kävijää. Jakaminen tapahtuu linkillä, jonka luot itse." } },
+      { "@type": "Question", "name": "Mitä laskenta huomioi?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Kuukausitason korkoa korolle, palkkakehityksen, lainat annuiteetteina, myyntivoittoveron (30/34 % nostojen voitto-osuudesta), työeläkkeen, inflaatiokorjauksen ja tuhansien polkujen Monte Carlo -simulaation, josta lasketaan suunnitelman onnistumistodennäköisyys." } },
+      { "@type": "Question", "name": "Osakesäästötili, arvo-osuustili vai vakuutuskuori?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Laskuri mallintaa kaikki kolme suomalaisittain: kuorissa osingot ja myynnit kertyvät verotta ja nostosta verotetaan voiton osuus; arvo-osuustilillä suorien osakkeiden osingoista menee vero vuosittain ja hankintameno-olettama on käytettävissä. Vertailu näyttää eron euroina." } },
+      { "@type": "Question", "name": "Voiko koko perheen taloutta suunnitella?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Kyllä — jopa neljä henkilöä: puoliso ja lapset omina käyrinään, perheen yhteinen onnistumistodennäköisyys samassa markkinahistoriassa, rahasiirrot, jaetut hankinnat ja leskiturvatarkastelu." } },
+      { "@type": "Question", "name": "Onko palvelussa tekoälyä?",
+        "acceptedAnswer": { "@type": "Answer", "text": "On: Tulkki-apuri (✦ Kysy AI) selittää laskurin tulokset selkokielellä, vertailee vaihtoehtoja, kokeilee muutoksia ja suhteuttaa suunnitelman ikäryhmän anonyymiin vertailudataan. Työnjako on tiukka — laskentamoottori laskee ja AI vain selittää, joten luvut tulevat aina laskennasta, eivät kielimallilta. Kysyessä välitetään vain kysymys ja suunnitelman anonyymi muoto; palvelin ei tallenna mitään. Ilmaiseksi 5 kysymystä päivässä." } },
+      { "@type": "Question", "name": "Voiko oman tekoälyavustajan kytkeä Varallisuuspolkuun?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Kyllä: laskentamoottorin saa tekoälyagentin (esimerkiksi Clauden) työkaluksi paikallisena MCP-palvelimena — asennus komennolla npx -y varallisuuspolku-mcp (npm-paketti varallisuuspolku-mcp). Agentti voi simuloida suunnitelman jakolinkistä, ratkaista eläkeiän tai säästötarpeen ja vertailla vaihtoehtoja samalla moottorilla kuin tämä sivu. Laskenta tapahtuu silloinkin omalla koneellasi eikä suunnitelma lähde verkkoon — ja työkalut laskevat, eivät anna sijoitusneuvontaa. Lisätietoa Agentit-sivulla." } },
+      { "@type": "Question", "name": "Sopiiko FIRE- ja varhaiseläkesuunnitteluun?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Kyllä. Laskuri ratkaisee aikaisimman mahdollisen eläkeiän, kestävän kuukausitulon ja tarvittavan säästön — halutessasi 75, 85 tai 95 prosentin varmuustasolla. Työeläkkeen alkamisen voi asettaa eri ikään kuin töiden lopettamisen." } },
+      { "@type": "Question", "name": "Onko tämä sijoitusneuvontaa?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Ei. Varallisuuspolku on laskuri, joka näyttää omien oletustesi seuraukset — se ei suosittele tuotteita eikä anna sijoitusneuvontaa. Suunnitelmani-dokumentin voi ottaa mukaan esimerkiksi varainhoitajatapaamiseen." } },
+      { "@type": "Question", "name": "Mitä palvelu maksaa?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Ei mitään. Kaikki ominaisuudet, myös ammattilaistason Pro-tila, ovat ilmaisia, eikä palvelussa ole mainoksia." } }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 29 C17 28 21 17 31 11 L31 32 L9 32 Z" fill="#fff" fill-opacity="0.18" />
+          <path d="M9 29 C17 28 21 17 31 11" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="9" cy="29" r="2" fill="#fff" fill-opacity="0.85" />
+          <circle cx="31" cy="11" r="3.3" fill="#fff" />
+          <circle cx="31" cy="11" r="1.5" fill="#8b7cf6" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-name">Varallisuuspolku</h1>
+        <p class="brand-tag">Koko elinkaaresi vaurastuminen yhdellä näkymällä</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn ghost more-btn" id="moreBtn" aria-label="Valikko" title="Valikko"><span class="mb-ic" aria-hidden="true">☰</span>Valikko</button>
+      <button class="btn" id="summaryBtn">Suunnitelmani</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel">
+      <div class="pro-switch" id="proSwitch">
+        <label class="toggle">
+          <input id="proToggle" type="checkbox" />
+          <span class="switch"></span>
+          <span><b>Pro-tila</b> <small>ammattilaisen säädöt ja analyysit</small></span>
+        </label>
+        <a href="#" id="proInfoLink">Mitä Pro sisältää →</a>
+      </div>
+
+      <section class="card" data-card="basics">
+        <h2>Perustiedot <span class="fam-chips" id="familyChips"></span></h2>
+        <div class="row2">
+          <label class="field">
+            <span class="field-label">Ikä nyt</span>
+            <span class="input"><input id="ageNow" type="number" min="0" max="80" step="1" value="30" /><em>v</em></span>
+          </label>
+          <label class="field">
+            <span class="field-label">Suunnitelma päättyy</span>
+            <span class="input"><input id="ageEnd" type="number" min="2" max="105" step="1" value="90" /><em>v</em></span>
+          </label>
+        </div>
+        <div class="row2">
+          <label class="field">
+            <span class="field-label">Varallisuus nyt</span>
+            <span class="input"><input id="startCapital" type="number" min="0" step="1000" value="20000" /><em>€</em></span>
+          </label>
+          <label class="field" id="monthlyField">
+            <span class="field-label">Kuukausisäästö</span>
+            <span class="input"><input id="monthly" type="number" min="0" step="50" value="1000" /><em>€/kk</em></span>
+          </label>
+        </div>
+        <label class="field field-sub" id="growthField">
+          <span class="field-label">Säästön vuosikasvu <small>palkka nousee → säästö kasvaa vuosittain</small></span>
+          <span class="input"><input id="savingsGrowth" type="number" min="0" max="15" step="0.5" value="1.5" /><em>%/v</em></span>
+        </label>
+        <div class="savephase">
+          <a href="#" id="savePhaseLink">📈 Porrasta säästö elämänvaiheittain <small>eri summa eri ikävuosina</small></a>
+          <div class="savephase-box" id="savePhaseBox" hidden>
+            <p class="note">Säästö elää elämänvaiheittain — töihin meno, palkankorotus, lyhennysvuodet. Anna kullekin ikävaiheelle oma kuukausisumma. Viimeinen vaihe jatkuu suunnitelman loppuun.</p>
+            <div id="savePhaseRows"></div>
+            <div class="savephase-acts">
+              <button type="button" class="btn ghost btn-mini" id="savePhaseAdd">+ Lisää vaihe</button>
+              <button type="button" class="btn ghost btn-mini" id="savePhaseOff">Poista porrastus</button>
+            </div>
+            <p class="note savephase-growth" id="savePhaseGrowth"></p>
+          </div>
+        </div>
+        <div class="saver">
+          <a href="#" id="saverLink">💡 Säästökyky-apuri <small>tuloista ja menoista säästöksi</small></a>
+          <div class="saver-box" id="saverBox" hidden>
+            <div class="row2">
+              <label class="field"><span class="field-label">Nettotulot</span>
+                <span class="input"><input id="savIncome" type="number" min="0" step="100" /><em>€/kk</em></span></label>
+              <label class="field"><span class="field-label">Menot</span>
+                <span class="input"><input id="savExpenses" type="number" min="0" step="100" /><em>€/kk</em></span></label>
+            </div>
+            <p class="note" id="savNote"></p>
+            <button class="btn ghost btn-mini" id="savApply">Käytä säästövara kuukausisäästönä</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" data-card="events">
+        <h2>Elämäntapahtumat</h2>
+        <p class="hint">Raahaa tapahtuma graafille — tai napauta, niin se lisätään ja pääset muokkaamaan ikää ja summaa. Valmiit pohjat: <a href="#" class="examples-trigger" id="examplesLink">Esimerkit</a>.</p>
+        <div class="palette" id="palette"></div>
+      </section>
+
+      <section class="card" data-card="timeline">
+        <h2>Aikajanalla</h2>
+        <div class="event-list" id="eventList"></div>
+      </section>
+
+      <section class="card" data-card="alloc">
+        <h2>Allokaatio</h2>
+        <div class="slider-field">
+          <div class="slider-head"><span>Osakkeet</span><b id="stocksVal">70&nbsp;%</b></div>
+          <input id="allocStocks" type="range" min="0" max="100" step="5" value="70" />
+        </div>
+        <div class="slider-field">
+          <div class="slider-head"><span>Korot</span><b id="bondsVal">20&nbsp;%</b></div>
+          <input id="allocBonds" type="range" min="0" max="100" step="5" value="20" />
+        </div>
+        <div class="alloc-cash">Käteinen <b id="cashVal">10&nbsp;%</b></div>
+        <div class="alloc-summary" id="allocSummary"></div>
+        <label class="toggle">
+          <input id="glide" type="checkbox" />
+          <span class="switch"></span>
+          <span>Ikäsidonnainen allokaatio <small>riski pienenee eläkettä lähestyttäessä</small></span>
+        </label>
+        <label class="toggle">
+          <input id="real" type="checkbox" />
+          <span class="switch"></span>
+          <span>Inflaatiokorjattu <small>luvut tämän päivän rahassa</small></span>
+        </label>
+        <label class="field" id="inflationField" hidden style="margin-top:10px">
+          <span class="field-label">Inflaatio-oletus <small>oma arviosi</small></span>
+          <span class="input"><input id="inflation" type="number" min="0" max="15" step="0.1" value="2" /><em>%/v</em></span>
+        </label>
+        <label class="toggle">
+          <input id="tax" type="checkbox" />
+          <span class="switch"></span>
+          <span>Myyntivoittovero <small>verot mukana eläkeajan nostoissa (30/34&nbsp;%)</small></span>
+        </label>
+        <label class="field" style="margin-top:12px"><span class="field-label">Sijoitustili <small>vaikuttaa nostojen verotukseen</small></span>
+          <span class="input"><select id="acctSel">
+            <option value="aot">Arvo-osuustili</option>
+            <option value="ost">Osakesäästötili</option>
+            <option value="ins">Vakuutuskuori</option>
+          </select></span></label>
+        <p class="acct-note" id="acctNote"></p>
+        <div class="row2">
+          <label class="field"><span class="field-label">Sijoituskulut <small>rahastojen TER ym.</small></span>
+            <span class="input"><input id="feePct" type="number" min="0" max="10" step="0.05" value="0" /><em>%/v</em></span></label>
+          <label class="field" id="divYieldField"><span class="field-label">Osinkotuotto <small>0&nbsp;= kasvurahastot</small></span>
+            <span class="input"><input id="divYield" type="number" min="0" max="10" step="0.5" value="0" /><em>%/v</em></span></label>
+          <label class="field" id="wrapFeeField" hidden><span class="field-label">Kuoren kulu <small>vakuutuksen vuosikulu</small></span>
+            <span class="input"><input id="wrapFee" type="number" min="0" max="10" step="0.05" value="0" /><em>%/v</em></span></label>
+        </div>
+        <button type="button" class="btn ghost btn-mini" id="acctCompareLink" hidden
+          title="Nykyinen suunnitelma arvo-osuustilinä haamukäyräksi — kuoren hyöty tai haitta näkyy deltoina">Vertaa arvo-osuustiliin</button>
+      </section>
+
+      <section class="card pro-card" data-card="promkt" hidden>
+        <h2>Markkinaoletukset <i class="pro-tag" aria-hidden="true">Pro</i></h2>
+        <div id="proMkt"></div>
+      </section>
+
+      <section class="card pro-card" data-card="protax" hidden>
+        <h2>Kulut ja verot <i class="pro-tag" aria-hidden="true">Pro</i></h2>
+        <div id="proTax"></div>
+      </section>
+
+      <section class="card pro-card" data-card="prowd" hidden>
+        <h2>Nostostrategia <i class="pro-tag" aria-hidden="true">Pro</i></h2>
+        <div id="proWd"></div>
+      </section>
+
+      <section class="card pro-card" data-card="promc" hidden>
+        <h2>MC-laboratorio <i class="pro-tag" aria-hidden="true">Pro</i></h2>
+        <div id="proMc"></div>
+      </section>
+
+      <section class="card pro-card" data-card="proana" hidden>
+        <h2>Analyysit <i class="pro-tag" aria-hidden="true">Pro</i></h2>
+        <div id="proAna"></div>
+      </section>
+
+      <section class="card" data-card="dist">
+        <h2>Varallisuusjakauma</h2>
+        <div class="dist-wrap">
+          <svg id="distChart" viewBox="0 0 140 140"></svg>
+          <div class="dist-list" id="distList"></div>
+        </div>
+        <p class="hint" id="distHint">Jakauma seuraa graafin kohdistinta — oletuksena eläkeikä.</p>
+      </section>
+
+      <section class="card" data-card="about">
+        <h2>Tietoa ja usein kysyttyä</h2>
+        <div class="about-body">
+          <p>Varallisuuspolku on <strong>ilmainen elinkaarilaskuri ja varallisuussuunnittelija</strong>:
+          eläkelaskuri, sijoituslaskuri ja korkoa korolle -laskuri samassa näkymässä. Piirrä koko
+          elämäsi talous — säästäminen, asunnon osto lainoineen, lapset, eläke ja varhaiseläke
+          (FIRE) — ja katso Monte Carlo -simulaatiosta, kuinka todennäköisesti varasi riittävät.</p>
+          <details>
+            <summary>Minne tietoni tallentuvat?</summary>
+            <p>Vain omaan selaimeesi. Varallisuuspolku ei käytä pilvipalvelua, rekisteröitymistä
+            eikä evästeitä — suunnitelma ei lähde laitteeltasi mihinkään ilman erillistä lupaasi.
+            Kävijämäärät mitataan anonyymillä, evästeettömällä Plausible-analytiikalla, joka ei
+            näe suunnitelmasi sisältöä eikä yksilöi kävijää. Jakaminen tapahtuu linkillä, jonka
+            luot itse.</p>
+          </details>
+          <details>
+            <summary>Mitä laskenta huomioi?</summary>
+            <p>Kuukausitason korkoa korolle, palkkakehityksen, lainat annuiteetteina,
+            myyntivoittoveron (30/34&nbsp;% nostojen voitto-osuudesta), työeläkkeen,
+            inflaatiokorjauksen ja tuhansien polkujen Monte Carlo -simulaation, josta lasketaan
+            suunnitelman onnistumistodennäköisyys. Laskentakaavat on varmennettu analyyttisiä
+            korkolaskuidentiteettejä vasten — katso <a href="validointi-en.html">Laskennan
+            validointi</a>, jossa tarkistukset lasketaan auki.</p>
+          </details>
+          <details>
+            <summary>Osakesäästötili, arvo-osuustili vai vakuutuskuori?</summary>
+            <p>Laskuri mallintaa kaikki kolme suomalaisittain: kuorissa (osakesäästötili,
+            sijoitusvakuutus) osingot ja myynnit kertyvät verotta ja nostosta verotetaan voiton
+            osuus; arvo-osuustilillä suorien osakkeiden osingoista menee vero vuosittain ja
+            hankintameno-olettama on käytettävissä. Vertailu näyttää eron euroina haamukäyränä.</p>
+          </details>
+          <details>
+            <summary>Voiko koko perheen taloutta suunnitella?</summary>
+            <p>Kyllä — jopa neljä henkilöä: puoliso ja lapset omina käyrinään, perheen yhteinen
+            onnistumistodennäköisyys samassa markkinahistoriassa, rahasiirrot, jaetut hankinnat
+            puoliksi ja leskiturvatarkastelu.</p>
+          </details>
+          <details>
+            <summary>Onko palvelussa tekoälyä?</summary>
+            <p>On: Tulkki-apuri (✦ Kysy AI) selittää laskurin tulokset selkokielellä, vertailee
+            vaihtoehtoja, kokeilee muutoksia ja suhteuttaa suunnitelman ikäryhmän anonyymiin
+            vertailudataan. Työnjako on tiukka — laskentamoottori laskee ja AI vain selittää,
+            joten luvut tulevat aina laskennasta, eivät kielimallilta. Kysyessä välitetään vain
+            kysymys ja suunnitelman anonyymi muoto; palvelin ei tallenna mitään. Ilmaiseksi
+            5&nbsp;kysymystä päivässä.</p>
+          </details>
+          <details>
+            <summary>Voiko oman tekoälyavustajan kytkeä Varallisuuspolkuun?</summary>
+            <p>Kyllä: laskentamoottorin saa tekoälyagentin (esimerkiksi Clauden) työkaluksi
+            paikallisena MCP-palvelimena — asennus komennolla <code>npx -y varallisuuspolku-mcp</code>
+            (<a href="https://www.npmjs.com/package/varallisuuspolku-mcp" rel="noopener">npm-paketti
+            varallisuuspolku-mcp</a>). Agentti voi simuloida suunnitelman jakolinkistä, ratkaista
+            eläkeiän tai säästötarpeen ja vertailla vaihtoehtoja samalla moottorilla kuin tämä
+            sivu. Laskenta tapahtuu silloinkin omalla koneellasi eikä suunnitelma lähde verkkoon —
+            ja työkalut laskevat, eivät anna sijoitusneuvontaa. Lisätietoa
+            <a href="agentit-en.html">Agentit-sivulla</a>.</p>
+          </details>
+          <details>
+            <summary>Sopiiko FIRE- ja varhaiseläkesuunnitteluun?</summary>
+            <p>Kyllä. Laskuri ratkaisee aikaisimman mahdollisen eläkeiän, kestävän kuukausitulon
+            ja tarvittavan säästön — halutessasi 75, 85 tai 95&nbsp;prosentin varmuustasolla.
+            Työeläkkeen alkamisen voi asettaa eri ikään kuin töiden lopettamisen.</p>
+          </details>
+          <details>
+            <summary>Onko tämä sijoitusneuvontaa?</summary>
+            <p>Ei. Varallisuuspolku on laskuri, joka näyttää omien oletustesi seuraukset — se ei
+            suosittele tuotteita eikä anna sijoitusneuvontaa. Suunnitelmani-dokumentin voi ottaa
+            mukaan esimerkiksi varainhoitajatapaamiseen keskustelun pohjaksi.</p>
+          </details>
+          <details>
+            <summary>Mitä palvelu maksaa?</summary>
+            <p>Ei mitään. Kaikki ominaisuudet, myös ammattilaistason Pro-tila, ovat ilmaisia,
+            eikä palvelussa ole mainoksia.</p>
+          </details>
+          <p class="about-links">
+            <a href="https://apps.apple.com/fi/app/varallisuuspolku/id6798374499" rel="noopener">Sovellus App Storessa</a> ·
+            <a href="analytiikka-en.html">Tilastot — miten muut suunnittelevat vaurastumista</a> ·
+            <a href="validointi-en.html">Laskennan validointi</a> ·
+            <a href="saavutettavuus-en.html">Saavutettavuus</a> ·
+            <a href="tietosuoja-en.html">Tietosuojaseloste</a> ·
+            <a href="https://github.com/olavikurola/varallisuuspolku" rel="noopener">Lähdekoodi (GitHub)</a>
+          </p>
+        </div>
+      </section>
+
+      <p class="appstore-alue">
+        <a class="appstore-badge" href="https://apps.apple.com/fi/app/varallisuuspolku/id6798374499" rel="noopener" title="Varallisuuspolku iPhonelle — widget, toteumaseuranta ja muistutukset"><img src="appstore-badge.svg" alt="Lataa App Storesta" width="143" height="40" loading="lazy" /></a>
+      </p>
+      <p class="disclaimer">Laskelma on suuntaa antava havainnollistus, ei sijoitusneuvontaa. Suunnitelma tallentuu selaimeesi automaattisesti. Oletukset ja tietosuoja: <a href="#" id="disclaimerInfo">Tietoa palvelusta</a>.</p>
+    </aside>
+
+    <section class="chart-col">
+      <div class="hud" id="hud" hidden>
+        <div class="hud-metrics" id="hudMetrics"></div>
+        <div class="hud-actions">
+          <button class="btn ghost btn-mini" id="fsAddBtn" title="Lisää tavoite tai elämäntapahtuma graafille">＋ Lisää</button>
+          <button class="btn ghost btn-mini" id="fsClose" title="Sulje piirtopöytä (Esc)" aria-label="Sulje piirtopöytä">✕</button>
+        </div>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="chart-wrap" id="chartWrap">
+        <svg id="chart" role="img" aria-label="Varallisuuden odotettu kehitys iän mukaan elämäntapahtumineen"></svg>
+        <button class="fs-open" id="fsOpen" title="Piirrä polkuasi — piirtopöytä (F)" aria-label="Avaa piirtopöytä">⛶</button>
+        <div class="cmp-pill" id="cmpPill" hidden>
+          <span id="cmpPillTxt"></span>
+          <button type="button" id="cmpPillU" title="Aseta nykyinen suunnitelma uudeksi vertailukohdaksi" aria-label="Päivitä vertailukohta">⟳</button>
+          <button type="button" id="cmpPillX" title="Lopeta vertailu" aria-label="Lopeta vertailu">✕</button>
+        </div>
+        <div class="tooltip" id="tooltip" hidden></div>
+        <div class="popover" id="popover" hidden></div>
+        <div class="dchip" id="dchip" hidden></div>
+        <div class="drop-hint" id="dropHint" hidden><span>Pudota tapahtuma aikajanalle</span></div>
+      </div>
+      <div class="sr-live" id="ariaLive" aria-live="polite"></div>
+      <div class="legend">
+        <span class="lg"><i class="sw sw-line"></i>Sijoitusvarallisuus</span>
+        <span class="lg"><i class="sw sw-band"></i><span id="legendBandTxt">Vaihteluväli</span></span>
+        <span class="lg"><i class="sw sw-dash"></i>Sijoitettu pääoma</span>
+        <span class="lg"><i class="sw sw-marker">🏠</i>Elämäntapahtuma</span>
+        <span class="lg" id="legendCompare" hidden><i class="sw sw-ghost"></i>Vertailukohta</span>
+        <span class="lg" id="legendFamily" hidden><i class="sw sw-fam"></i>Perhe <i class="sw sw-tot"></i>Yhteensä
+          <button class="btn ghost btn-mini" id="famMountainBtn" title="Perheen virrat 2.5D-vuoristona">Vuoristo</button></span>
+        <button class="btn ghost btn-mini" id="tableBtn" title="Vuosikohtaiset luvut taulukkona ja CSV:nä">Vuositaulukko</button>
+      </div>
+      <div class="balance-panel" id="balancePanel" hidden>
+        <div class="balance-head">
+          <span class="balance-title">Tase</span>
+          <span class="lg"><i class="sw sw-inv"></i>Sijoitukset</span>
+          <span class="lg"><i class="sw sw-asset"></i>Omaisuus</span>
+          <span class="lg"><i class="sw sw-debtbar"></i>Velka</span>
+          <span class="lg"><i class="sw sw-net"></i>Netto</span>
+          <button class="collapse-btn" id="balanceToggle" title="Pienennä / suurenna" aria-label="Pienennä tai suurenna tasepaneeli">▾</button>
+        </div>
+        <div class="balance-body" id="balanceWrap"><svg id="balanceChart" role="img" aria-label="Tase vuosittain: sijoitukset, omaisuus, velka ja nettovarallisuus"></svg></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="summary" id="mountainModal" hidden>
+    <div class="sum-bar">
+      <button class="btn ghost" id="mountainClose">Sulje</button>
+    </div>
+    <div class="sum-sheet">
+      <div class="sum-head">
+        <div><h1>Perhevuoristo</h1>
+        <div class="sum-sub">Perheen virrat rinnakkain — odotettu kehitys kalenteriajassa</div></div>
+      </div>
+      <div class="mtn-wrap"><svg id="mountainSvg"></svg></div>
+      <p class="sum-assump">Katselunäkymä: taaimmaisena perheen yhteisvarallisuus, edessä henkilöiden omat virrat. Muokkaus tapahtuu henkilöchipeillä ja piirtopöydällä.</p>
+    </div>
+  </div>
+
+  <div class="summary" id="proModal" hidden>
+    <div class="sum-bar">
+      <button class="btn" id="proEnable">Ota Pro käyttöön</button>
+      <button class="btn ghost" id="proCancel">Palaa</button>
+    </div>
+    <div class="sum-sheet info-sheet">
+      <div class="sum-head">
+        <div><h1>Varallisuuspolku Pro</h1>
+        <div class="sum-sub">Ammattilaisen säädöt ja analyysit — sama moottori, oletukset auki</div></div>
+      </div>
+
+      <p>Perusversio vastaa kysymykseen <b>"riittävätkö rahani"</b>. Pro vastaa kysymykseen
+      <b>"kuinka herkkä suunnitelma on oletuksilleen ja millä ehdoilla se kestää"</b> — se avaa
+      lukitut oletukset säädettäviksi ja syventää analyysit. Kaikki laskenta pysyy edelleen
+      omassa selaimessasi, eikä mitään lähetetä mihinkään.</p>
+
+      <h2>📈 Markkinaoletukset ja allokaattori</h2>
+      <p>Omat tuotto-odotukset ja volatiliteetit jokaiselle omaisuusluokalle — ja enintään kolme
+      omaa luokkaa (esim. kiinteistörahasto, kulta). <b>Korrelaatiomatriisi</b> tuo aidon
+      hajautushyödyn laskentaan: perusversio olettaa täyskorrelaation, mikä on turvallisen
+      konservatiivista mutta karkeaa. Lisäksi oma glidepath, inflaatio-oletus ja halutessasi
+      paksuhäntäinen tuottojakauma (Studentin t).</p>
+
+      <h2>🧾 Kulut ja verot</h2>
+      <p>Juoksevat kulut (TER) syövät tuottoa realistisesti. Pääomatuloveron prosentit ja raja
+      ovat muokattavissa, ja hankintameno-olettaman voi ulottaa myös eläkeajan kuukausinostoihin.</p>
+
+      <h2>💶 Nostostrategiat ja kulutuksen vaiheistus</h2>
+      <p>Kiinteän kuukausitulon rinnalle <b>prosentti salkusta</b> ja <b>guardrails</b>
+      (nostotasoa korjataan, jos se karkaa putkesta). Eläkeajan kulutuksen voi vaiheistaa:
+      aktiivivuodet, rauhallisemmat vuodet ja loppuvuodet omilla tasoillaan.</p>
+
+      <h2>🎲 Monte Carlo -laboratorio</h2>
+      <p>Polkumäärä 300–20 000, viuhkan persentiilit valittavissa (P5–P95, P10–P90, P25–P75),
+      siemen vaihdettavissa — ja kolme stressiskenaariota piirtyvät suoraan graafiin:
+      karhumarkkina heti eläkkeellä, stagflaatio ja menetetty vuosikymmen.</p>
+
+      <h2>🔬 Analyysit</h2>
+      <p><b>Ehtymiskäyrä</b> näyttää todennäköisyyden, että varat ovat lopussa ikään mennessä.
+      <b>Tornado-herkkyys</b> kertoo, mihin oletukseen suunnitelma on herkin. <b>Kestävä tulo
+      eläkei'ittäin</b> piirtää, mitä jokainen lykkäysvuosi on arvossaan. Lisäksi enintään kolme
+      nimettyä skenaariota rinnakkaisina haamukäyrinä.</p>
+
+      <h2>Tärkeää</h2>
+      <p>Kaikki Pro-oletukset ovat <b>sinun omia oletuksiasi</b> — palvelu ei suosittele lukuja
+      eikä salkkuja, eikä laskelma ole sijoitusneuvontaa. Suunnitelmani-dokumenttiin tulostuu
+      Pro-tilassa oletusliite, jossa jokainen poikkeama perusoletuksista on auki kirjattu.</p>
+    </div>
+  </div>
+
+  <div class="ramp" id="ramp" hidden>
+    <div class="ramp-card" role="dialog" aria-modal="true" aria-label="Aloitus" id="rampCard">
+      <h1 class="ramp-title">Näe, riittävätkö rahasi koko elämäksi</h1>
+      <p class="ramp-sub">Kolme lukua riittää alkuun. Kaikki laskenta tapahtuu selaimessasi — mitään ei lähetetä minnekään.</p>
+      <div class="ramp-fields">
+        <label class="field"><span class="field-label">Ikäsi</span>
+          <span class="input"><input id="rampAge" type="number" min="16" max="80" step="1" inputmode="numeric" placeholder="esim. 34" /><em>v</em></span></label>
+        <label class="field"><span class="field-label">Sijoitukset ja säästöt nyt</span>
+          <span class="input"><input id="rampWealth" type="number" min="0" step="1000" inputmode="numeric" placeholder="esim. 15 000" /><em>€</em></span></label>
+        <label class="field"><span class="field-label">Säästät kuukaudessa</span>
+          <span class="input"><input id="rampMonthly" type="number" min="0" step="50" inputmode="numeric" placeholder="esim. 300" /><em>€/kk</em></span></label>
+      </div>
+      <p class="ramp-err" id="rampErr" hidden>Kerro ikäsi (16–80), niin polku voidaan piirtää.</p>
+      <div class="ramp-acts">
+        <button class="btn" id="rampGo">Näytä polkuni</button>
+      </div>
+      <a href="#" class="ramp-skip" id="rampSkip">Ohita — katso valmista esimerkkiä kierroksen kanssa</a>
+    </div>
+  </div>
+
+  <div class="tour" id="tour" hidden aria-live="polite">
+    <div class="tour-hole" id="tourHole"></div>
+    <div class="tour-card" id="tourCard" role="dialog" aria-label="Esittelykierros"></div>
+  </div>
+
+  <div class="summary" id="infoModal" hidden>
+    <div class="sum-bar">
+      <button class="btn ghost" id="infoClose">Sulje</button>
+    </div>
+    <div class="sum-sheet info-sheet">
+      <div class="sum-head">
+        <div><h1>Tietoa Varallisuuspolusta</h1>
+        <div class="sum-sub">Ilmainen visuaalinen varallisuussuunnittelutyökalu</div></div>
+      </div>
+
+      <h2>Mikä tämä on</h2>
+      <p>Varallisuuspolku näyttää koko elinkaaresi talouden yhdellä näkymällä: säästämisen, elämän
+      suuret hankinnat lainoineen sekä eläkeajan tulot työeläkkeineen ja veroineen. Tavoitetilat
+      ratkaisevat puolestasi kestävän kuukausitulon, aikaisimman eläkeiän tai tarvittavan säästön —
+      halutessasi 75–95 %:n varmuudella. Mukaan saa koko perheen: puolison ja lasten polut lasketaan
+      yhteen, ja <b>Tulkki</b>-apuri (✦ Kysy AI) selittää tulokset selkokielellä.
+      <b>Suunnitelmani</b> kokoaa kaiken tulostettavaksi
+      dokumentiksi, jonka voi antaa vaikka varainhoitajalle keskustelun pohjaksi.</p>
+
+      <h2>Vinkit</h2>
+      <p><b>Piirtopöytä</b> (graafin ⛶-nappi tai F) on nopein tapa suunnitella: tartu käyrään,
+      tapahtumaan tai eläkeikäviivaan ja vedä — kone laskee vedon hinnan. <b>Esittelykierros</b>
+      (☰-valikossa) käy palvelun läpi yhdeksällä klikkauksella. <b>Pro-tila</b> (paneelin
+      yläreunan kytkin) avaa ammattilaissäädöt: omat tuotto-oletukset, korrelaatiot,
+      nostostrategiat ja analyysit.
+      <b>Esimerkit</b> (Elämäntapahtumat-kortissa) antaa valmiin pohjan eri elämäntilanteisiin. <b>Vertaile</b>
+      (☰-valikossa) tallentaa nykyisen suunnitelman haamukäyräksi, jota vasten näet muutosten vaikutuksen.
+      <b>Perhe</b> (Perustiedot-kortin ＋-napista) tuo puolison ja lapset samaan kuvaan: yhteinen
+      käyrä ja onnistumistodennäköisyys, jaetut hankinnat puoliksi ja siirrot läheisille.
+      <b>Suunnitelmat</b> (Suunnitelmani-sivun yläosa) pitää useat suunnitelmat — omat ja lähipiirin —
+      tallessa samassa selaimessa: vaihda, monista, vertaa rinnakkain ja vie talteen.
+      <b>Vuositaulukko</b> (graafin alla) näyttää luvut vuosi vuodelta ja vie ne CSV:nä.
+      <b>Ctrl+Z</b> kumoaa viimeisimmän muutoksen, ja tapahtuman voi <b>monistaa</b>
+      muokkausikkunasta (esim. toinen lapsi). Suunnitelmani-sivun <b>Kopioi jakolinkki</b> jakaa
+      suunnitelman ja toimii myös varmuuskopiona — koko suunnitelma on linkissä. Sovelluksen voi
+      asentaa aloitusnäytölle (PWA), jolloin se toimii myös ilman verkkoyhteyttä.</p>
+
+      <h2>Tulkki — kysy AI:lta</h2>
+      <p>Oikean reunan <b>✦ Kysy AI</b> -kielekkeestä aukeaa Tulkki, joka selittää suunnitelmasi
+      luvut selkokielellä ja suhteuttaa ne ikäryhmäsi anonyymiin vertailudataan. Se osaa myös
+      <b>kokeilla</b> muutoksia (&rdquo;kokeile eläkeikää 62&rdquo;) ja <b>vertailla</b> vaihtoehtoja
+      rinnakkain — vaikutukset näytetään ensin euroeroina, eikä suunnitelmaasi kosketa ennen kuin
+      itse otat muutoksen käyttöön. Pikatoiminnot laativat kysymyslistan varainhoitajatapaamiseen
+      tai haastavat suunnitelmasi heikot kohdat, ja avatessa Tulkki nostaa esiin muutaman huomion.</p>
+      <p><b>Työnjako on tiukka: laskentamoottori laskee, AI vain selittää.</b> Vastausten luvut
+      sidotaan suoraan moottorin tuloksiin, joten Tulkin siteeraamat luvut eivät voi olla kielimallin
+      keksimiä. Kysyessäsi palvelimelle välittyy vain kysymyksesi, suunnitelman anonyymi muoto (sama
+      tunnisteeton sisältö kuin vertailudatassa) ja moottorin tunnusluvut — välityspalvelin on
+      tilaton eikä tallenna kysymyksiä tai vastauksia, ja sen koodi on avointa lähdekoodia
+      (kielimallina Anthropicin Claude). Ilman avainkoodia käytössä on 5 kysymystä päivässä.
+      Tulkki ei anna sijoitusneuvontaa.</p>
+
+      <h2>Tietosuoja</h2>
+      <p class="small" style="margin-top:-4px"><a href="tietosuoja-en.html">Koko tietosuojaseloste omalla sivullaan →</a></p>
+      <p><b>Suunnitelmasi ei lähde laitteeltasi mihinkään ilman erillistä, tapauskohtaista lupaasi.</b>
+      Laskenta tapahtuu kokonaan selaimessa ja suunnitelma tallentuu selaimen omaan muistiin
+      (localStorage) vain tällä laitteella. Palvelu ei käytä evästeitä eikä kerää henkilötietoja;
+      fontit tarjoillaan sivuston omalta palvelimelta. Kävijämäärät mitataan
+      <a href="https://plausible.io/privacy-focused-web-analytics" rel="noopener">Plausible-analytiikalla</a>,
+      joka on evästeetön eikä yksilöi kävijää — se laskee vain sivulatauksia, ei näe suunnitelmasi
+      sisältöä. Suunnitelmadataa koskevat poikkeukset ovat vapaaehtoisia ja tapahtuvat vain omasta
+      aloitteestasi: anonyymi vertailudata (alla), jonka sisällön näet kokonaisuudessaan ennen
+      jakamista, sekä Tulkille esittämäsi kysymys, jonka mukana kulkee suunnitelman sama anonyymi,
+      tunnisteeton muoto (ks. Tulkki yllä).</p>
+      <p>Huomaa: <b>Jaa linkki</b> pakkaa koko suunnitelmasi verkko-osoitteeseen. Linkin saaja näkee
+      suunnitelman sisällön, joten jaa se vain henkilöille, joille haluat sen näyttää.</p>
+
+      <h2>Vertailu ja avoin data</h2>
+      <p>Suunnitelmani-sivulla voit halutessasi jakaa suunnitelmasi <b>anonyymisti</b> vertailudataan ja
+      nähdä, miten eri ikäiset suunnittelevat talouttaan ja etenevät vaurastumisen matkalla.
+      Jaetuissa tiedoissa ei ole tunnisteita — ei nimiä, ei antamiasi otsikoita, ei IP-osoitetta —
+      summat pyöristetään ja päiväys tallentuu kuukausitasolla, eikä jaettuja suunnitelmia voi
+      yhdistää toisiinsa tai keneenkään. Jakaumat julkaistaan avoimena datana vasta, kun ikäryhmässä
+      on vähintään 30 suunnitelmaa. Vastaanottava palvelinkoodi on avointa lähdekoodia samassa
+      GitHub-repossa (kansio <b>palvelin/</b>). Jakaminen ei velvoita mihinkään.
+      Koko avoin data: <a href="analytiikka-en.html">Tilastot</a>.
+      Jos valitsit &quot;Ei kiitos&quot;, voit <a href="#" id="donateReset">nollata valinnan</a>.</p>
+
+      <h2>Laskentaoletukset</h2>
+      <p>Tuotto-oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa. Inflaatiokorjaus 2 %/v
+      (valinnainen). Kuukausisäästö voi kasvaa vuosittain (palkkakehitys). Lainat lasketaan
+      annuiteettilainoina. Epävarmuushaarukka (P10–P90) ja onnistumistodennäköisyys lasketaan samasta
+      satunnaisten markkinapolkujen joukosta — jopa 5&nbsp;000 polkua taustalaskentana. Sijoitustilin
+      voi mallintaa arvo-osuustilinä, osakesäästötilinä tai vakuutuskuorena — verokohtelu lasketaan
+      kunkin mukaan. Perhetilassa kaikkien henkilöiden polut simuloidaan samassa markkinamaailmassa,
+      joten perheen yhteinen onnistumistodennäköisyys on aidosti yhteinen.</p>
+      <p><b>Eläkeaika ja verot:</b> voit antaa lakisääteisen työeläkkeen arvion kuukausitulona — se
+      pienentää sijoituksista tarvittavaa nostoa ja voi alkaa eri iässä kuin eläkkeelle jäänti. Eläkeajan
+      nostoista voidaan huomioida Suomen myyntivoittovero (30 % vuotuisiin 30 000 €:n voittoihin asti,
+      34 % ylimenevältä osalta); veroa peritään vain noston voitto-osuudesta eli arvon ja jäljellä olevan
+      hankintahinnan erotuksesta.</p>
+      <p><b>Omaisuuden myynti:</b> omaisuuserän (esim. asunto tai mökki) voi myydä valitussa iässä,
+      jolloin sen arvo siirtyy sijoituksiin, jäljellä oleva laina maksetaan pois ja voitosta peritään
+      myyntivoittovero. Verotettavaa voittoa rajaa hankintameno-olettama (40 % myyntihinnasta, kun
+      omistus on kestänyt vähintään 10 vuotta; muuten 20 %), ja oman asunnon myynnin voi merkitä
+      verovapaaksi. <b>Varmuustaso:</b> eläketavoitteen voi ratkaista myös niin, että vähintään 75, 85
+      tai 95 % satunnaisista markkinapoluista onnistuu — pelkän odotetun kehityksen sijaan.
+      Työeläkkeen arvio ja veromalli ovat suuntaa antavia yksinkertaistuksia, eivät virallisia
+      laskelmia. Laskennan tarkistukset, oletusten versiointi ja tunnetut yksinkertaistukset on
+      dokumentoitu avoimesti: <a href="validointi-en.html">Laskennan validointi</a>.</p>
+
+      <h2>Tärkeä huomautus</h2>
+      <p>Laskelma on suuntaa antava havainnollistus, ei sijoitusneuvontaa eikä sijoitussuositus.
+      Historiallinen tuotto ei ole tae tulevasta. Tee sijoituspäätökset omalla harkinnallasi tai
+      ammattilaisen kanssa.</p>
+
+      <h2>Palaute</h2>
+      <p>Palvelu on avointa lähdekoodia. Kehitysehdotukset ja bugi-ilmoitukset:
+      <a id="repoLink" href="https://github.com/olavikurola/varallisuuspolku" target="_blank" rel="noopener">GitHub</a>.</p>
+    </div>
+  </div>
+
+  <div class="summary" id="summary" hidden>
+    <div class="sum-bar">
+      <button class="btn" id="sumPrint">Tulosta / PDF</button>
+      <button class="btn" id="sumShare">Kopioi jakolinkki</button>
+      <button class="btn ghost" id="sumClose">Sulje</button>
+    </div>
+    <div class="plans-home" id="plansHome"></div>
+    <div id="donateSlot"></div>
+    <div class="sum-sheet" id="sumSheet"></div>
+  </div>
+
+  <div class="summary" id="donateModal" hidden>
+    <div class="sum-bar">
+      <button class="btn ghost" id="donateCancel">Sulje</button>
+    </div>
+    <div class="sum-sheet donate-sheet">
+      <div class="sum-head">
+        <div><h1>Näin suunnitelmasi jaetaan — anonyymisti</h1>
+        <div class="sum-sub">Tarkista alta täsmälleen, mitä vertailudataan menee — ei mitään muuta.</div></div>
+      </div>
+      <div id="donatePreview"></div>
+      <details class="donate-raw"><summary>Näytä raakadata (JSON)</summary><pre id="donateJson"></pre></details>
+      <p class="donate-note">Jaetuissa tiedoissa ei ole tunnisteita: ei nimiä, ei nimeämiäsi otsikoita, ei
+      IP-osoitetta, ei evästeitä. Summat on pyöristetty ja päiväys on kuukausitasolla. Jos jaat
+      myöhemmin päivitetyn suunnitelman tältä samalta selaimelta, <b>se korvaa aiemman rivisi
+      tilastoissa</b> (satunnainen rivitunniste — ei henkilötunniste), joten yksi henkilö ei
+      kertaannu vertailussa. Jakaminen ei velvoita mihinkään — mutta koska henkilötunnistetta ei
+      ole, jaettua tietoa <b>ei voi jälkikäteen poistaa</b>. Jakaumat julkaistaan avoimena datana
+      vasta, kun ikäryhmässä on vähintään 30 suunnitelmaa. Palvelinkoodi on avointa lähdekoodia.</p>
+      <div class="donate-actions">
+        <button class="btn" id="donateSend">Jaa anonyymisti ja avaa vertailu</button>
+        <button class="btn ghost" id="donateNever">Ei kiitos — älä kysy uudestaan</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary" id="compareModal" hidden>
+    <div class="sum-bar">
+      <button class="btn ghost" id="compareClose">Sulje</button>
+    </div>
+    <div class="sum-sheet compare-sheet">
+      <div class="sum-head">
+        <div><h1>Miten muut suunnittelevat?</h1>
+        <div class="sum-sub" id="compareSub"></div></div>
+      </div>
+      <div id="compareBody"></div>
+      <p class="donate-note">Perustuu käyttäjien vapaaehtoisesti ja anonyymisti jakamiin suunnitelmiin.
+      <a href="analytiikka-en.html"><b>Tilastot: miten muut suunnittelevat vaurastumista →</b></a><br>
+      Aggregaatit ovat avointa dataa: <a id="openDataLink" href="#" target="_blank" rel="noopener">stats.json</a>.</p>
+    </div>
+  </div>
+
+  <div class="summary" id="tableModal" hidden>
+    <div class="sum-bar">
+      <button class="btn" id="tableCsv">Lataa CSV</button>
+      <button class="btn ghost" id="tableClose">Sulje</button>
+    </div>
+    <div class="sum-sheet table-sheet">
+      <div class="sum-head">
+        <div><h1>Vuositaulukko</h1><div class="sum-sub" id="tableSub"></div></div>
+      </div>
+      <div class="table-scroll"><table class="sum-table" id="yearTable"></table></div>
+      <p class="sum-assump">Rahavirrat ovat vuosisummia odotetulla kehityspolulla; varallisuus on tilanne kunkin ikävuoden alussa. CSV avautuu suoraan taulukkolaskentaan.</p>
+    </div>
+  </div>
+
+  <script src="kieli.js" defer></script>
+  <script src="kieli-en.js" defer></script>
+  <script src="laskenta.js" defer></script>
+  <!-- Entinen app.js kuutena osana — classic scriptit jakavat globaalin
+       skoopin, joten järjestys on sitova (defer säilyttää sen) -->
+  <script src="apu.js" defer></script>
+  <script src="kaavio.js" defer></script>
+  <script src="piirtopoyta.js" defer></script>
+  <script src="kortit.js" defer></script>
+  <script src="laajennukset.js" defer></script>
+  <script src="sovellus.js" defer></script>
+  <script src="tulkki.js" defer></script>
+  <script src="alapalkki.js" defer></script>
+  <script src="natiivilisat.js" defer></script>
+</body>
+</html>

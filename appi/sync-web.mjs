@@ -18,8 +18,9 @@ const ROOT = join(APPI, '..');
 const WWW = join(APPI, 'www');
 
 const FILES = [
-  // sivut
+  // sivut (myös generoidut -en-parit: kieli.js ohjaa niille kun valinta on en)
   'index.html', 'analytiikka.html', 'saavutettavuus.html', 'validointi.html', 'agentit.html',
+  'index-en.html', 'analytiikka-en.html', 'saavutettavuus-en.html', 'validointi-en.html', 'agentit-en.html',
   // tyylit ja fontit
   'style.css', 'fonts.css', 'fonts/inter-latin.woff2', 'fonts/inter-latin-ext.woff2',
   // ajonaikainen JS (sw.js tarkoituksella pois)

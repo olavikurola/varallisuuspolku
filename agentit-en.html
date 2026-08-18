@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<!-- GENEROITU TIEDOSTO — älä muokkaa käsin. Lähde: agentit.html + tyokalut/kieli-en-html.json, buildi: tyokalut/kieli-sivut-buildi.js -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Agentit — Varallisuuspolku</title>
+  <meta name="description" content="Kytke oma tekoälyavustajasi Varallisuuspolun laskentamoottoriin: paikallinen MCP-palvelin, kuusi työkalua ja jakolinkit rajapintana. Deterministinen laskenta ilman verkkoa — ei sijoitusneuvontaa." />
+  <meta name="theme-color" content="#0a0e1a" />
+  <script>/* Vaalea teema käyttöön ennen ensimmäistä maalausta — ei välähdystä */try{if(localStorage.getItem("vp-theme")==="light"){document.documentElement.classList.add("light");document.querySelector("meta[name=theme-color]").content="#eef1f8"}}catch(e){}</script>
+  <meta property="og:locale" content="en_GB" />
+  <meta property="og:site_name" content="Varallisuuspolku" />
+  <meta property="og:title" content="Agentit — Varallisuuspolku" />
+  <meta property="og:description" content="Laskentamoottori tekoälyagentin työkaluna: paikallinen MCP-palvelin, jakolinkit rajapintana, deterministinen laskenta." />
+  <meta property="og:url" content="https://varallisuuspolku.com/agentit-en.html" />
+  <link rel="canonical" href="https://varallisuuspolku.com/agentit-en.html" />
+  <link rel="alternate" hreflang="fi" href="https://varallisuuspolku.com/agentit.html" />
+  <link rel="alternate" hreflang="en" href="https://varallisuuspolku.com/agentit-en.html" />
+  <link rel="alternate" hreflang="x-default" href="https://varallisuuspolku.com/agentit.html" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="fonts.css" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Sivukohtaiset tyylit: komentolohkot ja esimerkkikysymykset */
+    .ag-pre {
+      margin: 10px 0 0;
+      padding: 12px 14px;
+      background: rgba(var(--ink), 0.7);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 12px;
+      line-height: 1.55;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+    .ag-quote {
+      margin: 0 0 10px;
+      padding: 10px 14px;
+      border-left: 3px solid var(--accent);
+      background: rgba(var(--ink), 0.35);
+      border-radius: 0 10px 10px 0;
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--text-dim);
+      font-style: italic;
+    }
+    .ag-quote b { color: var(--text); font-style: normal; }
+    .ag-note { font-size: 12.5px; color: var(--text-faint); line-height: 1.6; margin: 12px 0 0; }
+  </style>
+  <!-- Privacy-friendly analytics by Plausible -->
+  <script async src="https://plausible.io/js/pa-gxRZu9FAu8RyeQ_oaNFz0.js"></script>
+  <script>
+    window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+    plausible.init()
+  </script>
+</head>
+<body class="an-body">
+  <header class="topbar">
+    <a class="brand" href="./index-en.html" style="text-decoration:none;color:inherit">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 29 C17 28 21 17 31 11 L31 32 L9 32 Z" fill="#fff" fill-opacity="0.18" />
+          <path d="M9 29 C17 28 21 17 31 11" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="9" cy="29" r="2" fill="#fff" fill-opacity="0.85" />
+          <circle cx="31" cy="11" r="3.3" fill="#fff" />
+          <circle cx="31" cy="11" r="1.5" fill="#8b7cf6" />
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">Agentit</div>
+        <div class="brand-tag">Varallisuuspolku tekoälyagenteille</div>
+      </div>
+    </a>
+    <div class="topbar-right">
+      <a class="btn" href="./index-en.html">Avaa suunnittelutyökalu</a>
+    </div>
+  </header>
+
+  <main class="an-main">
+    <p class="an-intro">Varallisuuspolun laskentamoottoria voi käyttää oman tekoälyavustajan
+    työkaluna. Sama deterministinen moottori, joka pyörii tällä sivustolla — lakisääteinen
+    työeläke, suomalainen myyntivoittoverotus, lainat annuiteetteina, Monte Carlo kiintein
+    siemenin — on saatavilla paikallisena <b>MCP-palvelimena</b> (Model Context Protocol),
+    jota esimerkiksi Claude ja muut MCP-yhteensopivat agentit osaavat käyttää. Agentti keskustelee,
+    moottori laskee: luvut eivät koskaan tule kielimallilta.</p>
+
+    <section class="an-card">
+      <h2>Mitä agenttituki mahdollistaa</h2>
+      <p class="ag-quote">&rdquo;Tässä suunnitelmani: varallisuuspolku.com#s=&hellip; —
+      <b>pärjäänkö, jos jään eläkkeelle 60-vuotiaana?</b>&rdquo;</p>
+      <p class="ag-quote">&rdquo;Olen 34-vuotias, säästän 600&nbsp;€/kk ja asunnossani on
+      120&nbsp;000&nbsp;€ lainaa. <b>Rakenna suunnitelma ja kerro, milloin voin jäädä
+      eläkkeelle 85&nbsp;%:n varmuudella.</b>&rdquo;</p>
+      <p class="ag-quote">&rdquo;<b>Vertaile kolmea vaihtoehtoa:</b> eläkkeelle 58, 62 vai 65 —
+      mitä kestävää kuukausituloa kukin tarkoittaa?&rdquo;</p>
+      <p class="ag-quote">&rdquo;Tässä perheemme linkki: varallisuuspolku.com#f=&hellip; —
+      <b>kestääkö taloutemme, jos toinen meistä siirtyy osa-aikatyöhön?</b>&rdquo;</p>
+      <p class="an-intro" style="margin:12px 0 0">Agentti lukee suunnitelman jakolinkistä tai
+      rakentaa sen keskustelusta tyhjästä (<code>suunnitelman_skeema</code> kertoo sille kaikki
+      kentät ja tapahtumatyypit). Vastausten luvut lasketaan moottorilla — samat tulokset saa
+      tarkistettua avaamalla saman jakolinkin tällä sivustolla.</p>
+    </section>
+
+    <section class="an-card">
+      <h2>Työkalut</h2>
+      <table class="sum-table">
+        <tbody>
+          <tr><td><code>simuloi_suunnitelma</code></td><td>Koko elinkaari: onnistumis-%, varallisuus eläkeiässä ja lopussa (P10–P90), kestävä tulo, verot, ehtymisriskit ja vuositaulukko.</td></tr>
+          <tr><td><code>ratkaise_elakeika</code></td><td>Aikaisin mahdollinen eläkeikä annetulla kuukausitulolla — halutessa Monte Carlo -varmuustasolla (75/85/95&nbsp;%).</td></tr>
+          <tr><td><code>ratkaise_saasto</code></td><td>Tarvittava kuukausisäästö annetulla eläkeiällä ja tulotarpeella.</td></tr>
+          <tr><td><code>vertaa_suunnitelmia</code></td><td>2–4 vaihtoehdon vertailutaulukko, paras arvo merkittynä.</td></tr>
+          <tr><td><code>simuloi_perhe</code></td><td>Koko kotitalous (enintään 4 henkilöä) perhelinkistä: henkilökohtaiset tunnusluvut ja perheen yhteinen onnistumis-% koherentilla Monte Carlolla.</td></tr>
+          <tr><td><code>suunnitelman_skeema</code></td><td>Suunnitelma-JSON:n kenttädokumentaatio ja esimerkit — agentti voi rakentaa suunnitelman ilman jakolinkkiä.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="an-card">
+      <h2>Käyttöönotto</h2>
+      <p class="an-intro" style="margin:0"><b>Claude Code:</b></p>
+      <pre class="ag-pre">claude mcp add varallisuuspolku -- npx -y varallisuuspolku-mcp</pre>
+      <p class="an-intro" style="margin:14px 0 0"><b>Claude Desktop</b> (Asetukset → Kehittäjä → Muokkaa asetuksia):</p>
+      <pre class="ag-pre">{
+  "mcpServers": {
+    "varallisuuspolku": {
+      "command": "npx",
+      "args": ["-y", "varallisuuspolku-mcp"]
+    }
+  }
+}</pre>
+      <p class="an-intro" style="margin:14px 0 0">Muut MCP-yhteensopivat asiakkaat: käynnistä
+      <code>npx -y varallisuuspolku-mcp</code> stdio-palvelimena. Vaatii
+      <a href="https://nodejs.org" rel="noopener">Node.js</a>&nbsp;≥&nbsp;18. Paketti:
+      <a href="https://www.npmjs.com/package/varallisuuspolku-mcp" rel="noopener">varallisuuspolku-mcp
+      npm:ssä</a>.</p>
+    </section>
+
+    <section class="an-card">
+      <h2>Jakolinkki on rajapinta</h2>
+      <p class="an-intro" style="margin:0">Suunnitelma liikkuu ihmisen, sivuston ja agentin
+      välillä jakolinkkinä: <code>#s=</code>-linkki kantaa yhden henkilön suunnitelman ja
+      <code>#f=</code>-linkki koko perheen. Linkin saa työkalusta kohdasta
+      <b>Suunnitelmani&nbsp;→ Jaa linkkinä</b> — liitä se agentille sellaisenaan. Sama linkki
+      aukeaa aina myös selaimessa, joten agentin käsittelemän suunnitelman voi milloin tahansa
+      tarkistaa silmin.</p>
+    </section>
+
+    <section class="an-card">
+      <h2>Periaatteet</h2>
+      <table class="sum-table">
+        <tbody>
+          <tr><td>Paikallinen</td><td>MCP-palvelin toimii agentin koneella, ei käytä verkkoa eikä tallenna mitään — sama tietosuojalupaus kuin sivustolla, nyt myös agenttikäytössä.</td></tr>
+          <tr><td>Deterministinen</td><td>Kiinteät Monte Carlo -siemenet: sama syöte antaa aina täsmälleen saman vastauksen, ja laskennan voi tarkistaa <a href="validointi-en.html">validointisivulta</a>.</td></tr>
+          <tr><td>Ei sijoitusneuvontaa</td><td>Työkalut laskevat ja vertailevat — ne eivät suosittele tuotteita tai toimia, ja jokainen vastaus kantaa tämän muistutuksen.</td></tr>
+          <tr><td>Avoin</td><td>Lähdekoodi <a href="https://github.com/olavikurola/varallisuuspolku" rel="noopener">GitHubissa</a> (MIT). Koneluettava palvelukuvaus indeksoijille: <a href="llms.txt">llms.txt</a>.</td></tr>
+        </tbody>
+      </table>
+      <p class="ag-note">Tulkki — sivuston sisäänrakennettu tekoälyavustaja — on eri asia kuin
+      agenttituki: Tulkki asuu tässä palvelussa, agenttituki tuo moottorin sinun avustajaasi.
+      Molemmissa pätee sama työnjako: tekoäly selittää, moottori laskee.</p>
+    </section>
+
+    <p class="sum-assump" style="max-width:860px;margin:0 auto 24px"><a href="./index-en.html">Takaisin
+    suunnittelutyökaluun</a> · <a href="validointi-en.html">Laskennan validointi</a> ·
+    <a href="https://www.npmjs.com/package/varallisuuspolku-mcp" rel="noopener">npm-paketti</a> ·
+    <a href="https://github.com/olavikurola/varallisuuspolku" rel="noopener">Lähdekoodi</a></p>
+  </main>
+  <!-- Natiiviappi: alapalkki + natiivilisät (selaimessa no-op) — ilman näitä
+       sivu olisi appissa umpikuja ilman navigointia -->
+  <script src="kieli.js" defer></script>
+  <script src="kieli-en.js" defer></script>
+  <script src="alapalkki.js" defer></script>
+  <script src="natiivilisat.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<!-- GENEROITU TIEDOSTO — älä muokkaa käsin. Lähde: tietosuoja.html + tyokalut/kieli-en-html.json, buildi: tyokalut/kieli-sivut-buildi.js -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Tietosuojaseloste — Varallisuuspolku</title>
+  <meta name="description" content="Varallisuuspolun tietosuojaseloste: kaikki laskenta ja data pysyy omalla laitteellasi — ei tiliä, ei evästeitä, ei seurantaa. Poikkeukset ovat käyttäjän itse käynnistämiä ja kuvattu tässä." />
+  <meta name="theme-color" content="#0a0e1a" />
+  <script>/* Vaalea teema käyttöön ennen ensimmäistä maalausta — ei välähdystä */try{if(localStorage.getItem("vp-theme")==="light"){document.documentElement.classList.add("light");document.querySelector("meta[name=theme-color]").content="#eef1f8"}}catch(e){}</script>
+  <meta property="og:locale" content="en_GB" />
+  <meta property="og:site_name" content="Varallisuuspolku" />
+  <meta property="og:title" content="Tietosuojaseloste — Varallisuuspolku" />
+  <meta property="og:url" content="https://varallisuuspolku.com/tietosuoja-en.html" />
+  <link rel="canonical" href="https://varallisuuspolku.com/tietosuoja-en.html" />
+  <link rel="alternate" hreflang="fi" href="https://varallisuuspolku.com/tietosuoja.html" />
+  <link rel="alternate" hreflang="en" href="https://varallisuuspolku.com/tietosuoja-en.html" />
+  <link rel="alternate" hreflang="x-default" href="https://varallisuuspolku.com/tietosuoja.html" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="fonts.css" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Privacy-friendly analytics by Plausible -->
+  <script async src="https://plausible.io/js/pa-gxRZu9FAu8RyeQ_oaNFz0.js"></script>
+  <script>
+    window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+    plausible.init()
+  </script>
+</head>
+<body class="an-body">
+  <header class="topbar">
+    <a class="brand" href="./index-en.html" style="text-decoration:none;color:inherit">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 29 C17 28 21 17 31 11 L31 32 L9 32 Z" fill="#fff" fill-opacity="0.18" />
+          <path d="M9 29 C17 28 21 17 31 11" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="9" cy="29" r="2" fill="#fff" fill-opacity="0.85" />
+          <circle cx="31" cy="11" r="3.3" fill="#fff" />
+          <circle cx="31" cy="11" r="1.5" fill="#8b7cf6" />
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">Tietosuoja</div>
+        <div class="brand-tag">Varallisuuspolun tietosuojaseloste</div>
+      </div>
+    </a>
+    <div class="topbar-right">
+      <a class="btn" href="./index-en.html">Avaa suunnittelutyökalu</a>
+    </div>
+  </header>
+
+  <main class="an-main">
+    <p class="an-intro"><b>Lyhyesti: suunnitelmasi ei lähde laitteeltasi mihinkään ilman erillistä,
+    tapauskohtaista lupaasi.</b> Varallisuuspolku ei käytä käyttäjätilejä, ei evästeitä eikä
+    mainos- tai seurantatekniikoita, eikä se kerää henkilötietoja. Tämä seloste koskee sekä
+    verkkopalvelua (varallisuuspolku.com) että mobiilisovellusta. Päivitetty 9.8.2026.</p>
+
+    <section class="an-card">
+      <h2>Mitä tietoja käsitellään ja missä</h2>
+      <p>Kaikki laskenta tapahtuu omalla laitteellasi. Suunnitelmasi (iät, summat, tapahtumat,
+      asetukset) tallentuu vain laitteesi omaan muistiin — selaimessa localStorage-tallennukseen,
+      sovelluksessa sovelluksen omaan tallennustilaan. Tietoja ei siirretä palvelimelle, eikä
+      palvelun ylläpitäjällä ole niihin pääsyä. Tiedot poistuvat, kun tyhjennät selaimen
+      sivustotiedot tai poistat sovelluksen.</p>
+      <p>Sovelluksen kotinäyttöwidget lukee laitteen sisäistä, sovelluksen itse kirjoittamaa
+      tiivistelmää — sekin pysyy laitteella.</p>
+    </section>
+
+    <section class="an-card">
+      <h2>Poikkeukset — aina oma, erikseen käynnistämäsi toiminto</h2>
+      <p>Kolme toimintoa siirtää tietoa laitteelta, ja jokainen niistä tapahtuu vain omasta
+      aloitteestasi:</p>
+      <table class="sum-table">
+        <tbody>
+          <tr><td><b>Jakolinkki</b></td><td>"Kopioi jakolinkki" pakkaa koko suunnitelman
+          verkko-osoitteeseen. Linkin saaja näkee suunnitelman sisällön — jaa se vain henkilöille,
+          joille haluat sen näyttää. Linkkiä ei tallenneta palvelimelle.</td></tr>
+          <tr><td><b>Kysy AI (Tulkki)</b></td><td>Kun esität kysymyksen, palvelimelle välittyy
+          kysymyksesi, suunnitelman anonyymi muoto (ei nimiä eikä tunnisteita) ja laskennan
+          tunnusluvut. Välityspalvelin on tilaton: se ei tallenna kysymyksiä eikä vastauksia, ja
+          sen lähdekoodi on avoin. Kielimallina toimii Anthropicin Claude.</td></tr>
+          <tr><td><b>Anonyymi vertailudata</b></td><td>Voit halutessasi jakaa suunnitelmasi
+          anonyymisti yhteiseen vertailudataan. Näet ennen jakamista täsmälleen, mitä lähetetään:
+          ei nimiä, ei otsikoita, ei IP-osoitetta; summat pyöristetään ja päiväys tallentuu
+          kuukausitasolla. Jaettuja suunnitelmia ei voi yhdistää toisiinsa eikä keneenkään, ja
+          jakaumat julkaistaan vasta vähintään 30 suunnitelman ryhmistä. Vastaanottava
+          palvelinkoodi on avointa lähdekoodia.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="an-card">
+      <h2>Kävijämittaus (vain verkkopalvelu)</h2>
+      <p>Verkkosivuston kävijämäärät mitataan <a href="https://plausible.io/privacy-focused-web-analytics"
+      rel="noopener">Plausible-analytiikalla</a>, joka on evästeetön eikä yksilöi kävijää — se
+      laskee sivulatauksia eikä näe suunnitelmasi sisältöä. <b>Mobiilisovelluksessa ei ole
+      analytiikkaa lainkaan</b>: sovellus ei kerää mitään tietoja.</p>
+    </section>
+
+    <section class="an-card">
+      <h2>Sovelluksen valinnaiset ominaisuudet</h2>
+      <p>Muistutukset ajastetaan laitteella (mitään ei lähetetä), sovelluksen lukitus käyttää
+      laitteen omaa tunnistusta (Face ID / sormenjälki — biometriatiedot eivät koskaan poistu
+      laitteen suojatusta ympäristöstä eikä sovellus näe niitä), ja toteumakirjaukset tallentuvat
+      vain laitteelle. Kaikki ovat oletuksena pois päältä tai tyhjiä.</p>
+    </section>
+
+    <section class="an-card">
+      <h2>Oikeutesi ja yhteydenotot</h2>
+      <p>Koska palvelu ei kerää eikä säilytä henkilötietoja, ylläpitäjällä ei ole hallussaan
+      tietoja, joita voisi pyytää nähtäväksi tai poistettavaksi — kaikki tietosi ovat omalla
+      laitteellasi ja poistettavissa itse (selaimen sivustotietojen tyhjennys tai sovelluksen
+      poisto). Kysymykset tietosuojasta: <a href="mailto:info@varallisuuspolku.com">info@varallisuuspolku.com</a>.</p>
+      <p>Palvelun lähdekoodi on avointa: <a href="https://github.com/olavikurola/varallisuuspolku"
+      rel="noopener">GitHub</a>. Laskentaoletukset ja palvelun kuvaus: <a href="./index-en.html">etusivun</a>
+      Tietoa palvelusta -osio.</p>
+    </section>
+
+    <p class="disclaimer" style="margin:8px 4px 40px">Varallisuuspolku on suuntaa antava
+    havainnollistustyökalu, ei sijoitusneuvontaa. <a href="./index-en.html">Varallisuuspolku</a> — kaikki
+    suunnittelu tapahtuu omalla laitteellasi.</p>
+  </main>
+</body>
+</html>
