@@ -95,6 +95,15 @@ for (const sivu of SIVUT) {
   }
   vaadi(html.includes(enUrl), sivu + ': canonical/og:url-uudelleenkirjoitus ei osunut');
 
+  // 2b) yksikköliitteet: sanaston "≥3 kirjainta" -sääntö ohittaa lyhyet
+  //     <em>-yksiköt tarkoituksella — vaihdetaan mekaanisesti en-muotoon
+  //     (sama konventio kuin kieli.js: v→y, kk→mo, %/v→%/yr)
+  html = html.split('<em>v</em>').join('<em>y</em>')
+    .split('<em>kk</em>').join('<em>mo</em>')
+    .split('<em>%/v</em>').join('<em>%/yr</em>')
+    .split('<em>€/kk</em>').join('<em>€/mo</em>')
+    .split('<em>€/v</em>').join('<em>€/yr</em>');
+
   // 3) kieli- ja localemetadata
   vaadi(html.includes('<html lang="fi">'), sivu + ': <html lang="fi"> puuttuu');
   html = html.replace('<html lang="fi">', '<html lang="en">');

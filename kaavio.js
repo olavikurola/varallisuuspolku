@@ -148,7 +148,7 @@ function renderChart(reuse = false) {
     const x = scaleX(age);
     el('line', { x1: x, y1: plot.t, x2: x, y2: plot.t + plot.h, class: 'grid-line-x' }, svg);
     const t1 = el('text', { x, y: plot.t + plot.h + 20, 'text-anchor': 'middle', class: 'axis-text' }, svg);
-    t1.textContent = age + ' v';
+    t1.textContent = age + ' ' + VP_YKS_V;
     const t2 = el('text', { x, y: plot.t + plot.h + 34, 'text-anchor': 'middle', class: 'axis-text axis-year' }, svg);
     t2.textContent = yearNow + Math.round(age - a0);
   }
@@ -380,7 +380,7 @@ function updateCrosshair(px, localY) {
   }
 
   tooltip.innerHTML =
-    `<div class="tt-age">Ikä ${Math.round(age)} v · ${yearNow + Math.round(age - a0)}</div>` +
+    `<div class="tt-age">${t('Ikä {0} v · {1}', Math.round(age), yearNow + Math.round(age - a0))}</div>` +
     `<div class="tt-row"><span>${t('Sijoitukset')}</span><b class="hl">${fmtEur(sim.exp[m])}</b></div>` +
     gRow +
     `<div class="tt-row"><span>${t('Vaihteluväli')}</span><b>${fmtCompact(sim.pess[m])} – ${fmtCompact(sim.opt[m])}</b></div>` +
@@ -795,7 +795,7 @@ function openPopover(id) {
       `<div class="field"><span class="field-label">${t('Tavoite')}</span><div class="seg seg-goal" id="pv-goals">${goalBtns}</div></div>` +
       `<p class="note">${t(goalNotes[g])}</p>` +
       `<label class="field"><span class="field-label">${t(ageSolved ? 'Aikaisin eläkeikä (laskettu)' : 'Eläkkeelle jäänti-ikä')}</span>` +
-      `<span class="input"><input id="pv-age" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${ageVal}" ${ageSolved ? 'disabled' : ''} /><em>v</em></span></label>` +
+      `<span class="input"><input id="pv-age" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${ageVal}" ${ageSolved ? 'disabled' : ''} /><em>${VP_YKS_V}</em></span></label>` +
       `<label class="field"><span class="field-label">${t(wdSolved ? 'Kestävä kuukausitulo (laskettu)' : 'Kuukausitulon tarve')} <small>${t('koko kulutus eläkkeellä')}</small></span>` +
       `<span class="input"><input id="pv-wd" type="number" min="0" step="100" value="${wdVal}" ${wdSolved ? 'disabled' : ''} /><em>€/kk</em></span></label>` +
       // Varmuustaso: ratkaisu mitoitetaan Monte Carlo -onnistumisosuudelle
@@ -810,7 +810,7 @@ function openPopover(id) {
       `<label class="field"><span class="field-label">${t('Työeläke (arvio)')}</span>` +
       `<span class="input"><input id="pv-pen" type="number" min="0" step="100" value="${penVal}" /><em>€/kk</em></span></label>` +
       `<label class="field"><span class="field-label">${t('Eläke alkaa')}</span>` +
-      `<span class="input"><input id="pv-penage" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${penAgeVal}" /><em>v</em></span></label>` +
+      `<span class="input"><input id="pv-penage" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${penAgeVal}" /><em>${VP_YKS_V}</em></span></label>` +
       `</div>` +
       `<p class="note pen-note" id="pv-pen-note"></p>` +
       (g === 'saving' || g === 'age' ? `<p class="note req-note" id="pv-req"></p>` : '');
@@ -819,7 +819,7 @@ function openPopover(id) {
     fields =
       `<p class="note">${t('Tavoitepiste on mittari — se ei siirrä rahaa. Piirtopöydän Ratkaise hakee kuukausisäästön, jolla polku osuu pisteeseen.')}</p>` +
       `<label class="field"><span class="field-label">${t('Ikä')}</span>` +
-      `<span class="input"><input id="pv-age" type="number" min="${state.ageNow + 1}" max="${state.ageEnd}" step="1" value="${Math.round(ev.age)}" /><em>v</em></span></label>` +
+      `<span class="input"><input id="pv-age" type="number" min="${state.ageNow + 1}" max="${state.ageEnd}" step="1" value="${Math.round(ev.age)}" /><em>${VP_YKS_V}</em></span></label>` +
       `<label class="field"><span class="field-label">${t('Tavoitesumma')}</span>` +
       `<span class="input"><input id="pv-amount" type="number" min="0" step="5000" value="${ev.amount}" /><em>€</em></span></label>`;
   } else if (def.familyOnly && familyOn()) {
@@ -830,7 +830,7 @@ function openPopover(id) {
     fields =
       `<p class="note">${t('Siirto kirjautuu molempien suunnitelmiin samaan kalenterihetkeen — vastapuolelle peilikuvana.')}</p>` +
       `<label class="field"><span class="field-label">${t('Ikä (oma)')}</span>` +
-      `<span class="input"><input id="pv-age" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${Math.round(ev.age)}" /><em>v</em></span></label>` +
+      `<span class="input"><input id="pv-age" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${Math.round(ev.age)}" /><em>${VP_YKS_V}</em></span></label>` +
       `<label class="field"><span class="field-label">${t('Summa')}</span>` +
       `<span class="input"><input id="pv-amount" type="number" step="1000" value="${ev.amount}" /><em>€</em></span></label>` +
       (peers.length > 1
@@ -858,7 +858,7 @@ function openPopover(id) {
         `<label class="field"><span class="field-label">${t('Korko')}</span>` +
         `<span class="input"><input id="pv-rate" type="number" min="0" max="25" step="0.1" value="${ev.rate != null ? ev.rate : 3.5}" /><em>%/v</em></span></label>` +
         `<label class="field"><span class="field-label">${t('Vuosia jäljellä')}</span>` +
-        `<span class="input"><input id="pv-years" type="number" min="1" max="40" step="1" value="${ev.years != null ? ev.years : 10}" /><em>v</em></span></label>` +
+        `<span class="input"><input id="pv-years" type="number" min="1" max="40" step="1" value="${ev.years != null ? ev.years : 10}" /><em>${VP_YKS_V}</em></span></label>` +
         `</div>` +
         `<p class="note loan-note" id="pv-loan-note"></p>`;
     }
@@ -868,7 +868,7 @@ function openPopover(id) {
     if (selling) {
       fields +=
         `<label class="field" style="margin-top:10px"><span class="field-label">${t('Myynti-ikä')}</span>` +
-        `<span class="input"><input id="pv-sellage" type="number" min="${Math.ceil(ev.age) + 1}" max="${state.ageEnd}" step="1" value="${Math.round(ev.sellAge)}" /><em>v</em></span></label>` +
+        `<span class="input"><input id="pv-sellage" type="number" min="${Math.ceil(ev.age) + 1}" max="${state.ageEnd}" step="1" value="${Math.round(ev.sellAge)}" /><em>${VP_YKS_V}</em></span></label>` +
         `<label class="toggle"><input id="pv-selltf" type="checkbox" ${ev.sellTaxFree ? 'checked' : ''} /><span class="switch"></span>` +
         `<span>${t('Verovapaa myynti')} <small>${t('esim. oma asunto, asuttu ≥ 2 v')}</small></span></label>` +
         (!ev.sellTaxFree
@@ -888,7 +888,7 @@ function openPopover(id) {
         `<label class="field"><span class="field-label">${t('Erä (− meno, + tulo)')}</span>` +
         `<span class="input"><input id="pv-recm" type="number" step="50" value="${ev.recMonthly}" /><em>€/kk</em></span></label>` +
         `<label class="field"><span class="field-label">${t('Kesto')}</span>` +
-        `<span class="input"><input id="pv-recy" type="number" min="1" max="60" step="1" value="${Math.round(ev.recYears != null ? ev.recYears : 10)}" /><em>v</em></span></label>` +
+        `<span class="input"><input id="pv-recy" type="number" min="1" max="60" step="1" value="${Math.round(ev.recYears != null ? ev.recYears : 10)}" /><em>${VP_YKS_V}</em></span></label>` +
         `</div>`;
     }
     // Jaettu omistus: puolet arvosta ja lainasta kummallekin aikuiselle
@@ -896,7 +896,7 @@ function openPopover(id) {
   } else {
     fields =
       `<label class="field"><span class="field-label">${t('Ikä')}</span>` +
-      `<span class="input"><input id="pv-age" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${Math.round(ev.age)}" /><em>v</em></span></label>` +
+      `<span class="input"><input id="pv-age" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${Math.round(ev.age)}" /><em>${VP_YKS_V}</em></span></label>` +
       `<label class="field"><span class="field-label">${t('Summa (− kulu, + tulo)')}</span>` +
       `<span class="input"><input id="pv-amount" type="number" step="1000" value="${ev.amount}" /><em>€</em></span></label>`;
 
@@ -911,7 +911,7 @@ function openPopover(id) {
         `<label class="field"><span class="field-label">${t('Erä (− meno, + tulo)')}</span>` +
         `<span class="input"><input id="pv-recm" type="number" step="50" value="${ev.recMonthly}" /><em>€/kk</em></span></label>` +
         `<label class="field"><span class="field-label">${t('Kesto')}</span>` +
-        `<span class="input"><input id="pv-recy" type="number" min="1" max="60" step="1" value="${Math.round(ev.recYears != null ? ev.recYears : 10)}" /><em>v</em></span></label>` +
+        `<span class="input"><input id="pv-recy" type="number" min="1" max="60" step="1" value="${Math.round(ev.recYears != null ? ev.recYears : 10)}" /><em>${VP_YKS_V}</em></span></label>` +
         `</div>`;
     }
 
@@ -933,7 +933,7 @@ function openPopover(id) {
           `<label class="field"><span class="field-label">${t('Korko')}</span>` +
           `<span class="input"><input id="pv-rate" type="number" min="0" max="25" step="0.1" value="${ev.rate}" /><em>%/v</em></span></label>` +
           `<label class="field"><span class="field-label">${t('Laina-aika')}</span>` +
-          `<span class="input"><input id="pv-years" type="number" min="1" max="40" step="1" value="${ev.years}" /><em>v</em></span></label>` +
+          `<span class="input"><input id="pv-years" type="number" min="1" max="40" step="1" value="${ev.years}" /><em>${VP_YKS_V}</em></span></label>` +
           `</div>` +
           `<p class="note loan-note" id="pv-loan-note"></p>`;
       }
@@ -952,7 +952,7 @@ function openPopover(id) {
         if (selling) {
           fields +=
             `<label class="field" style="margin-top:10px"><span class="field-label">${t('Myynti-ikä')}</span>` +
-            `<span class="input"><input id="pv-sellage" type="number" min="${Math.ceil(ev.age) + 1}" max="${state.ageEnd}" step="1" value="${Math.round(ev.sellAge)}" /><em>v</em></span></label>` +
+            `<span class="input"><input id="pv-sellage" type="number" min="${Math.ceil(ev.age) + 1}" max="${state.ageEnd}" step="1" value="${Math.round(ev.sellAge)}" /><em>${VP_YKS_V}</em></span></label>` +
             `<label class="toggle"><input id="pv-selltf" type="checkbox" ${ev.sellTaxFree ? 'checked' : ''} /><span class="switch"></span>` +
             `<span>${t('Verovapaa myynti')} <small>${t('esim. oma asunto, asuttu ≥ 2 v')}</small></span></label>` +
             `<p class="note sale-note" id="pv-sale-note"></p>`;

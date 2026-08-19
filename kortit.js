@@ -599,12 +599,12 @@ function updateAllocUI() {
     const classes = classesOf(state);
     const corrM = pAl.corr ? ensurePSD(corrMatrixOf(classes.length, pAl.corr)).M : null;
     ({ mu, sigma } = portfolioStatsPro(weightsAt(state.ageNow, null, state), classes, corrM, pAl.ter));
-    if (cs > 0) extra = ` · omat luokat ${Math.round(cs)} %`;
+    if (cs > 0) extra = t(' · omat luokat {0} %', Math.round(cs));
   } else {
     $('cashVal').textContent = Math.round(a.c * 100) + ' %';
     ({ mu, sigma } = portfolioStats(a));
   }
-  const txt = `Tuotto-odotus <b>${pctFmt(mu)}/v</b> · heilunta ±${pctFmt(sigma)}${extra}`;
+  const txt = t('Tuotto-odotus <b>{0}/v</b> · heilunta ±{1}{2}', pctFmt(mu), pctFmt(sigma), extra);
   $('allocSummary').innerHTML = txt;
   for (const id of ['allocStocks', 'allocBonds']) {
     const inp = $(id);

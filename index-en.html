@@ -129,11 +129,11 @@
         <div class="row2">
           <label class="field">
             <span class="field-label">Age now</span>
-            <span class="input"><input id="ageNow" type="number" min="0" max="80" step="1" value="30" /><em>v</em></span>
+            <span class="input"><input id="ageNow" type="number" min="0" max="80" step="1" value="30" /><em>y</em></span>
           </label>
           <label class="field">
             <span class="field-label">Plan ends</span>
-            <span class="input"><input id="ageEnd" type="number" min="2" max="105" step="1" value="90" /><em>v</em></span>
+            <span class="input"><input id="ageEnd" type="number" min="2" max="105" step="1" value="90" /><em>y</em></span>
           </label>
         </div>
         <div class="row2">
@@ -143,12 +143,12 @@
           </label>
           <label class="field" id="monthlyField">
             <span class="field-label">Monthly savings</span>
-            <span class="input"><input id="monthly" type="number" min="0" step="50" value="1000" /><em>€/kk</em></span>
+            <span class="input"><input id="monthly" type="number" min="0" step="50" value="1000" /><em>€/mo</em></span>
           </label>
         </div>
         <label class="field field-sub" id="growthField">
           <span class="field-label">Annual savings growth <small>your salary rises → savings grow yearly</small></span>
-          <span class="input"><input id="savingsGrowth" type="number" min="0" max="15" step="0.5" value="1.5" /><em>%/v</em></span>
+          <span class="input"><input id="savingsGrowth" type="number" min="0" max="15" step="0.5" value="1.5" /><em>%/yr</em></span>
         </label>
         <div class="savephase">
           <a href="#" id="savePhaseLink">📈 Stage your savings by life phase <small>a different amount at different ages</small></a>
@@ -167,9 +167,9 @@
           <div class="saver-box" id="saverBox" hidden>
             <div class="row2">
               <label class="field"><span class="field-label">Net income</span>
-                <span class="input"><input id="savIncome" type="number" min="0" step="100" /><em>€/kk</em></span></label>
+                <span class="input"><input id="savIncome" type="number" min="0" step="100" /><em>€/mo</em></span></label>
               <label class="field"><span class="field-label">Expenses</span>
-                <span class="input"><input id="savExpenses" type="number" min="0" step="100" /><em>€/kk</em></span></label>
+                <span class="input"><input id="savExpenses" type="number" min="0" step="100" /><em>€/mo</em></span></label>
             </div>
             <p class="note" id="savNote"></p>
             <button class="btn ghost btn-mini" id="savApply">Use the savings capacity as monthly savings</button>
@@ -212,7 +212,7 @@
         </label>
         <label class="field" id="inflationField" hidden style="margin-top:10px">
           <span class="field-label">Inflation assumption <small>your own estimate</small></span>
-          <span class="input"><input id="inflation" type="number" min="0" max="15" step="0.1" value="2" /><em>%/v</em></span>
+          <span class="input"><input id="inflation" type="number" min="0" max="15" step="0.1" value="2" /><em>%/yr</em></span>
         </label>
         <label class="toggle">
           <input id="tax" type="checkbox" />
@@ -228,11 +228,11 @@
         <p class="acct-note" id="acctNote"></p>
         <div class="row2">
           <label class="field"><span class="field-label">Investment costs <small>fund TERs etc.</small></span>
-            <span class="input"><input id="feePct" type="number" min="0" max="10" step="0.05" value="0" /><em>%/v</em></span></label>
+            <span class="input"><input id="feePct" type="number" min="0" max="10" step="0.05" value="0" /><em>%/yr</em></span></label>
           <label class="field" id="divYieldField"><span class="field-label">Dividend yield <small>0&nbsp;= accumulating funds</small></span>
-            <span class="input"><input id="divYield" type="number" min="0" max="10" step="0.5" value="0" /><em>%/v</em></span></label>
+            <span class="input"><input id="divYield" type="number" min="0" max="10" step="0.5" value="0" /><em>%/yr</em></span></label>
           <label class="field" id="wrapFeeField" hidden><span class="field-label">Wrapper fee <small>the insurance's annual fee</small></span>
-            <span class="input"><input id="wrapFee" type="number" min="0" max="10" step="0.05" value="0" /><em>%/v</em></span></label>
+            <span class="input"><input id="wrapFee" type="number" min="0" max="10" step="0.05" value="0" /><em>%/yr</em></span></label>
         </div>
         <button type="button" class="btn ghost btn-mini" id="acctCompareLink" hidden
           title="The current plan as a book-entry account, saved as a ghost curve — the wrapper's benefit or cost shows as deltas">Compare with a book-entry account</button>
@@ -429,11 +429,11 @@
       <p class="ramp-sub">Three numbers are enough to get going. All calculation happens in your browser — nothing is sent anywhere.</p>
       <div class="ramp-fields">
         <label class="field"><span class="field-label">Your age</span>
-          <span class="input"><input id="rampAge" type="number" min="16" max="80" step="1" inputmode="numeric" placeholder="e.g. 34" /><em>v</em></span></label>
+          <span class="input"><input id="rampAge" type="number" min="16" max="80" step="1" inputmode="numeric" placeholder="e.g. 34" /><em>y</em></span></label>
         <label class="field"><span class="field-label">Investments and savings now</span>
           <span class="input"><input id="rampWealth" type="number" min="0" step="1000" inputmode="numeric" placeholder="e.g. 15 000" /><em>€</em></span></label>
         <label class="field"><span class="field-label">You save per month</span>
-          <span class="input"><input id="rampMonthly" type="number" min="0" step="50" inputmode="numeric" placeholder="e.g. 300" /><em>€/kk</em></span></label>
+          <span class="input"><input id="rampMonthly" type="number" min="0" step="50" inputmode="numeric" placeholder="e.g. 300" /><em>€/mo</em></span></label>
       </div>
       <p class="ramp-err" id="rampErr" hidden>Enter your age (16–80) so the path can be drawn.</p>
       <div class="ramp-acts">
