@@ -66,8 +66,8 @@ const PLAN = {
   const ids = await page.$$eval('.menu button', (bs) => bs.map((b) => b.id));
   // Ryhmitelty valikko (5.8.2026): Toiminnot (vertaile, kierros) → Sivut
   // (tilastot, agentit, tietoa) → Asetukset (teema) → nollaus viimeisenä
-  Q('valikon järjestys: vertaile → kierros → tilastot → agentit → tietoa → teema → nollaus',
-    JSON.stringify(ids) === JSON.stringify(['mi-compare', 'mi-tour', 'mi-analytics', 'mi-agents', 'mi-info', 'mi-theme', 'mi-reset']));
+  Q('valikon järjestys: vertaile → kierros → tilastot → agentit → tietoa → kieli → teema → nollaus',
+    JSON.stringify(ids) === JSON.stringify(['mi-compare', 'mi-tour', 'mi-analytics', 'mi-agents', 'mi-info', 'mi-kieli', 'mi-theme', 'mi-reset']));
   Q('väliotsikot: Toiminnot / Sivut / Asetukset',
     JSON.stringify(await page.$$eval('.menu .msect', (ss) => ss.map((s) => s.textContent))) === JSON.stringify(['Toiminnot', 'Sivut', 'Asetukset']));
   await page.click('#mi-analytics');

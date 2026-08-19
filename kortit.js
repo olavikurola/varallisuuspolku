@@ -25,7 +25,7 @@ function renderStats() {
     v: s.wAtRet != null ? fmtEur(s.wAtRet) : '–',
     va: s.wAtRet != null ? fmtCompact(s.wAtRet) : null, // tiivis arvo kapeaan telakkanäkymään
     cls: 'accent',
-    s: s.retireAge != null ? `${Math.round(s.retireAge)} v iässä` : 'ei eläketapahtumaa',
+    s: s.retireAge != null ? t('{0} v iässä', Math.round(s.retireAge)) : 'ei eläketapahtumaa',
     d: dRow(s.wAtRet, g && g.wAtRet, fmtCompact, 500),
   });
   // Perheen yhteinen onnistuminen: sama markkinahistoria molemmille,
@@ -42,16 +42,16 @@ function renderStats() {
   // velkaa (sijoitukset alarivillä), muuten pelkät sijoitukset
   if (s.hasNet) {
     cards.push({
-      k: `Netto ${Math.round(s.a1)} v iässä`,
+      k: t('Netto {0} v iässä', Math.round(s.a1)),
       v: fmtEur(s.net[s.months]),
       va: fmtCompact(s.net[s.months]),
       cls: 'net',
-      s: `sis. sijoitukset ${fmtCompact(s.wEnd)} · ${state.real ? 'nykyrahassa' : 'nimellisarvoin'}`,
+      s: t('sis. sijoitukset {0} · {1}', fmtCompact(s.wEnd), state.real ? t('nykyrahassa') : t('nimellisarvoin')),
       d: dRow(s.net[s.months], g && (g.net ? g.net[g.months] : g.wEnd), fmtCompact, 500),
     });
   } else {
     cards.push({
-      k: `Sijoitukset ${Math.round(s.a1)} v iässä`,
+      k: t('Sijoitukset {0} v iässä', Math.round(s.a1)),
       v: fmtEur(s.wEnd),
       va: fmtCompact(s.wEnd),
       cls: '',
@@ -64,7 +64,7 @@ function renderStats() {
     v: fmtEur(s.deposits),
     va: fmtCompact(s.deposits),
     cls: '',
-    s: `${fmtEur(state.monthly)}/kk${state.savingsGrowth > 0 ? ` (+${fmtLuku(state.savingsGrowth)} %/v)` : ''} + alkupääoma${s.investedPay > 0.5 ? ` − lainanhoito ${fmtCompact(s.investedPay)}` : ''}`,
+    s: t('{0}/kk{1} + alkupääoma{2}', fmtEur(state.monthly), state.savingsGrowth > 0 ? t(' (+{0} %/v)', fmtLuku(state.savingsGrowth)) : '', s.investedPay > 0.5 ? t(' − lainanhoito {0}', fmtCompact(s.investedPay)) : ''),
   });
   const confTxt = s.conf ? t('{0} % varmuudella', Math.round(s.conf * 100)) : null;
   const p = s.successProb != null ? Math.round(s.successProb * 100) : null;
@@ -93,16 +93,16 @@ function renderStats() {
     const pctMode = pmWd && pmWd.wd.mode === 'pct';
     cards.push({
       k: 'Riittävyys',
-      v: pctMode ? `Tulo alittaa tarpeen ~${Math.round(s.depletionAge)} v` : `Ehtyy ~${Math.round(s.depletionAge)} v`,
+      v: pctMode ? t('Tulo alittaa tarpeen ~{0} v', Math.round(s.depletionAge)) : t('Ehtyy ~{0} v', Math.round(s.depletionAge)),
       cls: 'bad',
       s: pctMode
-        ? [pTxt, 'nosto + työeläke ei kata kuukausitulon tarvetta'].filter(Boolean).join(' · ')
-        : [pTxt, 'kokeile lisätä säästöä'].filter(Boolean).join(' · '),
+        ? [pTxt, t('nosto + työeläke ei kata kuukausitulon tarvetta')].filter(Boolean).join(' · ')
+        : [pTxt, t('kokeile lisätä säästöä')].filter(Boolean).join(' · '),
       d: pDelta,
     });
   } else {
     cards.push({ k: 'Riittävyys', v: 'Varat riittävät ✓', cls: 'ok',
-      s: [`${Math.round(s.a1)} v ikään asti`, pTxt].filter(Boolean).join(' · '), d: pDelta });
+      s: [t('{0} v ikään asti', Math.round(s.a1)), pTxt].filter(Boolean).join(' · '), d: pDelta });
   }
 
   if (s.taxPaid > 0.5) {

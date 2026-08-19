@@ -235,7 +235,7 @@ function renderChart(reuse = false) {
   const lbt = $('legendBandTxt');
   if (lbt) {
     lbt.textContent = sim.pctLo != null && (sim.pctLo !== 10 || sim.pctHi !== 90)
-      ? `Vaihteluväli (P${sim.pctLo}–P${sim.pctHi})` : 'Vaihteluväli';
+      ? t('Vaihteluväli (P{0}–P{1})', sim.pctLo, sim.pctHi) : t('Vaihteluväli');
   }
 
   /* eläkeviiva */

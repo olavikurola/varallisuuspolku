@@ -63,6 +63,9 @@ const VP_LOCALE = VP_KIELI === 'en' ? 'en-GB' : 'fi-FI';
 const VP_YKS_V = VP_KIELI === 'en' ? 'y' : 'v';
 const VP_YKS_KK = VP_KIELI === 'en' ? 'mo' : 'kk';
 const VP_SANASTO = {}; // kieli-en.js täyttää kun VP_KIELI === 'en'
+
+// JS-navigointien sivupari: en-tilassa X.html → X-en.html (staattiset sivut)
+const vpSivu = (nimi) => VP_KIELI === 'en' ? nimi.replace(/\.html$/, '-en.html') : nimi;
 function t(s, ...args) {
   let m = VP_KIELI === 'fi' ? s : (VP_SANASTO[s] || s);
   for (let i = 0; i < args.length; i++) m = m.split('{' + i + '}').join(args[i]);

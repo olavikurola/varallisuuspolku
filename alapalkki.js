@@ -279,7 +279,7 @@
 
   function etusivulle(lippu) {
     try { sessionStorage.setItem(lippu, '1'); } catch (e) {}
-    location.href = './index.html';
+    location.href = vpSivu('./index.html');
   }
   function kotona(fn, lippu) {
     return function () { if (!onIndex) etusivulle(lippu); else fn(); };
@@ -444,9 +444,9 @@
     add('mi-toteuma', 'Toteuma', 'Kirjaa toteutunut varallisuutesi — oletko polulla?',
       kotona(function () { if (window.vpAvaaToteuma) window.vpAvaaToteuma(); }, LIPUT.toteuma));
     add('mi-analytics', 'Tilastot', 'Miten muut suunnittelevat vaurastumista — avoin data',
-      function () { if (onStats) ylos(); else location.href = './analytiikka.html'; });
+      function () { if (onStats) ylos(); else location.href = vpSivu('./analytiikka.html'); });
     add('mi-agents', 'Agentit', 'Kytke oma tekoälyavustajasi laskentamoottoriin (MCP)',
-      function () { location.href = './agentit.html'; });
+      function () { location.href = vpSivu('./agentit.html'); });
     add('mi-info', 'Tietoa palvelusta', 'Oletukset, tietosuoja ja vinkit', kotona(toimTietoa, LIPUT.tietoa));
     add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti yhdeksällä klikkauksella',
       kotona(function () { startTour(); }, LIPUT.kierros));
@@ -651,7 +651,7 @@
 
     var polku = tab('polku', 'Polku', onIndex);
     polku.addEventListener('click', function () {
-      if (!onIndex) { location.href = './index.html'; return; }
+      if (!onIndex) { location.href = vpSivu('./index.html'); return; }
       suljeAvoimet();
       ylos();
     });
@@ -659,7 +659,7 @@
     var tilastot = tab('tilastot', 'Tilastot', onStats);
     tilastot.addEventListener('click', function () {
       if (onStats) { suljeSheet(); if (window.vpSuljeToteuma) window.vpSuljeToteuma(); ylos(); return; }
-      location.href = './analytiikka.html';
+      location.href = vpSivu('./analytiikka.html');
     });
 
     var ai = tab('ai', 'Kysy AI', false);

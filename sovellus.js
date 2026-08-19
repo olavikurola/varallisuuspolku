@@ -447,7 +447,7 @@ function openMoreMenu(anchor) {
     const b = document.createElement('button');
     b.id = id;
     if (danger) b.classList.add('danger');
-    b.innerHTML = `<div>${name}</div><div class="mdesc">${desc}</div>`;
+    b.innerHTML = `<div>${t(name)}</div><div class="mdesc">${t(desc)}</div>`;
     if (fn) b.addEventListener('click', () => { closeMoreMenu(); fn(); });
     menu.appendChild(b);
     return b;
@@ -457,7 +457,7 @@ function openMoreMenu(anchor) {
   const sect = (label) => {
     const s = document.createElement('div');
     s.className = 'msect';
-    s.textContent = label;
+    s.textContent = t(label);
     menu.appendChild(s);
   };
 
@@ -474,13 +474,22 @@ function openMoreMenu(anchor) {
 
   sect('Sivut');
   add('mi-analytics', 'Tilastot', 'Miten muut suunnittelevat vaurastumista — avoin data',
-    () => { location.href = 'analytiikka.html'; });
+    () => { location.href = vpSivu('analytiikka.html'); });
   add('mi-agents', 'Agentit', 'Kytke oma tekoälyavustajasi laskentamoottoriin (MCP)',
-    () => { location.href = 'agentit.html'; });
+    () => { location.href = vpSivu('agentit.html'); });
   add('mi-info', 'Tietoa palvelusta', 'Oletukset, tietosuoja ja vinkit',
     () => { $('infoModal').hidden = false; });
 
   sect('Asetukset');
+  // Kielivalitsin KOHDEKIELELLÄ (en-puhuja löytää sen fi-valikosta) — siksi
+  // VP_KIELI-haara eikä t(); navigoi sivupariin, kieli.js hoitaa loput
+  add('mi-kieli',
+    VP_KIELI === 'en' ? 'Suomeksi' : 'In English',
+    VP_KIELI === 'en' ? 'Vaihda kieli suomeksi' : 'Switch the language to English',
+    () => {
+      try { localStorage.setItem('vp-kieli', VP_KIELI === 'en' ? 'fi' : 'en'); } catch (e) {}
+      location.href = VP_KIELI === 'en' ? './' : 'index-en.html';
+    });
   add('mi-theme',
     isLightTheme() ? 'Tumma teema' : 'Vaalea teema',
     'Vaihda värimaailma — valinta muistetaan',
@@ -495,7 +504,7 @@ function openMoreMenu(anchor) {
     }
     reset.dataset.armed = '1';
     reset.classList.add('armed-item');
-    reset.querySelector('div').textContent = 'Vahvista nollaus';
+    reset.querySelector('div').textContent = t('Vahvista nollaus');
     setTimeout(() => {
       if (!reset.isConnected) return;
       delete reset.dataset.armed;
