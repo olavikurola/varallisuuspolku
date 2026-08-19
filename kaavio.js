@@ -360,9 +360,13 @@ function updateCrosshair(px, localY) {
   const x = scaleX(age);
   const yearNow = new Date().getFullYear();
 
-  hoverLine.setAttribute('x1', x); hoverLine.setAttribute('x2', x); hoverLine.setAttribute('opacity', 1);
+  // Kohdistin näkyy molemmissa kaavioissa (sama ikä ohjaa tooltippiä ja
+  // jakaumaa), mutta ei-osoitettu kaavio himmeämpänä — hierarkia kertoo mitä
+  // osoitetaan. localY tulee vain pääkaavion overlaylta, tase antaa nullin.
+  const balAct = localY == null;
+  hoverLine.setAttribute('x1', x); hoverLine.setAttribute('x2', x); hoverLine.setAttribute('opacity', balAct ? 0.45 : 1);
   hoverDot.setAttribute('cx', x); hoverDot.setAttribute('cy', scaleY(sim.exp[m])); hoverDot.setAttribute('opacity', 1);
-  if (balHoverLine) { balHoverLine.setAttribute('x1', x); balHoverLine.setAttribute('x2', x); balHoverLine.setAttribute('opacity', 1); }
+  if (balHoverLine) { balHoverLine.setAttribute('x1', x); balHoverLine.setAttribute('x2', x); balHoverLine.setAttribute('opacity', balAct ? 1 : 0.45); }
 
   // Vertailu päällä: haamun arvo ja ero tässä iässä — "milloin ero syntyy"
   // löytyy liu'uttamalla

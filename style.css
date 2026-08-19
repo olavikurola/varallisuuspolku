@@ -486,6 +486,12 @@ input[type="range"]::-moz-range-thumb {
 
 #chart { display: block; width: 100%; height: 100%; }
 
+/* Kosketus: vaakaveto kaavioiden päällä ohjaa ikäkohdistinta — ilman tätä
+   selain kaappaa eleen scrolliksi ja pointercancel katkoo hoverin pätkiväksi.
+   Pystyveto vierittää sivua edelleen ja nipistyszoomi säilyy; piirtotilassa
+   wrapin touch-action: none voittaa (efektiivinen arvo on leikkaus). */
+#chart, #balanceChart { touch-action: pan-y pinch-zoom; }
+
 .axis-text { font-size: 11.5px; fill: var(--text-dim); font-family: inherit; }
 .axis-year { font-size: 10px; fill: var(--text-faint); }
 .grid-line { stroke: rgba(148, 168, 220, 0.07); }
