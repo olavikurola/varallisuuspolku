@@ -509,7 +509,7 @@ function openMoreMenu(anchor) {
       if (!reset.isConnected) return;
       delete reset.dataset.armed;
       reset.classList.remove('armed-item');
-      reset.querySelector('div').textContent = 'Nollaa suunnitelma';
+      reset.querySelector('div').textContent = t('Nollaa suunnitelma');
     }, 3000);
   });
 
@@ -844,7 +844,7 @@ async function copyShareUrl(btn) {
     btn.textContent = 'Kopioitu ✓';
     setTimeout(() => { btn.textContent = orig; }, 1600);
   } catch (e) {
-    prompt('Kopioi linkki:', url);
+    prompt(t('Kopioi linkki:'), url);
   }
 }
 
@@ -1648,7 +1648,7 @@ function openPlanMenu(btn, p, rowEl) {
     b.type = 'button';
     b.dataset.act = act; // rakenteellinen kahva (testit, ei kielisidontaa)
     if (cls) b.className = cls;
-    b.textContent = label;
+    b.textContent = t(label); // nielukäärintä: rivinimet kääntyvät, kutsupaikat pysyvät suomena
     b.addEventListener('click', () => { closePlanMenu(); fn(); });
     menu.appendChild(b);
   };
@@ -1660,7 +1660,7 @@ function openPlanMenu(btn, p, rowEl) {
   add('jaa-linkki', 'Jaa linkkinä', async () => {
     const url = planShareUrl(p);
     try { await navigator.clipboard.writeText(url); toast('Linkki kopioitu — koko suunnitelma kulkee linkissä'); }
-    catch (e) { window.prompt('Kopioi linkki', url); }
+    catch (e) { window.prompt(t('Kopioi linkki'), url); }
     track('Jakolinkki luotu', { tyyppi: p.family && p.family.persons && p.family.persons.length > 1 ? 'perhe' : 'oma' });
   });
   add('jaa-kuva', 'Jaa tuloskuvana', () => {

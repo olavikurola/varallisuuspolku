@@ -341,7 +341,7 @@
   const handle = document.createElement('button');
   handle.className = 'tk-handle';
   handle.type = 'button';
-  handle.textContent = '✦ Kysy AI';
+  handle.textContent = t('✦ Kysy AI');
   handle.title = 'Tulkki — kysy suunnitelmastasi';
   // Hiljainen katsastusmerkki: ei sykettä, ei ääntä (kunnioittaa tyyntä ilmettä)
   const badge = document.createElement('i');

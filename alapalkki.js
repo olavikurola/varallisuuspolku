@@ -387,7 +387,7 @@
     menu.className = 'menu';
     var otsikko = document.createElement('div');
     otsikko.className = 'vp-sivuotsikko';
-    otsikko.textContent = 'Lisää';
+    otsikko.textContent = t('Lisää');
     menu.appendChild(otsikko);
 
     /* Kaksijako (Olavin jäsennys 8.8.): SIVUT = navigointi, ASETUKSET =
@@ -494,12 +494,12 @@
         if (b.dataset.armed) { nollaaAktiivinen(); return; }
         b.dataset.armed = '1';
         b.classList.add('armed-item');
-        b.querySelector('div').textContent = 'Vahvista nollaus';
+        b.querySelector('div').textContent = t('Vahvista nollaus');
         setTimeout(function () {
           if (!b.isConnected) return;
           delete b.dataset.armed;
           b.classList.remove('armed-item');
-          b.querySelector('div').textContent = 'Nollaa suunnitelma';
+          b.querySelector('div').textContent = t('Nollaa suunnitelma');
         }, 3000);
       }, { danger: true, pysy: true });
 

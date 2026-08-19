@@ -10,7 +10,7 @@
 
 function announce(msg) {
   const el = $('ariaLive');
-  if (el) { el.textContent = ''; el.textContent = msg; }
+  if (el) { el.textContent = ''; el.textContent = t(msg); } // nielukäärintä: staattiset viestit kääntyvät, valmiiksi käännetyt palautuvat sellaisinaan
 }
 
 // Kerroksittainen Esc piirtotilassa — palauttaa true jos kerros purettiin:

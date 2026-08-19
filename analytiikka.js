@@ -134,7 +134,7 @@ function markYou(containerId, glyph) {
   if (!h || h.querySelector('.an-youchip')) return;
   const s = document.createElement('span');
   s.className = 'an-youchip';
-  s.textContent = `${glyph} sinä`;
+  s.textContent = `${glyph} ${t('sinä')}`;
   h.appendChild(s);
 }
 
@@ -234,7 +234,7 @@ function renderHistCols(containerId, h, opts) {
     const mx = xOf(o.med);
     el('line', { x1: mx, y1: t, x2: mx, y2: base, stroke: '#2dd4bf', 'stroke-width': 2, 'stroke-dasharray': '3 4' }, svg);
     const right = mx > l + (W - l - r) * 0.72; // nimiö kääntyy vasemmalle oikeassa reunassa
-    text(svg, right ? mx - 6 : mx + 6, t + 11, `med. ${fmt(o.med)}`, 'an-tick-strong', right ? 'end' : 'start');
+    text(svg, right ? mx - 6 : mx + 6, t + 11, window.t('med. {0}', fmt(o.med)), 'an-tick-strong', right ? 'end' : 'start');
   }
   // Oma merkki oman lokeron pylvään päälle — ei irralleen yläreunaan
   if (o.meVal != null) {
@@ -250,7 +250,7 @@ function renderHistCols(containerId, h, opts) {
     const i = Math.floor((x - l) / bw);
     if (i < 0 || i >= nB || !counts[i]) return null;
     return {
-      html: `<b>${fmt(edges[i])} – ${fmt(edges[i + 1])}</b><br>${counts[i]} suunnitelmaa · ${Math.round((counts[i] / total) * 100)} %`,
+      html: `<b>${fmt(edges[i])} – ${fmt(edges[i + 1])}</b><br>${window.t('{0} suunnitelmaa · {1} %', counts[i], Math.round((counts[i] / total) * 100))}`,
       x: xEdge(i) + bw / 2, y1: t, y2: base,
     };
   });
@@ -268,7 +268,7 @@ function histFallback(containerId, stats, key, meVal, fmt, dims) {
   if (!ah) return false;
   renderHistCols(containerId, ah, Object.assign(
     { fmt, med: all[key] && all[key].p50, meVal, labelEdges: LABEL_EDGES[key] }, dims));
-  setSmall(containerId, `kaikki jakajat · n = ${all.n}`);
+  setSmall(containerId, t('kaikki jakajat · n = {0}', all.n));
   return true;
 }
 
@@ -320,7 +320,7 @@ function renderHero(stats, me) {
     const n = stats.groups[best.p.g] && stats.groups[best.p.g].n;
     const q = best.p.q;
     return {
-      html: `<b>${best.p.g} v</b>${n ? ` · n = ${n}` : ''}<br>P75 ${fmtCompact(q.p75)}<br>Mediaani <b>${fmtCompact(q.p50)}</b><br>P25 ${fmtCompact(q.p25)}`,
+      html: `<b>${window.t('{0} v', best.p.g)}</b>${n ? ` · n = ${n}` : ''}<br>P75 ${fmtCompact(q.p75)}<br>${window.t('Mediaani')} <b>${fmtCompact(q.p50)}</b><br>P25 ${fmtCompact(q.p25)}`,
       x: X(best.p.cx), y1: t, y2: H - b,
     };
   });
@@ -337,7 +337,7 @@ function renderRidgeline(stats, me) {
   const X = (age) => l + ((age - 18) / (81 - 18)) * (W - l - r);
   for (let a = 20; a <= 80; a += 10) {
     el('line', { x1: X(a), y1: headH, x2: X(a), y2: H - 24, class: 'grid-line-x' }, svg);
-    text(svg, X(a), H - 8, a + ' v', 'an-tick', 'middle');
+    text(svg, X(a), H - 8, a + ' ' + VP_YKS_V, 'an-tick', 'middle');
   }
   rows.forEach((type, i) => {
     const d = stats.eventAges[type];
@@ -358,8 +358,8 @@ function renderRidgeline(stats, me) {
     path += ` Q ${prev.x.toFixed(1)},${prev.y.toFixed(1)} ${X(d.edges[d.edges.length - 1]).toFixed(1)},${base}`;
     el('path', { d: path + ' Z', fill: `rgba(45,212,191,${0.28 - i * 0.012})`, stroke: 'rgba(45,212,191,0.6)', 'stroke-width': 1.4 }, svg);
     el('line', { x1: l, y1: base, x2: W - r, y2: base, stroke: 'rgba(148,168,220,0.12)' }, svg);
-    text(svg, 12, base - 6, `${ICONS[type]} ${LABELS[type]}`, 'an-row-label');
-    text(svg, W - r + 8, base - 6, `med. ${Math.round(d.p50)} v`, 'an-tick');
+    text(svg, 12, base - 6, `${ICONS[type]} ${t(LABELS[type])}`, 'an-row-label');
+    text(svg, W - r + 8, base - 6, t('med. {0} v', Math.round(d.p50)), 'an-tick');
     if (me) {
       const mine = type === 'retirement' ? me.ret : me.events.find((e) => e.type === type);
       if (mine) {
@@ -376,13 +376,13 @@ function renderRidgeline(stats, me) {
     for (let k = 0; k < d.counts.length; k++) {
       if (x >= X(d.edges[k]) && x < X(d.edges[k + 1]) && d.counts[k] > 0) {
         return {
-          html: `${ICONS[type]} <b>${LABELS[type]}</b> · med. ${Math.round(d.p50)} v<br>` +
-            `${d.edges[k]}–${d.edges[k + 1]} v: ${Math.round((d.counts[k] / tot) * 100)} % suunnitelmista`,
+          html: `${ICONS[type]} <b>${t(LABELS[type])}</b> · ${t('med. {0} v', Math.round(d.p50))}<br>` +
+            t('{0}–{1} v: {2} % suunnitelmista', d.edges[k], d.edges[k + 1], Math.round((d.counts[k] / tot) * 100)),
           x: (X(d.edges[k]) + X(d.edges[k + 1])) / 2, y1: headH, y2: H - 24,
         };
       }
     }
-    return `${ICONS[type]} <b>${LABELS[type]}</b> · mediaani ${Math.round(d.p50)} v`;
+    return `${ICONS[type]} <b>${t(LABELS[type])}</b> · ${t('mediaani {0} v', Math.round(d.p50))}`;
   });
 }
 
@@ -434,7 +434,7 @@ function renderQuartCols(containerId, stats, key, me, meVal, fmt, refFn, vCap) {
     const n = stats.groups[best.p.g] && stats.groups[best.p.g].n;
     const q = best.p.q;
     return {
-      html: `<b>${best.p.g} v</b>${n ? ` · n = ${n}` : ''}<br>P75 ${fmt(q.p75)}<br>Mediaani <b>${fmt(q.p50)}</b><br>P25 ${fmt(q.p25)}`,
+      html: `<b>${window.t('{0} v', best.p.g)}</b>${n ? ` · n = ${n}` : ''}<br>P75 ${fmt(q.p75)}<br>${window.t('Mediaani')} <b>${fmt(q.p50)}</b><br>P25 ${fmt(q.p25)}`,
       x: X(best.p.i), y1: t, y2: H - b,
     };
   });
@@ -458,7 +458,7 @@ function renderRetireHist(stats, me) {
     const x0 = X(h.edges[i]), x1 = X(h.edges[i + 1]);
     histBar(svg, x0 + 1, Y(c), Math.max(2, x1 - x0 - 2), H - b, histBarFill(svg));
   });
-  for (let a = 40; a <= 80; a += 10) text(svg, X(a), H - 10, a + ' v', 'an-tick', 'middle');
+  for (let a = 40; a <= 80; a += 10) text(svg, X(a), H - 10, a + ' ' + VP_YKS_V, 'an-tick', 'middle');
   if (g.retireAge) {
     el('line', { x1: X(g.retireAge.p50), y1: t, x2: X(g.retireAge.p50), y2: H - b, stroke: '#2dd4bf', 'stroke-width': 2, 'stroke-dasharray': '3 4' }, svg);
   }
@@ -476,7 +476,7 @@ function renderRetireHist(stats, me) {
     for (let i = 0; i < h.counts.length; i++) {
       if (x >= X(h.edges[i]) && x < X(h.edges[i + 1]) && h.counts[i] > 0) {
         return {
-          html: `<b>Eläkeikä ${h.edges[i]}–${h.edges[i + 1]} v</b><br>${h.counts[i]} suunnitelmaa · ${Math.round((h.counts[i] / totalC) * 100)} %`,
+          html: `<b>${window.t('Eläkeikä {0}–{1} v', h.edges[i], h.edges[i + 1])}</b><br>${window.t('{0} suunnitelmaa · {1} %', h.counts[i], Math.round((h.counts[i] / totalC) * 100))}`,
           x: (X(h.edges[i]) + X(h.edges[i + 1])) / 2, y1: t, y2: H - b,
         };
       }
@@ -497,11 +497,11 @@ function renderPenCoverage(stats, me) {
   for (const r of rows) {
     const pct = Math.round(r.s.p50 * 100);
     const mine = me && me.group === r.g ? ' mine' : '';
-    html += `<div class="an-cov-row${mine}"><span class="cg">${r.g}</span>` +
+    html += `<div class="an-cov-row${mine}"><span class="cg">${t(r.g)}</span>` +
       `<span class="cbar"><i style="width:${pct}%"></i></span>` +
-      `<span class="cpct">${pct} % työeläke</span></div>`;
+      `<span class="cpct">${t('{0} % työeläke', pct)}</span></div>`;
   }
-  html += '</div><p class="an-note" style="margin-top:8px">Mediaani: työeläkkeen osuus eläkeajan kuukausitulosta — loput katetaan sijoituksista.</p>';
+  html += `</div><p class="an-note" style="margin-top:8px">${t('Mediaani: työeläkkeen osuus eläkeajan kuukausitulosta — loput katetaan sijoituksista.')}</p>`;
   $('penCoverage').innerHTML = html;
 }
 
@@ -513,7 +513,7 @@ function renderDonut(containerId, slicesIn, note) {
   const totalV = slices.reduce((s, x) => s + x.v, 0);
   if (Math.max(...slices.map((s) => s.v)) / totalV >= 0.9) {
     $(containerId).innerHTML = slices.map((s) =>
-      `<div class="an-share"><span class="k">${s.l}</span>` +
+      `<div class="an-share"><span class="k">${t(s.l)}</span>` +
       `<span class="sbar"><i style="width:${Math.round((s.v / totalV) * 100)}%"></i></span>` +
       `<b>${Math.round((s.v / totalV) * 100)} %</b></div>`).join('');
     return;
@@ -534,7 +534,7 @@ function renderDonut(containerId, slicesIn, note) {
   }
   slices.forEach((s, i) => {
     el('rect', { x: 158, y: 22 + i * 26, width: 11, height: 11, rx: 3, fill: s.c }, svg);
-    text(svg, 176, 32 + i * 26, `${s.l} ${Math.round((s.v / total) * 100)} %`, 'an-tick-strong');
+    text(svg, 176, 32 + i * 26, `${t(s.l)} ${Math.round((s.v / total) * 100)} %`, 'an-tick-strong');
   });
   if (note) text(svg, cx, cy + 4, note, 'an-tick', 'middle');
   // kulma → siivu (ei elementtikohtaisia kuuntelijoita — klooni perii resolverin)
@@ -547,7 +547,7 @@ function renderDonut(containerId, slicesIn, note) {
     let ang = Math.atan2(y - cy, x - cx);
     if (ang < -Math.PI / 2) ang += Math.PI * 2; // normalisoi alkamaan kello 12:sta
     const hit = arcs.find((a) => ang >= a.a0 && ang < a.a1);
-    return hit ? `<b>${hit.s.l}</b> · ${Math.round((hit.s.v / total) * 100)} %` : null;
+    return hit ? `<b>${t(hit.s.l)}</b> · ${Math.round((hit.s.v / total) * 100)} %` : null;
   });
 }
 
@@ -561,10 +561,12 @@ function renderEventRank(stats, me) {
     .sort((a, b) => b[1] - a[1]).slice(0, 8);
   if (!rows.length) return empty('eventRank', 'Kertyy vielä.');
   $('eventRank').innerHTML = rows.map(([t, v]) => {
-    const mine = me && me.events.some((e) => e.type === t) ? ' <span class="you">sinullakin ✓</span>' : '';
-    return `<div class="an-share"><span class="k">${ICONS[t]} ${LABELS[t]}${mine}</span>` +
+    const mine = me && me.events.some((e) => e.type === t) ? ` <span class="you">${window.t('sinullakin ✓')}</span>` : '';
+    return `<div class="an-share"><span class="k">${ICONS[t]} ${window.t(LABELS[t])}${mine}</span>` +
       `<span class="sbar"><i style="width:${Math.round(v * 100)}%"></i></span><b>${Math.round(v * 100)} %</b></div>`;
-  }).join('') + `<p class="an-note" style="margin-top:10px">Osuus suunnitelmista${g !== stats.groups.all ? ` ikäryhmässä ${me.group}` : ''}, joissa tapahtuma on mukana (n = ${g.n}).</p>`;
+  }).join('') + `<p class="an-note" style="margin-top:10px">${g !== stats.groups.all
+    ? t('Osuus suunnitelmista ikäryhmässä {0}, joissa tapahtuma on mukana (n = {1}).', me.group, g.n)
+    : t('Osuus suunnitelmista, joissa tapahtuma on mukana (n = {0}).', g.n)}</p>`;
 }
 
 // Eläkeajan talous: tulotarve, työeläke ja varallisuus eläkkeelle jäädessä
@@ -572,18 +574,20 @@ function renderRetirePlan(stats, me) {
   const g = (me && me.group && stats.groups[me.group] && stats.groups[me.group].withdrawal)
     ? stats.groups[me.group] : stats.groups.all;
   if (!g || (!g.withdrawal && !g.wAtRet)) return empty('retirePlan', needMsg(stats.total, stats.kAnon));
-  const eurKk = (v) => fmtLuku(Math.round(v)) + ' €/kk';
+  const eurKk = (v) => fmtLuku(Math.round(v)) + ' €/' + VP_YKS_KK;
   const row = (k, q, fmt, mine) =>
     `<div class="an-hl-row"><span class="k">${k}</span><b>${fmt(q.p50)}</b>` +
-    `<span class="rng">P25–P75: ${fmt(q.p25)} – ${fmt(q.p75)}</span>` +
-    (mine != null ? `<span class="you">sinä: ${fmt(mine)}</span>` : '') + `</div>`;
+    `<span class="rng">${t('P25–P75: {0} – {1}', fmt(q.p25), fmt(q.p75))}</span>` +
+    (mine != null ? `<span class="you">${t('sinä: {0}', fmt(mine))}</span>` : '') + `</div>`;
   let html = '';
-  if (g.withdrawal) html += row('Kuukausitulon tarve eläkkeellä', g.withdrawal, eurKk, me && me.ret ? me.ret.withdrawal : null);
-  if (g.pension) html += row('Työeläkeoletus', g.pension, eurKk, me && me.ret && me.ret.pension > 0 ? me.ret.pension : null);
-  if (g.wAtRet) html += row('Varallisuus eläkkeelle jäädessä', g.wAtRet, fmtCompact, null);
+  if (g.withdrawal) html += row(t('Kuukausitulon tarve eläkkeellä'), g.withdrawal, eurKk, me && me.ret ? me.ret.withdrawal : null);
+  if (g.pension) html += row(t('Työeläkeoletus'), g.pension, eurKk, me && me.ret && me.ret.pension > 0 ? me.ret.pension : null);
+  if (g.wAtRet) html += row(t('Varallisuus eläkkeelle jäädessä'), g.wAtRet, fmtCompact, null);
   $('retirePlan').innerHTML = html +
-    `<p class="an-note" style="margin-top:10px">Mediaani ja P25–P75 ${g === stats.groups.all ? 'kaikista jakajista' : `ikäryhmästä ${me.group}`} (n = ${g.n}). ` +
-    `Varallisuus eläkkeellä on laskentamoottorin tulos kunkin suunnitelman omilla oletuksilla.</p>`;
+    `<p class="an-note" style="margin-top:10px">${g === stats.groups.all
+      ? t('Mediaani ja P25–P75 kaikista jakajista (n = {0}).', g.n)
+      : t('Mediaani ja P25–P75 ikäryhmästä {0} (n = {1}).', me.group, g.n)} ` +
+    `${t('Varallisuus eläkkeellä on laskentamoottorin tulos kunkin suunnitelman omilla oletuksilla.')}</p>`;
 }
 
 // Asuntolaina: tunnuslukurivit
@@ -594,14 +598,14 @@ function renderHomeLoan(stats, me) {
   const myHome = me && me.events.find((e) => e.type === 'home' && e.financing === 'loan');
   const row = (k, q, fmt, mine) =>
     `<div class="an-hl-row"><span class="k">${k}</span><b>${fmt(q.p50)}</b>` +
-    `<span class="rng">P25–P75: ${fmt(q.p25)} – ${fmt(q.p75)}</span>` +
-    (mine != null ? `<span class="you">sinä: ${fmt(mine)}</span>` : '') + `</div>`;
+    `<span class="rng">${t('P25–P75: {0} – {1}', fmt(q.p25), fmt(q.p75))}</span>` +
+    (mine != null ? `<span class="you">${t('sinä: {0}', fmt(mine))}</span>` : '') + `</div>`;
   $('homeLoan').innerHTML =
-    row('Asunnon hinta', hl.price, fmtCompact, myHome ? -myHome.amount : null) +
-    (hl.downShare ? row('Käsirahan osuus', hl.downShare, pct, myHome && myHome.down != null ? myHome.down / -myHome.amount : null) : '') +
-    (hl.years ? row('Laina-aika', hl.years, (v) => Math.round(v) + ' v', myHome ? myHome.years : null) : '') +
-    (hl.rate ? row('Korko-oletus', hl.rate, (v) => fmtLuku(v, { maximumFractionDigits: 1 }) + ' %', myHome ? myHome.rate : null) : '') +
-    `<p class="an-note" style="margin-top:10px">Suunnitelmien asunnonostot lainalla (n = ${hl.n}).</p>`;
+    row(t('Asunnon hinta'), hl.price, fmtCompact, myHome ? -myHome.amount : null) +
+    (hl.downShare ? row(t('Käsirahan osuus'), hl.downShare, pct, myHome && myHome.down != null ? myHome.down / -myHome.amount : null) : '') +
+    (hl.years ? row(t('Laina-aika'), hl.years, (v) => Math.round(v) + ' ' + VP_YKS_V, myHome ? myHome.years : null) : '') +
+    (hl.rate ? row(t('Korko-oletus'), hl.rate, (v) => fmtLuku(v, { maximumFractionDigits: 1 }) + ' %', myHome ? myHome.rate : null) : '') +
+    `<p class="an-note" style="margin-top:10px">${t('Suunnitelmien asunnonostot lainalla (n = {0}).', hl.n)}</p>`;
 }
 
 // Jo omistettu varallisuus: omistusaste + arvo/laina-kvartiilit (own*-tyypit)
@@ -615,13 +619,13 @@ function renderOwned(stats, me) {
     (you ? `<span class="you">${you}</span>` : '') + `</div>`;
   const row = (k, q, fmt, mineV) =>
     `<div class="an-hl-row"><span class="k">${k}</span><b>${fmt(q.p50)}</b>` +
-    `<span class="rng">P25–P75: ${fmt(q.p25)} – ${fmt(q.p75)}</span>` +
-    (mineV != null ? `<span class="you">sinä: ${fmt(mineV)}</span>` : '') + `</div>`;
-  let html = bar('Suunnitelmassa jo omistettua', ow.share, mine && mine.length ? 'sinäkin ✓' : '');
-  if (ow.debtShare != null) html += bar('Omistuksissa lainaa jäljellä', ow.debtShare);
-  if (ow.value) html += row('Omistuksen nykyarvo', ow.value, fmtCompact, mine && mine.length ? -mine[0].amount : null);
-  if (ow.loanLeft) html += row('Lainaa jäljellä', ow.loanLeft, fmtCompact, mine && mine.length && (mine[0].loanLeft || 0) > 0 ? mine[0].loanLeft : null);
-  html += `<p class="an-note" style="margin-top:10px">Jo omistettu asunto, sijoitusasunto tai mökki nykyarvoon (n = ${ow.n} suunnitelmaa). Uusi tapahtumatyyppi 25.7.2026 alkaen — jakaumat täydentyvät datan karttuessa.</p>`;
+    `<span class="rng">${t('P25–P75: {0} – {1}', fmt(q.p25), fmt(q.p75))}</span>` +
+    (mineV != null ? `<span class="you">${t('sinä: {0}', fmt(mineV))}</span>` : '') + `</div>`;
+  let html = bar(t('Suunnitelmassa jo omistettua'), ow.share, mine && mine.length ? t('sinäkin ✓') : '');
+  if (ow.debtShare != null) html += bar(t('Omistuksissa lainaa jäljellä'), ow.debtShare);
+  if (ow.value) html += row(t('Omistuksen nykyarvo'), ow.value, fmtCompact, mine && mine.length ? -mine[0].amount : null);
+  if (ow.loanLeft) html += row(t('Lainaa jäljellä'), ow.loanLeft, fmtCompact, mine && mine.length && (mine[0].loanLeft || 0) > 0 ? mine[0].loanLeft : null);
+  html += `<p class="an-note" style="margin-top:10px">${t('Jo omistettu asunto, sijoitusasunto tai mökki nykyarvoon (n = {0} suunnitelmaa). Uusi tapahtumatyyppi {1} alkaen — jakaumat täydentyvät datan karttuessa.', ow.n, '25.7.2026')}</p>`;
   $('ownedCard').innerHTML = html;
 }
 
@@ -632,15 +636,16 @@ function renderRealism(stats, me) {
   if (!g || !g.shares) return empty('realism', needMsg(stats.total, stats.kAnon));
   const bar = (k, v) =>
     `<div class="an-share"><span class="k">${k}</span><span class="sbar"><i style="width:${Math.round(v * 100)}%"></i></span><b>${Math.round(v * 100)} %</b></div>`;
-  let html = bar('Myyntivoittovero mallinnettu', g.shares.tax) +
-    bar('Ikäsidonnainen allokaatio', g.shares.glide) +
-    bar('Inflaatiokorjaus käytössä', g.shares.real);
+  let html = bar(t('Myyntivoittovero mallinnettu'), g.shares.tax) +
+    bar(t('Ikäsidonnainen allokaatio'), g.shares.glide) +
+    bar(t('Inflaatiokorjaus käytössä'), g.shares.real);
   if (g.successProb) {
-    html += `<div class="an-hl-row" style="margin-top:12px"><span class="k">Onnistumistodennäköisyys</span>` +
+    html += `<div class="an-hl-row" style="margin-top:12px"><span class="k">${t('Onnistumistodennäköisyys')}</span>` +
       `<b>${Math.round(g.successProb.p50 * 100)} %</b>` +
-      `<span class="rng">P25–P75: ${Math.round(g.successProb.p25 * 100)}–${Math.round(g.successProb.p75 * 100)} %</span></div>`;
+      `<span class="rng">${t('P25–P75: {0}–{1} %', Math.round(g.successProb.p25 * 100), Math.round(g.successProb.p75 * 100))}</span></div>`;
   }
-  $('realism').innerHTML = html + `<p class="an-note" style="margin-top:10px">Osuus suunnitelmista${me && me.group && g !== stats.groups.all ? ` ikäryhmässä ${me.group}` : ''}.</p>`;
+  $('realism').innerHTML = html + `<p class="an-note" style="margin-top:10px">${me && me.group && g !== stats.groups.all
+    ? t('Osuus suunnitelmista ikäryhmässä {0}.', me.group) : t('Osuus suunnitelmista.')}</p>`;
 }
 
 // Kertymä-sparkline
@@ -652,9 +657,9 @@ function renderTimeline(stats) {
   if (tl.length < 3) {
     const since = fmtPvm(new Date(tl[0].m + '-01T00:00:00'), { month: 'long', year: 'numeric' });
     $('timeline').innerHTML =
-      `<div class="an-hl-row"><span class="k">Jaettuja suunnitelmia yhteensä</span><b>${stats.total}</b>` +
-      `<span class="rng">alkaen ${since}</span></div>` +
-      `<p class="an-note" style="margin-top:8px">Kuukausittainen kertymäkäyrä piirtyy, kun kuukausia on useampi.</p>`;
+      `<div class="an-hl-row"><span class="k">${window.t('Jaettuja suunnitelmia yhteensä')}</span><b>${stats.total}</b>` +
+      `<span class="rng">${window.t('alkaen {0}', since)}</span></div>` +
+      `<p class="an-note" style="margin-top:8px">${window.t('Kuukausittainen kertymäkäyrä piirtyy, kun kuukausia on useampi.')}</p>`;
     return;
   }
   const W = 470, H = 110, l = 8, r = 8, t = 10, b = 24;
@@ -666,12 +671,12 @@ function renderTimeline(stats) {
     el('rect', { x: l + i * bw + 2, y: H - b - h, width: Math.max(3, bw - 4), height: h, rx: 3, fill: 'rgba(139,124,246,0.65)' }, svg);
     if (i === 0 || i === tl.length - 1) text(svg, l + i * bw + bw / 2, H - 8, x.m, 'an-tick', 'middle');
   });
-  text(svg, W - r, t + 6, `yht. ${stats.total}`, 'an-tick-strong', 'end');
+  text(svg, W - r, t + 6, window.t('yht. {0}', stats.total), 'an-tick-strong', 'end');
   attachHover(svg, (x) => {
     const i = Math.floor((x - l) / bw);
     if (i < 0 || i >= tl.length) return null;
     return {
-      html: `<b>${tl[i].m}</b> · ${tl[i].n} jaettua suunnitelmaa`,
+      html: `<b>${tl[i].m}</b> · ${window.t('{0} jaettua suunnitelmaa', tl[i].n)}`,
       x: l + i * bw + bw / 2, y1: t, y2: H - b,
     };
   });
@@ -692,18 +697,15 @@ function renderGate(me) {
   const lock = document.createElement('div');
   lock.className = 'an-lock';
   lock.innerHTML = me
-    ? `<div class="an-lock-card"><div class="ic">🗺️</div><h2>Melkein valmista</h2>
-       <p>Sinulla on jo oma suunnitelma. Tilastot aukeavat, kun jaat sen
-       <b>anonyymisti</b> — näet ensin täsmälleen mitä jaetaan, eikä se velvoita mihinkään.</p>
-       <a class="btn" href="./#yhteenveto">Avaa Suunnitelmani ja jaa →</a>
-       <p class="small">Ei tunnisteita · summat pyöristetään · jakaumat julkaistaan vasta
-       ≥ 30 suunnitelman ryhmistä · aggregaatit ovat avointa dataa:
+    ? `<div class="an-lock-card"><div class="ic">🗺️</div><h2>${t('Melkein valmista')}</h2>
+       <p>${t('Sinulla on jo oma suunnitelma. Tilastot aukeavat, kun jaat sen <b>anonyymisti</b> — näet ensin täsmälleen mitä jaetaan, eikä se velvoita mihinkään.')}</p>
+       <a class="btn" href="./#yhteenveto">${t('Avaa Suunnitelmani ja jaa →')}</a>
+       <p class="small">${t('Ei tunnisteita · summat pyöristetään · jakaumat julkaistaan vasta ≥ 30 suunnitelman ryhmistä · aggregaatit ovat avointa dataa:')}
        <a href="${DATA_API}/stats.json" target="_blank" rel="noopener">stats.json</a></p></div>`
-    : `<div class="an-lock-card"><div class="ic">📊</div><h2>Tilastot — miten muut suunnittelevat vaurastumista</h2>
-       <p>Tämä näkymä kertoo, miten eri ikäiset suunnittelevat talouttaan ja etenevät
-       vaurastumisen matkalla. Tilastot aukeavat, kun sinullakin on <b>oma suunnitelma</b>.</p>
-       <a class="btn" href="./">Tee oma suunnitelma →</a>
-       <p class="small">Vie pari minuuttia — suunnitelmasi pysyy ${(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ? 'omalla laitteellasi' : 'omassa selaimessasi'}.</p></div>`;
+    : `<div class="an-lock-card"><div class="ic">📊</div><h2>${t('Tilastot — miten muut suunnittelevat vaurastumista')}</h2>
+       <p>${t('Tämä näkymä kertoo, miten eri ikäiset suunnittelevat talouttaan ja etenevät vaurastumisen matkalla. Tilastot aukeavat, kun sinullakin on <b>oma suunnitelma</b>.')}</p>
+       <a class="btn" href="./">${t('Tee oma suunnitelma →')}</a>
+       <p class="small">${t('Vie pari minuuttia — suunnitelmasi pysyy {0}.', (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ? t('omalla laitteellasi') : t('omassa selaimessasi'))}</p></div>`;
   document.body.appendChild(lock);
   return true;
 }
@@ -719,8 +721,8 @@ function initZoom() {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'an-zoom';
-    btn.title = 'Suurenna';
-    btn.setAttribute('aria-label', 'Suurenna kaavio');
+    btn.title = t('Suurenna');
+    btn.setAttribute('aria-label', t('Suurenna kaavio'));
     btn.textContent = '⛶';
     btn.addEventListener('click', () => {
       const light = document.createElement('div');
@@ -732,7 +734,7 @@ function initZoom() {
       const x = document.createElement('button');
       x.type = 'button';
       x.className = 'an-light-x';
-      x.setAttribute('aria-label', 'Sulje');
+      x.setAttribute('aria-label', t('Sulje'));
       x.textContent = '✕';
       clone.appendChild(x);
       light.appendChild(clone);
@@ -798,7 +800,7 @@ function takeaways(stats, me) {
   if (rg && rg.retireAge && me && me.ret) {
     const med = Math.round(rg.retireAge.p50);
     const d = Math.round(me.ret.age) - med;
-    const rTxt = d === 0 ? 'sama kuin mediaani' : d < 0 ? `${-d} v mediaania aiemmin` : `${d} v mediaania myöhemmin`;
+    const rTxt = d === 0 ? t('sama kuin mediaani') : d < 0 ? t('{0} v mediaania aiemmin', -d) : t('{0} v mediaania myöhemmin', d);
     addTake('retireHist', rg === stats.groups.all
       ? t('Mediaani eläkeikätavoite on <b>{0} v</b> — sinun {1} v on {2}.', med, Math.round(me.ret.age), rTxt)
       : t('Mediaani eläkeikätavoite ikäryhmässäsi on <b>{0} v</b> — sinun {1} v on {2}.', med, Math.round(me.ret.age), rTxt));
@@ -812,7 +814,7 @@ function takeaways(stats, me) {
   renderGate(me);
   // Paluulinkit: kun oma suunnitelma on olemassa, nappi kertoo että sinne palataan
   if (me) {
-    document.querySelectorAll('a.an-return').forEach((a) => { a.textContent = '← Palaa suunnitelmaasi'; });
+    document.querySelectorAll('a.an-return').forEach((a) => { a.textContent = t('← Palaa suunnitelmaasi'); });
   }
   $('anStatsLink').href = DATA_API + '/stats.json';
 
@@ -826,7 +828,7 @@ function takeaways(stats, me) {
 
   const renderStats = () => {
 
-  $('anUpdated').textContent = `Päivitetty ${fmtPvm(new Date(stats.updated))}.`;
+  $('anUpdated').textContent = t('Päivitetty {0}.', fmtPvm(new Date(stats.updated)));
   const all = stats.groups.all || { n: stats.total };
 
   // Edistymismittari: kun mikään ikäryhmä ei vielä yllä k-anon-rajaan,
@@ -840,11 +842,10 @@ function takeaways(stats, me) {
       const pct = Math.min(100, Math.round(bestN / stats.kAnon * 100));
       prog.hidden = false;
       prog.innerHTML =
-        `<div class="an-prog-head"><b>Kartta aukeaa yhdessä:</b> suurimmassa ikäryhmässä on nyt `
-        + `<b>${bestN}/${stats.kAnon}</b> jaettua suunnitelmaa (kaikkiaan ${stats.total}).</div>`
+        `<div class="an-prog-head">${t('<b>Kartta aukeaa yhdessä:</b> suurimmassa ikäryhmässä on nyt <b>{0}/{1}</b> jaettua suunnitelmaa (kaikkiaan {2}).', bestN, stats.kAnon, stats.total)}</div>`
         + `<div class="an-prog-bar"><i style="width:${pct}%"></i></div>`
-        + `<div class="an-prog-sub">Jakaumat julkaistaan, kun ikäryhmässä on ${stats.kAnon} anonyymiä suunnitelmaa. `
-        + `Ole yksi avaajista — jaa omasi <a href="./#yhteenveto">Suunnitelmani-sivulta</a>.</div>`;
+        + `<div class="an-prog-sub">${t('Jakaumat julkaistaan, kun ikäryhmässä on {0} anonyymiä suunnitelmaa.', stats.kAnon)} `
+        + `${t('Ole yksi avaajista — jaa omasi <a href="./#yhteenveto">Suunnitelmani-sivulta</a>.')}</div>`;
     } else {
       prog.hidden = true;
     }
@@ -852,12 +853,12 @@ function takeaways(stats, me) {
 
   // Tunnuslukutiilet
   const tiles = [{ k: 'Jaettuja suunnitelmia', v: String(stats.total) }];
-  if (all.monthly) tiles.push({ k: 'Mediaani kk-säästö', v: `${fmtLuku(Math.round(all.monthly.p50))} €/kk` });
-  if (all.retireAge) tiles.push({ k: 'Mediaani eläkeikätavoite', v: `${Math.round(all.retireAge.p50)} v` });
+  if (all.monthly) tiles.push({ k: 'Mediaani kk-säästö', v: `${fmtLuku(Math.round(all.monthly.p50))} €/${VP_YKS_KK}` });
+  if (all.retireAge) tiles.push({ k: 'Mediaani eläkeikätavoite', v: `${Math.round(all.retireAge.p50)} ${VP_YKS_V}` });
   if (all.wAtRet) tiles.push({ k: 'Mediaani varallisuus eläkkeellä', v: fmtCompact(all.wAtRet.p50) });
   if (all.events) {
     const top = Object.entries(all.events).filter(([t]) => t !== 'retirement' && LABELS[t]).sort((a, b) => b[1] - a[1])[0];
-    if (top && top[1] > 0) tiles.push({ k: `Yleisin: ${LABELS[top[0]].toLowerCase()}`, v: `${ICONS[top[0]]} ${Math.round(top[1] * 100)} %` });
+    if (top && top[1] > 0) tiles.push({ k: t('Yleisin: {0}', t(LABELS[top[0]]).toLowerCase()), v: `${ICONS[top[0]]} ${Math.round(top[1] * 100)} %` });
   }
   $('anTiles').innerHTML = tiles.map((c) => `<div class="sum-tile"><div class="k">${t(c.k)}</div><div class="v">${c.v}</div></div>`).join('');
 
@@ -866,8 +867,8 @@ function takeaways(stats, me) {
   if (bn && stats.editedN != null) {
     bn.hidden = false;
     bn.textContent = stats.basis === 'edited'
-      ? `Jakaumat lasketaan ${stats.editedN} muokatusta suunnitelmasta — muokkaamattomina jaetut esimerkkipohjat (${stats.total - stats.editedN} kpl) eivät vääristä lukuja.`
-      : `Jaetuista ${stats.total} suunnitelmasta ${stats.editedN} on muokattuja. Jakaumissa ovat toistaiseksi kaikki; muokkaamattomat esimerkkipohjat suodatetaan pois, kun muokattuja on vähintään ${stats.kAnon}.`;
+      ? t('Jakaumat lasketaan {0} muokatusta suunnitelmasta — muokkaamattomina jaetut esimerkkipohjat ({1} kpl) eivät vääristä lukuja.', stats.editedN, stats.total - stats.editedN)
+      : t('Jaetuista {0} suunnitelmasta {1} on muokattuja. Jakaumissa ovat toistaiseksi kaikki; muokkaamattomat esimerkkipohjat suodatetaan pois, kun muokattuja on vähintään {2}.', stats.total, stats.editedN, stats.kAnon);
   }
 
   // Kaikki "sinä"-kerroksesta riippuva piirto yhdessä funktiossa, jotta oman
@@ -930,7 +931,7 @@ function takeaways(stats, me) {
     lb.style.marginLeft = 'auto';
     lb.style.marginTop = '0';
     lb.innerHTML = `<input type="checkbox" id="anMeToggle"${showMe ? ' checked' : ''} />` +
-      `<span class="switch" aria-hidden="true"></span><span>Oma suunnitelmani kaavioissa</span>`;
+      `<span class="switch" aria-hidden="true"></span><span>${t('Oma suunnitelmani kaavioissa')}</span>`;
     document.querySelector('.an-nav').appendChild(lb);
     lb.querySelector('input').addEventListener('change', (e) => {
       showMe = e.target.checked;
@@ -946,7 +947,7 @@ function takeaways(stats, me) {
   $('methodChips').innerHTML = GROUPS.map(([g]) => {
     const n = (stats.groups[g] && stats.groups[g].n) || 0;
     const ok = n >= stats.kAnon;
-    return `<span class="an-chip ${ok ? 'ok' : ''}" title="${ok ? 'jakaumat julkaistu' : 'kertyy vielä'}">${g} v · ${n}</span>`;
+    return `<span class="an-chip ${ok ? 'ok' : ''}" title="${ok ? t('jakaumat julkaistu') : t('kertyy vielä')}">${t('{0} v · {1}', g, n)}</span>`;
   }).join('');
   };
 
