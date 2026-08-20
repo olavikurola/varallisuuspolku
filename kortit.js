@@ -17,7 +17,7 @@ function renderStats() {
     const d = cur - base;
     if (Math.abs(d) < eps) return ''; // sama arvo = ei kohinaa (fs asettaa haamun aina)
     const up = d > 0;
-    return `<div class="d ${up === goodUp ? 'up' : 'down'}">${up ? '▲ +' : '▼ −'}${fmt(Math.abs(d))} vertailuun</div>`;
+    return `<div class="d ${up === goodUp ? 'up' : 'down'}">${up ? '▲ +' : '▼ −'}${fmt(Math.abs(d))} ${t('vertailuun')}</div>`;
   };
 
   cards.push({
@@ -80,7 +80,7 @@ function renderStats() {
       : { k: 'Tarvittava säästö', v: 'Ei toteudu', cls: 'bad', s: 'tulotavoite on liian suuri tälle eläkeiälle' });
   }
   // Riittävyys ja onnistumis-% samassa kortissa — kertovat samaa asiaa
-  const pDelta = p != null && ghostP != null ? dRow(p, Math.round(ghostP * 100), (x) => `${x} %-yks`, 1) : '';
+  const pDelta = p != null && ghostP != null ? dRow(p, Math.round(ghostP * 100), (x) => t('{0} %-yks', x), 1) : '';
   if (s.goal === 'withdrawal' && s.goalUnreachable) {
     cards.push({ k: 'Kestävä kuukausitulo', v: 'Ei toteudu', cls: 'bad', s: t('edes 0 €/kk ei riitä {0}', confTxt || '').trim() });
   } else if (s.solvedWithdrawal != null && (s.depletionAge == null || s.depletionAge >= s.a1 - 1)) {
@@ -131,8 +131,8 @@ function updateCmpPill() {
   // Identtinen suunnitelma (esim. piirtopöydän automaattihaamu ilman
   // muutoksia) ei tarvitse pilleriä — se ilmestyy kun eroa syntyy
   if (Math.abs(d) < 500) { pill.hidden = true; return; }
-  const dTxt = `${both ? 'eläkeiässä' : 'lopussa'} <b class="${d > 0 ? 'pos' : 'neg'}">${d > 0 ? '+' : '−'}${fmtCompact(Math.abs(d))}</b>`;
-  $('cmpPillTxt').innerHTML = `Vertailussa: <b>${escapeHtml(baseline.cmpName || 'oma vertailukohta')}</b> · ${dTxt}`;
+  const dTxt = `${both ? t('eläkeiässä') : t('lopussa')} <b class="${d > 0 ? 'pos' : 'neg'}">${d > 0 ? '+' : '−'}${fmtCompact(Math.abs(d))}</b>`;
+  $('cmpPillTxt').innerHTML = t('Vertailussa: <b>{0}</b> · {1}', escapeHtml(t(baseline.cmpName || 'oma vertailukohta')), dTxt);
   pill.hidden = false;
 }
 

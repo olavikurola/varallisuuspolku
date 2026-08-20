@@ -45,6 +45,7 @@
   "{0} % salkusta/v": "{0} % of portfolio/yr",
   "{0} % työeläke": "{0} % earnings-related pension",
   "{0} % varmuudella": "with {0} % confidence",
+  "{0} %-yks": "{0} pp",
   "{0} %/v · ±{1} % · paino {2} %": "{0} %/yr · ±{1} % · weight {2} %",
   "{0} €/kk → {1} v": "{0} €/mo → age {1}",
   "{0} €/kk → loppu": "{0} €/mo → end",
@@ -151,6 +152,7 @@
   "Eläkeikä {0} vuotta": "Retirement age {0} years",
   "Eläkeikä {0}–{1} v": "Retirement age {0}–{1} y",
   "Eläkeikätavoitteeni ei toteudu nykyisillä oletuksilla{0} — tulotavoite ei onnistu edes suunnitelman lopussa.": "My retirement age goal isn't reached with the current assumptions{0} — the income goal isn't met even at the end of the plan.",
+  "eläkeiässä": "at retirement age",
   "Eläkkeelle": "Retirement",
   "Eläkkeelle {0} v": "Retire at {0}",
   "Eläkkeelle {0} v (~{1})": "Retire at {0} (~{1})",
@@ -376,6 +378,7 @@
   "Lisää-valikon Asetuksista löytyvä Pro-kytkin avaa ammattilaissäädöt: omat tuotto-oletukset ja korrelaatiot, kulut, nostostrategiat ja syvemmät analyysit. Perusversio riittää pitkälle — Pro odottaa, kun tarvitset sitä.": "The Pro toggle in the More menu's Settings opens professional-grade controls: your own return assumptions and correlations, costs, withdrawal strategies and deeper analyses. The basic version goes a long way — Pro is waiting when you need it.",
   "Lisää-valikosta löytyvät Vuositaulukko, Vertailu ja palvelun tiedot — sekä asetukset: teema, Pro, muistutukset ja sovelluksen lukitus.": "The More menu holds the Annual table, Comparison and service info — plus the settings: theme, Pro, reminders and app lock.",
   "Loppuvarallisuus": "Final wealth",
+  "lopussa": "at the end",
   "Lukittu — avaa tunnistautumalla": "Locked — unlock by authenticating",
   "Lukitus ei ole käytettävissä tässä versiossa": "Locking isn't available in this version",
   "Lukitus pois päältä": "Lock off",
@@ -817,6 +820,8 @@
   "Vertailukohta tallennettu — erot näkyvät, kun muutat suunnitelmaa": "Baseline saved — the differences show when you change the plan",
   "Vertailun laskenta epäonnistui.": "Calculating the comparison failed.",
   "Vertailussa: {0} — erot näkyvät käyrällä ja tunnusluvuissa": "Comparing: {0} — differences show on the curve and in the key figures",
+  "Vertailussa: <b>{0}</b> · {1}": "Comparing: <b>{0}</b> · {1}",
+  "vertailuun": "vs. baseline",
   "Vie pari minuuttia — suunnitelmasi pysyy {0}.": "Takes a couple of minutes — your plan stays {0}.",
   "Viimeinen vaihe jatkuu suunnitelman loppuun.": "The last phase continues to the end of the plan.",
   "Viittausta ({0}) ei löydy moottorin luvuista": "Reference ({0}) not found among the engine's figures",
@@ -832,5 +837,6 @@
   "Yhteisvarallisuus lopussa": "Combined wealth at the end",
   "Yhteys Tulkkiin epäonnistui — tarkista verkko.": "Connection to Tulkki failed — check your network.",
   "Yleisin: {0}": "Most common: {0}",
-  "ylimmässä neljänneksessä": "in the top quarter"
+  "ylimmässä neljänneksessä": "in the top quarter",
+  "Lähtötilanne": "Starting point"
 }

@@ -86,7 +86,7 @@ updateHud = function () {
   metric('Onnistuminen',
     curP != null ? Math.round(curP * 100) + ' %' : '–',
     curP != null && ghostP != null ? Math.round(curP * 100) - Math.round(ghostP * 100) : null,
-    1, (x) => `${x} %-yks`, sim.successStale ? ' stale' : '');
+    1, (x) => t('{0} %-yks', x), sim.successStale ? ' stale' : '');
   metric('Varallisuus eläkeiässä',
     sim.wAtRet != null ? fmtCompact(sim.wAtRet) : '–',
     sim.wAtRet != null && g && g.wAtRet != null ? sim.wAtRet - g.wAtRet : null,
