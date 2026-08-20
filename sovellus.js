@@ -180,7 +180,7 @@ function openExamplesMenu(anchor) {
   }
   const note = document.createElement('div');
   note.className = 'mnote';
-  note.textContent = 'Korvaa nykyisen suunnitelman — Ctrl+Z palauttaa.';
+  note.textContent = t('Korvaa nykyisen suunnitelman — Ctrl+Z palauttaa.');
   menu.appendChild(note);
   document.body.appendChild(menu);
   const r = anchor.getBoundingClientRect();
@@ -700,7 +700,7 @@ function loadState() {
       const o = JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(3)))));
       if (validFamily(o) && o.persons.length >= 2) {
         family = {
-          persons: o.persons.map((p) => ({ pid: p.pid, name: String(p.name || 'Henkilö').slice(0, 16), role: p.role, child: !!p.child, data: p.data })),
+          persons: o.persons.map((p) => ({ pid: p.pid, name: String(p.name || t('Henkilö')).slice(0, 16), role: p.role, child: !!p.child, data: p.data })),
           active: clamp(Math.round(o.active || 0), 0, o.persons.length - 1),
         };
         migrateFamily();
@@ -796,7 +796,7 @@ function bindAcct() {
     state.acct = e.target.value;
     updateAcctUI();
     renderAll();
-    announce(`Sijoitustili: ${e.target.options[e.target.selectedIndex].text}`);
+    announce(t('Sijoitustili: {0}', e.target.options[e.target.selectedIndex].text));
   });
   $('acctCompareLink').addEventListener('click', (e) => {
     e.preventDefault();
@@ -832,8 +832,8 @@ async function copyShareUrl(btn) {
   // leikepöydälle on arkin oma vaihtoehto. Peruutus ei pudota leikepöydälle.
   if (vpNativeApp && window.vpNatiivi && window.vpNatiivi.jaa) {
     const jaettiin = await window.vpNatiivi.jaa({
-      title: 'Varallisuuspolku-suunnitelma',
-      text: 'Suunnitelmani Varallisuuspolussa — linkki kantaa koko suunnitelman:',
+      title: t('Varallisuuspolku-suunnitelma'),
+      text: t('Suunnitelmani Varallisuuspolussa — linkki kantaa koko suunnitelman:'),
       url,
     });
     if (jaettiin) return;
@@ -841,7 +841,7 @@ async function copyShareUrl(btn) {
   const orig = btn.textContent;
   try {
     await navigator.clipboard.writeText(url);
-    btn.textContent = 'Kopioitu ✓';
+    btn.textContent = t('Kopioitu ✓');
     setTimeout(() => { btn.textContent = orig; }, 1600);
   } catch (e) {
     prompt(t('Kopioi linkki:'), url);
@@ -950,7 +950,7 @@ function summaryChartSVG(s) {
   }
   const yearNow = new Date().getFullYear();
   for (let age = Math.ceil(a0 / 10) * 10; age <= a1; age += 10) {
-    g += `<text class="sum-tick" x="${xs(age)}" y="${t + h + 14}" text-anchor="middle">${age} v</text>` +
+    g += `<text class="sum-tick" x="${xs(age)}" y="${t + h + 14}" text-anchor="middle">${window.t('{0} v', age)}</text>` +
       `<text class="sum-tick" x="${xs(age)}" y="${t + h + 26}" text-anchor="middle">${yearNow + Math.round(age - a0)}</text>`;
   }
 
@@ -1078,12 +1078,12 @@ function renderSummary() {
 
   const tiles = [
     { k: 'Nykyinen varallisuus', v: fmtEur(state.startCapital) },
-    { k: 'Kuukausisäästö', v: `${fmtEur(state.monthly)}/kk`, s: state.savingsGrowth > 0 ? t('kasvu {0} %/v', fmtLuku(state.savingsGrowth)) : '' },
+    { k: 'Kuukausisäästö', v: t('{0}/kk', fmtEur(state.monthly)), s: state.savingsGrowth > 0 ? t('kasvu {0} %/v', fmtLuku(state.savingsGrowth)) : '' },
     { k: s.goal === 'age' ? 'Aikaisin eläkeikä' : 'Eläkeikä',
-      v: s.retireAge != null ? (s.goal === 'age' && s.solvedRetireAge != null ? fmtAge(s.solvedRetireAge) : `${Math.round(s.retireAge)} v`) : '—',
-      s: s.retireAge != null ? yearOf(s.retireAge) : 'ei eläketapahtumaa' },
-    { k: 'Kuukausitulo eläkkeellä', v: retire ? `${fmtEur(s.withdrawal)}/kk` : '—',
-      s: retire ? (s.pension > 0 ? t('sis. työeläke {0}/kk', fmtEur(s.pension)) : (s.goal === 'withdrawal' ? 'kestävä tulo — varat loppuun' : 'sijoituksista')) : '' },
+      v: s.retireAge != null ? (s.goal === 'age' && s.solvedRetireAge != null ? fmtAge(s.solvedRetireAge) : t('{0} v', Math.round(s.retireAge))) : '—',
+      s: s.retireAge != null ? yearOf(s.retireAge) : t('ei eläketapahtumaa') },
+    { k: 'Kuukausitulo eläkkeellä', v: retire ? t('{0}/kk', fmtEur(s.withdrawal)) : '—',
+      s: retire ? (s.pension > 0 ? t('sis. työeläke {0}/kk', fmtEur(s.pension)) : (s.goal === 'withdrawal' ? t('kestävä tulo — varat loppuun') : t('sijoituksista'))) : '' },
     { k: 'Varallisuus eläkkeellä', v: s.wAtRet != null ? fmtEur(s.wAtRet) : '—', cls: 'accent' },
     // appissa lyhyt label — täysi sana rivittyi rumasti kapeassa tiilessä
     { k: vpNativeApp ? 'Onnistumis-%' : 'Onnistumistodennäköisyys', v: p != null ? `${p} %` : '—', cls: p >= 80 ? 'ok' : p >= 55 ? '' : 'bad', s: t('{0} markkinapolkua', fmtLuku(s.mcPaths || MC_LIVE)) },
@@ -1093,8 +1093,8 @@ function renderSummary() {
     const def = EVENT_TYPES[e.type];
     let sum, fin = '', note = '';
     if (e.type === 'retirement') {
-      sum = `−${fmtEur(s.goal === 'withdrawal' && s.solvedWithdrawal != null ? s.solvedWithdrawal : e.withdrawal)}/kk`;
-      fin = t({ manual: 'kuukausitulon tarve', withdrawal: 'kestävä tulo — varat loppuun', age: 'aikaisin mahdollinen ikä', saving: 'säästötavoite' }[retGoal(e)]);
+      sum = `−${t('{0}/kk', fmtEur(s.goal === 'withdrawal' && s.solvedWithdrawal != null ? s.solvedWithdrawal : e.withdrawal))}`;
+      fin = { manual: t('kuukausitulon tarve'), withdrawal: t('kestävä tulo — varat loppuun'), age: t('aikaisin mahdollinen ikä'), saving: t('säästötavoite') }[retGoal(e)];
       if (e.pension > 0) note = t('työeläke {0}/kk alk. {1} v', fmtEur(e.pension), Math.round(e.pensionAge != null ? e.pensionAge : 65));
     } else if (e.type === 'goal') {
       sum = fmtEur(e.amount);
@@ -1264,12 +1264,12 @@ function initPlans() {
   if (visitKind === 'shared' && hadStored) {
     // Jakolinkki ei korvaa mitään olemassa olevaa — linkin sisältö omaksi
     // rivikseen (tarvittaessa katon yli: käyttäjä siivoaa itse)
-    const row = planRowFromCurrent(planUniqueName('Tuotu suunnitelma'), 'linkki');
+    const row = planRowFromCurrent(planUniqueName(t('Tuotu suunnitelma')), 'linkki');
     plans.push(row);
     planActiveId = row.id;
   } else if (!plans.length) {
     // Migraatio ja ensivierailu: nykyinen tila ensimmäiseksi riviksi äänettömästi
-    const row = planRowFromCurrent(visitKind === 'shared' ? 'Tuotu suunnitelma' : 'Oma suunnitelma',
+    const row = planRowFromCurrent(visitKind === 'shared' ? t('Tuotu suunnitelma') : t('Oma suunnitelma'),
       visitKind === 'shared' ? 'linkki' : 'oma');
     plans = [row];
     planActiveId = row.id;
@@ -1334,7 +1334,7 @@ function deletePlan(id) {
   planCmpSel = planCmpSel.filter((x) => x !== id);
   planSimCache.delete(id);
   if (!plans.length) {
-    plans = [{ id: planId(), nimi: 'Oma suunnitelma', data: JSON.parse(DEFAULT_PLAN_JSON), family: null, luotu: planNow(), muokattu: planNow(), alkupera: 'oma' }];
+    plans = [{ id: planId(), nimi: t('Oma suunnitelma'), data: JSON.parse(DEFAULT_PLAN_JSON), family: null, luotu: planNow(), muokattu: planNow(), alkupera: 'oma' }];
   }
   if (wasActive) {
     planActiveId = null;
@@ -1406,7 +1406,7 @@ function fillPlanRow(p, rowEl) {
   if (s.goal === 'age' && s.solvedRetireAge != null) set('.m-ret', fmtAge(s.solvedRetireAge));
   set('.m-wret', s.wAtRet != null ? `<b>${fmtCompact(s.wAtRet)}</b>` : '—');
   const wd = s.sustainableWd != null ? s.sustainableWd : (ret ? s.withdrawal : null);
-  set('.m-wd', wd != null ? fmtEur(wd) + '/kk' : '—');
+  set('.m-wd', wd != null ? t('{0}/kk', fmtEur(wd)) : '—');
   const pr = s.successProb != null ? Math.round(s.successProb * 100) : null;
   const pEl = rowEl.querySelector('.m-p');
   if (pEl) { pEl.textContent = pr != null ? pr + ' %' : '—'; pEl.classList.toggle('warn', pr != null && pr < 55); }
@@ -1415,7 +1415,7 @@ function fillPlanRow(p, rowEl) {
   if (aEl) {
     if (!adq) aEl.textContent = '—';
     else {
-      aEl.textContent = adq.ok ? `✓ ${Math.round(adq.age)} v` : `~${Math.floor(adq.age)} v`;
+      aEl.textContent = adq.ok ? `✓ ${t('{0} v', Math.round(adq.age))}` : `~${t('{0} v', Math.floor(adq.age))}`;
       aEl.classList.add(adq.ok ? 'ok' : 'warn');
     }
   }
@@ -1436,8 +1436,8 @@ function renderPlans() {
   if (planCmpSel.length === 2) {
     const [a, b] = planCmpSel.map((id) => plans.find((x) => x.id === id));
     if (a && b) {
-      cmpbar = `<div class="ph-cmpbar">⚖️ Vertailuun valittu: <b>${escapeHtml(a.nimi)}</b> ja <b>${escapeHtml(b.nimi)}</b>` +
-        `<button type="button" class="btn ph-cmp-open" title="${escapeHtml(a.nimi)} avautuu työtilaan ja ${escapeHtml(b.nimi)} piirtyy haamukäyräksi — erot euroina tunnusluvuissa">Avaa rinnakkain →</button></div>`;
+      cmpbar = `<div class="ph-cmpbar">⚖️ ${t('Vertailuun valittu: <b>{0}</b> ja <b>{1}</b>', escapeHtml(a.nimi), escapeHtml(b.nimi))}` +
+        `<button type="button" class="btn ph-cmp-open" title="${t('{0} avautuu työtilaan ja {1} piirtyy haamukäyräksi — erot euroina tunnusluvuissa', escapeHtml(a.nimi), escapeHtml(b.nimi))}">${t('Avaa rinnakkain →')}</button></div>`;
     }
   }
 
@@ -1445,63 +1445,64 @@ function renderPlans() {
     const active = p.id === planActiveId;
     const checked = planCmpSel.includes(p.id);
     const famBadge = p.family && p.family.persons && p.family.persons.length > 1
-      ? `<span class="src" title="Perhesuunnitelma · ${p.family.persons.length} henkilöä">👥</span>` : '';
+      ? `<span class="src" title="${t('Perhesuunnitelma · {0} henkilöä', p.family.persons.length)}">👥</span>` : '';
     const srcBadge = p.alkupera === 'linkki' || p.alkupera === 'tiedosto'
-      ? `<span class="src" title="${p.alkupera === 'linkki' ? 'Tuotu jakolinkistä' : 'Tuotu tiedostosta'}">⇣</span>` : '';
+      ? `<span class="src" title="${p.alkupera === 'linkki' ? t('Tuotu jakolinkistä') : t('Tuotu tiedostosta')}">⇣</span>` : '';
     const ret = (p.data.events || []).find((e) => e.type === 'retirement');
     return `<div class="ph-row${active ? ' active' : ''}" data-id="${p.id}">` +
-      `<label class="ph-check" title="Valitse vertailuun"><input type="checkbox"${checked ? ' checked' : ''}></label>` +
-      `<div class="ph-name">${active ? '<span class="dot" title="Auki työtilassa"></span>' : ''}<span class="nm">${escapeHtml(p.nimi)}</span>${famBadge}${srcBadge}<button type="button" class="p-edit" title="Nimeä uudelleen">✎</button></div>` +
-      `<div class="num c-ika">${Math.round(p.data.ageNow)} v</div>` +
-      `<div class="num m-ret">${ret ? Math.round(ret.age) + ' v' : '—'}</div>` +
-      `<div class="num c-saasto"${p.data.savePhases ? ' title="porrastettu säästö — summa elää elämänvaiheittain"' : ''}>${fmtEur(p.data.monthly)}${p.data.savePhases ? '*' : ''}</div>` +
+      `<label class="ph-check" title="${t('Valitse vertailuun')}"><input type="checkbox"${checked ? ' checked' : ''}></label>` +
+      `<div class="ph-name">${active ? `<span class="dot" title="${t('Auki työtilassa')}"></span>` : ''}<span class="nm">${escapeHtml(p.nimi)}</span>${famBadge}${srcBadge}<button type="button" class="p-edit" title="${t('Nimeä uudelleen')}">✎</button></div>` +
+      `<div class="num c-ika">${t('{0} v', Math.round(p.data.ageNow))}</div>` +
+      `<div class="num m-ret">${ret ? t('{0} v', Math.round(ret.age)) : '—'}</div>` +
+      `<div class="num c-saasto"${p.data.savePhases ? ` title="${t('porrastettu säästö — summa elää elämänvaiheittain')}"` : ''}>${fmtEur(p.data.monthly)}${p.data.savePhases ? '*' : ''}</div>` +
       `<div class="num accent c-wret m-wret">…</div>` +
       `<div class="num violet c-kestava m-wd">…</div>` +
       `<div class="num c-onn m-p">…</div>` +
       `<div class="num m-adq">…</div>` +
       `<div class="ph-spark c-spark m-spark"></div>` +
-      `<div class="ph-acts"><button type="button" class="ph-act ph-open"${active ? ' title="Tämä suunnitelma on auki työtilassa"' : ''}>Avaa</button><button type="button" class="ph-more" title="Lisää toimintoja">⋯</button></div>` +
+      `<div class="ph-acts"><button type="button" class="ph-act ph-open"${active ? ` title="${t('Tämä suunnitelma on auki työtilassa')}"` : ''}>${t('Avaa')}</button><button type="button" class="ph-more" title="${t('Lisää toimintoja')}">⋯</button></div>` +
       `</div>`;
   }).join('');
 
-  const thead = `<div class="ph-thead"><span></span><span>Suunnitelma</span>` +
-    `<span class="num c-ika">Ikä</span><span class="num">Eläkeikä</span><span class="num c-saasto">Säästö/kk</span>` +
-    `<span class="num c-wret">Eläkkeellä</span><span class="num c-kestava">Tulo/kk</span><span class="num c-onn">Onnist.</span>` +
-    `<span class="num">Riittävyys</span><span class="num c-spark">Kehitys</span><span></span></div>`;
+  const thead = `<div class="ph-thead"><span></span><span>${t('Suunnitelma')}</span>` +
+    `<span class="num c-ika">${t('Ikä')}</span><span class="num">${t('Eläkeikä')}</span><span class="num c-saasto">${t('Säästö/kk')}</span>` +
+    `<span class="num c-wret">${t('Eläkkeellä')}</span><span class="num c-kestava">${t('Tulo/kk')}</span><span class="num c-onn">${t('Onnist.')}</span>` +
+    `<span class="num">${t('Riittävyys')}</span><span class="num c-spark">${t('Kehitys')}</span><span></span></div>`;
 
   const newInner = `<div class="ph-opts">` +
-    `<button type="button" class="ph-opt" data-act="ramppi"><b>Kolme kysymystä</b><span>Sama tuttu aloitus — ikä, varallisuus, säästö. Sopii läheisen suunnitelman pohjaksi.</span></button>` +
-    (hasTulkki ? `<button type="button" class="ph-opt" data-act="nl"><b>Kerro omin sanoin <em class="beta">BETA</em></b><span>Kuvaile tilanne vapaasti — Tulkki täyttää luvut ja tapahtumat puolestasi.</span></button>` : '') +
-    `<button type="button" class="ph-opt" data-act="kopio"><b>Kopio nykyisestä</b><span>Skenaariokokeiluun: sama suunnitelma, eri valinnat rinnakkain.</span></button>` +
-    `<button type="button" class="ph-opt" data-act="tyhja"><b>Tyhjä pohja</b><span>Aloita puhtaalta pöydältä oletuspohjalla.</span></button>` +
+    `<button type="button" class="ph-opt" data-act="ramppi"><b>${t('Kolme kysymystä')}</b><span>${t('Sama tuttu aloitus — ikä, varallisuus, säästö. Sopii läheisen suunnitelman pohjaksi.')}</span></button>` +
+    (hasTulkki ? `<button type="button" class="ph-opt" data-act="nl"><b>${t('Kerro omin sanoin')} <em class="beta">BETA</em></b><span>${t('Kuvaile tilanne vapaasti — Tulkki täyttää luvut ja tapahtumat puolestasi.')}</span></button>` : '') +
+    `<button type="button" class="ph-opt" data-act="kopio"><b>${t('Kopio nykyisestä')}</b><span>${t('Skenaariokokeiluun: sama suunnitelma, eri valinnat rinnakkain.')}</span></button>` +
+    `<button type="button" class="ph-opt" data-act="tyhja"><b>${t('Tyhjä pohja')}</b><span>${t('Aloita puhtaalta pöydältä oletuspohjalla.')}</span></button>` +
     `</div><div class="ph-io">` +
-    `<input type="text" id="phLinkIn" placeholder="Liitä jakolinkki tähän — suunnitelma tallentuu omaksi rivikseen…">` +
-    `<button type="button" class="btn ghost" data-act="tuolinkki">Tuo linkistä</button>` +
-    `<button type="button" class="btn ghost" data-act="tuotiedosto">Tuo tiedostosta…</button>` +
-    `<button type="button" class="btn ghost" data-act="vie">Vie kaikki varmuuskopioksi</button>` +
+    `<input type="text" id="phLinkIn" placeholder="${t('Liitä jakolinkki tähän — suunnitelma tallentuu omaksi rivikseen…')}">` +
+    `<button type="button" class="btn ghost" data-act="tuolinkki">${t('Tuo linkistä')}</button>` +
+    `<button type="button" class="btn ghost" data-act="tuotiedosto">${t('Tuo tiedostosta…')}</button>` +
+    `<button type="button" class="btn ghost" data-act="vie">${t('Vie kaikki varmuuskopioksi')}</button>` +
     `</div>`;
   // Appi: vaihtoehdot ja tuonti/vienti napin takana — sivu pysyy tiiviinä,
   // ohjeet näkyvät vasta kun uutta suunnitelmaa oikeasti tehdään
   const newSec = vpNativeApp
-    ? `<div class="ph-new"><button type="button" class="btn ghost ph-new-toggle">➕ Uusi suunnitelma</button><div class="ph-new-body" hidden>${newInner}</div></div>`
-    : `<div class="ph-new"><h3>➕ Uusi suunnitelma</h3>${newInner}</div>`;
+    ? `<div class="ph-new"><button type="button" class="btn ghost ph-new-toggle">➕ ${t('Uusi suunnitelma')}</button><div class="ph-new-body" hidden>${newInner}</div></div>`
+    : `<div class="ph-new"><h3>➕ ${t('Uusi suunnitelma')}</h3>${newInner}</div>`;
 
   let bytes = 0;
   try { bytes = JSON.stringify(plans).length; } catch (e) {}
+  const lkm = plans.length === 1 ? t('{0} suunnitelma', plans.length) : t('{0} suunnitelmaa', plans.length);
   const foot = vpNativeApp
-    ? `<div class="ph-foot"><span><b>${plans.length} suunnitelma${plans.length === 1 ? '' : 'a'}</b> · tallessa tällä laitteella</span>` +
-      `<span>Jakolinkki kantaa koko suunnitelman: linkki toiselle laitteelle = siirto ja varmuuskopio</span></div>`
+    ? `<div class="ph-foot"><span><b>${lkm}</b> · ${t('tallessa tällä laitteella')}</span>` +
+      `<span>${t('Jakolinkki kantaa koko suunnitelman: linkki toiselle laitteelle = siirto ja varmuuskopio')}</span></div>`
     : `<div class="ph-foot">` +
-      `<span><b>${plans.length} suunnitelma${plans.length === 1 ? '' : 'a'}</b> · ~${Math.max(1, Math.round(bytes / 1024))} kt · selaimen omassa muistissa</span>` +
-      `<span>Yksityisselaimessa tiedot katoavat ikkunan sulkeutuessa — ota varmuuskopio</span>` +
-      `<span>Jakolinkki kantaa koko suunnitelman: linkki toiselle laitteelle = siirto</span></div>`;
+      `<span><b>${lkm}</b> · ${t('~{0} kt · selaimen omassa muistissa', Math.max(1, Math.round(bytes / 1024)))}</span>` +
+      `<span>${t('Yksityisselaimessa tiedot katoavat ikkunan sulkeutuessa — ota varmuuskopio')}</span>` +
+      `<span>${t('Jakolinkki kantaa koko suunnitelman: linkki toiselle laitteelle = siirto')}</span></div>`;
 
   host.innerHTML =
-    `<div class="ph-head"><h2>Suunnitelmat</h2><p>` +
+    `<div class="ph-head"><h2>${t('Suunnitelmat')}</h2><p>` +
     (vpNativeApp
-      ? `Omat ja lähipiirin suunnitelmat, tallessa <b>vain tällä laitteella</b> — ruksi kaksi riviä vertailuun.`
-      : `Omat ja lähipiirin suunnitelmat — kaikki tallessa <b>vain tässä selaimessa</b>. ` +
-        `Ruksi kaksi riviä vertailuun, <b>Avaa</b> ottaa suunnitelman työtilaan.`) +
+      ? t('Omat ja lähipiirin suunnitelmat, tallessa <b>vain tällä laitteella</b> — ruksi kaksi riviä vertailuun.')
+      : t('Omat ja lähipiirin suunnitelmat — kaikki tallessa <b>vain tässä selaimessa</b>.') + ' ' +
+        t('Ruksi kaksi riviä vertailuun, <b>Avaa</b> ottaa suunnitelman työtilaan.')) +
     `</p></div>` +
     cmpbar + `<div class="ph-grid">${thead}${rows}</div>` + newSec + foot;
 
@@ -1581,10 +1582,10 @@ function handlePlanAct(act) {
     syncActivePlan();
     const a = activePlan();
     if (!a) return;
-    const c = addPlanRow(planClone(a.data), planClone(a.family), planUniqueName('Kopio: ' + a.nimi).slice(0, 40), 'kopio');
+    const c = addPlanRow(planClone(a.data), planClone(a.family), planUniqueName(t('Kopio: {0}', a.nimi)).slice(0, 40), 'kopio');
     if (c) { activatePlan(c.id); toast('Kopio avattu työtilaan — kokeile eri valintoja, alkuperäinen on tallessa'); }
   } else if (act === 'tyhja') {
-    const c = addPlanRow(JSON.parse(DEFAULT_PLAN_JSON), null, planUniqueName('Uusi suunnitelma'), 'tyhja');
+    const c = addPlanRow(JSON.parse(DEFAULT_PLAN_JSON), null, planUniqueName(t('Uusi suunnitelma')), 'tyhja');
     if (c) { activatePlan(c.id); toast('Uusi suunnitelma avattu työtilaan'); }
   } else if (act === 'tuolinkki') {
     const inEl = $('phLinkIn');
@@ -1670,7 +1671,7 @@ function openPlanMenu(btn, p, rowEl) {
     shareResultImage('suunnitelmat');
   });
   add('kopio', 'Kopioi skenaarioksi', () => {
-    const c = addPlanRow(planClone(p.data), planClone(p.family), planUniqueName('Kopio: ' + p.nimi).slice(0, 40), 'kopio');
+    const c = addPlanRow(planClone(p.data), planClone(p.family), planUniqueName(t('Kopio: {0}', p.nimi)).slice(0, 40), 'kopio');
     if (c) { renderPlans(); toast('Kopio luotu — Avaa ottaa sen työtilaan'); }
   });
   add('lataa', 'Lataa tiedostona', () => {
@@ -1753,14 +1754,14 @@ function importPlanLink(txt) {
     if (m[1] === 'f') {
       if (!(validFamily(o) && o.persons.length >= 2)) throw new Error('fam');
       const fam = {
-        persons: o.persons.map((q) => ({ pid: q.pid, name: String(q.name || 'Henkilö').slice(0, 16), role: q.role, child: !!q.child, data: q.data })),
+        persons: o.persons.map((q) => ({ pid: q.pid, name: String(q.name || t('Henkilö')).slice(0, 16), role: q.role, child: !!q.child, data: q.data })),
         active: clamp(Math.round(o.active || 0), 0, o.persons.length - 1),
       };
-      row = addPlanRow(planClone(fam.persons[fam.active].data), fam, planUniqueName('Tuotu suunnitelma'), 'linkki');
+      row = addPlanRow(planClone(fam.persons[fam.active].data), fam, planUniqueName(t('Tuotu suunnitelma')), 'linkki');
     } else {
       const clean = sanitizePlanData(o);
       if (!clean) throw new Error('data');
-      row = addPlanRow(clean, null, planUniqueName('Tuotu suunnitelma'), 'linkki');
+      row = addPlanRow(clean, null, planUniqueName(t('Tuotu suunnitelma')), 'linkki');
     }
     if (row) {
       const inEl = $('phLinkIn');
@@ -1787,7 +1788,7 @@ function pickPlanFile() {
           const clean = sanitizePlanData(data);
           if (!clean) return false;
           const okFam = fam && validFamily(fam) ? planClone(fam) : null;
-          return !!addPlanRow(clean, okFam, planUniqueName(String(nimi || 'Tuotu suunnitelma').slice(0, 40)), 'tiedosto');
+          return !!addPlanRow(clean, okFam, planUniqueName(String(nimi || t('Tuotu suunnitelma')).slice(0, 40)), 'tiedosto');
         };
         if (o && o.vp === 'varmuuskopio' && Array.isArray(o.plans)) {
           for (const q of o.plans) {
@@ -1829,7 +1830,7 @@ let rampPlanPrevId = null;
 let rampPlanTempId = null;
 
 function newPlanViaRamp(focusNl) {
-  const row = addPlanRow(JSON.parse(DEFAULT_PLAN_JSON), null, planUniqueName('Uusi suunnitelma'), focusNl ? 'nl' : 'ramppi');
+  const row = addPlanRow(JSON.parse(DEFAULT_PLAN_JSON), null, planUniqueName(t('Uusi suunnitelma')), focusNl ? 'nl' : 'ramppi');
   if (!row) return;
   rampPlanPrevId = planActiveId;
   rampPlanTempId = row.id;

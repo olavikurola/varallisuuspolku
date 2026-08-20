@@ -324,20 +324,20 @@ function renderDonateSlot() {
   const h = hashStr(JSON.stringify(payload));
   if (ds.donatedHash === h) {
     slot.innerHTML =
-      `<div class="donate-card slim"><span>📊 Suunnitelmasi on mukana anonyymissä vertailudatassa.</span>` +
-      `<button class="btn" id="donateCompareBtn">Katso vertailu ikäryhmääsi</button></div>`;
+      `<div class="donate-card slim"><span>${t('📊 Suunnitelmasi on mukana anonyymissä vertailudatassa.')}</span>` +
+      `<button class="btn" id="donateCompareBtn">${t('Katso vertailu ikäryhmääsi')}</button></div>`;
   } else if (ds.donatedHash) {
     slot.innerHTML =
-      `<div class="donate-card slim"><span>📊 Suunnitelmasi on muuttunut — vertailutiedot voi halutessa päivittää.</span>` +
-      `<button class="btn ghost" id="donateOpenBtn">Päivitä</button>` +
-      `<button class="btn" id="donateCompareBtn">Katso vertailu</button></div>`;
+      `<div class="donate-card slim"><span>${t('📊 Suunnitelmasi on muuttunut — vertailutiedot voi halutessa päivittää.')}</span>` +
+      `<button class="btn ghost" id="donateOpenBtn">${t('Päivitä')}</button>` +
+      `<button class="btn" id="donateCompareBtn">${t('Katso vertailu')}</button></div>`;
   } else {
     slot.innerHTML =
-      `<div class="donate-card"><div class="dc-text"><b>📊 Haluatko nähdä, miten eri ikäiset suunnittelevat talouttaan ja etenevät vaurastumisen matkalla?</b>` +
-      `<span>Vertailu perustuu käyttäjien anonyymeihin suunnitelmiin. Näet ensin täsmälleen, mitä suunnitelmastasi jaetaan — data on anonyymiä eikä velvoita mihinkään.</span>` +
+      `<div class="donate-card"><div class="dc-text"><b>${t('📊 Haluatko nähdä, miten eri ikäiset suunnittelevat talouttaan ja etenevät vaurastumisen matkalla?')}</b>` +
+      `<span>${t('Vertailu perustuu käyttäjien anonyymeihin suunnitelmiin. Näet ensin täsmälleen, mitä suunnitelmastasi jaetaan — data on anonyymiä eikä velvoita mihinkään.')}</span>` +
       `<span class="dc-progress" id="dcProgress"></span></div>` +
-      `<div class="dc-actions"><button class="btn" id="donateOpenBtn">Kyllä, näytä</button>` +
-      `<button class="btn ghost" id="donateNeverBtn">Ei kiitos</button></div></div>`;
+      `<div class="dc-actions"><button class="btn" id="donateOpenBtn">${t('Kyllä, näytä')}</button>` +
+      `<button class="btn ghost" id="donateNeverBtn">${t('Ei kiitos')}</button></div></div>`;
     fillDonateProgress();
   }
   const open = $('donateOpenBtn');
@@ -362,7 +362,7 @@ async function fillDonateProgress() {
     const bestN = Math.max(0, ...Object.entries(s.groups || {})
       .filter(([g]) => g !== 'all').map(([, v]) => v.n || 0));
     if (bestN >= s.kAnon) return; // kartta jo auki — kutsu riittää ilman mittaria
-    target.textContent = `Kartta aukeaa yhdessä: suurimmassa ikäryhmässä ${bestN}/${s.kAnon} suunnitelmaa — ole yksi avaajista.`;
+    target.textContent = t('Kartta aukeaa yhdessä: suurimmassa ikäryhmässä {0}/{1} suunnitelmaa — ole yksi avaajista.', bestN, s.kAnon);
   } catch (e) { /* datapalvelin ei tavoitettavissa — ei riviä */ }
 }
 

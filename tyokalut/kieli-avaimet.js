@@ -18,7 +18,11 @@ const TIEDOSTOT = ['apu.js', 'kaavio.js', 'piirtopoyta.js', 'kortit.js',
 const avaimet = new Map(); // avain -> [tiedosto:rivi, ...]
 const lisaa = (avain, lahde) => {
   if (!avain || !/[a-zA-ZäöåÄÖÅ]/.test(avain)) return; // pelkät merkit/numerot pois
-  if (/^[.#]/.test(avain)) return; // CSS-valitsimet (esim. TOUR_STEPSin s-kentät)
+  // CSS-valitsimet (TOUR_STEPSin s-kentät) pois — mutta VAIN välilyönnittömät
+  // valitsinmuotoiset tokenit ('.tk-handle', '#chartWrap', '.card[data-card="x"]').
+  // HUOM: proosahännät alkavat myös pisteellä ('. Laadittu Varallisuuspolku-…')
+  // — vanha /^[.#]/ pudotti ne hiljaa sanastosta (löytyi 20.8.2026 en-tarkistuksessa).
+  if (/^[.#][\w-]/.test(avain) && !/\s/.test(avain)) return;
   if (!avaimet.has(avain)) avaimet.set(avain, []);
   avaimet.get(avain).push(lahde);
 };

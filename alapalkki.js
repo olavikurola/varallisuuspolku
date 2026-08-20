@@ -20,10 +20,12 @@
   } catch (e) { /* ei Capacitoria → web */ }
   if (!native) return;
 
-  var onStats = /analytiikka\.html$/.test(location.pathname);
+  // (-en)?: myös generoidut englanninkieliset sivuparit (index-en.html ym.) —
+  // ilman tätä en-tilastosivu tunnistui etusivuksi ja tabit jumittivat (1.1-beta)
+  var onStats = /analytiikka(-en)?\.html$/.test(location.pathname);
   // Etusivu = ainoa sivu jolla suunnitelmatoiminnot elävät; muut (Tilastot,
   // Agentit) ajavat ne sinne lippujen kautta
-  var onIndex = !/analytiikka\.html$|agentit\.html$|saavutettavuus\.html$|validointi\.html$/.test(location.pathname);
+  var onIndex = !/analytiikka(-en)?\.html$|agentit(-en)?\.html$|saavutettavuus(-en)?\.html$|validointi(-en)?\.html$/.test(location.pathname);
 
   var css = [
     /* z-index sivujen (summary 90, tk 160, menu 170) yläpuolella: sivut
@@ -468,10 +470,16 @@
     kytkin('mi-kieli',
       VP_KIELI === 'en' ? 'Suomeksi' : 'In English',
       VP_KIELI === 'en' ? 'Vaihda sovelluksen kieli suomeen' : 'Switch the app language to English',
-      function () { return VP_KIELI === 'en'; },
+      // tila localStoragesta (ei VP_KIELI-vakiosta): paivita() näyttää uuden
+      // asennon heti vaihdon jälkeen — kytkin animoituu kuten muutkin rivit
       function () {
+        try { return localStorage.getItem('vp-kieli') === 'en'; } catch (e) { return VP_KIELI === 'en'; }
+      },
+      function (paivita) {
         try { localStorage.setItem('vp-kieli', VP_KIELI === 'en' ? 'fi' : 'en'); } catch (e) {}
-        location.reload();
+        paivita();
+        // kieli vaihtuu sivulatauksessa — pieni viive näyttää animaation loppuun
+        setTimeout(function () { location.reload(); }, 280);
       });
     kytkin('mi-pro', 'Pro-tila', 'Ammattilaisen säädöt ja analyysit',
       function () { return onIndex && typeof state !== 'undefined' && !!state.proOn; },

@@ -71,6 +71,36 @@ const server = http.createServer((req, res) => {
   await p1.waitForTimeout(1500);
   ok((await p1.evaluate(() => VP_KIELI)) === 'fi', '?lang=fi palauttaa suomen');
 
+  /* Appitabit en-sivuilla (Olavin 1.1-beta-havainto): alapalkin onStats/onIndex
+     tunnistivat vain fi-tiedostonimet → en-tilastosivulla tabit jumittivat.
+     Natiivitila stubataan kuten verify-natiivilisat; lukkopeite pois tieltä. */
+  const ctxN = await b.newContext({ viewport: { width: 390, height: 844 }, locale: 'en-US' });
+  await ctxN.addInitScript(() => {
+    window.Capacitor = { isNativePlatform: () => true, Plugins: {} };
+    try {
+      localStorage.setItem('vp-tour-done', '1');
+      localStorage.setItem('vp-autotour-off', '1');
+      localStorage.setItem('vp-kieli', 'en');
+    } catch (e) {}
+  });
+  const pn = await ctxN.newPage();
+  const poistaLukko = () => pn.evaluate(() => { const el = document.getElementById('vpLukko'); if (el) el.remove(); });
+  await pn.goto(`http://localhost:${PORT}/analytiikka-en.html`);
+  await pn.waitForTimeout(2000);
+  const akt = await pn.evaluate(() => {
+    const t2 = [...document.querySelectorAll('.vp-tab')].find((x) => x.classList.contains('act'));
+    return t2 ? (t2.textContent || '').trim() : '';
+  });
+  ok(/stat/i.test(akt), 'en-tilastosivu: Stats-tabi aktiivinen (onStats tunnistaa -en)', JSON.stringify(akt));
+  await poistaLukko();
+  await pn.click('.vp-tab:nth-child(1)');
+  await pn.waitForTimeout(1800);
+  ok(/index-en\.html$/.test(pn.url()), 'en: Path-tabi vie en-etusivulle', pn.url());
+  await poistaLukko();
+  await pn.click('.vp-tab:nth-child(2)');
+  await pn.waitForTimeout(1800);
+  ok(/analytiikka-en\.html$/.test(pn.url()), 'en: Stats-tabi vie en-tilastosivulle', pn.url());
+
   await b.close();
   server.close();
   if (failed) { console.error(`\n${failed} TARKISTUSTA EPÄONNISTUI`); process.exit(1); }
