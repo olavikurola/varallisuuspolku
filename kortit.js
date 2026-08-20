@@ -552,20 +552,20 @@ function renderEventList() {
       amount = -ev.amount;
       amStr = fmtCompact(-ev.amount);
     }
-    let loanBadge = ev.amount < 0 && ev.financing === 'loan' ? '<span class="loan-badge">laina</span>' : '';
-    if (ev.owned) loanBadge += `<span class="loan-badge">omistan${(ev.loanLeft || 0) > 0 ? ` · lainaa ${fmtCompact(ev.loanLeft)}` : ''}</span>`;
-    if (ev.shared) loanBadge += '<span class="loan-badge share-badge">½ jaettu</span>';
-    if (ev.type !== 'retirement' && ev.recMonthly) loanBadge += '<span class="loan-badge rec-badge">toistuva</span>';
-    if (ev.isAsset && ev.sellAge != null) loanBadge += `<span class="loan-badge sale-badge">myynti ${Math.round(ev.sellAge)} v</span>`;
+    let loanBadge = ev.amount < 0 && ev.financing === 'loan' ? `<span class="loan-badge">${t('laina')}</span>` : '';
+    if (ev.owned) loanBadge += `<span class="loan-badge">${t('omistan')}${(ev.loanLeft || 0) > 0 ? t(' · lainaa {0}', fmtCompact(ev.loanLeft)) : ''}</span>`;
+    if (ev.shared) loanBadge += `<span class="loan-badge share-badge">${t('½ jaettu')}</span>`;
+    if (ev.type !== 'retirement' && ev.recMonthly) loanBadge += `<span class="loan-badge rec-badge">${t('toistuva')}</span>`;
+    if (ev.isAsset && ev.sellAge != null) loanBadge += `<span class="loan-badge sale-badge">${t('myynti {0} v', Math.round(ev.sellAge))}</span>`;
     const goalBadge = { withdrawal: '→ 0 €', age: 'aikaisin', saving: 'tavoite' }[g];
     if (goalBadge) loanBadge = `<span class="loan-badge zero-badge">${goalBadge}</span>`;
-    if (ev.type === 'goal') loanBadge = '<span class="loan-badge goal-badge">🎯 tavoite</span>';
+    if (ev.type === 'goal') loanBadge = `<span class="loan-badge goal-badge">${t('🎯 tavoite')}</span>`;
     row.innerHTML =
       `<span class="ic">${def.icon}</span><span class="nm" title="${escapeHtml(evLabel(ev))}">${escapeHtml(evLabel(ev))}</span>` +
       loanBadge +
-      `<span class="ag">${ev.owned ? 'nyt' : Math.round(ev.age) + ' v'}</span>` +
+      `<span class="ag">${ev.owned ? t('nyt') : Math.round(ev.age) + ' ' + VP_YKS_V}</span>` +
       `<span class="am ${amount >= 0 ? 'pos' : 'neg'}">${amStr}</span>` +
-      `<button class="rm" title="Poista">✕</button>`;
+      `<button class="rm" title="${t('Poista')}">✕</button>`;
     row.tabIndex = 0;
     row.setAttribute('role', 'button');
     row.addEventListener('click', (e) => {

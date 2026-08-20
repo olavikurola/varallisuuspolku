@@ -36,7 +36,12 @@ const TAULUT = {
                   ['PRO_BASE_ASSETS', /'((?:[^'\\]|\\.)+)'/g]],
   'tulkki.js': [['ERRORS', /: '((?:[^'\\]|\\.)+)'/g],
                 ['FIELDS', /nimi: '((?:[^'\\]|\\.)+)'/g],
-                ['EVENT_NAMES', /: '((?:[^'\\]|\\.)+)'/g]],
+                ['EVENT_NAMES', /: '((?:[^'\\]|\\.)+)'/g],
+                // EVENT_PROPS-ominaisuusnimet (t(p.nimi) muutosriveillä) ja
+                // NOQ-tehtävälabelit (t(NOQ[mode]) — käännetty teksti menee
+                // myös palvelimelle kysymyksenä, ks. KIELIVERSIO.md-linjaus)
+                ['EVENT_PROPS', /nimi: '((?:[^'\\]|\\.)+)'/g],
+                ['const NOQ', /: '((?:[^'\\]|\\.)+)'/g]],
   'sovellus.js': [['ACCT_NOTES', /: '((?:[^'\\]|\\.)+)'/g],
                   ['PLAN_SRC_LABELS', /: '((?:[^'\\]|\\.)+)'/g],
                   ['EXAMPLES', /(?:name|desc): '((?:[^'\\]|\\.)+)'/g]],
@@ -102,6 +107,10 @@ function pysyvatAvaimet(tourLohko) {
   // Datana kulkevat yksittäisarvot, joita mikään lohkopoiminta ei näe:
   // analytiikka.js renderPenCoverage: rows.push({ g: 'kaikki' }) → t(r.g)
   lisaa('kaikki', 'PYSYVAT (analytiikka.js penCoverage koko joukon rivi)');
+  // tulkki.js katsastuksen lainafallbackit: t(EVENT_NAMES[e.type] || 'Laina')
+  // — fallback-literaali ei ole staattinen t('...')-kutsu
+  lisaa('Laina', 'PYSYVAT (tulkki.js katsastus fallback)');
+  lisaa('Lainaa', 'PYSYVAT (tulkki.js katsastus fallback)');
 }
 
 // 3) Nielukäärityt objektiliteraalit: tiilien/korttien k/s/v-statiikat.

@@ -88,6 +88,7 @@ tyyppi-label) EI käännetä — Plausible-datan jatkuvuus. MCP ja LLM-konteksti
 - [x] tulkki.js ERRORS-luennat (4 kpl) fallback-teksteineen — t() lukupaikassa,
       ERRORS-taulun fi-arvot toimivat avaimina. LINJAUS: NOQ ei käärity — arvot
       menevät palvelimelle LLM-kysymyksinä (kieli ratkeaa vaiheen 2 lang-paramilla)
+      → LINJAUS PÄIVITETTY 20.8.2026: NOQ ja chipit KÄÄNNETÄÄN, ks. vaihe 2
 - [x] STRESS_DEFS-nimet + from-tekstit stressiskenaariolistassa (laajennukset.js;
       laskenta.js pysyy koskemattomana — labelit käännetään renderöintipaikassa)
 - [x] kortit.js tilastotiilet + sovellus.js yhteenvetotiilet NIELUKÄÄRINTÄNÄ:
@@ -167,6 +168,25 @@ Tiedosto kerrallaan, testit joka välissä. Järjestys (helpoimmasta / perustavi
       + viestilabelit CONTEXT/QUESTION/DESCRIPTION. ⚠ VAATII RAILWAY-DEPLOYN.
       OPPI: node --check ei näe skooppien välisiä ReferenceErroreita — palvelin-
       muutokset testattava aina oikealla pyynnöllä (tulkki-proxy.test.js).
+- [x] Tulkin loppusiivous (20.8.2026): KAIKKI jäljellä ollut käyttäjälle näkyvä
+      suomi tulkki.js:ssä t():hen — 132 uutta käärintää (otsikon tekoälyapuri-rivi,
+      handle.title/aria-labelit, kiintiö- ja kiinnostuskortti, Huomiot-vihjelauseet
+      {0}-muotoon, Selitä-napit, chipit, Tulkin toimet/Kopioi evalit -laskurinapit,
+      muutosesikatselun rivinimet+ohitettu-syyt, vertailu- ja markkinatestitaulukot,
+      intro, NL-ramppi, Miksi?-chipin kysymys). NBSP:t 6→6 (vain regex-luokissa;
+      r. 1479 kääritty node-skriptillä sieppausryhmin). fi-tavuidenttisyys
+      todistettu 27 pariteettitarkistuksella. LINJAUSPÄIVITYS: chipit ja
+      NOQ-tehtävälabelit käännetään t():llä renderissä ja KÄÄNNETTY teksti
+      lähtee palvelimelle kysymyksenä — oikein nyt, koska palvelin valitsee
+      en-promptin lang=en-parametrilla (vanha "NOQ pysyy suomena" edelsi
+      palvelinpään en-tukea). Skanneriin EVENT_PROPS+NOQ-taulupoiminnat ja
+      Laina/Lainaa-fallbackit (PYSYVAT). Sanasto 712→834 avainta, kaikki
+      käännetty (mukana edellisen erän 13 kortit/kaavio-badgen jäännösavainta);
+      vanhat avaimet tavuidenttiset (git diff = pelkkiä lisäyksiä). TIETOISESTI
+      SUOMEKSI YHÄ: LLM-kontekstin selitteet (buildVertailu/buildContext/
+      buildOmatSuunnitelmat — malli saa fi-kontekstin, en-prompt ohjaa kielen),
+      ERRORS/FIELDS/EVENT_NAMES/EVENT_PROPS/NOQ-taulut (käännös lukupaikassa),
+      track()-nimet, 'tulkin-toimet.json'-tiedostonimi, '· N tok' -kehittäjärivi.
 - [x] Natiivitekstit ilman .strings-kirurgiaa: iOS-widgetin galleria/fallback-tekstit
       Swift-kielihaaralla (vpEnglanti, Locale.preferredLanguages — sisältö tulee
       appista käännettynä), Android values-en/strings.xml (widget + pikatoiminnot;

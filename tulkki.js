@@ -342,7 +342,7 @@
   handle.className = 'tk-handle';
   handle.type = 'button';
   handle.textContent = t('✦ Kysy AI');
-  handle.title = 'Tulkki — kysy suunnitelmastasi';
+  handle.title = t('Tulkki — kysy suunnitelmastasi');
   // Hiljainen katsastusmerkki: ei sykettä, ei ääntä (kunnioittaa tyyntä ilmettä)
   const badge = document.createElement('i');
   badge.className = 'tk-badge';
@@ -352,11 +352,11 @@
   const sheet = document.createElement('aside');
   sheet.className = 'tk-sheet';
   sheet.hidden = true;
-  sheet.setAttribute('aria-label', 'Tulkki, tekoälyapuri — kysy suunnitelmastasi');
+  sheet.setAttribute('aria-label', t('Tulkki, tekoälyapuri — kysy suunnitelmastasi'));
   sheet.innerHTML =
     `<header class="tk-head">
       <span class="tk-dot" aria-hidden="true">✦</span>
-      <b>Tulkki</b><small>tekoälyapuri</small>
+      <b>Tulkki</b><small>${t('tekoälyapuri')}</small>
       <button type="button" class="tk-x" id="tkClose" aria-label="${t('Sulje Tulkki')}">✕</button>
     </header>
     <div class="tk-privacy" title="${t('Vain suunnitelman anonyymi muoto ja kysymys välitetään selitystä varten — ei nimiä eikä tunnisteita.')}">${APPI ? t('🔒 Laskelmasi ei lähde laitteeltasi — palvelin ei tallenna mitään.') : t('🔒 Laskelmasi ei lähde selaimestasi — palvelin ei tallenna mitään.')}</div>
@@ -368,7 +368,7 @@
       <button type="submit" aria-label="${t('Lähetä kysymys')}">↑</button>
     </form>
     <div class="tk-foot">
-      <button type="button" class="tk-mini" id="tkLogBtn">Tulkin toimet (0)</button>
+      <button type="button" class="tk-mini" id="tkLogBtn">${t('Tulkin toimet ({0})', 0)}</button>
       <button type="button" class="tk-mini" id="tkEvalCopy"></button>
       <span class="tk-quota" id="tkQuota" title="${t('Ilmaiskäytön päiväkiintiö — nollautuu keskiyöllä')}"></span>
       <span class="tk-cost" id="tkCost"></span>
@@ -453,37 +453,37 @@
       const sugs = [];
       // Sama asia näkyy Huomioissa Selitä-nappina — ei duplikaattia chippinä
       const huomioissa = s && (s.depletionAge != null || (s.successProb != null && s.successProb < 0.75));
-      if (!huomioissa && s && s.successProb != null) sugs.push(`Miksi onnistumistodennäköisyys on ${Math.round(s.successProb * 100)} %?`);
+      if (!huomioissa && s && s.successProb != null) sugs.push(t('Miksi onnistumistodennäköisyys on {0} %?', Math.round(s.successProb * 100)));
       // Vertailuchippi vasta kun aggregaattidataa on oikeasti julkaistu
       if (vStats && ((vStats.groups[tkGroupOf(state.ageNow)] || {}).monthly || (vStats.groups.all || {}).monthly)) {
-        sugs.push('Miten suunnitelmani vertautuu muihin?');
+        sugs.push(t('Miten suunnitelmani vertautuu muihin?'));
       }
-      sugs.push('Mikä suunnitelmassani on suurin epävarmuus?');
-      sugs.push('Mistä verot kertyvät?');
+      sugs.push(t('Mikä suunnitelmassani on suurin epävarmuus?'));
+      sugs.push(t('Mistä verot kertyvät?'));
       // Appissa tyhjä aloitusnäkymä täyttyy ehdotuskorteilla (3 + haasta) —
       // webissä kapea chippirivi kuten ennen
       html = sugs.slice(0, APPI ? 3 : (tkNarrow() ? 1 : 2)).map((q) => `<button type="button" class="tk-sug">${esc(q)}</button>`).join('') +
-        '<button type="button" class="tk-sug tk-haasta">🔍 Haasta suunnitelmani</button>';
-      if (APPI) html = '<div class="tk-alku-otsikko">Kokeile näitä</div>' + html;
+        `<button type="button" class="tk-sug tk-haasta">${t('🔍 Haasta suunnitelmani')}</button>`;
+      if (APPI) html = `<div class="tk-alku-otsikko">${t('Kokeile näitä')}</div>` + html;
     } else {
       // Profiilichippi vain kun rinnakkaisia suunnitelmia oikeasti on
       const hasPlans = typeof plans !== 'undefined' && Array.isArray(plans) && plans.length > 1;
-      html = (hasRet ? '<button type="button" class="tk-sug tk-market">📉 Markkinatesti</button>' : '') +
-        '<button type="button" class="tk-sug tk-haasta">🔍 Haasta suunnitelmani</button>' +
-        (hasPlans ? '<button type="button" class="tk-sug tk-plans">🗂 Vertaa suunnitelmiani</button>' : '') +
-        '<button type="button" class="tk-sug tk-adv">📋 Kysymyslista varainhoitajalle</button>';
+      html = (hasRet ? `<button type="button" class="tk-sug tk-market">${t('📉 Markkinatesti')}</button>` : '') +
+        `<button type="button" class="tk-sug tk-haasta">${t('🔍 Haasta suunnitelmani')}</button>` +
+        (hasPlans ? `<button type="button" class="tk-sug tk-plans">${t('🗂 Vertaa suunnitelmiani')}</button>` : '') +
+        `<button type="button" class="tk-sug tk-adv">${t('📋 Kysymyslista varainhoitajalle')}</button>`;
     }
     el.innerHTML = html;
     el.classList.toggle('tk-sugs-alku', APPI && !chat.length);
     el.querySelectorAll('.tk-sug').forEach((b) => {
       b.addEventListener('click', () => {
         if (b.classList.contains('tk-adv')) ask('', 'advisor');
-        else if (b.classList.contains('tk-plans')) ask('Vertaa suunnitelmiani keskenään', 'explain');
+        else if (b.classList.contains('tk-plans')) ask(t('Vertaa suunnitelmiani keskenään'), 'explain');
         else if (b.classList.contains('tk-haasta')) ask('', 'haasta');
         else if (b.classList.contains('tk-market')) {
           tkTrack('Tulkki markkinatesti');
           const qEl = document.createElement('div');
-          qEl.className = 'tk-q'; qEl.textContent = 'Markkinatesti';
+          qEl.className = 'tk-q'; qEl.textContent = t('Markkinatesti');
           log.appendChild(qEl);
           renderMarketStress();
         } else ask(b.textContent, 'explain');
@@ -515,7 +515,7 @@
     if (!el) return;
     if (tkKey) { el.hidden = true; return; }
     el.hidden = false;
-    el.textContent = `${Math.min(QUOTA_MAX, quotaUsed())}/${QUOTA_MAX} tänään`;
+    el.textContent = t('{0}/{1} tänään', Math.min(QUOTA_MAX, quotaUsed()), QUOTA_MAX);
   }
 
   // Kun päiväkiintiö täyttyy: kerrotaan tilanne ja tarjotaan kiinnostuksen
@@ -525,18 +525,18 @@
     const card = document.createElement('div');
     card.className = 'tk-change tk-quota-card';
     card.innerHTML =
-      `<div class="tk-ch-lab">Päivän ${QUOTA_MAX} ilmaista kysymystä on käytetty</div>` +
-      `<div class="tk-ch-note">Tulkki jatkaa huomenna — laskuri ja muut työkalut (markkinatesti, katsastus, vertailu) toimivat normaalisti ilman rajaa. Laajempi maksullinen versio on suunnitteilla: kiinnostuksen ilmaisu auttaa mitoittamaan sen.</div>` +
-      `<div class="tk-ch-acts"><button type="button" class="tk-keep tk-interest">Olen kiinnostunut laajemmasta käytöstä</button></div>`;
+      `<div class="tk-ch-lab">${t('Päivän {0} ilmaista kysymystä on käytetty', QUOTA_MAX)}</div>` +
+      `<div class="tk-ch-note">${t('Tulkki jatkaa huomenna — laskuri ja muut työkalut (markkinatesti, katsastus, vertailu) toimivat normaalisti ilman rajaa. Laajempi maksullinen versio on suunnitteilla: kiinnostuksen ilmaisu auttaa mitoittamaan sen.')}</div>` +
+      `<div class="tk-ch-acts"><button type="button" class="tk-keep tk-interest">${t('Olen kiinnostunut laajemmasta käytöstä')}</button></div>`;
     card.querySelector('.tk-interest').addEventListener('click', (ev) => {
       tkTrack('Tukija kiinnostus');
-      ev.target.textContent = 'Kiitos — kiinnostus kirjattu ✓';
+      ev.target.textContent = t('Kiitos — kiinnostus kirjattu ✓');
       ev.target.disabled = true;
       // Sähköposti paljastuu vasta kiinnostuksen jälkeen: yksi ele ensin,
       // syvempi kanava sitä haluavalle — ei kahta kilpailevaa kehotetta
       const more = document.createElement('div');
       more.className = 'tk-ch-note';
-      more.innerHTML = 'Halutessasi voit myös kertoa toiveistasi — se auttaa muotoilemaan laajemman version oikein:<br>' +
+      more.innerHTML = t('Halutessasi voit myös kertoa toiveistasi — se auttaa muotoilemaan laajemman version oikein:') + '<br>' +
         '<a class="tk-mailto" href="mailto:info@varallisuuspolku.com?subject=Tukija-kiinnostus">✉ info@varallisuuspolku.com</a>';
       card.appendChild(more);
       log.scrollTop = log.scrollHeight;
@@ -548,7 +548,7 @@
   async function ask(question, mode) {
     if (busy) return;
     if (quotaLeft() <= 0) { renderQuotaCard(); return; }
-    const q = NOQ[mode] || (question || input.value.trim());
+    const q = NOQ[mode] ? t(NOQ[mode]) : (question || input.value.trim());
     if (!NOQ[mode] && !q) return;
     tkTrack('Tulkki kysymys', { mode: mode || 'explain' });
     busy = true;
@@ -562,7 +562,7 @@
     log.appendChild(qEl);
     const aEl = document.createElement('div');
     aEl.className = 'tk-a tk-busy';
-    aEl.textContent = 'Tulkki miettii…';
+    aEl.textContent = t('Tulkki miettii…');
     log.appendChild(aEl);
     log.scrollTop = log.scrollHeight;
 
@@ -573,7 +573,7 @@
     try { ctx = buildContext(); } catch (e) { /* alla */ }
     if (!ctx) {
       aEl.className = 'tk-a tk-err';
-      aEl.textContent = 'Kontekstin rakentaminen moottorista epäonnistui.';
+      aEl.textContent = t('Kontekstin rakentaminen moottorista epäonnistui.');
       busy = false; input.disabled = false;
       return;
     }
@@ -651,7 +651,7 @@
             const opts = [];
             for (const v of (Array.isArray(tCmpRaw.input.vaihtoehdot) ? tCmpRaw.input.vaihtoehdot : []).slice(0, 4)) {
               const { list } = validateChanges(v && v.muutokset);
-              if (list.length) opts.push({ nimi: String((v && v.nimi) || 'Vaihtoehto').slice(0, 40), muutokset: list });
+              if (list.length) opts.push({ nimi: String((v && v.nimi) || t('Vaihtoehto')).slice(0, 40), muutokset: list });
             }
             if (opts.length) toolCompare = { vaihtoehdot: opts, selite: String(tCmpRaw.input.selite || '').slice(0, 200) };
           }
@@ -663,7 +663,7 @@
           const viallinen = toolErr || (!toolCompare && cmp && cmp.viallinen) || (!toolChange && parsed.viallinen);
           let text = cmp ? cmp.text : parsed.text;
           if (!text) { // työkalukutsu ilman saatetekstiä — selite kelpaa vastaukseksi
-            text = (change && change.selite) || (compare && compare.selite) || 'Kokeillaan — katso esikatselu.';
+            text = (change && change.selite) || (compare && compare.selite) || t('Kokeillaan — katso esikatselu.');
             aEl.className = 'tk-a';
           }
           const doubts = renderAnswer(aEl, text, nums, bmap); // lopullinen: ei kursoria
@@ -674,12 +674,12 @@
           const mEl = document.createElement('div');
           mEl.className = 'tk-meta';
           mEl.innerHTML =
-            `<span>✓ luvut moottorista${bound ? ` · ${bound} sidottu` : ''}${doubts ? ` · <b class="tk-doubt-n">${doubts} tarkistamatonta</b>` : ''}</span>` +
+            `<span>${t('✓ luvut moottorista')}${bound ? ` · ${t('{0} sidottu', bound)}` : ''}${doubts ? ` · <b class="tk-doubt-n">${t('{0} tarkistamatonta', doubts)}</b>` : ''}</span>` +
             // Palaute: vain arvio Plausibleen (ylos/alas) — EI sisältöä, ei
             // tunnisteita. Avaimella arvio tallentuu myös paikalliseen evaliin.
             `<span class="tk-fb"><button type="button" class="tk-mini tk-fb-b" data-arvio="ylos" title="${t('Hyvä vastaus')}" aria-label="${t('Hyvä vastaus')}">👍</button>` +
             `<button type="button" class="tk-mini tk-fb-b" data-arvio="alas" title="${t('Huono tai epäselvä vastaus')}" aria-label="${t('Huono tai epäselvä vastaus')}">👎</button></span>` +
-            (tkKey ? `<button type="button" class="tk-mini tk-eval-b">Tallenna evaliksi</button>` : '');
+            (tkKey ? `<button type="button" class="tk-mini tk-eval-b">${t('Tallenna evaliksi')}</button>` : '');
           mEl.querySelectorAll('.tk-fb-b').forEach((b) => b.addEventListener('click', () => {
             tkTrack('Tulkki palaute', { arvio: b.dataset.arvio });
             if (tkKey) saveEval(q, full, ctx, b.dataset.arvio);
@@ -689,7 +689,7 @@
           const evalBtn = mEl.querySelector('.tk-eval-b');
           if (evalBtn) evalBtn.addEventListener('click', (ev) => {
             saveEval(q, full, ctx);
-            ev.target.textContent = 'Tallennettu ✓';
+            ev.target.textContent = t('Tallennettu ✓');
             ev.target.disabled = true;
           });
           aEl.appendChild(mEl);
@@ -699,14 +699,14 @@
             const note = document.createElement('div');
             note.className = 'tk-change';
             const rr = (cmp && cmp.raakaRivi) || parsed.raakaRivi || '';
-            note.innerHTML = '<div class="tk-ch-note">Tulkin komentorivi oli viallinen — mitään ei muutettu. Sano sama hieman toisin, niin yritän uudelleen.</div>' +
+            note.innerHTML = `<div class="tk-ch-note">${t('Tulkin komentorivi oli viallinen — mitään ei muutettu. Sano sama hieman toisin, niin yritän uudelleen.')}</div>` +
               (rr ? `<div class="tk-ch-row tk-ch-skip"><code>${esc(rr)}</code></div>` : '');
             log.appendChild(note);
           }
           else if (rejected && rejected.length) {
             const note = document.createElement('div');
             note.className = 'tk-change';
-            note.innerHTML = `<div class="tk-ch-note">Tulkki yritti muuttaa kohdetta, jota esikatselu ei vielä tue (${esc(rejected.join(', '))}) — mitään ei muutettu. Kokeile sanoa tarkemmin, tai tee muutos käsin napauttamalla tapahtumaa aikajanalla.</div>`;
+            note.innerHTML = `<div class="tk-ch-note">${t('Tulkki yritti muuttaa kohdetta, jota esikatselu ei vielä tue ({0}) — mitään ei muutettu. Kokeile sanoa tarkemmin, tai tee muutos käsin napauttamalla tapahtumaa aikajanalla.', esc(rejected.join(', ')))}</div>`;
             log.appendChild(note);
           }
           if (meta && meta.usage) {
@@ -897,7 +897,7 @@
       const opts = [];
       for (const v of (Array.isArray(o.vaihtoehdot) ? o.vaihtoehdot : []).slice(0, 4)) {
         const { list } = validateChanges(v && v.muutokset);
-        if (list.length) opts.push({ nimi: String((v && v.nimi) || 'Vaihtoehto').slice(0, 40), muutokset: list });
+        if (list.length) opts.push({ nimi: String((v && v.nimi) || t('Vaihtoehto')).slice(0, 40), muutokset: list });
       }
       if (!opts.length) return { text: d.text, compare: null, viallinen: true, raakaRivi: d.payload.slice(0, 160) };
       return { text: d.text, compare: { vaihtoehdot: opts, selite: String(o.selite || '').slice(0, 200) } };
@@ -914,9 +914,10 @@
         mod.savePhases = c.aikataulu.slice().sort((a, b) => a.to - b.to);
         mod.monthly = mod.savePhases[0].amount; // perussäästö = 1. vaihe (poiston varalta)
         const n = mod.savePhases.length;
-        const desc = mod.savePhases.map((p, i) =>
-          `${fmtFi(Math.round(p.amount))} €/kk ${i < n - 1 ? '→ ' + p.to + ' v' : '→ loppu'}`).join(', ');
-        rows.push({ nimi: 'Säästöaikataulu', desc });
+        const desc = mod.savePhases.map((p, i) => i < n - 1
+          ? t('{0} €/kk → {1} v', fmtFi(Math.round(p.amount)), p.to)
+          : t('{0} €/kk → loppu', fmtFi(Math.round(p.amount)))).join(', ');
+        rows.push({ nimi: t('Säästöaikataulu'), desc });
         continue;
       }
       // Uusi tapahtuma: samat oletukset kuin paletista lisätessä (EVENT_TYPES).
@@ -934,7 +935,7 @@
           };
           if (def.rec) { ev.recMonthly = def.rec.monthly; ev.recYears = def.rec.years; }
           mod.events.push(ev);
-          rows.push({ nimi: `${EVENT_NAMES[c.uusi]} (uusi)`, desc: 'omistus nykyhetkessä — oletusarvot ja -laina' });
+          rows.push({ nimi: t('{0} (uusi)', t(EVENT_NAMES[c.uusi])), desc: t('omistus nykyhetkessä — oletusarvot ja -laina') });
           continue;
         }
         const age = Math.min(mod.ageEnd, Math.max(mod.ageNow, c.ika));
@@ -945,49 +946,49 @@
           if (def.rec) { ev.recMonthly = def.rec.monthly; ev.recYears = def.rec.years; }
         }
         mod.events.push(ev);
-        rows.push({ nimi: `${EVENT_NAMES[c.uusi]} (uusi)`, desc: `lisätty ikään ${age} v` });
+        rows.push({ nimi: t('{0} (uusi)', t(EVENT_NAMES[c.uusi])), desc: t('lisätty ikään {0} v', age) });
         continue;
       }
       // Tapahtuman poisto: kohdennus kuten ominaisuusmuutoksessa
       if (c.poista) {
-        const label = `${EVENT_NAMES[c.poista]} · poisto`;
+        const label = t('{0} · poisto', t(EVENT_NAMES[c.poista]));
         const cands = (mod.events || []).filter((e) => e.type === c.poista);
-        if (!cands.length) { rows.push({ nimi: label, ohitettu: 'ei tällaista tapahtumaa' }); continue; }
+        if (!cands.length) { rows.push({ nimi: label, ohitettu: t('ei tällaista tapahtumaa') }); continue; }
         let ev = cands[0];
         if (cands.length > 1) {
-          if (c.tapahtumaIka == null) { rows.push({ nimi: label, ohitettu: 'useita samaa tyyppiä — täsmennä ikä' }); continue; }
+          if (c.tapahtumaIka == null) { rows.push({ nimi: label, ohitettu: t('useita samaa tyyppiä — täsmennä ikä') }); continue; }
           ev = cands.reduce((a, b) => Math.abs(a.age - c.tapahtumaIka) <= Math.abs(b.age - c.tapahtumaIka) ? a : b);
         }
         mod.events = mod.events.filter((e) => e !== ev);
-        rows.push({ nimi: `${EVENT_NAMES[c.poista]} (${Math.round(ev.age)} v)`, desc: 'poistettu' });
+        rows.push({ nimi: t('{0} ({1} v)', t(EVENT_NAMES[c.poista]), Math.round(ev.age)), desc: t('poistettu') });
         continue;
       }
       // Tapahtuman ominaisuus: kohdenna tyyppiin, tarvittaessa ikään
       if (c.tapahtuma) {
         const p = EVENT_PROPS[c.ominaisuus];
-        const label = `${EVENT_NAMES[c.tapahtuma]} · ${p.nimi}`;
+        const label = t(EVENT_NAMES[c.tapahtuma]) + ' · ' + t(p.nimi);
         const cands = (mod.events || []).filter((e) => e.type === c.tapahtuma);
-        if (!cands.length) { rows.push({ nimi: label, ohitettu: 'ei tällaista tapahtumaa' }); continue; }
+        if (!cands.length) { rows.push({ nimi: label, ohitettu: t('ei tällaista tapahtumaa') }); continue; }
         let ev = cands[0];
         if (cands.length > 1) {
-          if (c.tapahtumaIka == null) { rows.push({ nimi: label, ohitettu: 'useita samaa tyyppiä — täsmennä ikä' }); continue; }
+          if (c.tapahtumaIka == null) { rows.push({ nimi: label, ohitettu: t('useita samaa tyyppiä — täsmennä ikä') }); continue; }
           ev = cands.reduce((a, b) => Math.abs(a.age - c.tapahtumaIka) <= Math.abs(b.age - c.tapahtumaIka) ? a : b);
         }
         // Omistuksen lainakentät elävät loanLeftin varassa, ei financing-lippua
         if ((c.ominaisuus === 'rate' || c.ominaisuus === 'years') && ev.financing !== 'loan' && !(ev.owned && (ev.loanLeft || 0) > 0)) {
-          rows.push({ nimi: label, ohitettu: 'tapahtumassa ei ole lainaa' }); continue;
+          rows.push({ nimi: label, ohitettu: t('tapahtumassa ei ole lainaa') }); continue;
         }
         if (c.ominaisuus === 'down' && ev.financing !== 'loan') {
-          rows.push({ nimi: label, ohitettu: 'tapahtumassa ei ole lainaa' }); continue;
+          rows.push({ nimi: label, ohitettu: t('tapahtumassa ei ole lainaa') }); continue;
         }
         if (c.ominaisuus === 'loanLeft' && !ev.owned) {
-          rows.push({ nimi: label, ohitettu: 'vain omistukselle (own*)' }); continue;
+          rows.push({ nimi: label, ohitettu: t('vain omistukselle (own*)') }); continue;
         }
         if (c.ominaisuus === 'appr' && !ev.isAsset) {
-          rows.push({ nimi: label, ohitettu: 'ei omaisuuserä' }); continue;
+          rows.push({ nimi: label, ohitettu: t('ei omaisuuserä') }); continue;
         }
         if (c.ominaisuus === 'age' && ev.owned) {
-          rows.push({ nimi: label, ohitettu: 'omistus on aina nykyhetkessä' }); continue;
+          rows.push({ nimi: label, ohitettu: t('omistus on aina nykyhetkessä') }); continue;
         }
         let arvo = c.arvo;
         if (c.ominaisuus === 'age') arvo = Math.min(mod.ageEnd, Math.max(mod.ageNow, Math.round(arvo)));
@@ -995,7 +996,7 @@
         if (c.ominaisuus === 'amount' && typeof ev.amount === 'number' && ev.amount < 0 && arvo > 0) arvo = -arvo;
         const vanha = ev[c.ominaisuus];
         ev[c.ominaisuus] = arvo;
-        rows.push({ nimi: `${EVENT_NAMES[c.tapahtuma]} (${ev.owned ? 'nyt' : ev.age + ' v'}) · ${p.nimi}`, vanha, uusi: arvo, yks: p.yks });
+        rows.push({ nimi: t(EVENT_NAMES[c.tapahtuma]) + ' (' + (ev.owned ? t('nyt') : t('{0} v', ev.age)) + ') · ' + t(p.nimi), vanha, uusi: arvo, yks: p.yks });
         continue;
       }
       const f = FIELDS[c.kentta];
@@ -1013,7 +1014,7 @@
           };
           mod.events = mod.events || [];
           mod.events.push(ret);
-          rows.push({ nimi: 'Eläkkeelle jäänti', desc: `lisätty suunnitelmaan oletuksin (nosto ${def.withdrawal} €/kk, työeläke ${def.pension} €/kk ${def.pensionAge} v alkaen)` });
+          rows.push({ nimi: t('Eläkkeelle jäänti'), desc: t('lisätty suunnitelmaan oletuksin (nosto {0} €/kk, työeläke {1} €/kk {2} v alkaen)', def.withdrawal, def.pension, def.pensionAge) });
         }
         if (c.kentta === 'retAge') arvo = Math.min(mod.ageEnd - 1, Math.max(mod.ageNow + 1, Math.round(arvo)));
         const vanha = ret[f.ret];
@@ -1034,7 +1035,7 @@
     const card = document.createElement('div');
     card.className = 'tk-change';
     if (previewBefore) {
-      card.innerHTML = '<div class="tk-ch-note">Päätä ensin edellinen kokeilu (Pidä tai Palauta).</div>';
+      card.innerHTML = `<div class="tk-ch-note">${t('Päätä ensin edellinen kokeilu (Pidä tai Palauta).')}</div>`;
       log.appendChild(card);
       return;
     }
@@ -1047,23 +1048,23 @@
       const miksi = rows.length
         ? rows.map((r) => `<div class="tk-ch-row tk-ch-skip">${esc(t(r.nimi))} · ${esc(r.ohitettu || '')}</div>`).join('')
         : '';
-      const vihje = rows.some((r) => r.ohitettu === 'ei tällaista tapahtumaa')
-        ? '<div class="tk-ch-note">Vinkki: pyydä ensin lisäämään tapahtuma (esim. “lisää mökki 65-vuotiaana 150 000 €”), niin luon sen ja säädän summat samalla.</div>'
+      const vihje = rows.some((r) => r.ohitettu === t('ei tällaista tapahtumaa'))
+        ? `<div class="tk-ch-note">${t('Vinkki: pyydä ensin lisäämään tapahtuma (esim. “lisää mökki 65-vuotiaana 150 000 €”), niin luon sen ja säädän summat samalla.')}</div>`
         : '';
-      card.innerHTML = '<div class="tk-ch-note">Muutosta ei voitu soveltaa suunnitelmaan:</div>' + miksi + vihje;
+      card.innerHTML = `<div class="tk-ch-note">${t('Muutosta ei voitu soveltaa suunnitelmaan:')}</div>` + miksi + vihje;
       log.appendChild(card);
       log.scrollTop = log.scrollHeight;
       return;
     }
     previewBefore = before;
-    setBaseline('Ennen Tulkin kokeilua'); // haamu = tilanne ennen muutosta
+    setBaseline(t('Ennen Tulkin kokeilua')); // haamu = tilanne ennen muutosta
     applySaved(mod);
     syncInputs();
     renderAll();
 
     const fmt = fmtFi;
     card.innerHTML =
-      `<div class="tk-ch-lab">Kokeilu käytössä — vertailu haamuna graafissa</div>` +
+      `<div class="tk-ch-lab">${t('Kokeilu käytössä — vertailu haamuna graafissa')}</div>` +
       (change.selite ? `<div class="tk-ch-sel">${esc(change.selite)}</div>` : '') +
       rows.map((r) => r.ohitettu
         ? `<div class="tk-ch-row tk-ch-skip">${esc(t(r.nimi))} · ${t('ohitettu')} (${esc(r.ohitettu)})</div>`
@@ -1071,21 +1072,21 @@
         ? `<div class="tk-ch-row">${esc(t(r.nimi))}: <b>${esc(r.desc)}</b></div>`
         : `<div class="tk-ch-row">${esc(t(r.nimi))}: <s>${fmt(r.vanha)}</s> → <b>${fmt(r.uusi)}</b> ${esc(r.yks)}</div>`).join('') +
       `<div class="tk-ch-acts">
-        <button type="button" class="tk-keep">Pidä muutos</button>
+        <button type="button" class="tk-keep">${t('Pidä muutos')}</button>
         <button type="button" class="tk-mini tk-revert" title="${t('Palauttaa tilanteen ennen kokeilua')}">${t('Palauta')}</button>
       </div>`;
     card.querySelector('.tk-keep').addEventListener('click', () => {
       // Kirjaa pidetty muutos paikalliseen lokiin ennen previewBeforen nollausta
       saveLogEntry({
         t: new Date().toISOString(),
-        q: cmdQ || change.selite || 'Tulkin muutos',
+        q: cmdQ || change.selite || t('Tulkin muutos'),
         selite: change.selite || '',
         rows: applied.map((r) => ({ nimi: r.nimi, vanha: r.vanha, uusi: r.uusi, yks: r.yks || '', desc: r.desc })),
         before: previewBefore,
       });
       previewBefore = null;
       tkTrack('Tulkki muutos pidetty');
-      card.querySelector('.tk-ch-lab').textContent = 'Muutos pidetty ✓ — vertailukohta jäi graafiin';
+      card.querySelector('.tk-ch-lab').textContent = t('Muutos pidetty ✓ — vertailukohta jäi graafiin');
       card.querySelector('.tk-ch-acts').remove();
     });
     card.querySelector('.tk-revert').addEventListener('click', () => {
@@ -1094,7 +1095,7 @@
       syncInputs();
       renderAll();
       clearBaseline();
-      card.querySelector('.tk-ch-lab').textContent = 'Palautettu ennalleen';
+      card.querySelector('.tk-ch-lab').textContent = t('Palautettu ennalleen');
       card.querySelector('.tk-ch-acts').remove();
     });
     log.appendChild(card);
@@ -1117,12 +1118,12 @@
   }
 
   const CMP_ROWS = [
-    { k: 'Onnistuminen', get: (m) => m.succ, fmt: (v) => v == null ? '–' : v + ' %', best: 'max' },
-    { k: 'Varat riittävät', get: (m) => m.dep, fmt: (v) => v == null ? '✓' : v + ' v', best: 'maxNull' },
-    { k: 'Kestävä tulo, €/kk', get: (m) => m.sust, fmt: (v) => v == null ? '–' : fmtFi(v), best: 'max' },
+    { k: t('Onnistuminen'), get: (m) => m.succ, fmt: (v) => v == null ? '–' : v + ' %', best: 'max' },
+    { k: t('Varat riittävät'), get: (m) => m.dep, fmt: (v) => v == null ? '✓' : t('{0} v', v), best: 'maxNull' },
+    { k: t('Kestävä tulo, €/kk'), get: (m) => m.sust, fmt: (v) => v == null ? '–' : fmtFi(v), best: 'max' },
     // tiivis muoto (1,8 M€ / 86 t€): sarakkeet mahtuvat lehteen ilman vaakavieritystä
-    { k: 'Loppuvarallisuus', get: (m) => m.wEnd, fmt: (v) => fmtCompact(v), best: 'max' },
-    { k: 'Verot yhteensä', get: (m) => m.tax, fmt: (v) => fmtCompact(v), best: 'min' },
+    { k: t('Loppuvarallisuus'), get: (m) => m.wEnd, fmt: (v) => fmtCompact(v), best: 'max' },
+    { k: t('Verot yhteensä'), get: (m) => m.tax, fmt: (v) => fmtCompact(v), best: 'min' },
   ];
 
   function bestIndex(vals, mode) {
@@ -1144,7 +1145,7 @@
     let base;
     try {
       base = JSON.parse(JSON.stringify(serialize()));
-      const cols = [{ nimi: 'Nykyinen', m: metricsOf(base) }];
+      const cols = [{ nimi: t('Nykyinen'), m: metricsOf(base) }];
       for (const v of compare.vaihtoehdot) {
         const mod = JSON.parse(JSON.stringify(base));
         applyChanges(mod, v.muutokset);
@@ -1159,12 +1160,12 @@
         return `<tr><th>${row.k}</th>${cells}</tr>`;
       }).join('');
       card.innerHTML =
-        `<div class="tk-cmp-lab">Vertailu — moottori laski jokaisen vaihtoehdon</div>` +
+        `<div class="tk-cmp-lab">${t('Vertailu — moottori laski jokaisen vaihtoehdon')}</div>` +
         (compare.selite ? `<div class="tk-ch-sel">${esc(compare.selite)}</div>` : '') +
         `<div class="tk-cmp-scroll"><table class="tk-cmp-tbl">${head}${body}</table></div>` +
-        `<div class="tk-cmp-note">Suunnitelmaasi ei muutettu. Ota jokin käyttöön sanomalla esim. “ota käyttöön ${esc(compare.vaihtoehdot[0].nimi)}”.</div>`;
+        `<div class="tk-cmp-note">${t('Suunnitelmaasi ei muutettu. Ota jokin käyttöön sanomalla esim. “ota käyttöön {0}”.', esc(compare.vaihtoehdot[0].nimi))}</div>`;
     } catch (e) {
-      card.innerHTML = '<div class="tk-ch-note">Vertailun laskenta epäonnistui.</div>';
+      card.innerHTML = `<div class="tk-ch-note">${t('Vertailun laskenta epäonnistui.')}</div>`;
     }
     log.appendChild(card);
     log.scrollTop = log.scrollHeight;
@@ -1188,7 +1189,7 @@
   }
   function updateLogBtn() {
     const b = $t('tkLogBtn');
-    if (b) b.textContent = `Tulkin toimet (${tkActions().length})`;
+    if (b) b.textContent = t('Tulkin toimet ({0})', tkActions().length);
   }
 
   function renderLogView() {
@@ -1199,12 +1200,14 @@
     card.className = 'tk-actions';
     let html = `<div class="tk-kats-head"><span>${t('Tulkin toimet')}</span><button type="button" class="tk-kats-x" aria-label="${t('Sulje')}">✕</button></div>`;
     if (!list.length) {
-      html += '<div class="tk-ch-note">Tulkki ei ole vielä muuttanut suunnitelmaasi. Pidetyt muutokset kirjautuvat tähän — vain sinun ' + (APPI ? 'laitteellesi' : 'selaimeesi') + ', ei minnekään muualle.</div>';
+      html += '<div class="tk-ch-note">' + (APPI
+        ? t('Tulkki ei ole vielä muuttanut suunnitelmaasi. Pidetyt muutokset kirjautuvat tähän — vain sinun laitteellesi, ei minnekään muualle.')
+        : t('Tulkki ei ole vielä muuttanut suunnitelmaasi. Pidetyt muutokset kirjautuvat tähän — vain sinun selaimeesi, ei minnekään muualle.')) + '</div>';
     } else {
-      html += `<div class="tk-act-tools"><button type="button" class="tk-mini tk-act-export">Lataa loki</button><button type="button" class="tk-mini tk-act-clear">Tyhjennä</button></div>`;
+      html += `<div class="tk-act-tools"><button type="button" class="tk-mini tk-act-export">${t('Lataa loki')}</button><button type="button" class="tk-mini tk-act-clear">${t('Tyhjennä')}</button></div>`;
       html += list.slice().reverse().map((e, ri) => {
         const idx = list.length - 1 - ri;
-        const when = e.t ? e.t.slice(0, 16).replace('T', ' klo ') : '';
+        const when = e.t ? e.t.slice(0, 16).replace('T', t(' klo ')) : '';
         const chg = (e.rows || []).map((r) => r.desc
           ? `${esc(t(r.nimi))}: ${esc(r.desc)}`
           : `${esc(t(r.nimi))}: ${fmtFi(r.vanha)} → ${fmtFi(r.uusi)} ${esc(r.yks || '')}`).join('; ');
@@ -1238,7 +1241,7 @@
       syncInputs();
       renderAll();
       clearBaseline();
-      b.textContent = 'Palautettu ✓';
+      b.textContent = t('Palautettu ✓');
       b.disabled = true;
     }));
     log.appendChild(card);
@@ -1274,13 +1277,13 @@
     try { s = simulate(mod); } catch (e) { return null; }
     if (!Array.isArray(s.stress) || !s.stress.length) return null;
     const cols = [{
-      nimi: 'Nykyinen',
+      nimi: t('Nykyinen'),
       wEnd: Math.round(Math.max(0, s.exp[s.months] || 0)),
       dep: s.depletionAge != null ? Math.round(s.depletionAge) : null,
     }];
     for (const st of s.stress) {
       cols.push({
-        nimi: st.name,
+        nimi: t(st.name),
         wEnd: Math.round(Math.max(0, st.arr[st.arr.length - 1] || 0)),
         dep: st.depletion != null ? Math.round(st.depletion) : null,
       });
@@ -1293,24 +1296,24 @@
     card.className = 'tk-cmp';
     const cols = runMarketStress();
     if (!cols) {
-      card.innerHTML = '<div class="tk-ch-note">Markkinatesti tarvitsee eläketapahtuman — lisää se ensin, niin näet sekvenssiriskin.</div>';
+      card.innerHTML = `<div class="tk-ch-note">${t('Markkinatesti tarvitsee eläketapahtuman — lisää se ensin, niin näet sekvenssiriskin.')}</div>`;
       log.appendChild(card); log.scrollTop = log.scrollHeight;
       return;
     }
     // Käännetty taulukko: skenaariot riveinä — pitkät nimet mahtuvat kapeaan lehteen
-    const head = `<tr><th></th><th>Loppuvarallisuus</th><th>Varat riittävät</th></tr>`;
+    const head = `<tr><th></th><th>${t('Loppuvarallisuus')}</th><th>${t('Varat riittävät')}</th></tr>`;
     const biW = bestIndex(cols.map((c) => c.wEnd), 'max');
     const biD = bestIndex(cols.map((c) => c.dep), 'maxNull');
     const body = cols.map((c, i) =>
       `<tr><th>${esc(c.nimi)}</th>` +
       `<td class="${i === biW ? 'tk-cmp-best' : ''}">${esc(fmtCompact(c.wEnd))}</td>` +
-      `<td class="${i === biD ? 'tk-cmp-best' : ''}">${esc(c.dep == null ? '✓' : c.dep + ' v')}</td></tr>`
+      `<td class="${i === biD ? 'tk-cmp-best' : ''}">${esc(c.dep == null ? '✓' : t('{0} v', c.dep))}</td></tr>`
     ).join('');
     card.innerHTML =
-      `<div class="tk-cmp-lab">Markkinatesti — moottori ajoi ${cols.length - 1} stressiskenaariota</div>` +
-      `<div class="tk-ch-sel">Sekvenssiriski: sama suunnitelma, jos markkina käyttäytyy huonosti eläkkeelle jäädessäsi.</div>` +
+      `<div class="tk-cmp-lab">${t('Markkinatesti — moottori ajoi {0} stressiskenaariota', cols.length - 1)}</div>` +
+      `<div class="tk-ch-sel">${t('Sekvenssiriski: sama suunnitelma, jos markkina käyttäytyy huonosti eläkkeelle jäädessäsi.')}</div>` +
       `<div class="tk-cmp-scroll"><table class="tk-cmp-tbl">${head}${body}</table></div>` +
-      `<div class="tk-cmp-note">Deterministiset skenaariot, eivät ennuste. Suunnitelmaasi ei muutettu. Kysy “miksi karhumarkkina osuu näin” niin selitän.</div>`;
+      `<div class="tk-cmp-note">${t('Deterministiset skenaariot, eivät ennuste. Suunnitelmaasi ei muutettu. Kysy “miksi karhumarkkina osuu näin” niin selitän.')}</div>`;
     log.appendChild(card);
     log.scrollTop = log.scrollHeight;
   }
@@ -1333,11 +1336,11 @@
   function updateEvalBtn() {
     const b = $t('tkEvalCopy');
     if (!tkKey) { b.hidden = true; return; } // kehittäjätyökalu — vain avaimella
-    b.textContent = `Kopioi evalit (${evals().length})`;
+    b.textContent = t('Kopioi evalit ({0})', evals().length);
   }
   $t('tkEvalCopy').addEventListener('click', () => {
     navigator.clipboard.writeText(JSON.stringify(evals(), null, 2)).then(() => {
-      $t('tkEvalCopy').textContent = 'Kopioitu ✓';
+      $t('tkEvalCopy').textContent = t('Kopioitu ✓');
       setTimeout(updateEvalBtn, 1500);
     });
   });
@@ -1357,9 +1360,9 @@
     // art. 50 läpinäkyvyysvaatimus — ei saa pudottaa.
     card.innerHTML =
       `<div class="tk-kats-head"><span>${t('Tervetuloa — Tulkki')}</span><button type="button" class="tk-kats-x" aria-label="${t('Sulje')}">✕</button></div>` +
-      `<div class="tk-intro-body">Olen tekoälyavustaja: selitän suunnitelmasi luvut selkokielellä ja autan kokeilemaan muutoksia — ` +
-      `<b>en anna sijoitusneuvontaa</b>: moottori laskee, minä tulkkaan, ja voin erehtyä.` +
-      (tkKey ? '' : ` Ilmaiskäytössä ${QUOTA_MAX} kysymystä päivässä.`) + `</div>`;
+      `<div class="tk-intro-body">` +
+      t('Olen tekoälyavustaja: selitän suunnitelmasi luvut selkokielellä ja autan kokeilemaan muutoksia — <b>en anna sijoitusneuvontaa</b>: moottori laskee, minä tulkkaan, ja voin erehtyä.') +
+      (tkKey ? '' : ' ' + t('Ilmaiskäytössä {0} kysymystä päivässä.', QUOTA_MAX)) + `</div>`;
     card.querySelector('.tk-kats-x').addEventListener('click', () => card.remove());
     log.appendChild(card);
   }
@@ -1380,10 +1383,10 @@
         if (e.financing === 'loan' && e.years) {
           const endAge = e.age + e.years;
           if (endAge > ret.age + 0.5) {
-            const nimi = (EVENT_NAMES[e.type] || 'Laina').toLowerCase();
+            const nimi = t(EVENT_NAMES[e.type] || 'Laina').toLowerCase();
             items.push({ sev: 'info',
-              text: `${EVENT_NAMES[e.type] || 'Lainaa'} maksetaan vielä eläkkeellä (n. ${Math.round(endAge)} v asti) — se suurentaa eläkeajan alkuvuosien nostoja.`,
-              q: `Miten ${nimi}n laina eläkkeen alkuvuosina vaikuttaa suunnitelmaani?` });
+              text: t('{0} maksetaan vielä eläkkeellä (n. {1} v asti) — se suurentaa eläkeajan alkuvuosien nostoja.', t(EVENT_NAMES[e.type] || 'Lainaa'), Math.round(endAge)),
+              q: t('Miten {0}n laina eläkkeen alkuvuosina vaikuttaa suunnitelmaani?', nimi) });
           }
         }
       }
@@ -1391,21 +1394,21 @@
 
     // 2. Varat ehtyvät ennen suunnitelman loppua (tai %-tilassa tulo alittaa tarpeen)
     if (s.depletionAge != null && s.depletionAge < state.ageEnd - 0.5) {
-      const kind = s.dryKind === 'floor' ? 'tulo alittaa tarpeen' : 'varat ehtyvät';
+      const kind = s.dryKind === 'floor' ? t('tulo alittaa tarpeen') : t('varat ehtyvät');
       items.push({ sev: 'warn',
-        text: `Suunnitelmassa ${kind} ${Math.round(s.depletionAge)}-vuotiaana, ennen loppua (${state.ageEnd} v).`,
-        q: `Miksi ${kind} ${Math.round(s.depletionAge)}-vuotiaana ja mitä sille voisi tehdä?` });
+        text: t('Suunnitelmassa {0} {1}-vuotiaana, ennen loppua ({2} v).', kind, Math.round(s.depletionAge), state.ageEnd),
+        q: t('Miksi {0} {1}-vuotiaana ja mitä sille voisi tehdä?', kind, Math.round(s.depletionAge)) });
     } else if (s.successProb != null && s.successProb < 0.75) {
       // 3. Matala onnistumistodennäköisyys (vain jos ei jo ehtymisvaroitusta)
       items.push({ sev: 'warn',
-        text: `Onnistumistodennäköisyys on ${Math.round(s.successProb * 100)} % — markkinariski painaa suunnitelmaa.`,
-        q: `Miksi onnistumistodennäköisyys jää ${Math.round(s.successProb * 100)} %:iin?` });
+        text: t('Onnistumistodennäköisyys on {0} % — markkinariski painaa suunnitelmaa.', Math.round(s.successProb * 100)),
+        q: t('Miksi onnistumistodennäköisyys jää {0} %:iin?', Math.round(s.successProb * 100)) });
     }
 
     // 4. Ei eläketapahtumaa → lempeä opastus (näkyy vain tyhjennetyssä suunnitelmassa)
     if (!ret) {
       items.push({ sev: 'info',
-        text: 'Suunnitelmassa ei ole eläketapahtumaa — lisää se nähdäksesi, riittävätkö varat eläkkeellä.', q: null });
+        text: t('Suunnitelmassa ei ole eläketapahtumaa — lisää se nähdäksesi, riittävätkö varat eläkkeellä.'), q: null });
     }
 
     // 5. Vertailuhuomio jaetusta datasta (jos ehtinyt latautua): oma kk-säästö
@@ -1417,8 +1420,8 @@
       const mq = g && g.monthly;
       if (mq && state.monthly < mq.p25) {
         items.push({ sev: 'info',
-          text: `Kuukausisäästösi ${fmtFi(state.monthly)} € on jaettujen suunnitelmien alakvartiilissa (mediaani ${fmtFi(Math.round(mq.p50))} €/kk). Ei normi — mutta hyvä tiedostaa.`,
-          q: 'Miten kuukausisäästöni vertautuu muiden suunnitelmiin ja mitä se tarkoittaa omalleni?' });
+          text: t('Kuukausisäästösi {0} € on jaettujen suunnitelmien alakvartiilissa (mediaani {1} €/kk). Ei normi — mutta hyvä tiedostaa.', fmtFi(state.monthly), fmtFi(Math.round(mq.p50))),
+          q: t('Miten kuukausisäästöni vertautuu muiden suunnitelmiin ja mitä se tarkoittaa omalleni?') });
       }
     }
 
@@ -1436,7 +1439,7 @@
     card.innerHTML =
       `<div class="tk-kats-head"><span>${t('Huomiot')}</span><button type="button" class="tk-kats-x" aria-label="${t('Piilota huomiot')}">✕</button></div>` +
       items.map((it, i) => `<div class="tk-kats-row tk-kats-${it.sev}">${esc(it.text)}` +
-        (it.q ? ` <button type="button" class="tk-kats-ask" data-i="${i}">Selitä</button>` : '') + `</div>`).join('');
+        (it.q ? ` <button type="button" class="tk-kats-ask" data-i="${i}">${t('Selitä')}</button>` : '') + `</div>`).join('');
     card.querySelector('.tk-kats-x').addEventListener('click', () => { card.remove(); katsastusDismissed = true; });
     card.querySelectorAll('.tk-kats-ask').forEach((b) => b.addEventListener('click', () => {
       const it = items[+b.dataset.i];
@@ -1470,13 +1473,13 @@
         btn.type = 'button';
         btn.className = 'tk-why';
         btn.textContent = '?';
-        btn.title = 'Miksi? Tulkki selittää tämän luvun';
-        btn.setAttribute('aria-label', 'Miksi? Tulkki selittää tämän luvun');
+        btn.title = t('Miksi? Tulkki selittää tämän luvun');
+        btn.setAttribute('aria-label', t('Miksi? Tulkki selittää tämän luvun'));
         btn.addEventListener('click', () => {
           openSheet();
           // telakoituna näkyy tiivis arvo (v-alt) — kysymykseen aina täysi (v-full)
           const vEl = v.querySelector('.v-full') || v;
-          ask(`Miksi "${k.textContent.trim()}" on ${vEl.textContent.trim().replace(/ /g, ' ')}?`, 'explain');
+          ask(t('Miksi "{0}" on {1}?', k.textContent.trim(), vEl.textContent.trim().replace(/ /g, ' ')), 'explain');
         });
         card.appendChild(btn);
       });
@@ -1501,17 +1504,17 @@
     const nl = document.createElement('div');
     nl.className = 'tk-nl';
     nl.innerHTML =
-      `<label class="tk-nl-lab" for="tkNlText">Tai kerro tilanteesi omin sanoin — Tulkki täyttää luvut puolestasi <em>beta</em></label>` +
-      `<textarea id="tkNlText" rows="3" maxlength="600" placeholder="esim. Olen 38, sijoituksia 80 000 €, säästän 600 €/kk. Asunnossa 150 000 € lainaa jäljellä. Haluaisin eläkkeelle 62-vuotiaana."></textarea>` +
-      `<div class="tk-nl-acts"><button type="button" class="btn ghost" id="tkNlGo">Rakenna suunnitelmani</button><span class="tk-nl-status" id="tkNlStatus" role="status"></span></div>`;
+      `<label class="tk-nl-lab" for="tkNlText">${t('Tai kerro tilanteesi omin sanoin — Tulkki täyttää luvut puolestasi <em>beta</em>')}</label>` +
+      `<textarea id="tkNlText" rows="3" maxlength="600" placeholder="${t('esim. Olen 38, sijoituksia 80 000 €, säästän 600 €/kk. Asunnossa 150 000 € lainaa jäljellä. Haluaisin eläkkeelle 62-vuotiaana.')}"></textarea>` +
+      `<div class="tk-nl-acts"><button type="button" class="btn ghost" id="tkNlGo">${t('Rakenna suunnitelmani')}</button><span class="tk-nl-status" id="tkNlStatus" role="status"></span></div>`;
     rampCard.insertBefore(nl, rampCard.querySelector('.ramp-skip'));
 
     nl.querySelector('#tkNlGo').addEventListener('click', async () => {
       const ta = nl.querySelector('#tkNlText'), st = nl.querySelector('#tkNlStatus'), btn = nl.querySelector('#tkNlGo');
       const text = ta.value.trim();
-      if (text.length < 10) { st.textContent = 'Kerro ainakin ikäsi ja säästötilanteesi.'; ta.focus(); return; }
+      if (text.length < 10) { st.textContent = t('Kerro ainakin ikäsi ja säästötilanteesi.'); ta.focus(); return; }
       btn.disabled = true; ta.disabled = true;
-      st.textContent = 'Tulkki lukee ja moottori laskee…';
+      st.textContent = t('Tulkki lukee ja moottori laskee…');
       tkTrack('Ramppi NL käytetty');
       // Tyhjä aloituspohja — EI nykytilasta: ohitus ja kolme kysymystä ennallaan,
       // eikä mihinkään kosketa ennen kuin poiminta onnistuu
@@ -1575,13 +1578,13 @@
           note.innerHTML =
             `<b>Tulkki:</b> ${esc(plainBinds((parsed.text || parsed.change.selite || ''), null).slice(0, 300))}` +
             `<div class="tk-nl-rows">${applied.slice(0, 8).map((r) =>
-              esc(r.desc ? `${r.nimi}: ${r.desc}` : `${r.nimi}: ${fmtFi(r.uusi)} ${r.yks || ''}`)).join(' · ')}</div>` +
-            `<div class="tk-nl-hint">Kaikkea voi säätää työtilassa — mikään ei ole lukittu.</div>`;
+              esc(r.desc ? `${t(r.nimi)}: ${r.desc}` : `${t(r.nimi)}: ${fmtFi(r.uusi)} ${r.yks || ''}`)).join(' · ')}</div>` +
+            `<div class="tk-nl-hint">${t('Kaikkea voi säätää työtilassa — mikään ei ole lukittu.')}</div>`;
           const acts = rampCard.querySelector('.ramp-acts2');
           if (acts) acts.parentNode.insertBefore(note, acts);
           return;
         }
-        st.textContent = 'Tulkki ei saanut kuvauksesta suunnitelmaa kasaan — täytä kolme kenttää yllä, niin tarkennat työtilassa.';
+        st.textContent = t('Tulkki ei saanut kuvauksesta suunnitelmaa kasaan — täytä kolme kenttää yllä, niin tarkennat työtilassa.');
         tkTrack('Ramppi NL virhe');
       }
       btn.disabled = false; ta.disabled = false;

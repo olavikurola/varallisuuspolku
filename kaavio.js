@@ -507,26 +507,26 @@ function renderDist() {
     const classes = classesOf(state);
     const w = weightsAt(age, retireAge, state);
     const proColors = ['#2dd4bf', '#8b7cf6', '#8fa0c4', '#f59e0b', '#22d3ee', '#a3e635'];
-    invSlices = classes.map((c, i) => ({ l: c.name, v: inv * w[i], c: proColors[i % proColors.length] }));
+    invSlices = classes.map((c, i) => ({ l: t(c.name), v: inv * w[i], c: proColors[i % proColors.length] }));
   } else {
     const alloc = allocationAt(age, retireAge, state);
     invSlices = [
-      { l: 'Osakkeet', v: inv * alloc.s, c: '#2dd4bf' },
-      { l: 'Korot',    v: inv * alloc.b, c: '#8b7cf6' },
-      { l: 'Käteinen', v: inv * alloc.c, c: '#8fa0c4' },
+      { l: t('Osakkeet'), v: inv * alloc.s, c: '#2dd4bf' },
+      { l: t('Korot'),    v: inv * alloc.b, c: '#8b7cf6' },
+      { l: t('Käteinen'), v: inv * alloc.c, c: '#8fa0c4' },
     ];
   }
   const slices = [
     ...invSlices,
-    { l: 'Kiinteistöt',  v: cats.realEstate[m],  c: '#60a5fa' },
-    { l: 'Ajoneuvot',    v: cats.vehicles[m],    c: '#fb923c' },
-    { l: 'Muu omaisuus', v: cats.other[m],       c: '#f472b6' },
+    { l: t('Kiinteistöt'),  v: cats.realEstate[m],  c: '#60a5fa' },
+    { l: t('Ajoneuvot'),    v: cats.vehicles[m],    c: '#fb923c' },
+    { l: t('Muu omaisuus'), v: cats.other[m],       c: '#f472b6' },
   ].filter((s) => s.v > 0.5);
   const total = slices.reduce((sum, s) => sum + s.v, 0);
 
   distSvg.innerHTML = '';
   if (total <= 0) {
-    list.innerHTML = '<div class="event-empty">Ei varallisuutta valitussa iässä.</div>';
+    list.innerHTML = `<div class="event-empty">${t('Ei varallisuutta valitussa iässä.')}</div>`;
     return;
   }
 
