@@ -12,6 +12,7 @@
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>fi</string>
+		<string>en</string>
 	</array>
 	<!-- Kotinäytön nimi lyhyenä — "Varallisuuspolku" katkeaa ikonin alla (~11 merkkiä).
 	     Kaupan nimi pysyy täytenä App Store Connectissa. -->

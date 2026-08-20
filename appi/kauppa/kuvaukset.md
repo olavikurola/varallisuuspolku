@@ -231,3 +231,33 @@ Localizable Information → English (U.S.)):
   englanninkieliset kuvat generoidaan myöhemmin kun UI-käännös on buildissa)
 - Ei-lokalisoituvat (jo täytetty fi-julkaisussa): kategoria, ikäraja, hinta,
   App Privacy, tietosuoja-URL
+
+
+## Versio 1.1 — What's New (valmiit tekstit, 20.8.2026)
+
+### Suomeksi (fi)
+
+Varallisuuspolku puhuu nyt myös englantia! Kielen voi vaihtaa asetuksista
+(In English) — koko sovellus, tekoälyapuri Tulkki ja widget mukaan lukien.
+
+Lisäksi: kaavion ikäkohdistin toimii nyt kosketuksella molemmissa kaavioissa,
+ja pieni joukko hiontoja.
+
+Kaikki laskenta pysyy edelleen omalla laitteellasi.
+
+### English (en-US)
+
+Varallisuuspolku now speaks English! Switch languages in Settings — the whole
+app, including Tulkki (the AI assistant) and the home-screen widget.
+
+Also: the chart age cursor now works with touch on both charts, plus a handful
+of refinements.
+
+All calculations still run entirely on your device.
+
+### ASC-muistilista 1.1:lle
+- Versio 1.1 pbxproj:ssa (MARKETING_VERSION ×4), build-numeron antaa CI (run_number)
+- CFBundleLocalizations = [fi, en] → kauppasivun Kielet-rivi: suomi, englanti
+- InfoPlist-kolmikko (FaceID + pikavalinnat) TIETOISESTI suomeksi v1.1:ssä (KIELIVERSIO.md)
+- en-US-lokalisoinnin kentät: tämän tiedoston edellinen osio (nimi/alaotsikko/promo/kuvaus/avainsanat)
+- TestFlight ensin → X-toivojat DM-kutsulla → julkinen release manuaalisesti
