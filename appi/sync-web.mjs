@@ -30,6 +30,7 @@ const FILES = [
   // ikonit ja manifesti
   'favicon.svg', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-512-maskable.png',
   'appstore-badge.svg', // etusivun App Store -kortti (piilossa appissa, mutta img latautuu)
+  'appstore-badge-en.svg', // sama en-sivuilla (Applen virallinen US/UK-artwork)
 ];
 
 rmSync(WWW, { recursive: true, force: true });

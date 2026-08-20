@@ -5,7 +5,7 @@
    välimuistista. Näin julkaisut päivittyvät heti kun verkko on käytössä,
    mutta sovellus toimii myös kokonaan ilman yhteyttä. */
 
-const CACHE = 'varallisuuspolku-v52'; // bump isoissa julkaisuissa: asennuserä pysyy eheänä parina
+const CACHE = 'varallisuuspolku-v53'; // bump isoissa julkaisuissa: asennuserä pysyy eheänä parina
 const CORE = [
   './',
   './index.html',
@@ -31,6 +31,7 @@ const CORE = [
   './fonts/inter-latin-ext.woff2',
   './favicon.svg',
   './appstore-badge.svg',
+  './appstore-badge-en.svg',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',

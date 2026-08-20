@@ -104,6 +104,13 @@ for (const sivu of SIVUT) {
     .split('<em>€/kk</em>').join('<em>€/mo</em>')
     .split('<em>€/v</em>').join('<em>€/yr</em>');
 
+  // 2c) App Store -badge: Applen virallinen en-artwork (SVG-tekstiä ei voi
+  //     kääntää sanastolla — kuvassa teksti on piirrettynä)
+  html = html.split('src="appstore-badge.svg"').join('src="appstore-badge-en.svg"');
+  // en-badge on kapeampi (119.66×40 vs fi 142.85×40) — width mukaan, ettei veny
+  html = html.split('src="appstore-badge-en.svg" alt="Download on the App Store" width="143"')
+    .join('src="appstore-badge-en.svg" alt="Download on the App Store" width="120"');
+
   // 3) kieli- ja localemetadata
   vaadi(html.includes('<html lang="fi">'), sivu + ': <html lang="fi"> puuttuu');
   html = html.replace('<html lang="fi">', '<html lang="en">');
