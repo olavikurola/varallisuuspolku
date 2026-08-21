@@ -1451,7 +1451,7 @@ function renderPlans() {
     const ret = (p.data.events || []).find((e) => e.type === 'retirement');
     return `<div class="ph-row${active ? ' active' : ''}" data-id="${p.id}">` +
       `<label class="ph-check" title="${t('Valitse vertailuun')}"><input type="checkbox"${checked ? ' checked' : ''}></label>` +
-      `<div class="ph-name">${active ? `<span class="dot" title="${t('Auki työtilassa')}"></span>` : ''}<span class="nm">${escapeHtml(p.nimi)}</span>${famBadge}${srcBadge}<button type="button" class="p-edit" title="${t('Nimeä uudelleen')}">✎</button></div>` +
+      `<div class="ph-name">${active ? `<span class="dot" title="${t('Auki työtilassa')}"></span>` : ''}<span class="nm">${escapeHtml(t(p.nimi))}</span>${famBadge}${srcBadge}<button type="button" class="p-edit" title="${t('Nimeä uudelleen')}">✎</button></div>` +
       `<div class="num c-ika">${t('{0} v', Math.round(p.data.ageNow))}</div>` +
       `<div class="num m-ret">${ret ? t('{0} v', Math.round(ret.age)) : '—'}</div>` +
       `<div class="num c-saasto"${p.data.savePhases ? ` title="${t('porrastettu säästö — summa elää elämänvaiheittain')}"` : ''}>${fmtEur(p.data.monthly)}${p.data.savePhases ? '*' : ''}</div>` +
@@ -1601,9 +1601,12 @@ function startPlanRename(rowEl, p) {
   const nameEl = rowEl.querySelector('.ph-name');
   if (!nameEl || nameEl.classList.contains('name-edit')) return;
   nameEl.classList.add('name-edit');
-  nameEl.innerHTML = `<input type="text" maxlength="40" title="Enter tallentaa · Esc peruu">`;
+  nameEl.innerHTML = `<input type="text" maxlength="40" title="${t('Enter tallentaa · Esc peruu')}">`;
   const inp = nameEl.querySelector('input');
-  inp.value = p.nimi;
+  // Näytetty (käännetty) nimi myös muokkauskenttään: jos käyttäjä tallentaa,
+  // oletusnimi vakiintuu sillä kielellä jolla hän sen näki — omat nimet
+  // kulkevat t():n läpi muuttumattomina (sanakirjasta ei löydy osumaa).
+  inp.value = t(p.nimi);
   inp.focus();
   inp.select();
   let done = false;
@@ -1643,7 +1646,7 @@ function openPlanMenu(btn, p, rowEl) {
   menu.className = 'ph-menu';
   menu.dataset.pid = p.id;
   const d = new Date(p.muokattu || p.luotu || planNow());
-  menu.innerHTML = `<div class="info">${escapeHtml(p.nimi)} · ${t(PLAN_SRC_LABELS[p.alkupera] || 'oma')} · ${t('muokattu')} ${d.getDate()}.${d.getMonth() + 1}.</div>`;
+  menu.innerHTML = `<div class="info">${escapeHtml(t(p.nimi))} · ${t(PLAN_SRC_LABELS[p.alkupera] || 'oma')} · ${t('muokattu')} ${d.getDate()}.${d.getMonth() + 1}.</div>`;
   const add = (act, label, fn, cls) => {
     const b = document.createElement('button');
     b.type = 'button';
