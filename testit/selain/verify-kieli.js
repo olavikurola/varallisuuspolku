@@ -194,6 +194,50 @@ const server = http.createServer((req, res) => {
   ok(kJalkeen.valikkoAuki, 'VALIKKO PYSYY AUKI kielen vaihdon jälkeen', JSON.stringify(kJalkeen));
   ok(kJalkeen.nimi === 'Language' && kJalkeen.checked === true, 'en: otsikko "Language", asento EN', JSON.stringify(kJalkeen));
 
+  /* Vuositaulukko ja Toteuma englanniksi (Olavin havainto 21.8.2026).
+     HUOM: suomen tunnistus SANOISTA — pelkkä ä/ö-haku päästi läpi sarake-
+     otsikot kuten "Vuosi", "Nostot", "Verot" ja koko Toteuma-näkymän. */
+  const SUOMI = ['vuosi', 'nostot', 'verot', 'vero', 'toteuma', 'kirjaa', 'sijoitukset',
+    'omaisuus', 'velka', 'netto', 'suunnitelma', 'saastot', 'laitteella', 'kirjaukset'];
+  const enSuomea = async (selector, nimi) => {
+    const r = await pn.evaluate((args) => {
+      const [sel, sanat] = args;
+      const juuri = document.querySelector(sel);
+      if (!juuri) return { pituus: 0, loydot: ['näkymä puuttuu: ' + sel] };
+      const teksti = juuri.innerText || '';
+      const out = [];
+      const w = document.createTreeWalker(juuri, NodeFilter.SHOW_TEXT);
+      let n;
+      while ((n = w.nextNode())) {
+        const s = (n.textContent || '').trim();
+        if (s.length < 2) continue;
+        const el = n.parentElement;
+        if (!el || el.getBoundingClientRect().width < 1) continue;
+        if (/[äöåÄÖÅ]/.test(s)) { out.push(s.slice(0, 40)); continue; }
+        const sanatt = s.toLowerCase().replace(/[^\w\s]/g, ' ').split(/\s+/);
+        if (sanatt.some((x) => sanat.includes(x))) out.push(s.slice(0, 40));
+      }
+      return { pituus: teksti.length, loydot: [...new Set(out)] };
+    }, [selector, SUOMI]);
+    ok(r.pituus > 50, `${nimi}: näkymässä on sisältöä (${r.pituus} merkkiä)`);
+    ok(r.loydot.length === 0, `${nimi} englanniksi`, r.loydot.slice(0, 4).join(' | '));
+  };
+  await pn.goto(`http://localhost:${PORT}/index-en.html`);
+  await pn.waitForTimeout(2000);
+  await poistaLukko();
+  await pn.click('.vp-tab:nth-child(5)');
+  await pn.waitForTimeout(600);
+  await pn.click('#mi-taulukko');
+  await pn.waitForTimeout(1300);
+  await enSuomea('#tableModal', 'vuositaulukko');
+  await pn.keyboard.press('Escape');
+  await pn.waitForTimeout(400);
+  await pn.click('.vp-tab:nth-child(5)');
+  await pn.waitForTimeout(600);
+  await pn.click('#mi-toteuma');
+  await pn.waitForTimeout(1300);
+  await enSuomea('.vp-toteuma', 'toteuma');
+
   await b.close();
   server.close();
   if (failed) { console.error(`\n${failed} TARKISTUSTA EPÄONNISTUI`); process.exit(1); }

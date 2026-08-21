@@ -319,12 +319,12 @@
     var t = toteumaLue();
     var tila = toteumaTila();
     var fmt = typeof fmtCompact === 'function' ? fmtCompact : function (v) { return Math.round(v) + ' €'; };
-    var html = '<div class="vp-sivuotsikko">Toteuma</div>' +
+    var html = '<div class="vp-sivuotsikko">' + window.t('Toteuma') + '</div>' +
       '<div class="vpt-nyt"><input id="vptEur" type="number" inputmode="numeric" min="0" step="1000" ' +
-      'placeholder="Sijoitukset ja säästöt nyt, €"><button type="button" class="btn" id="vptTallenna">Kirjaa</button></div>';
+      'placeholder="' + window.t('Sijoitukset ja säästöt nyt, €') + '"><button type="button" class="btn" id="vptTallenna">' + window.t('Kirjaa') + '</button></div>';
     if (tila) {
       html += '<div class="vpt-tila">' + tila.teksti +
-        '<small>' + kkNimi(tila.kk) + ': kirjattu ' + fmt(tila.eur) + ' · suunnitelman odotus ' + fmt(tila.odotus) + '</small></div>';
+        '<small>' + window.t('{0}: kirjattu {1} · suunnitelman odotus {2}', kkNimi(tila.kk), fmt(tila.eur), fmt(tila.odotus)) + '</small></div>';
     } else {
       html += '<div class="vpt-tila">' + window.t('Aloita kirjaamalla tämän kuun varallisuutesi') +
         '<small>' + window.t('Vertailukohta jäädytetään suunnitelmastasi ensimmäisellä kirjauksella') + '</small></div>';
@@ -334,13 +334,13 @@
       var d = od != null ? r.eur - od : null;
       return '<div class="vpt-rivi" data-kk="' + r.kk + '"><span><b>' + kkNimi(r.kk) + '</b> · ' + fmt(r.eur) + '</span>' +
         '<span class="d">' + (d == null ? '' : (d >= 0 ? '+' : '−') + fmt(Math.abs(d))) + '</span>' +
-        '<button type="button" class="x" aria-label="Poista kirjaus">✕</button></div>';
+        '<button type="button" class="x" aria-label="' + window.t('Poista kirjaus') + '">✕</button></div>';
     }).join('');
     if (rivit) html += '<div class="vpt-lista">' + rivit + '</div>';
-    html += '<div class="vpt-info">Kirjaukset ja vertailukohta pysyvät vain tällä laitteella. ' +
+    html += '<div class="vpt-info">' + window.t('Kirjaukset ja vertailukohta pysyvät vain tällä laitteella.') + ' ' +
       (t.viite ? window.t('Vertailukohta on jäädytetty suunnitelmastasi {0} — kaikkien kirjausten poisto nollaa sen.', kkNimi(t.viite.pvm)) :
         window.t('Kuukausimuistutus muistuttaa kirjaamisesta, kun muistutukset ovat päällä.')) +
-      (widgetDiag && widgetDiag !== 'ok' ? '<br>Widget-silta: ' + widgetDiag + ' — kotinäyttöwidget ei saa tietoja.' : '') +
+      (widgetDiag && widgetDiag !== 'ok' ? '<br>' + window.t('Widget-silta: {0} — kotinäyttöwidget ei saa tietoja.', widgetDiag) : '') +
       '</div>';
     toteumaEl.innerHTML = html;
 

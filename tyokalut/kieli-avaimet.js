@@ -182,6 +182,17 @@ for (const f of skannatut) {
     while ((m = TOAST_RE.exec(teksti))) lisaa(m[1], `${f}:${riviNro(teksti, m.index)} (toast)`);
   }
   if (VALIKKO_TIEDOSTOT.includes(f)) poimiValikot(teksti, f);
+  // Vuositaulukon sarakeotsikot: taulukko on dataa, käännös renderöinnissä
+  // ${t(h)} — skanneri ei näe niitä t()-kutsuina (löytyi 21.8.2026).
+  if (f === 'kortit.js') {
+    const alku = teksti.indexOf('const th = [');
+    if (alku >= 0) {
+      const lause = teksti.slice(alku, teksti.indexOf(';', alku));
+      const re = /'((?:[^'\\]|\\.)+)'/g;
+      let mm;
+      while ((mm = re.exec(lause))) lisaa(mm[1], `${f}/vuositaulukko`);
+    }
+  }
   if (f === 'laajennukset.js') {
     const tour = lohkoTaulukko(teksti, 'const TOUR_STEPS');
     const txRe = /\b[tx]: '((?:[^'\\]|\\.)+)'/g;

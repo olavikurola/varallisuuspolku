@@ -271,13 +271,13 @@ function buildCsv() {
 function renderYearTable() {
   const s = sim || simulate(state);
   const hasNet = s.hasNet;
-  $('tableSub').textContent = `${state.real ? 'Nykyrahassa (inflaatiokorjattu)' : 'Nimellisarvoin'} · odotettu kehityspolku`;
+  $('tableSub').textContent = `${state.real ? t('Nykyrahassa (inflaatiokorjattu)') : t('Nimellisarvoin')} · ${t('odotettu kehityspolku')}`;
   const th = ['Ikä', 'Vuosi', 'Sijoitukset', 'Säästöt/v', 'Nostot/v', 'Vero/v', 'Työeläke/v']
     .concat(hasNet ? ['Omaisuus', 'Velka', 'Netto'] : []);
   const num = (v, cls) => `<td class="num${cls ? ' ' + cls : ''}">${Math.abs(v) < 0.5 ? '–' : fmtCompact(v)}</td>`;
-  let html = `<thead><tr>${th.map((h) => `<th${h === 'Ikä' || h === 'Vuosi' ? '' : ' class="num"'}>${h}</th>`).join('')}</tr></thead><tbody>`;
+  let html = `<thead><tr>${th.map((h) => `<th${h === 'Ikä' || h === 'Vuosi' ? '' : ' class="num"'}>${t(h)}</th>`).join('')}</tr></thead><tbody>`;
   for (const r of yearRows(s)) {
-    html += `<tr><td>${r.age} v</td><td>${r.year}</td>` +
+    html += `<tr><td>${r.age} ${VP_YKS_V}</td><td>${r.year}</td>` +
       num(r.inv) + num(r.contrib) + num(r.gross) + num(r.tax, r.tax > 0.5 ? 'dbt' : '') + num(r.pen) +
       (hasNet ? num(r.assets) + num(-r.debt, r.debt > 0.5 ? 'dbt' : '') + num(r.net, 'net') : '') +
       '</tr>';
