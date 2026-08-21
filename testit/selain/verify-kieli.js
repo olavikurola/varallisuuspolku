@@ -150,6 +150,50 @@ const server = http.createServer((req, res) => {
   await pn.waitForTimeout(1800);
   ok(/analytiikka-en\.html$/.test(pn.url()), 'en: Stats-tabi vie en-tilastosivulle', pn.url());
 
+  /* Kielirivi appin asetuksissa (Olavin toive 21.8.2026): FI/EN kytkimen
+     laidoilla, asento kertoo kielen, JA valikko pysyy auki vaihdon jälkeen
+     (vp-a-sheet-lippu + suora siirtymä sivupariin — reload kuluttaisi lipun). */
+  const ctxK = await b.newContext({ viewport: { width: 390, height: 844 }, locale: 'fi-FI' });
+  await ctxK.addInitScript(() => {
+    localStorage.setItem('vp-tour-done', '1');
+    localStorage.setItem('vp-autotour-off', '1');
+    sessionStorage.setItem('vp-lukko-auki', '1');
+    sessionStorage.setItem('vp-intro-ok', '1');
+    window.Capacitor = { isNativePlatform: () => true, Plugins: {} };
+  });
+  const pk = await ctxK.newPage();
+  await pk.goto(`http://localhost:${PORT}/index.html`);
+  await pk.waitForTimeout(1600);
+  await pk.evaluate(() => { const el = document.getElementById('vpLukko'); if (el) el.remove(); });
+  await pk.click('.vp-tab:nth-child(5)');
+  await pk.waitForTimeout(600);
+  const kRivi = await pk.evaluate(() => {
+    const el = document.getElementById('mi-kieli');
+    return el && {
+      nimi: (el.querySelector('.vp-kr-nimi') || {}).textContent,
+      reunat: [...el.querySelectorAll('.vp-kr-reuna')].map((x) => x.textContent).join('|'),
+      checked: el.querySelector('input').checked,
+    };
+  });
+  ok(kRivi && kRivi.reunat === 'FI|EN', 'kielirivillä FI ja EN kytkimen laidoilla', JSON.stringify(kRivi));
+  ok(kRivi && kRivi.nimi === 'Kieli' && kRivi.checked === false, 'fi: otsikko "Kieli", asento FI', JSON.stringify(kRivi));
+  await pk.click('#mi-kieli');
+  await pk.waitForTimeout(3000);
+  const kJalkeen = await pk.evaluate(() => {
+    const el = document.getElementById('mi-kieli');
+    const menu = document.querySelector('.menu');
+    // HUOM: offsetParent on null fixed-elementeille — mitataan korkeudesta
+    return {
+      url: location.pathname,
+      valikkoAuki: !!(menu && menu.getBoundingClientRect().height > 50),
+      nimi: el ? (el.querySelector('.vp-kr-nimi') || {}).textContent : null,
+      checked: el ? el.querySelector('input').checked : null,
+    };
+  });
+  ok(/index-en\.html$/.test(kJalkeen.url), 'kielivaihto siirtyy en-sivupariin', kJalkeen.url);
+  ok(kJalkeen.valikkoAuki, 'VALIKKO PYSYY AUKI kielen vaihdon jälkeen', JSON.stringify(kJalkeen));
+  ok(kJalkeen.nimi === 'Language' && kJalkeen.checked === true, 'en: otsikko "Language", asento EN', JSON.stringify(kJalkeen));
+
   await b.close();
   server.close();
   if (failed) { console.error(`\n${failed} TARKISTUSTA EPÄONNISTUI`); process.exit(1); }

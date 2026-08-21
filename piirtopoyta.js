@@ -34,7 +34,7 @@ function enterFs() {
   closePopover();
   $('hud').hidden = false;
   wrap.setAttribute('role', 'application');
-  wrap.setAttribute('aria-label', 'Piirtopöytä: valitse käyrän osa, tapahtuma tai viiva ja säädä raahaamalla tai nuolinäppäimillä');
+  wrap.setAttribute('aria-label', t('Piirtopöytä: valitse käyrän osa, tapahtuma tai viiva ja säädä raahaamalla tai nuolinäppäimillä'));
   wrap.tabIndex = 0;
   renderChart();
   updateHud();
@@ -775,7 +775,7 @@ function drawGuides() {
   arrow(g1a, `M ${gx} ${gy - 30} L ${gx} ${gy - 11} M ${gx} ${gy + 11} L ${gx} ${gy + 30}`
     + ` M ${gx - 5} ${gy - 24} L ${gx} ${gy - 31} L ${gx + 5} ${gy - 24}`
     + ` M ${gx - 5} ${gy + 24} L ${gx} ${gy + 31} L ${gx + 5} ${gy + 24}`);
-  label(g1, gx, gy - 46 < plot.t + 18 ? gy + 54 : gy - 46, 'Tartu käyrään ja vedä — säästö joustaa');
+  label(g1, gx, gy - 46 < plot.t + 18 ? gy + 54 : gy - 46, t('Tartu käyrään ja vedä — säästö joustaa'));
 
   // Eläkeikäviiva: vaakanuoli viivan poikki, merkkipinon alapuolella
   if (retA != null) {
@@ -786,7 +786,7 @@ function drawGuides() {
     arrow(g2a, `M ${rx - 30} ${ry} L ${rx - 8} ${ry} M ${rx + 8} ${ry} L ${rx + 30} ${ry}`
       + ` M ${rx - 24} ${ry - 5} L ${rx - 31} ${ry} L ${rx - 24} ${ry + 5}`
       + ` M ${rx + 24} ${ry - 5} L ${rx + 31} ${ry} L ${rx + 24} ${ry + 5}`);
-    label(g2, rx, ry - 18, 'Tartu viivaan ja vedä — eläkeikä siirtyy');
+    label(g2, rx, ry - 18, t('Tartu viivaan ja vedä — eläkeikä siirtyy'));
   }
 
   // Kolmas arketyyppi: napautettavat kohteet. Kaikki valittavat (merkit,
@@ -811,7 +811,7 @@ function drawGuides() {
     const fx = parseFloat(firstMark.getAttribute('cx'));
     const fy = parseFloat(firstMark.getAttribute('cy'));
     const g3 = el('g', { class: 'guide' }, svg);
-    label(g3, fx, fy - 34 > plot.t + 16 ? fy - 34 : fy + 40, 'Napauta ja vedä — tapahtuman ikä ja summa');
+    label(g3, fx, fy - 34 > plot.t + 16 ? fy - 34 : fy + 40, t('Napauta ja vedä — tapahtuman ikä ja summa'));
   }
 }
 

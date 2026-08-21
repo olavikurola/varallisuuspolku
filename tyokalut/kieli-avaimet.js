@@ -88,7 +88,10 @@ function poimiValikot(teksti, f) {
   const alkuRe = /(?<!classList\.)\b(?:add|kytkin)\(\s*'([\w-]+)',/g;
   let m;
   while ((m = alkuRe.exec(teksti))) {
-    if (m[1] === 'mi-kieli') continue;
+    // Webin (sovellus.js) kielirivi näytetään tahallaan KOHDEkielellä
+    // ('In English' / 'Suomeksi') — ei käännettävää. Appin (alapalkki.js)
+    // rivi on 21.8.2026 alkaen FI/EN-kytkin, jonka otsikko käännetään.
+    if (m[1] === 'mi-kieli' && f === 'sovellus.js') continue;
     const ikkuna = teksti.slice(alkuRe.lastIndex, alkuRe.lastIndex + 400);
     // argumentti-ikkuna päättyy callbackin alkuun (function/nuoli/kotona/null)
     const loppu = ikkuna.search(/\bfunction\b|=>|\bkotona\(|\bnull\b/);
