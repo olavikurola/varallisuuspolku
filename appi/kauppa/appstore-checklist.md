@@ -84,3 +84,56 @@ viimeistä Submit-nappia; kaiken voi tallentaa ja jatkaa myöhemmin.
   päivitykset arvostellaan yleensä nopeammin kuin ensijulkaisu.
 - Google Play: päätetty odottaa (suljetun testin 12 testaajaa × 14 pv
   -vaatimus — aloita testaajien keruu kun Play tulee ajankohtaiseksi).
+
+
+---
+
+# Versio 1.1 (englanti) — läpikävely
+
+1.0:n kertaluontoiset asetukset (A1–A4) ovat jo tehty eikä niitä tarvitse
+koskea. Uutta 1.1:ssä on **en-US-lokalisointi**, uudet kuvat ja What's New.
+Arvioitu aika ~20–30 min. Tekstit: [kuvaukset.md](kuvaukset.md).
+
+## 1. en-US-lokalisointi (kertaluontoinen, tehdään ennen versiosivua)
+- [ ] My Apps → Varallisuuspolku → **App Information** → kielivalitsin
+      oikeassa yläkulmassa → **Add Language → English (U.S.)**
+- [ ] Name: `Varallisuuspolku` (sama brändi, 16/30)
+- [ ] Subtitle: `Draw your path to wealth` (24/30)
+- [ ] Tallenna. HUOM: tämä kohta tekee englannista näkyvän kaupassa —
+      ilman sitä en-tekstit ja -kuvat eivät näy kenellekään.
+
+## 2. Versiosivu 1.1 (iOS App → 1.1 Prepare for Submission)
+Jokainen kenttä täytetään ERIKSEEN molemmille kielille (kielivalitsin sivun
+yläreunassa: Finnish / English (U.S.)).
+
+### Suomeksi (fi)
+- [ ] What's New: kuvaukset.md → "Versio 1.1 — What's New" → Suomeksi
+- [ ] Screenshots: `iphone69-fi-1…5`, (valinnaiset `iphone67-fi-*`), `ipad13-fi-*`
+- [ ] Promotional Text / Description / Keywords: ennallaan (1.0:n tekstit)
+
+### English (U.S.)
+- [ ] What's New: kuvaukset.md → "Versio 1.1 — What's New" → English
+- [ ] Screenshots: `iphone69-en-1…5`, (`iphone67-en-*`), `ipad13-en-*`
+      Järjestys: koti → piirtopöytä → Tulkki → suunnitelmat → asetukset
+- [ ] Promotional Text / Description / Keywords: kuvaukset.md → en-US-osio
+- [ ] Support URL: `https://varallisuuspolku.com/index-en.html`
+
+### Molemmille yhteiset
+- [ ] **Build**: + Add Build → uusin (korkein numero)
+- [ ] Version Release: **Manually release this version**
+- [ ] App Review Information: ennallaan 1.0:sta (ei kirjautumista)
+
+## 3. Lähetys
+- [ ] Add for Review → Submit
+- [ ] Odota hyväksyntä (päivitykset yleensä nopeampia kuin ensijulkaisu)
+- [ ] **Release This Version** kun haluat → kaupassa muutamassa tunnissa
+- [ ] Julkaisun jälkeen: somenosto (tekstipohjat keskustelussa) ja DM
+      X-palautteen antajille, jotka englantia toivoivat
+
+## Huomioita 1.1:stä
+- Kauppasivun **Kielet-rivi** muuttuu muotoon "suomi, englanti" (Info.plistin
+  CFBundleLocalizations + dev region korjattu — 1.0:ssa luki virheellisesti EN).
+- Palvelinmuutokset (Tulkin en-prompt) ovat jo tuotannossa Railwayssa,
+  eivät kulje appijulkaisun mukana.
+- iOS:n InfoPlist-tekstit (Face ID -selite, 3 pikavalintaa) jäävät 1.1:ssä
+  tietoisesti suomeksi — ks. KIELIVERSIO.md.
