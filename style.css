@@ -207,8 +207,11 @@ body {
 .field-label small { display: block; color: var(--text-faint); font-size: 11px; font-weight: 400; margin-top: 1px; }
 .field.field-sub { margin-top: 10px; }
 
-/* minmax(0,…): kentät saavat kutistua inputin min-content-leveyden alle */
-.row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+/* minmax(0,…): kentät saavat kutistua inputin min-content-leveyden alle.
+   align-items: end — eri mittaiset otsikot (esim. "Työeläke (arvio)" rivittyy
+   kapealla, "Eläke alkaa" ei) jättivät syöttökentät eri tasoille; nyt kentät
+   linjautuvat rivin alareunaan otsikon rivimäärästä riippumatta. */
+.row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: end; }
 
 .input {
   display: flex;

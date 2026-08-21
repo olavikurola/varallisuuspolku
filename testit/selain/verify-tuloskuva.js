@@ -65,7 +65,9 @@ const ok = (c, n, d = '') => { if (c) console.log('  ✓ ' + n); else { failed++
   await page.fill('#rampWealth', '15000');
   await page.fill('#rampMonthly', '600');
   await page.click('#rampGo');
-  try { await page.waitForSelector('#rampShare', { timeout: 8000 }); } catch (e) { await page.click('#rampGo'); await page.waitForSelector('#rampShare', { timeout: 8000 }); }
+  // Tuloskortti odottaa MC-ratkaisijaa: kuormitetulla koneella 8 s ei riitä
+  // (sama oppi kuin verify-omistus-jatkot #rampOwn -odotuksessa) → 15 s + uusinta
+  try { await page.waitForSelector('#rampShare', { timeout: 15000 }); } catch (e) { await page.click('#rampGo'); await page.waitForSelector('#rampShare', { timeout: 15000 }); }
   ok(true, 'rampin tulosnäkymässä jakonappi');
   const dl2 = page.waitForEvent('download', { timeout: 8000 }).catch(() => null);
   await page.click('#rampShare');

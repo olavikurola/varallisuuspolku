@@ -547,7 +547,7 @@ function renderDist() {
   const t1 = el('text', { x: cx, y: cy - 1, 'text-anchor': 'middle', 'font-size': 15, 'font-weight': 700, fill: '#e8edf8' }, distSvg);
   t1.textContent = fmtCompact(total);
   const t2 = el('text', { x: cx, y: cy + 16, 'text-anchor': 'middle', 'font-size': 11, fill: '#9aa7c4' }, distSvg);
-  t2.textContent = Math.round(age) + ' v';
+  t2.textContent = Math.round(age) + ' ' + VP_YKS_V;
 
   let html = slices.map((s) =>
     `<div class="dist-row"><span class="dist-dot" style="background:${s.c}"></span>` +
@@ -556,9 +556,9 @@ function renderDist() {
   ).join('');
   if (sim.debt[m] > 0.5) {
     html += `<div class="dist-row dist-extra"><span class="dist-dot" style="background:rgba(248,113,113,0.7)"></span>` +
-      `<span class="dl">Velka</span><span class="dv dbt">−${fmtCompact(sim.debt[m])}</span></div>` +
+      `<span class="dl">${t('Velka')}</span><span class="dv dbt">−${fmtCompact(sim.debt[m])}</span></div>` +
       `<div class="dist-row"><span class="dist-dot" style="background:#fbbf24"></span>` +
-      `<span class="dl">Netto</span><span class="dv net">${fmtCompact(sim.net[m])}</span></div>`;
+      `<span class="dl">${t('Netto')}</span><span class="dv net">${fmtCompact(sim.net[m])}</span></div>`;
   }
   list.innerHTML = html;
 }

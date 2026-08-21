@@ -664,8 +664,14 @@ function bindInputs() {
   });
   $('allocBonds').addEventListener('input', (e) => {
     const cs = state.proOn ? proCustomSum() : 0;
-    state.allocBonds = Math.min(+e.target.value, 100 - state.allocStocks - cs);
+    // Symmetrinen osakkeiden kanssa (Olavin havainto 21.8.2026): korot saavat
+    // kasvaa täyteen asti, ja jousto tulee ensin käteisestä (jäännös) ja vasta
+    // sen loputtua osakkeista. Ennen korot oli kovakattoinen osakepainoon, jolloin
+    // käteisen ollessa 0 korkoliukuri oli kuollut — veto ei tehnyt mitään.
+    state.allocBonds = Math.min(+e.target.value, 100 - cs);
     e.target.value = state.allocBonds;
+    state.allocStocks = Math.min(state.allocStocks, 100 - state.allocBonds - cs);
+    $('allocStocks').value = state.allocStocks;
     renderAll();
   });
   $('glide').addEventListener('change', (e) => { state.glide = e.target.checked; renderAll(); });
