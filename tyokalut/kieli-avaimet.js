@@ -32,6 +32,11 @@ const lisaa = (avain, lahde) => {
 // $t('tkQuota') ym. päättyvät "t("-merkkeihin mutta eivät ole käännöskutsuja.
 const T_RE = /(?<![\w$.])(?:window\.)?t\(\s*'((?:[^'\\]|\\.)+)'/g;
 
+// 1b) Ternääriargumentit: t(ehto ? 'A' : 'B') — T_RE näkee vain literaalilla
+// alkavat kutsut, joten molemmat haarat jäisivät sanastosta (löytyi 21.8.2026
+// eläkelomakkeen 'Eläkkeelle jäänti-ikä' -tekstistä).
+const T_TERN_RE = /(?<![\w$.])(?:window\.)?t\(\s*[\w$.]+\s*\?\s*'((?:[^'\\]|\\.)+)'\s*:\s*'((?:[^'\\]|\\.)+)'/g;
+
 // 2) Labeltaulut, joiden arvot toimivat avaimina (käännös lukupaikassa) —
 //    lohko poimitaan nimellä ja arvot sen sisältä. Lista: KIELIVERSIO.md.
 const TAULUT = {
@@ -155,6 +160,10 @@ for (const f of skannatut) {
   let m;
   if (f !== 'laskenta.js') {
     while ((m = T_RE.exec(teksti))) lisaa(m[1], `${f}:${riviNro(teksti, m.index)}`);
+    while ((m = T_TERN_RE.exec(teksti))) {
+      lisaa(m[1], `${f}:${riviNro(teksti, m.index)} (ternääri)`);
+      lisaa(m[2], `${f}:${riviNro(teksti, m.index)} (ternääri)`);
+    }
   }
   for (const [nimi, re] of TAULUT[f] || []) {
     const b = lohko(teksti, nimi);

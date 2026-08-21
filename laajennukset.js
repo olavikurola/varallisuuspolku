@@ -817,7 +817,7 @@ function maybeOfferShareSplit(ownerIdx) {
     <h3>${t('Jaetaanko yhteiset hankinnat?')}</h3>
     <p class="note">${t('Valitut kulut puolitetaan teille kahdelle — puolikkaat pysyvät synkassa ja näkyvät molempien suunnitelmissa samassa kalenterihetkessä. Valintaa voi muuttaa myöhemmin tapahtuman Jaettu-kytkimestä.')}</p>
     ${cands.map((e) => `<label class="toggle"><input type="checkbox" data-share="${e.id}" ${SHARE_PRESET.has(e.type) ? 'checked' : ''} /><span class="switch"></span>
-      <span>${EVENT_TYPES[e.type].icon} ${escapeHtml(evLabel(e))} <small>${Math.round(e.age)} v · ${fmtEur(Math.abs(e.amount))}${e.recMonthly ? ` + ${fmtEur(Math.abs(e.recMonthly))}/kk` : ''}</small></span></label>`).join('')}
+      <span>${EVENT_TYPES[e.type].icon} ${escapeHtml(evLabel(e))} <small>${t('{0} v', Math.round(e.age))} · ${fmtEur(Math.abs(e.amount))}${e.recMonthly ? t(' + {0}/kk', fmtEur(Math.abs(e.recMonthly))) : ''}</small></span></label>`).join('')}
     <div class="actions"><button class="btn" id="shareApply">${t('Jaa valitut puoliksi')}</button>
     <button class="btn ghost" id="shareSkip">${t('Ei kiitos')}</button></div>
   </div>`;
@@ -1160,7 +1160,7 @@ function familySummaryHtml() {
   family.persons.forEach((p, i) => {
     const s = sims[i];
     rows += `<tr><td>${escapeHtml(p.name)}</td>`
-      + `<td class="num">${fmtEur(p.data.monthly)}/kk</td>`
+      + `<td class="num">${t('{0}/kk', fmtEur(p.data.monthly))}</td>`
       + `<td class="num">${s.retireAge != null ? Math.round(s.retireAge) + ' v' : '—'}</td>`
       + `<td class="num">${s.wAtRet != null ? fmtCompact(s.wAtRet) : '—'}</td>`
       + `<td class="num">${s.successProb != null ? Math.round(s.successProb * 100) + ' %' : '—'}</td></tr>`;
@@ -1319,8 +1319,8 @@ function renderSavePhaseRows() {
   box.innerHTML = ph.map((p, i) =>
     `<div class="savephase-row">` +
     `<span class="sp-lab">${t('alle')}</span>` +
-    `<span class="input sp-age"><input type="number" class="sp-to" data-i="${i}" min="1" max="105" step="1" value="${p.to}" /><em>v</em></span>` +
-    `<span class="input sp-amt-w"><input type="number" class="sp-amt" data-i="${i}" min="0" step="50" value="${Math.round(p.amount)}" /><em>€/kk</em></span>` +
+    `<span class="input sp-age"><input type="number" class="sp-to" data-i="${i}" min="1" max="105" step="1" value="${p.to}" /><em>${VP_YKS_V}</em></span>` +
+    `<span class="input sp-amt-w"><input type="number" class="sp-amt" data-i="${i}" min="0" step="50" value="${Math.round(p.amount)}" /><em>${VP_YKS_EKK}</em></span>` +
     (ph.length > 1 ? `<button type="button" class="sp-del" data-i="${i}" aria-label="${t('Poista vaihe')}" title="${t('Poista vaihe')}">✕</button>` : '<span class="sp-del-x"></span>') +
     `</div>`).join('');
   box.querySelectorAll('.sp-to').forEach((el) => el.addEventListener('input', (e) => {

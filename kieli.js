@@ -62,6 +62,11 @@ try {
 const VP_LOCALE = VP_KIELI === 'en' ? 'en-GB' : 'fi-FI';
 const VP_YKS_V = VP_KIELI === 'en' ? 'y' : 'v';
 const VP_YKS_KK = VP_KIELI === 'en' ? 'mo' : 'kk';
+// Yhdistelmäyksiköt lomakekenttien <em>-liitteisiin ja koosteisiin.
+// (Staattisten sivujen samat liitteet vaihtaa kieli-sivut-buildi.js.)
+const VP_YKS_EKK = VP_KIELI === 'en' ? '€/mo' : '€/kk';   // €/kk
+const VP_YKS_EV = VP_KIELI === 'en' ? '€/yr' : '€/v';     // €/v
+const VP_YKS_PV = VP_KIELI === 'en' ? '%/yr' : '%/v';     // %/v
 const VP_SANASTO = {}; // kieli-en.js täyttää kun VP_KIELI === 'en'
 
 // JS-navigointien sivupari: en-tilassa X.html → X-en.html (staattiset sivut)

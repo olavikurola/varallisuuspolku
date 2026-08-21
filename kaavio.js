@@ -309,24 +309,24 @@ function renderChart(reuse = false) {
     if (ev.type === 'retirement') {
       const g = retGoal(ev);
       const wd = g === 'withdrawal' && sim.solvedWithdrawal != null ? sim.solvedWithdrawal : ev.withdrawal;
-      const penTxt = ev.pension > 0 ? ` · työeläke ${fmtEur(ev.pension)}/kk` : '';
-      tdesc = fmtEur(wd) + '/kk tuloa' + penTxt + (g === 'withdrawal' ? ' (kestävä)' : g === 'age' ? ' (aikaisin eläkeikä)' : '');
+      const penTxt = ev.pension > 0 ? t(' · työeläke {0}/kk', fmtEur(ev.pension)) : '';
+      tdesc = t('{0}/kk tuloa', fmtEur(wd)) + penTxt + (g === 'withdrawal' ? t(' (kestävä)') : g === 'age' ? t(' (aikaisin eläkeikä)') : '');
     } else if (ev.owned) {
       const left = Math.max(0, ev.loanLeft || 0);
-      tdesc = `arvo ${fmtEur(-ev.amount)}` +
-        (left > 0 ? ` · lainaa ${fmtEur(left)} (${fmtEur(loanPayment(left, ev.rate || 0, Math.max(1, ev.years || 10)))}/kk)` : '');
+      tdesc = t('arvo {0}', fmtEur(-ev.amount)) +
+        (left > 0 ? t(' · lainaa {0} ({1}/kk)', fmtEur(left), fmtEur(loanPayment(left, ev.rate || 0, Math.max(1, ev.years || 10)))) : '');
     } else if (ev.amount < 0 && ev.financing === 'loan') {
       const pmt = loanPayment(Math.max(0, -ev.amount - (ev.down || 0)), ev.rate || 0, ev.years || 10);
-      tdesc = `${fmtEur(ev.amount)} · lainalla ${fmtEur(pmt)}/kk`;
+      tdesc = t('{0} · lainalla {1}/kk', fmtEur(ev.amount), fmtEur(pmt));
     } else {
       tdesc = ev.amount ? fmtEur(ev.amount) : '';
     }
     if (ev.type !== 'retirement') {
-      if (ev.recMonthly && ev.recYears > 0) tdesc += `${tdesc ? ' · ' : ''}${ev.recMonthly > 0 ? '+' : ''}${fmtEur(ev.recMonthly)}/kk ${Math.round(ev.recYears)} v`;
-      if (ev.isAsset && ev.sellAge != null) tdesc += ` · myynti ${Math.round(ev.sellAge)} v`;
-      if (ev.shared) tdesc += ' · jaettu puoliksi (oma osuus)';
+      if (ev.recMonthly && ev.recYears > 0) tdesc += (tdesc ? ' · ' : '') + (ev.recMonthly > 0 ? '+' : '') + t('{0}/kk {1} v', fmtEur(ev.recMonthly), Math.round(ev.recYears));
+      if (ev.isAsset && ev.sellAge != null) tdesc += t(' · myynti {0} v', Math.round(ev.sellAge));
+      if (ev.shared) tdesc += t(' · jaettu puoliksi (oma osuus)');
     }
-    title.textContent = `${evLabel(ev)} · ${ev.owned ? 'omistan nyt' : Math.round(ev.age) + ' v'} · ${tdesc}`;
+    title.textContent = evLabel(ev) + ' · ' + (ev.owned ? t('omistan nyt') : t('{0} v', Math.round(ev.age))) + ' · ' + tdesc;
 
     g.addEventListener('pointerdown', (e) => {
       // Piirtotilassa valintamalli: napautus valitsee, veto valitusta säätää.
@@ -797,7 +797,7 @@ function openPopover(id) {
       `<label class="field"><span class="field-label">${t(ageSolved ? 'Aikaisin eläkeikä (laskettu)' : 'Eläkkeelle jäänti-ikä')}</span>` +
       `<span class="input"><input id="pv-age" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${ageVal}" ${ageSolved ? 'disabled' : ''} /><em>${VP_YKS_V}</em></span></label>` +
       `<label class="field"><span class="field-label">${t(wdSolved ? 'Kestävä kuukausitulo (laskettu)' : 'Kuukausitulon tarve')} <small>${t('koko kulutus eläkkeellä')}</small></span>` +
-      `<span class="input"><input id="pv-wd" type="number" min="0" step="100" value="${wdVal}" ${wdSolved ? 'disabled' : ''} /><em>€/kk</em></span></label>` +
+      `<span class="input"><input id="pv-wd" type="number" min="0" step="100" value="${wdVal}" ${wdSolved ? 'disabled' : ''} /><em>${VP_YKS_EKK}</em></span></label>` +
       // Varmuustaso: ratkaisu mitoitetaan Monte Carlo -onnistumisosuudelle
       (g !== 'manual'
         ? `<div class="field"><span class="field-label">${t('Varmuustaso')} <small>${t('osuus markkinapoluista, joilla tavoite onnistuu')}</small></span>` +
@@ -808,7 +808,7 @@ function openPopover(id) {
         : '') +
       `<div class="row2">` +
       `<label class="field"><span class="field-label">${t('Työeläke (arvio)')}</span>` +
-      `<span class="input"><input id="pv-pen" type="number" min="0" step="100" value="${penVal}" /><em>€/kk</em></span></label>` +
+      `<span class="input"><input id="pv-pen" type="number" min="0" step="100" value="${penVal}" /><em>${VP_YKS_EKK}</em></span></label>` +
       `<label class="field"><span class="field-label">${t('Eläke alkaa')}</span>` +
       `<span class="input"><input id="pv-penage" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${penAgeVal}" /><em>${VP_YKS_V}</em></span></label>` +
       `</div>` +
@@ -848,7 +848,7 @@ function openPopover(id) {
       `<label class="field"><span class="field-label">${t('Nykyarvo')}</span>` +
       `<span class="input"><input id="pv-own-val" type="number" min="0" step="5000" value="${Math.round(-ev.amount)}" /><em>€</em></span></label>` +
       `<label class="field"><span class="field-label">${t('Arvonmuutos')}</span>` +
-      `<span class="input"><input id="pv-appr" type="number" min="-30" max="15" step="0.5" value="${ev.appr != null ? ev.appr : 2}" /><em>%/v</em></span></label>` +
+      `<span class="input"><input id="pv-appr" type="number" min="-30" max="15" step="0.5" value="${ev.appr != null ? ev.appr : 2}" /><em>${VP_YKS_PV}</em></span></label>` +
       `</div>` +
       `<label class="field"><span class="field-label">${t('Lainaa jäljellä')}</span>` +
       `<span class="input"><input id="pv-own-loan" type="number" min="0" step="5000" value="${Math.round(ev.loanLeft || 0)}" /><em>€</em></span></label>`;
@@ -856,7 +856,7 @@ function openPopover(id) {
       fields +=
         `<div class="row2">` +
         `<label class="field"><span class="field-label">${t('Korko')}</span>` +
-        `<span class="input"><input id="pv-rate" type="number" min="0" max="25" step="0.1" value="${ev.rate != null ? ev.rate : 3.5}" /><em>%/v</em></span></label>` +
+        `<span class="input"><input id="pv-rate" type="number" min="0" max="25" step="0.1" value="${ev.rate != null ? ev.rate : 3.5}" /><em>${VP_YKS_PV}</em></span></label>` +
         `<label class="field"><span class="field-label">${t('Vuosia jäljellä')}</span>` +
         `<span class="input"><input id="pv-years" type="number" min="1" max="40" step="1" value="${ev.years != null ? ev.years : 10}" /><em>${VP_YKS_V}</em></span></label>` +
         `</div>` +
@@ -886,7 +886,7 @@ function openPopover(id) {
       fields +=
         `<div class="row2" style="margin-top:10px">` +
         `<label class="field"><span class="field-label">${t('Erä (− meno, + tulo)')}</span>` +
-        `<span class="input"><input id="pv-recm" type="number" step="50" value="${ev.recMonthly}" /><em>€/kk</em></span></label>` +
+        `<span class="input"><input id="pv-recm" type="number" step="50" value="${ev.recMonthly}" /><em>${VP_YKS_EKK}</em></span></label>` +
         `<label class="field"><span class="field-label">${t('Kesto')}</span>` +
         `<span class="input"><input id="pv-recy" type="number" min="1" max="60" step="1" value="${Math.round(ev.recYears != null ? ev.recYears : 10)}" /><em>${VP_YKS_V}</em></span></label>` +
         `</div>`;
@@ -909,7 +909,7 @@ function openPopover(id) {
       fields +=
         `<div class="row2" style="margin-top:10px">` +
         `<label class="field"><span class="field-label">${t('Erä (− meno, + tulo)')}</span>` +
-        `<span class="input"><input id="pv-recm" type="number" step="50" value="${ev.recMonthly}" /><em>€/kk</em></span></label>` +
+        `<span class="input"><input id="pv-recm" type="number" step="50" value="${ev.recMonthly}" /><em>${VP_YKS_EKK}</em></span></label>` +
         `<label class="field"><span class="field-label">${t('Kesto')}</span>` +
         `<span class="input"><input id="pv-recy" type="number" min="1" max="60" step="1" value="${Math.round(ev.recYears != null ? ev.recYears : 10)}" /><em>${VP_YKS_V}</em></span></label>` +
         `</div>`;
@@ -931,7 +931,7 @@ function openPopover(id) {
           `<span class="input"><input id="pv-down" type="number" min="0" step="1000" value="${ev.down}" /><em>€</em></span></label>` +
           `<div class="row2">` +
           `<label class="field"><span class="field-label">${t('Korko')}</span>` +
-          `<span class="input"><input id="pv-rate" type="number" min="0" max="25" step="0.1" value="${ev.rate}" /><em>%/v</em></span></label>` +
+          `<span class="input"><input id="pv-rate" type="number" min="0" max="25" step="0.1" value="${ev.rate}" /><em>${VP_YKS_PV}</em></span></label>` +
           `<label class="field"><span class="field-label">${t('Laina-aika')}</span>` +
           `<span class="input"><input id="pv-years" type="number" min="1" max="40" step="1" value="${ev.years}" /><em>${VP_YKS_V}</em></span></label>` +
           `</div>` +
@@ -943,7 +943,7 @@ function openPopover(id) {
       if (ev.isAsset) {
         fields +=
           `<label class="field" style="margin-top:10px"><span class="field-label">${t('Arvonmuutos')}</span>` +
-          `<span class="input"><input id="pv-appr" type="number" min="-30" max="15" step="0.5" value="${ev.appr != null ? ev.appr : 2}" /><em>%/v</em></span></label>`;
+          `<span class="input"><input id="pv-appr" type="number" min="-30" max="15" step="0.5" value="${ev.appr != null ? ev.appr : 2}" /><em>${VP_YKS_PV}</em></span></label>`;
         // Myynti: omaisuuserä realisoidaan sijoitusvarallisuudeksi
         const selling = ev.sellAge != null;
         fields +=

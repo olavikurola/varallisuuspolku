@@ -71,6 +71,55 @@ const server = http.createServer((req, res) => {
   await p1.waitForTimeout(1500);
   ok((await p1.evaluate(() => VP_KIELI)) === 'fi', '?lang=fi palauttaa suomen');
 
+  /* Elämäntapahtumien lomakkeet englanniksi (Olavin havainto: /kk- ja v-yksiköt
+     jäivät suomeksi popoverissa). Käydään JOKAINEN tyyppi läpi ja etsitään
+     suomea sekä <em>-yksiköistä että näkyvistä teksteistä. */
+  const ctxL = await b.newContext({ locale: 'en-US', viewport: { width: 1440, height: 950 } });
+  const pl = await ctxL.newPage();
+  await pl.goto(`http://localhost:${PORT}/index-en.html`);
+  await pl.evaluate(() => {
+    localStorage.setItem('vp-tour-done', '1');
+    localStorage.setItem('vp-autotour-off', '1');
+    localStorage.setItem('vp-kieli', 'en');
+  });
+  await pl.reload();
+  await pl.waitForTimeout(2200);
+  const tyypit = await pl.evaluate(() => Object.keys(EVENT_TYPES).filter((k) => !EVENT_TYPES[k].familyOnly));
+  ok(tyypit.length >= 15, `tapahtumatyyppejä löytyi (${tyypit.length})`);
+  const suomiLoydot = [];
+  for (const tyyppi of tyypit) {
+    const avattu = await pl.evaluate((tp) => {
+      const ika = tp === 'retirement' ? 65 : Math.min(state.ageNow + 5, state.ageEnd - 1);
+      let ev = state.events.find((e) => e.type === tp);
+      if (!ev) { addEvent(tp, ika); ev = state.events.find((e) => e.type === tp); }
+      if (!ev) return false;
+      openPopover(ev.id);
+      return true;
+    }, tyyppi);
+    if (!avattu) { suomiLoydot.push(tyyppi + ': popoveria ei voitu avata'); continue; }
+    await pl.waitForTimeout(320);
+    const loydot = await pl.evaluate(() => {
+      const pop = document.querySelector('.popover, #popover, .pv-wrap');
+      if (!pop) return ['popover puuttuu'];
+      const out = [];
+      pop.querySelectorAll('em').forEach((em) => {
+        const s = (em.textContent || '').trim();
+        if (/^(?:v|kk|€\/kk|%\/v|€\/v)$/.test(s)) out.push('yksikkö: ' + s);
+      });
+      const w = document.createTreeWalker(pop, NodeFilter.SHOW_TEXT);
+      let n;
+      while ((n = w.nextNode())) {
+        const teksti = (n.textContent || '').trim();
+        if (teksti.length > 2 && /[äöåÄÖÅ]/.test(teksti)) out.push('teksti: ' + teksti.slice(0, 60));
+      }
+      return [...new Set(out)];
+    });
+    loydot.forEach((l) => suomiLoydot.push(tyyppi + ' » ' + l));
+    await pl.evaluate(() => { try { closePopover(); } catch (e) {} });
+  }
+  ok(suomiLoydot.length === 0, 'kaikkien tapahtumatyyppien lomakkeet englanniksi',
+    suomiLoydot.slice(0, 6).join(' | '));
+
   /* Appitabit en-sivuilla (Olavin 1.1-beta-havainto): alapalkin onStats/onIndex
      tunnistivat vain fi-tiedostonimet → en-tilastosivulla tabit jumittivat.
      Natiivitila stubataan kuten verify-natiivilisat; lukkopeite pois tieltä. */

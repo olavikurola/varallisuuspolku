@@ -92,9 +92,9 @@ updateHud = function () {
     sim.wAtRet != null && g && g.wAtRet != null ? sim.wAtRet - g.wAtRet : null,
     500, fmtCompact, '');
   metric('Kestävä tulo',
-    sim.sustainableWd != null ? `${fmtNum(sim.sustainableWd)} €/kk` : '–',
+    sim.sustainableWd != null ? `${fmtNum(sim.sustainableWd)} ${VP_YKS_EKK}` : '–',
     sim.sustainableWd != null && g && g.sustainableWd != null ? sim.sustainableWd - g.sustainableWd : null,
-    20, (x) => `${fmtNum(x)} €/kk`, '');
+    20, (x) => `${fmtNum(x)} ${VP_YKS_EKK}`, '');
   if (familyOn()) {
     metric('Perheen onnistumis-%',
       jointMc ? Math.round(jointMc.successProb * 100) + ' %' : '…',
@@ -152,22 +152,22 @@ function selInfo() {
   const retA = sim.retireAge;
   const mRet = retA != null ? clamp(Math.round((retA - a0) * 12), 0, months) : months;
   const at = (m) => ({ x: scaleX(a0 + m / 12), y: scaleY(sim.exp[clamp(m, 0, months)]) });
-  const hint = '<div class="dchip-note">Raahaa — tai nuolet, Enter muokkaa</div>';
+  const hint = `<div class="dchip-note">${t('Raahaa — tai nuolet, Enter muokkaa')}</div>`;
   if (s.kind === 'acc') {
     return { ...at(Math.max(6, Math.round(mRet / 2))),
       aria: t('Kuukausisäästö {0} euroa kuukaudessa', fmtNum(state.monthly)),
-      html: `<div class="dchip-row"><b>Kuukausisäästö</b> ${fmtNum(state.monthly)} €/kk</div>${hint}` };
+      html: `<div class="dchip-row"><b>${t('Kuukausisäästö')}</b> ${fmtNum(state.monthly)} ${VP_YKS_EKK}</div>${hint}` };
   }
   if (s.kind === 'wd') {
     return { ...at(mRet + Math.round((months - mRet) / 2)),
       aria: t('Kuukausitulo eläkkeellä {0} euroa kuukaudessa', fmtNum(sim.withdrawal)),
-      html: `<div class="dchip-row"><b>Kuukausitulo</b> ${fmtNum(sim.withdrawal)} €/kk</div>${hint}` };
+      html: `<div class="dchip-row"><b>${t('Kuukausitulo')}</b> ${fmtNum(sim.withdrawal)} ${VP_YKS_EKK}</div>${hint}` };
   }
   if (s.kind === 'end') {
     return { ...at(months),
       aria: t('Pääomaa jäljellä suunnitelman lopussa {0} euroa', fmtNum(sim.wEnd)),
-      html: `<div class="dchip-row"><b>Pääomaa jäljellä</b> ${fmtCompact(sim.wEnd)}</div>`
-        + '<div class="dchip-note">Raahaa pystysuunnassa — kuukausitulo joustaa</div>' };
+      html: `<div class="dchip-row"><b>${t('Pääomaa jäljellä')}</b> ${fmtCompact(sim.wEnd)}</div>`
+        + `<div class="dchip-note">${t('Raahaa pystysuunnassa — kuukausitulo joustaa')}</div>` };
   }
   if (s.kind === 'retline' && retA != null) {
     return { x: scaleX(retA), y: plot.t + 64,

@@ -736,17 +736,17 @@
   // säätimissä; skeeman ulkopuoliset kentät hylätään.
 
   const FIELDS = {
-    ageNow:        { nimi: 'Ikä nyt', min: 16, max: 100, yks: 'v' },
-    ageEnd:        { nimi: 'Suunnitelma päättyy', min: 40, max: 105, yks: 'v' },
-    monthly:       { nimi: 'Kuukausisäästö', min: 0, max: 1e6, yks: '€/kk' },
+    ageNow:        { nimi: 'Ikä nyt', min: 16, max: 100, yks: VP_YKS_V },
+    ageEnd:        { nimi: 'Suunnitelma päättyy', min: 40, max: 105, yks: VP_YKS_V },
+    monthly:       { nimi: 'Kuukausisäästö', min: 0, max: 1e6, yks: VP_YKS_EKK },
     startCapital:  { nimi: 'Varallisuus nyt', min: 0, max: 1e9, yks: '€' },
-    savingsGrowth: { nimi: 'Säästön vuosikasvu', min: 0, max: 15, yks: '%/v' },
+    savingsGrowth: { nimi: 'Säästön vuosikasvu', min: 0, max: 15, yks: VP_YKS_PV },
     allocStocks:   { nimi: 'Osakepaino', min: 0, max: 100, yks: '%' },
     allocBonds:    { nimi: 'Korkopaino', min: 0, max: 100, yks: '%' },
-    retAge:        { nimi: 'Eläkeikä', min: 18, max: 100, yks: 'v', ret: 'age' },
-    withdrawal:    { nimi: 'Kuukausitulon tarve', min: 0, max: 1e6, yks: '€/kk', ret: 'withdrawal' },
-    pension:       { nimi: 'Työeläke', min: 0, max: 1e6, yks: '€/kk', ret: 'pension' },
-    pensionAge:    { nimi: 'Työeläkkeen alkamisikä', min: 18, max: 105, yks: 'v', ret: 'pensionAge' },
+    retAge:        { nimi: 'Eläkeikä', min: 18, max: 100, yks: VP_YKS_V, ret: 'age' },
+    withdrawal:    { nimi: 'Kuukausitulon tarve', min: 0, max: 1e6, yks: VP_YKS_EKK, ret: 'withdrawal' },
+    pension:       { nimi: 'Työeläke', min: 0, max: 1e6, yks: VP_YKS_EKK, ret: 'pension' },
+    pensionAge:    { nimi: 'Työeläkkeen alkamisikä', min: 18, max: 105, yks: VP_YKS_V, ret: 'pensionAge' },
   };
 
   // Tapahtumien muutettavat ominaisuudet — rajat samat kuin popoverin kentissä.
@@ -762,11 +762,11 @@
   // kelpaa vain näille (applySaved normalisoi loput owned-kentät)
   const OWNED_SET = new Set(['ownHome', 'ownFlat', 'ownCottage']);
   const EVENT_PROPS = {
-    age:    { nimi: 'ikä', min: 0, max: 105, yks: 'v' },
+    age:    { nimi: 'ikä', min: 0, max: 105, yks: VP_YKS_V },
     amount: { nimi: 'summa', min: -1e9, max: 1e9, yks: '€' },
-    appr:   { nimi: 'arvonnousu', min: -30, max: 15, yks: '%/v' },
+    appr:   { nimi: 'arvonnousu', min: -30, max: 15, yks: VP_YKS_PV },
     rate:   { nimi: 'lainan korko', min: 0, max: 25, yks: '%' },
-    years:  { nimi: 'laina-aika', min: 1, max: 40, yks: 'v' },
+    years:  { nimi: 'laina-aika', min: 1, max: 40, yks: VP_YKS_V },
     down:   { nimi: 'käsiraha', min: 0, max: 1e9, yks: '€' },
     loanLeft: { nimi: 'lainaa jäljellä', min: 0, max: 1e9, yks: '€' },
   };

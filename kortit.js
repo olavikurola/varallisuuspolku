@@ -76,7 +76,7 @@ function renderStats() {
   }
   if (s.goal === 'saving') {
     cards.push(s.requiredMonthly != null
-      ? { k: 'Tarvittava säästö', v: `${fmtEur(s.requiredMonthly)}/kk`, cls: s.requiredMonthly > state.monthly ? 'accent' : 'ok', s: `nyt ${fmtEur(state.monthly)}/kk` + (confTxt ? ` · ${confTxt}` : '') }
+      ? { k: 'Tarvittava säästö', v: t('{0}/kk', fmtEur(s.requiredMonthly)), cls: s.requiredMonthly > state.monthly ? 'accent' : 'ok', s: t('nyt {0}/kk', fmtEur(state.monthly)) + (confTxt ? ` · ${confTxt}` : '') }
       : { k: 'Tarvittava säästö', v: 'Ei toteudu', cls: 'bad', s: 'tulotavoite on liian suuri tälle eläkeiälle' });
   }
   // Riittävyys ja onnistumis-% samassa kortissa — kertovat samaa asiaa
@@ -84,9 +84,9 @@ function renderStats() {
   if (s.goal === 'withdrawal' && s.goalUnreachable) {
     cards.push({ k: 'Kestävä kuukausitulo', v: 'Ei toteudu', cls: 'bad', s: t('edes 0 €/kk ei riitä {0}', confTxt || '').trim() });
   } else if (s.solvedWithdrawal != null && (s.depletionAge == null || s.depletionAge >= s.a1 - 1)) {
-    cards.push({ k: 'Kestävä kuukausitulo', v: `${fmtEur(s.solvedWithdrawal)}/kk`, cls: 'accent',
+    cards.push({ k: 'Kestävä kuukausitulo', v: t('{0}/kk', fmtEur(s.solvedWithdrawal)), cls: 'accent',
       s: [s.pension > 0 ? t('sis. työeläke {0}/kk', fmtEur(s.pension)) : null, confTxt || pTxt].filter(Boolean).join(' · ') || t('varat loppuun {0} v mennessä', Math.round(s.a1)),
-      d: dRow(s.solvedWithdrawal, g && (g.solvedWithdrawal != null ? g.solvedWithdrawal : g.sustainableWd), (x) => `${fmtLuku(Math.round(x))} €/kk`, 20) });
+      d: dRow(s.solvedWithdrawal, g && (g.solvedWithdrawal != null ? g.solvedWithdrawal : g.sustainableWd), (x) => `${fmtLuku(Math.round(x))} ${VP_YKS_EKK}`, 20) });
   } else if (s.depletionAge != null) {
     // %-nostossa "ehtyminen" tarkoittaa tulotarpeen alittumista (salkku ei ehdy)
     const pmWd = proOf(state);
@@ -375,7 +375,7 @@ function openDonateModal() {
   let html = `<h2>Perustiedot</h2>` +
     row('Ikä nyt / suunnitelman loppu', `${p.ageNow} v / ${p.ageEnd} v`) +
     row('Varallisuus nyt', fmtEur(p.startCapital)) +
-    row('Kuukausisäästö', `${fmtEur(p.monthly)}/kk` + (p.savingsGrowth ? ` (+${fmtLuku(p.savingsGrowth)} %/v)` : '')) +
+    row('Kuukausisäästö', t('{0}/kk', fmtEur(p.monthly)) + (p.savingsGrowth ? t(' (+{0} %/v)', fmtLuku(p.savingsGrowth)) : '')) +
     row('Allokaatio', `${p.alloc.stocks} % osakkeet · ${p.alloc.bonds} % korot`) +
     row('Kytkimet', [p.glide && 'ikäsidonnainen', p.real && 'inflaatiokorjattu', p.tax && 'myyntivoittovero'].filter(Boolean).join(' · ') || '—');
   html += `<h2>Tapahtumat (vain tyyppi, ikä ja summat — ei nimiä)</h2>`;
@@ -383,14 +383,14 @@ function openDonateModal() {
     const def = EVENT_TYPES[e.type];
     let desc;
     if (e.type === 'retirement') {
-      desc = `tulotarve ${fmtEur(e.withdrawal)}/kk · työeläke ${fmtEur(e.pension)}/kk` +
+      desc = t('tulotarve {0}/kk · työeläke {1}/kk', fmtEur(e.withdrawal), fmtEur(e.pension)) +
         (e.goal && e.goal !== 'manual' ? ` · tavoite: ${{ withdrawal: 'kestävä tulo', age: 'eläkeikä', saving: 'säästö' }[e.goal]}` : '') +
         (e.conf ? ` · ${Math.round(e.conf * 100)} %` : '');
     } else {
       desc = [
         e.amount ? fmtEur(e.amount) : null,
         e.financing === 'loan' ? 'lainalla' : null,
-        e.recMonthly ? `${e.recMonthly > 0 ? '+' : ''}${fmtEur(e.recMonthly)}/kk ${e.recYears} v` : null,
+        e.recMonthly ? (e.recMonthly > 0 ? '+' : '') + t('{0}/kk {1} v', fmtEur(e.recMonthly), e.recYears) : null,
         e.sellAge != null ? `myynti ${e.sellAge} v` : null,
       ].filter(Boolean).join(' · ') || '—';
     }
@@ -498,13 +498,13 @@ async function openCompareModal() {
       `<span class="cv">${fmt(user)}</span><span class="cp">${positionTxt(q, user)}</span>` +
       `<span class="cm">mediaani ${fmt(q.p50)}</span></div>`);
   };
-  add('Kuukausisäästö', g.monthly, state.monthly, (v) => `${fmtEur(v)}/kk`);
+  add('Kuukausisäästö', g.monthly, state.monthly, (v) => t('{0}/kk', fmtEur(v)));
   add('Varallisuus nyt', g.startCapital, state.startCapital, fmtCompact);
   add('Osakepaino', g.stocks, state.allocStocks, (v) => Math.round(v) + ' %');
   if (retire) {
     add('Eläkeikätavoite', g.retireAge, Math.round(retire.age), (v) => Math.round(v) + ' v');
-    add('Kuukausitulo eläkkeellä', g.withdrawal, retire.withdrawal, (v) => `${fmtEur(v)}/kk`);
-    if (retire.pension > 0) add('Työeläkearvio', g.pension, retire.pension, (v) => `${fmtEur(v)}/kk`);
+    add('Kuukausitulo eläkkeellä', g.withdrawal, retire.withdrawal, (v) => t('{0}/kk', fmtEur(v)));
+    if (retire.pension > 0) add('Työeläkearvio', g.pension, retire.pension, (v) => t('{0}/kk', fmtEur(v)));
   }
   if (g.wAtRet && s.wAtRet != null) add('Varallisuus eläkkeellä', g.wAtRet, s.wAtRet, fmtCompact);
 
@@ -542,10 +542,10 @@ function renderEventList() {
       ? (g === 'withdrawal' && sim && sim.solvedWithdrawal != null ? sim.solvedWithdrawal : ev.withdrawal)
       : 0;
     let amount = ev.type === 'retirement' ? -effWd : ev.amount;
-    let amStr = ev.type === 'retirement' ? `−${fmtCompact(effWd)}/kk` : fmtCompact(ev.amount);
+    let amStr = ev.type === 'retirement' ? '−' + t('{0}/kk', fmtCompact(effWd)) : fmtCompact(ev.amount);
     if (ev.type !== 'retirement' && !ev.amount && ev.recMonthly) {
       amount = ev.recMonthly;
-      amStr = `${fmtCompact(ev.recMonthly)}/kk`;
+      amStr = t('{0}/kk', fmtCompact(ev.recMonthly));
     }
     if (ev.owned) {
       // Omistus on varallisuutta, ei kulua — summa positiivisena
