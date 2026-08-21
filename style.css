@@ -2505,8 +2505,13 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
   .plans-home .c-saasto, .plans-home .c-kestava, .plans-home .c-spark { display: none; }
 }
 @media (max-width: 640px) {
-  .ph-thead, .ph-row { grid-template-columns: 20px minmax(76px, 1.4fr) 54px 70px 90px; gap: 0 6px; padding: 0 10px; }
-  .ph-thead { letter-spacing: 0.04em; }
+  .ph-thead, .ph-row { grid-template-columns: 20px minmax(64px, 1.2fr) 62px 78px 86px; gap: 0 6px; padding: 0 10px; }
+  /* Otsikot saavat rivittyä kapeassa sarakkeessa: .plans-home .num asettaa
+     nowrapin lukuja varten, mutta englannin pidemmät otsikot ("Retirement age",
+     "Will it last") valuivat sen takia sarakkeen yli päällekkäin (kauppakuva
+     21.8.2026). Luvut pysyvät yhdellä rivillä — vain thead rivittyy. */
+  .plans-home .ph-thead .num, .plans-home .ph-thead span { white-space: normal; line-height: 1.15; font-size: 8.5px; }
+  .ph-thead { letter-spacing: 0.02em; align-items: end; }
   .plans-home .c-ika, .plans-home .c-onn, .plans-home .c-wret { display: none; }
   .ph-act { padding: 5px 10px; }
   .ph-acts { gap: 5px; }

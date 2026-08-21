@@ -758,7 +758,7 @@
     /* Tulkin kehotepaikka lyhyeksi appissa — webin pitkä esimerkki
        ("Kysy tai kokeile: …") ahtautui kapeaan kenttään sekavasti */
     var tkInp = document.getElementById('tkInput');
-    if (tkInp) tkInp.placeholder = 'Kysy suunnitelmastasi…';
+    if (tkInp) tkInp.placeholder = t('Kysy suunnitelmastasi…');
 
     /* tab-aktiivitilat ja taustan skrollilukko: Tulkin ja Suunnitelman
        avautumista vahditaan hidden-attribuutista (avautuvat myös muualta

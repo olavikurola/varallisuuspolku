@@ -21,6 +21,25 @@ const LAITTEET = [
   { nimi: 'play', w: 360, h: 800, dsf: 3 },       // 1080×2400 (Play-puhelin)
 ];
 
+// Kielet: fi-listaukselle suomenkieliset, en-US-listaukselle englanninkieliset
+// kuvat (Apple ja Play ottavat kuvat lokalisoinnittain).
+const KIELET = [
+  { koodi: 'fi', sivu: '/index.html', locale: 'fi-FI' },
+  { koodi: 'en', sivu: '/index-en.html', locale: 'en-GB' },
+];
+
+/* Kuvasarja kertoo tarinan: näe → muokkaa → ymmärrä → säilytä → säädä.
+   Kaikki TUMMASSA teemassa (Olavin linjaus 21.8.2026) — vaalea teema oli
+   ennen kolmantena ja rikkoi sarjan ilmeen kaupan esikatselussa.
+   Kaupassa 3 ensimmäistä näkyy hakutuloksissa, joten kärki on tärkein. */
+const KUVAT = [
+  { nimi: 'koti', tabi: null },          // 1 kojelauta: koko elinkaari yhdellä silmäyksellä
+  { nimi: 'piirtopoyta', fs: true },     // 2 erottautuja: tartu käyrään ja vedä
+  { nimi: 'tulkki', tabi: 3 },           // 3 tekoälyapuri ja huomiot
+  { nimi: 'suunnitelma', tabi: 4 },      // 4 suunnitelmat ja tulostettava dokumentti
+  { nimi: 'valikko', tabi: 5 },          // 5 asetukset: muistutukset, lukitus, kieli
+];
+
 const server = http.createServer((req, res) => {
   let f = decodeURIComponent(req.url.split('?')[0].split('#')[0]);
   if (f === '/') f = '/index.html';
@@ -32,28 +51,32 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(8135, async () => {
+  // Vanhat kuvat pois: nimeämismalli vaihtui (kieli mukaan) ja vaalea kuva
+  // poistui sarjasta — muuten hakemistoon jäisi sekaisin kahta sukupolvea.
+  fs.rmSync(OUT, { recursive: true, force: true });
   fs.mkdirSync(OUT, { recursive: true });
   const b = await chromium.launch();
 
-  async function sivu(laite, vaalea) {
+  async function sivu(laite, kieli) {
     const ctx = await b.newContext({
       viewport: { width: laite.w, height: laite.h },
       deviceScaleFactor: laite.dsf,
-      locale: 'fi-FI',
+      locale: kieli.locale,
     });
-    await ctx.addInitScript((light) => {
+    await ctx.addInitScript((kk) => {
       localStorage.setItem('vp-tour-done', '1');
       localStorage.setItem('vp-autotour-off', '1');
       localStorage.setItem('vp-veto-vihje', '1');
-      if (light) localStorage.setItem('vp-theme', 'light');
+      localStorage.setItem('vp-kieli', kk);          // appin kielivalinta kuvaan
+      localStorage.setItem('vp-kieli-ehdotettu', '1'); // ei kielibanneria kuviin
       sessionStorage.setItem('vp-lukko-auki', '1'); // logoruutu ohi kuvia varten
       sessionStorage.setItem('vp-intro-ok', '1');   // piirtoanimaatio ohi — terävät kuvat
       // kauppakuviin suunnitelma näkyviin: Perustiedot ja tapahtumat auki
       localStorage.setItem('vp-kortit-auki-v1', JSON.stringify(['basics', 'events']));
       window.Capacitor = { isNativePlatform: () => true, Plugins: {} };
-    }, !!vaalea);
+    }, kieli.koodi);
     const pg = await ctx.newPage();
-    await pg.goto('http://localhost:8135/', { waitUntil: 'networkidle' });
+    await pg.goto('http://localhost:8135' + kieli.sivu, { waitUntil: 'networkidle' });
     // Lavastus: esimerkkipersoona "Perhe ja asunto (35 v)"
     await pg.evaluate(() => {
       applySaved(JSON.parse(JSON.stringify(EXAMPLES[1].data)));
@@ -66,29 +89,24 @@ server.listen(8135, async () => {
   }
 
   for (const laite of LAITTEET) {
-    // 1) Kojelauta (tumma)
-    let { ctx, pg } = await sivu(laite, false);
-    await pg.screenshot({ path: p.join(OUT, laite.nimi + '-1-koti.png') });
-
-    // 2) Piirtopöytä kokoruudussa
-    await pg.evaluate(() => enterFs());
-    await pg.waitForTimeout(1200);
-    await pg.screenshot({ path: p.join(OUT, laite.nimi + '-2-piirtopoyta.png') });
-    await pg.evaluate(() => exitFs());
-    await pg.waitForTimeout(600);
-
-    // 4) valikko (Lisää-tabi): natiivirivit (muistutukset + lukitus) näkyvissä
-    await pg.click('.vp-tab:nth-child(5)');
-    await pg.waitForTimeout(400);
-    await pg.screenshot({ path: p.join(OUT, laite.nimi + '-4-valikko.png') });
-    await ctx.close();
-
-    // 3) Kojelauta vaaleassa teemassa
-    ({ ctx, pg } = await sivu(laite, true));
-    await pg.screenshot({ path: p.join(OUT, laite.nimi + '-3-koti-vaalea.png') });
-    await ctx.close();
-
-    console.log(laite.nimi + ': 4 kuvaa (' + laite.w * laite.dsf + '×' + laite.h * laite.dsf + ')');
+    for (const kieli of KIELET) {
+      const { ctx, pg } = await sivu(laite, kieli);
+      for (let i = 0; i < KUVAT.length; i++) {
+        const kuva = KUVAT[i];
+        if (kuva.fs) {
+          await pg.evaluate(() => enterFs());
+          await pg.waitForTimeout(1200);
+        } else if (kuva.tabi) {
+          await pg.click('.vp-tab:nth-child(' + kuva.tabi + ')');
+          await pg.waitForTimeout(700);
+        }
+        const nimi = `${laite.nimi}-${kieli.koodi}-${i + 1}-${kuva.nimi}.png`;
+        await pg.screenshot({ path: p.join(OUT, nimi) });
+        if (kuva.fs) { await pg.evaluate(() => exitFs()); await pg.waitForTimeout(500); }
+      }
+      await ctx.close();
+      console.log(`${laite.nimi} ${kieli.koodi}: ${KUVAT.length} kuvaa (${laite.w * laite.dsf}×${laite.h * laite.dsf})`);
+    }
   }
 
   // Play feature graphic 1024×500

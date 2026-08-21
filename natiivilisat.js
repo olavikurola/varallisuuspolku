@@ -326,8 +326,8 @@
       html += '<div class="vpt-tila">' + tila.teksti +
         '<small>' + kkNimi(tila.kk) + ': kirjattu ' + fmt(tila.eur) + ' · suunnitelman odotus ' + fmt(tila.odotus) + '</small></div>';
     } else {
-      html += '<div class="vpt-tila">Aloita kirjaamalla tämän kuun varallisuutesi' +
-        '<small>Vertailukohta jäädytetään suunnitelmastasi ensimmäisellä kirjauksella</small></div>';
+      html += '<div class="vpt-tila">' + window.t('Aloita kirjaamalla tämän kuun varallisuutesi') +
+        '<small>' + window.t('Vertailukohta jäädytetään suunnitelmastasi ensimmäisellä kirjauksella') + '</small></div>';
     }
     var rivit = t.rivit.slice().reverse().map(function (r) {
       var od = toteumaOdotus(t, r.kk);
