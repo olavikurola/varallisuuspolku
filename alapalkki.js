@@ -137,13 +137,6 @@
        nollalevyiseksi ja nuppi valui kortista yli (mitattu WebKit-moottorilla) */
     'body.vp-has-tabbar .menu .vp-kr-sw{margin:0;flex:0 0 36px;width:36px;display:block;position:relative;}',
     'body.vp-has-tabbar .menu .vp-kr-sw .switch{display:block;width:36px;}',
-    /* kielirivin reunatunnukset: FI vasemmalla, EN oikealla — nupin asento
-       kertoo valitun kielen ilman erillistä toimintotekstiä */
-    'body.vp-has-tabbar .menu .vp-kr-reunat{display:flex;align-items:center;gap:8px;flex:0 0 auto;}',
-    'body.vp-has-tabbar .menu .vp-kr-reuna{font-size:11px;font-weight:700;letter-spacing:0.06em;color:var(--text-faint,#6b7a99);}',
-    /* valittu kieli korostuu (:has on jo käytössä tässä tiedostossa) */
-    'body.vp-has-tabbar .menu .vp-kr-reunat:has(input:checked) .vp-kr-reuna:last-child{color:var(--accent,#2dd4bf);}',
-    'body.vp-has-tabbar .menu .vp-kr-reunat:not(:has(input:checked)) .vp-kr-reuna:first-child{color:var(--accent,#2dd4bf);}',
     'body.vp-has-tabbar .menu>#mi-reset{margin-top:2px;}',
     /* yhtenäinen sivuilme (Olavin toive 7.8.): logo + otsikko myös sisäsivuilla —
        sama koko ja muoto kuin yläpalkin brand-markissa (42 px, kulmat 12 px).
@@ -429,17 +422,11 @@
     // Kytkinrivi: napautus ei sulje sivua — tila näkyy heti switchissä.
     // toggleFn saa paivita-callbackin, jota myös asynkroniset kytkennät
     // (ilmoituslupa, Face ID) kutsuvat kun tila on ratkennut.
-    // o.reunat = ['FI', 'EN']: kytkimen laidoille lyhyet tunnukset, jolloin
-    // asento ITSE kertoo valinnan (kielirivi) eikä tarvita toimintotekstiä
-    var kytkin = function (id, name, desc, tilaFn, toggleFn, o) {
+    var kytkin = function (id, name, desc, tilaFn, toggleFn) {
       var b = document.createElement('button');
       b.id = id;
       b.className = 'vp-kytkinrivi';
       var sw = '<span class="toggle vp-kr-sw"><input type="checkbox" tabindex="-1" aria-hidden="true"><span class="switch"></span></span>';
-      if (o && o.reunat) {
-        sw = '<span class="vp-kr-reunat"><span class="vp-kr-reuna">' + o.reunat[0] + '</span>' +
-          sw + '<span class="vp-kr-reuna">' + o.reunat[1] + '</span></span>';
-      }
       // flex asuu sisäkääreessä: <button> flex-kontainerina on WebKitissä
       // epäluotettava (Chromiumissa ok, laitteella switch vuoti kortista yli)
       b.innerHTML = '<span class="vp-krow">' +
@@ -480,9 +467,11 @@
       function (paivita) { vaihdaTeema(); paivita(); });
     // Kielivalitsin näytetään KOHDEKIELELLÄ (englanninkielinen löytää sen
     // suomenkielisestä valikosta ja päinvastoin) — siksi ei t():tä vaan haara.
-    /* Kielirivi: kytkimen laidoilla FI ja EN, joten asento kertoo valinnan
-       (aiemmin teksti oli toiminto "Suomeksi" ja kytkin päällä englannissa —
-       luki kuin suomi olisi valittuna, Olavin havainto 21.8.2026).
+    /* Kielirivi: TÄSMÄLLEEN samannäköinen kuin muut kytkinrivit — ei laidoilla
+       FI/EN-tunnuksia (Olavin toive 22.8.2026). Alaotsikko "Suomi / English"
+       kertoo vaihtoehdot ja nupin asento valinnan: pois = suomi, päällä =
+       English. Otsikko on tila ("Kieli"/"Language"), ei toiminto ("Suomeksi"),
+       jotta rivi ei lue päinvastoin kuin kytkimen asento.
        Kieli vaihtuu vain sivulatauksessa (staattinen HTML on sivukohtainen),
        mutta käyttäjä palaa VALIKKOON eikä sivulle: vp-a-sheet-lippu avaa
        valikon heti latauksen jälkeen, kuten muillakin sivusiirtymillä. */
@@ -508,8 +497,7 @@
           : tiedosto.replace(/-en\.html$/, '.html');
         if (!/\.html$/.test(kohde)) kohde = uusi === 'en' ? 'index-en.html' : 'index.html';
         setTimeout(function () { location.href = kohde; }, 280);
-      },
-      { reunat: ['FI', 'EN'] });
+      });
     kytkin('mi-pro', 'Pro-tila', 'Ammattilaisen säädöt ja analyysit',
       function () { return onIndex && typeof state !== 'undefined' && !!state.proOn; },
       function (paivita) {

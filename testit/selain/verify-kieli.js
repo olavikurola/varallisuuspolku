@@ -171,12 +171,21 @@ const server = http.createServer((req, res) => {
     const el = document.getElementById('mi-kieli');
     return el && {
       nimi: (el.querySelector('.vp-kr-nimi') || {}).textContent,
-      reunat: [...el.querySelectorAll('.vp-kr-reuna')].map((x) => x.textContent).join('|'),
+      desc: (el.querySelector('.mdesc') || {}).textContent,
+      // kielirivin pitää olla samanlainen kuin muut kytkinrivit: ei laidoilla
+      // FI/EN-tunnuksia, ja rakenne sama kuin naapurirvillä (Olavin toive 22.8.)
+      html: el.querySelector('.vp-krow').innerHTML,
+      naapuriHtml: (document.getElementById('mi-pro').querySelector('.vp-krow') || {}).innerHTML,
       checked: el.querySelector('input').checked,
     };
   });
-  ok(kRivi && kRivi.reunat === 'FI|EN', 'kielirivillä FI ja EN kytkimen laidoilla', JSON.stringify(kRivi));
-  ok(kRivi && kRivi.nimi === 'Kieli' && kRivi.checked === false, 'fi: otsikko "Kieli", asento FI', JSON.stringify(kRivi));
+  ok(kRivi && !/vp-kr-reuna/.test(kRivi.html), 'kielirivillä EI FI/EN-tunnuksia kytkimen laidoilla', JSON.stringify(kRivi && kRivi.html));
+  // sama rakenne kuin Pro-tila-rivillä: vain tekstit eroavat
+  const luuranko = (h) => String(h).replace(/>[^<]*</g, '>·<');
+  ok(kRivi && luuranko(kRivi.html) === luuranko(kRivi.naapuriHtml),
+    'kielirivin rakenne = muiden kytkinrivien rakenne', JSON.stringify({ k: kRivi && luuranko(kRivi.html), n: kRivi && luuranko(kRivi.naapuriHtml) }));
+  ok(kRivi && kRivi.desc === 'Suomi / English', 'kielirivin alaotsikko kertoo vaihtoehdot', JSON.stringify(kRivi && kRivi.desc));
+  ok(kRivi && kRivi.nimi === 'Kieli' && kRivi.checked === false, 'fi: otsikko "Kieli", asento pois päältä', JSON.stringify(kRivi));
   await pk.click('#mi-kieli');
   await pk.waitForTimeout(3000);
   const kJalkeen = await pk.evaluate(() => {
@@ -192,7 +201,7 @@ const server = http.createServer((req, res) => {
   });
   ok(/index-en\.html$/.test(kJalkeen.url), 'kielivaihto siirtyy en-sivupariin', kJalkeen.url);
   ok(kJalkeen.valikkoAuki, 'VALIKKO PYSYY AUKI kielen vaihdon jälkeen', JSON.stringify(kJalkeen));
-  ok(kJalkeen.nimi === 'Language' && kJalkeen.checked === true, 'en: otsikko "Language", asento EN', JSON.stringify(kJalkeen));
+  ok(kJalkeen.nimi === 'Language' && kJalkeen.checked === true, 'en: otsikko "Language", asento päällä', JSON.stringify(kJalkeen));
 
   /* Vuositaulukko ja Toteuma englanniksi (Olavin havainto 21.8.2026).
      HUOM: suomen tunnistus SANOISTA — pelkkä ä/ö-haku päästi läpi sarake-
