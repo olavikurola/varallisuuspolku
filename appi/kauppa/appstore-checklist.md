@@ -109,7 +109,18 @@ yläreunassa: Finnish / English (U.S.)).
 ### Suomeksi (fi)
 - [ ] What's New: kuvaukset.md → "Versio 1.1 — What's New" → Suomeksi
 - [ ] Screenshots: `iphone69-fi-1…5`, (valinnaiset `iphone67-fi-*`), `ipad13-fi-*`
-- [ ] Promotional Text / Description / Keywords: ennallaan (1.0:n tekstit)
+- [ ] **Description: PÄIVITTYNYT** — suomenkielinen kuvaus ei aiemmin maininnut
+      Tulkkia lainkaan (englanninkielisessä sillä oli oma osionsa). Kopioi
+      kuvaukset.md:n "Kuvaus"-lohko kokonaan uudelleen: mukana on nyt
+      TULKKI-osio ja neljä ominaisuusriviä (useita suunnitelmia, vuositaulukko,
+      tilastot, Pro-tila) sekä offline-maininta.
+- [ ] **Promotional Text: PÄIVITTYNYT** — "Kokeile *taloudellisia*
+      elämänpäätöksiä…" (146/170). HUOM: Promotional Text on ainoa kenttä,
+      jota voi vaihtaa ilman uutta versiota — tämän voi päivittää heti,
+      erillään 1.1:stä.
+- [ ] Keywords: ennallaan (1.0:n tekstit) — ellei ota käyttöön kuvaukset.md:n
+      vaihtoehtoista avainsanariviä, jossa "budjetti" on vaihdettu
+      "tekoälyksi" (Olavin päätös)
 
 ### English (U.S.)
 - [ ] What's New: kuvaukset.md → "Versio 1.1 — What's New" → English
@@ -121,7 +132,17 @@ yläreunassa: Finnish / English (U.S.)).
 ### Molemmille yhteiset
 - [ ] **Build**: + Add Build → uusin (korkein numero)
 - [ ] Version Release: **Manually release this version**
-- [ ] App Review Information: ennallaan 1.0:sta (ei kirjautumista)
+- [ ] **App Review Information: PÄIVITTYNYT** — kopioi kuvaukset.md:n
+      "App Review -muistiinpanot" uudelleen. Uutta: appi on kaksikielinen
+      (näkymien nimet annettu molemmilla kielillä) ja Kysy AI / Tulkki on
+      kuvattu auki — se on ainoa verkkoa käyttävä toiminto, joten katselmoija
+      ei tulkitse sitä ristiriidaksi "kaikki laskenta laitteella" -väitteen
+      kanssa.
+- [ ] **Ikärajakysely läpi uudelleen** (Age Rating → Edit): Applen kyselyssä on
+      oma kohtansa tekoälykeskustelusta, ja Kysy AI / Tulkki on sellainen.
+      Nykyinen 4+ ei ole itsestäänselvyys — käy kysely läpi ennen submitia.
+      Jos raja nousee, päivitä myös Playn sisältökysely ja kuvaukset.md:n
+      perustietotaulukon Ikäraja-rivi.
 
 ## 3. Lähetys
 - [ ] Add for Review → Submit

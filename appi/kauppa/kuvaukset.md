@@ -26,10 +26,14 @@ tuottolupauksia — kuvataan työkalu, ei tuloksia.
 `Piirrä polkusi vaurauteen` (25)
 
 **Promoteksti (max 170 merkkiä):**
-`Kokeile elämänpäätöksiä ennen kuin teet ne: eläkeikä, asunto, perhe. Kaikki laskenta tapahtuu laitteellasi — ei tiliä, ei seurantaa.` (~130)
+`Kokeile taloudellisia elämänpäätöksiä ennen kuin teet ne: eläkeikä, asunto, perhe. Kaikki laskenta tapahtuu laitteellasi — ei tiliä, ei seurantaa.` (146)
 
 **Avainsanat (max 100 merkkiä, pilkuin ilman välilyöntejä):**
 `eläke,säästäminen,sijoittaminen,talous,fire,eläkelaskuri,korkoa korolle,varallisuus,budjetti` (92)
+
+Vaihtoehto jos Tulkki halutaan hakuun — "budjetti" vaihtuu "tekoälyksi"
+(Olavin päätös; pelkkä lisäys ilman vaihtoa veisi kentän 100/100 täyteen):
+`eläke,säästäminen,sijoittaminen,talous,fire,eläkelaskuri,korkoa korolle,varallisuus,tekoäly` (91)
 
 **Kuvaus:**
 
@@ -53,6 +57,11 @@ MITÄ SOVELLUS TEKEE
   ratkaisee tarvittavan säästön, eläkeiän tai kestävän kuukausitulon
 • Suunnitelmani-dokumentti: koko suunnitelma oletuksineen luettavana
   tekstinä, jonka voi viedä mukaan pankkiin tai neuvojalle
+• Useita suunnitelmia: nimeä ja säilytä vaihtoehtoja ja vertaa niitä
+  haamukäyränä samassa kaaviossa
+• Vuositaulukko: kaikki luvut vuosi kerrallaan, vietävissä CSV:nä
+• Tilastot: miten muut suunnittelevat varallisuuttaan — avointa dataa
+• Pro-tila: ammattilaisen säädöt ja tarkemmat analyysit
 
 SOVELLUKSEN LISÄT
 • Toteumaseuranta: kirjaa toteutunut varallisuutesi kuukausittain ja näe,
@@ -64,10 +73,16 @@ SOVELLUKSEN LISÄT
 • Pikatoiminnot: pitkä painallus kuvakkeesta suoraan Kysy AI:hin,
   Toteumaan tai Suunnitelmaan
 
+TULKKI — TEKOÄLY JOKA SELITTÄÄ, EI NEUVO
+Kysy miksi luvut näyttävät siltä kuin näyttävät. Tulkki selittää oman
+suunnitelmasi ja sen oletukset selkokielellä. Se ei suosittele tuotteita
+eikä ennusta tuottoja. Kysymys lähtee laitteelta vain silloin kun itse
+kysyt — muu sovellus toimii ilman verkkoyhteyttä.
+
 YKSITYISYYS EDELLÄ
-Kaikki laskenta ja tiedot pysyvät laitteellasi. Ei tiliä, ei
-rekisteröitymistä, ei mainoksia, ei seurantaa. Mitään ei lähetetä
-minnekään ilman erillistä omaa toimintoasi.
+Kaikki laskenta ja tiedot pysyvät laitteellasi, ja sovellus toimii ilman
+verkkoyhteyttä. Ei tiliä, ei rekisteröitymistä, ei mainoksia, ei
+seurantaa. Mitään ei lähetetä minnekään ilman erillistä omaa toimintoasi.
 
 Varallisuuspolku ei ole sijoitusneuvontaa: se näyttää ja selittää omien
 oletustesi seuraukset, mutta ei suosittele tuotteita eikä lupaa tuottoja.
@@ -84,17 +99,40 @@ varallisuuspolku.com.
   to you, App functionality, Optional". Kumpikin perusteltavissa; "Data Not
   Collected" on oikein, koska mitään ei kerätä ilman käyttäjän omaa,
   nimenomaisesti käynnistämää toimintoa, eikä mitään yhdistetä henkilöön.
+- Tulkin osalta tarkistettu koodista (palvelin/server.js): välityspalvelin ei
+  talleta kysymystä eikä suunnitelman lukuja mihinkään — vain mallitoimittajan
+  virhevastaus lokitetaan. Applen "collect" edellyttää säilyttämistä pyynnön
+  palvelemista pidempään, joten "Data Not Collected" pitää paikkansa.
+- **AVOIN, OLAVIN PÄÄTETTÄVÄ: ikäraja.** Nykyinen merkintä on 4+. Applen
+  uudistetussa ikärajakyselyssä on oma kysymyksensä tekoälykeskustelusta
+  (chatbot), ja Kysy AI / Tulkki on juuri sellainen. Käy kysely läpi ASC:ssä
+  ennen 1.1:n submitia — jos vastaus nostaa rajan, myös Playn sisältökysely
+  pitää päivittää samalla. Älä oleta 4+:n säilyvän.
 
 **App Review -muistiinpanot (katselmoijalle):**
 ```
-No sign-in — all features work immediately. Native features beyond the
-web experience: home screen widget (WidgetKit), icon quick actions,
-monthly progress tracking (Toteuma in the Lisää tab), local notifications,
-Face ID app lock, haptic feedback on the drawing board, native share
-sheet. Try: 1) drag the wealth curve on the drawing board (expand icon on
-the chart), 2) Lisää tab -> Muistutukset / Sovelluksen lukitus / Toteuma,
-3) add the home screen widget after opening the app once. All calculations
-run on device; the app collects no data.
+No sign-in — all features work immediately. The app is bilingual: it
+follows the device language and can be switched between English and
+Finnish under the More (Lisää) tab; UI names below are given as
+"English (Finnish)".
+
+Native features beyond the web experience: home screen widget
+(WidgetKit), icon quick actions, monthly progress tracking (Actuals /
+Toteuma in the More tab), local notifications, Face ID app lock, haptic
+feedback on the drawing board, native share sheet.
+
+Ask AI ("Tulkki") is an assistant that explains the user's own plan in
+plain language. It is the only feature that uses the network: the typed
+question and the plan's numbers are sent over TLS to our own proxy, which
+forwards them to the language model. It is never triggered automatically
+— only when the user sends a question. No account, no personal data, no
+identifiers; nothing is stored on our side. Every other feature, and all
+of the calculation, runs on device and works offline.
+
+Try: 1) drag the wealth curve on the drawing board (expand icon on the
+chart), 2) More tab -> Reminders / App lock / Actuals, 3) Ask AI tab ->
+send any question, 4) add the home screen widget after opening the app
+once.
 ```
 
 ## Google Play
@@ -102,10 +140,15 @@ run on device; the app collects no data.
 **Lyhyt kuvaus (max 80 merkkiä):**
 `Piirrä polkusi vaurauteen — kaikki laskenta laitteellasi, ei tiliä.` (66)
 
-**Pitkä kuvaus:** sama kuin App Storen kuvaus yllä, yksi lisäys
-SOVELLUKSEN LISÄT -listaan:
-`• Kotinäyttöwidget: suunnitelmasi tila yhdellä vilkaisulla`
-(ja lukitusrivin muotoon "sormenjälki, kasvot tai laitteen koodi").
+**Pitkä kuvaus:** sama kuin App Storen suomenkielinen kuvaus yllä (widget-rivi
+on jo siinä mukana), yksi muutos: lukitusrivi muotoon
+`• Sovelluksen lukitus (valinnainen): sormenjälki, kasvot tai laitteen koodi`.
+
+**Englanninkielinen listaus (en-US):**
+- Lyhyt kuvaus (max 80): `Draw your path to wealth — all maths on your device, no account.` (64)
+- Pitkä kuvaus: sama kuin App Storen englanninkielinen kuvaus alempana, sama
+  lukitusrivin muutos (`fingerprint, face or your device passcode`)
+- Kuvakaappaukset: `play-en-<n>-*.png` + sama feature graphic
 
 **Data safety -luonnos:**
 - Ei kerättyä eikä jaettua dataa (sama perustelu kuin App Privacy yllä).
@@ -115,14 +158,20 @@ SOVELLUKSEN LISÄT -listaan:
 **Feature graphic (1024×500):** generoidaan [feature.html](feature.html):stä
 samalla kuvaskriptillä → `kuvat/play-feature.png`.
 
-## Kuvakaappaukset (generoitu, tumma + vaalea)
+## Kuvakaappaukset (generoitu, kaikki tummassa teemassa)
+
+Nimeämismalli `<laite>-<kieli>-<n>-<nimi>.png`; kieli `fi` tai `en`, sillä
+Apple ja Play ottavat kuvat lokalisoinnittain. Sarja kertoo tarinan
+näe → muokkaa → ymmärrä → säilytä → säädä, ja kaupan hakutuloksissa näkyy
+kolme ensimmäistä.
 
 | Tiedosto | Sisältö |
 |---|---|
-| `<laite>-1-koti.png` | Kojelauta: käyrä + onnistumis-% + alapalkki (tumma) |
-| `<laite>-2-piirtopoyta.png` | Piirtopöytä kokoruudussa (tumma) |
-| `<laite>-3-koti-vaalea.png` | Kojelauta vaaleassa teemassa |
-| `<laite>-4-valikko.png` | ☰-valikko: muistutukset + lukitus näkyvissä |
+| `<laite>-<kieli>-1-koti.png` | Kojelauta: käyrä + onnistumis-% + alapalkki |
+| `<laite>-<kieli>-2-piirtopoyta.png` | Piirtopöytä kokoruudussa |
+| `<laite>-<kieli>-3-tulkki.png` | Tulkki: tekoälyapuri ja huomiot |
+| `<laite>-<kieli>-4-suunnitelma.png` | Suunnitelmat ja tulostettava dokumentti |
+| `<laite>-<kieli>-5-valikko.png` | Lisää-valikko: asetukset, muistutukset, lukitus, kieli |
 
 Laitekoot: `iphone69` 1320×2868 (6,9" — pakollinen), `iphone67` 1290×2796
 (6,7"), `ipad13` 2064×2752 (iPad 13"), `play` 1080×2400 (Play-puhelin).
@@ -145,10 +194,14 @@ Tulkki ja Varallisuuspolku ovat tuotenimiä — ei käännetä.
 `Draw your path to wealth` (24)
 
 **Promoteksti (max 170 merkkiä):**
-`Try life decisions before you make them: retirement age, home, family. All calculations run on your device — no account, no tracking.` (133)
+`Try financial life decisions before you make them: retirement age, home, family. All calculations run on your device — no account, no tracking.` (143)
 
 **Avainsanat (max 100 merkkiä, pilkuin ilman välilyöntejä):**
 `retirement,pension,savings,investing,fire,wealth,planner,calculator,finland,budget,loan,simulator` (97)
+
+Vaihtoehto jos Tulkki halutaan hakuun — "simulator" vaihtuu "ai":ksi
+(sama varaus kuin fi:ssä: pelkkä lisäys veisi kentän 100/100 täyteen):
+`retirement,pension,savings,investing,fire,wealth,planner,calculator,finland,budget,loan,ai` (90)
 
 **Kuvaus (max 4000 merkkiä; alla 2549):**
 
@@ -181,6 +234,11 @@ WHAT THE APP DOES
   monthly income
 • My Plan document: your whole plan and its assumptions as readable
   text you can take to your bank or advisor
+• Multiple plans: name and keep alternatives, and compare them as a
+  ghost curve on the same chart
+• Annual table: every figure year by year, exportable as CSV
+• Stats: how others plan their wealth building — open data
+• Pro mode: professional-grade controls and deeper analyses
 
 APP EXTRAS
 • Progress tracking: log your actual net worth monthly and see whether
@@ -195,7 +253,8 @@ APP EXTRAS
 TULKKI — AI THAT EXPLAINS, NEVER ADVISES
 Ask why your numbers look the way they do. Tulkki explains your own
 plan and its assumptions in plain language. It does not recommend
-products and does not predict returns.
+products and does not predict returns. Your question leaves the device
+only when you ask — the rest of the app works offline.
 
 PRIVACY FIRST
 All calculations and data stay on your device, and the app works
@@ -227,37 +286,75 @@ Localizable Information → English (U.S.)):
 - App Information → Localizable Information (en-US): Name, Subtitle
 - Versiosivu (en-US): Promotional Text, Description, Keywords, What's New,
   Support URL / Marketing URL (samat kuin fi: varallisuuspolku.com)
-- Kuvakaappaukset per kieli: en-US voi aluksi käyttää fi-settiä (ASC sallii;
-  englanninkieliset kuvat generoidaan myöhemmin kun UI-käännös on buildissa)
+- Kuvakaappaukset per kieli: en-sarja on generoitu (`<laite>-en-<n>-*.png`)
+  — lataa en-US-lokalisointiin ne, ei fi-settiä
 - Ei-lokalisoituvat (jo täytetty fi-julkaisussa): kategoria, ikäraja, hinta,
   App Privacy, tietosuoja-URL
 
 
-## Versio 1.1 — What's New (valmiit tekstit, 20.8.2026)
+## Versio 1.1 — What's New (valmiit tekstit, päivitetty 22.8.2026)
 
-### Suomeksi (fi)
+Kenttä: ASC → versiosivu 1.1 → "What's New in This Version" (max 4000 merkkiä),
+täytetään erikseen molemmille kielille.
 
-Varallisuuspolku puhuu nyt myös englantia! Kielen voi vaihtaa asetuksista
-(In English) — koko sovellus, tekoälyapuri Tulkki ja widget mukaan lukien.
+### Suomeksi (fi) — 843 merkkiä
 
-Lisäksi: kaavion ikäkohdistin toimii nyt kosketuksella molemmissa kaavioissa,
-ja pieni joukko hiontoja.
+```
+Varallisuuspolku puhuu nyt myös englantia.
 
-Kaikki laskenta pysyy edelleen omalla laitteellasi.
+Koko sovellus on käännetty: piirtopöytä, suomalainen eläke- ja
+veromallinnus, elämäntapahtumat, vuositaulukko, toteumaseuranta,
+tekoälyapuri Tulkki ja kotinäyttöwidget. Kielen vaihdat milloin tahansa
+Lisää-välilehden asetuksista, Kieli-riviltä. Suomi on edelleen oletus
+eikä mikään muutu, ellet itse vaihda.
 
-### English (en-US)
+Muuta tässä versiossa:
+• Kaavion ikäkohdistin toimii nyt kosketuksella molemmissa kaavioissa:
+  vaakaveto kuljettaa kohdistinta, pystyveto vierittää yhä sivua
+• Allokaation korkoliukuri reagoi nyt myös silloin kun käteistä ei ole —
+  osake- ja korkopaino joustavat symmetrisesti ja summa pysyy sadassa
+• Kaavion tietolaatikko korjattu vaaleassa teemassa
+• Pieniä hiontoja lomakkeiden asetteluun ja Lisää-valikkoon
 
-Varallisuuspolku now speaks English! Switch languages in Settings — the whole
-app, including Tulkki (the AI assistant) and the home-screen widget.
+Kaikki laskenta pysyy edelleen omalla laitteellasi: ei tiliä, ei
+seurantaa.
+```
 
-Also: the chart age cursor now works with touch on both charts, plus a handful
-of refinements.
+### English (en-US) — 833 merkkiä
 
-All calculations still run entirely on your device.
+```
+Varallisuuspolku now speaks English.
+
+The whole app is translated: the drawing board, Finnish pension and tax
+modelling, life events, the annual table, progress tracking, the Tulkki
+explainer and the home screen widget. Switch languages at any time from
+the Language row under the More tab. Finnish remains the default —
+nothing changes unless you switch.
+
+Also in this version:
+• The chart's age cursor now works with touch on both charts: drag
+  horizontally to move the cursor, vertically to scroll as before
+• The interest allocation slider now responds even when you hold no
+  cash — equity and interest weights flex symmetrically and still
+  total 100
+• Fixed the chart tooltip in the light theme
+• Small refinements to form layout and the More menu
+
+All calculations still run entirely on your device: no account, no
+tracking.
+```
+
+**Tarkistettu koodista 22.8.2026:** appi EI vaihdu automaattisesti laitteen
+kielelle. [kieli.js](../../kieli.js) aloittaa aina suomesta; englanninkielinen
+laite saa etusivulla kertaluontoisen ehdotusbannerin, ja varsinainen valinta
+tehdään Kieli-riviltä. Edellisessä What's New -luonnoksessa luki "The app
+follows your device language" — se ei pitänyt paikkaansa, ja teksti on nyt
+korjattu. Älä palauta väitettä ilman että toteutus muuttuu.
 
 ### ASC-muistilista 1.1:lle
 - Versio 1.1 pbxproj:ssa (MARKETING_VERSION ×4), build-numeron antaa CI (run_number)
 - CFBundleLocalizations = [fi, en] → kauppasivun Kielet-rivi: suomi, englanti
 - InfoPlist-kolmikko (FaceID + pikavalinnat) TIETOISESTI suomeksi v1.1:ssä (KIELIVERSIO.md)
 - en-US-lokalisoinnin kentät: tämän tiedoston edellinen osio (nimi/alaotsikko/promo/kuvaus/avainsanat)
+- Ikärajakysely uudelleen (tekoälykeskustelu-kysymys) — ks. App Privacy -osio
 - TestFlight ensin → X-toivojat DM-kutsulla → julkinen release manuaalisesti
