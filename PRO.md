@@ -46,7 +46,11 @@ glidepath 15 v / 0,35, ei kuluja, kiinteä reaalinen nostotaso.
 
 **Tietoisesti ulos (Pro v2+ -lista, ei tähän toteutukseen):** kotitalous-/puolisomalli,
 tilityypit (OST vs AOT), perintöverolaskenta, historiadatan bootstrap, faktoritiltit,
-useampi rinnakkainen suunnitelma (profiilit), EN-versio.
+useampi rinnakkainen suunnitelma (profiilit), EN-versio, yleinen laina/velka-tapahtuma
+(nosto + korko + laina-aika + saldo nettovarallisuuteen; kattaisi neutraalisti myös
+sijoituslainan kassavirrat — käyttäjäpalaute 8/2026: säästöaste jatkuvasti yli 100 % eli
+vivutus. Margin call / pakkomyyntiriski jätetään tietoisesti mallintamatta pysyvästi ja
+raja sanotaan ääneen. Erillistä "vipuominaisuutta" ei rakenneta — ei-sijoitusneuvontaa-raja.).
 
 ## 3. Pro-ominaisuudet
 
