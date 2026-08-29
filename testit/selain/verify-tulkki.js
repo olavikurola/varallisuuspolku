@@ -32,6 +32,7 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
     const eiOle = /häät/i.test(q); // b-muoto tapahtumaan jota ei ole → syyt näkyviin
     const keskella = /perintö/i.test(q); // direktiivi EI viimeisenä rivinä → varaskanneri
     const rikki = /sivutulo/i.test(q); // viallinen JSON → kerrotaan, ei nielaista
+    const heitto = /heittomerkki/i.test(q); // englannin apostrofit: entiteetti ei saa hajota
     const korjattava = /remontti/i.test(q); // suomalainen lukumuoto JSONissa → korjausyritys
     // ENSISIJAINEN kanava (tool use): cmd/vertaa/haasta/ramppi tulevat {tool}-
     // rivinä kuten uusi palvelin ne lähettää. Muut jäävät tekstiriveiksi ja
@@ -72,6 +73,8 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
       ? 'Kokeillaan.\nMUUTOS: {"muutokset":[{"kentta":"home_margin","arvo":0}],"selite":"Marginaali nollaan"}'
       : evChange
       ? 'Kokeillaan — katso esikatselu.\nMUUTOS: {"muutokset":[{"tapahtuma":"home","tapahtumaIka":35,"ominaisuus":"appr","arvo":0}],"selite":"Asunnon arvonnousu nollaan"}'
+      : heitto
+      ? "Here's what stands out: you're on track and you'll end with 99 % success."
       : 'Onnistumistodennäköisyys on 99 %, koska **säästöaika on pitkä** ja nostotarve maltillinen.\n\nKeksitty vertailu: 123 456 € olisi tarvittu muuhun.';
     }
     // NDJSON-virta: teksti kahdessa palassa + mahdollinen {tool} + lopetusrivi
@@ -137,6 +140,16 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   const evals = await page.evaluate(() => JSON.parse(localStorage.getItem('vp-tulkki-evals') || '[]'));
   ok(evals.length === 1 && evals[0].q && evals[0].a && evals[0].context, 'eval tallentui rakenteineen');
   ok((await page.locator('#tkEvalCopy').textContent()).includes('(1)'), 'eval-laskuri päivittyi');
+
+  console.log('Heittomerkit (englannin oire: &#39; näkyi raakana)');
+  await page.fill('#tkInput', 'heittomerkkitesti');
+  await page.press('#tkInput', 'Enter');
+  await page.waitForFunction(() => document.querySelectorAll('.tk-a:not(.tk-busy)').length >= 2);
+  const hTxt = await page.locator('.tk-a').last().textContent();
+  const hHtml = await page.locator('.tk-a').last().innerHTML();
+  ok(hTxt.includes("Here's") && hTxt.includes("you're") && hTxt.includes("you'll"), 'heittomerkit renderöityvät merkkeinä', hTxt.slice(0, 80));
+  ok(!hTxt.includes('&#') && !/&amp;#/.test(hHtml), 'ei raakoja HTML-entiteettejä vastauksessa', hTxt.slice(0, 80));
+  ok(!/tk-num[^>]*>39</.test(hHtml), 'numSpans ei kääri entiteetin numeroa (39) spaniin');
 
   console.log('Advisor-nappi');
   await page.locator('.tk-adv').click();

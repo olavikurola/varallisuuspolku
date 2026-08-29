@@ -65,8 +65,13 @@
 
   const API_BASE = (typeof DATA_API === 'string' ? DATA_API : 'https://varallisuuspolku-data.up.railway.app');
 
+  // HUOM heittomerkki: EI &#39; vaan &apos;. Numeerinen entiteetti sisältää
+  // numerot 39, ja richHtml ajaa numSpansin ESCAPETULLE HTML:lle — se käärii
+  // "39":n spaniin, jolloin entiteetti hajoaa ja ruudulle jää raaka "&#39;".
+  // Oire on käytännössä englannin oire (You're, Here's, you'll) — suomessa
+  // heittomerkkejä ei juuri ole. &apos; on numeroton eikä voi rikkoutua näin.
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c]));
   const fmtFi = (v) => v == null ? '–' : (typeof v === 'number' ? fmtLuku(v) : String(v));
   // Plausible-telemetria app.js:n apureilla — vain tapahtuman nimi (+ tila),
   // ei sisältöä, ei tunnisteita. Suppilon mittarointi: avattu → kysymys → pidetty.
@@ -244,9 +249,12 @@
   }
 
   function numSpans(html, nums) {
-    return html.replace(/(\d[\d   ]*(?:,\d+)?)(\s?(?:%|€|v\b))?/g, (m, numStr, unit) => {
+    return html.replace(/(\d[\d   ]*(?:,\d+)?)(\s?(?:%|€|v\b))?/g, (m, numStr, unit, off, str) => {
       const val = parseFloat(numStr.replace(/[   ]/g, '').replace(',', '.'));
       if (!isFinite(val)) return m;
+      // Vyö ja henkselit escapen rinnalle: numeerisen HTML-entiteetin (&#NNN;)
+      // sisus ei ole tekstin luku — sen kääriminen spaniin rikkoisi entiteetin.
+      if (off >= 2 && str.slice(off - 2, off) === '&#') return m;
       // vertaa itseisarvoihin: kontekstin −200 000 € vastaa tekstin "200 000 €"
       const ok = nums.some((n) => {
         const b = Math.abs(n);
