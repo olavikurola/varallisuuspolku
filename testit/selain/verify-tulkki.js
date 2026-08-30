@@ -114,7 +114,13 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   ok(mr === '430px', 'sisältö väistyy telakoinnissa (1280 px → 430 px marginaali)', mr);
   ok(await page.locator('.tk-intro').count() === 1, 'kertaesittely ensimmäisellä avauksella');
   ok(await page.evaluate(() => localStorage.getItem('vp-tulkki-intro')) === '1', 'esittely merkitty nähdyksi');
-  ok((await page.locator('.tk-privacy').textContent()).includes('ei lähde selaimestasi'), 'tietosuojarivi näkyy');
+  // Tietosuojateksti kertoo täsmällisesti mitä välitetään (nimettömät luvut
+  // + kysymys) — "ei lähde" -muotoa ei saa palauttaa (täsmennetty 8/2026)
+  {
+    const pv = await page.locator('.tk-privacy').textContent();
+    ok(pv.includes('nimettöm') && !/ei lähde (selaimestasi|laitteeltasi)/.test(pv),
+      'tietosuojarivi näkyy ja on rehellinen', pv);
+  }
   ok(await page.locator('.tk-sug').count() >= 3, 'ehdotuschipit laskettu');
   await page.locator('.tk-sug').first().click();
   await page.waitForSelector('.tk-a:not(.tk-busy)');

@@ -94,6 +94,9 @@
 
   let vStats = null;   // stats.json sisältö (tai null: ei haettu / ei dataa)
   let vStatsP = null;  // yksi haku per sivulataus — ask() odottaa tätä lyhyesti
+  // Suunnitelmien nimipeite: { 'Suunnitelma 1': 'Varovainen' }. Verkkoon menee
+  // vain avain, käyttäjälle näytetään arvo. Ks. buildOmatSuunnitelmat.
+  let planAliases = {};
 
   function loadStats() {
     if (!vStatsP) {
@@ -214,13 +217,20 @@
   function buildOmatSuunnitelmat() {
     if (typeof plans === 'undefined' || !Array.isArray(plans) || plans.length < 2) return null;
     const rivit = [];
+    planAliases = {};
     for (const p of plans.slice(0, 8)) {
       const d = p.data || {};
       const ps = typeof planSim === 'function' ? planSim(p) : null;
       if (!ps) continue;
       const ret = (d.events || []).find((e) => e.type === 'retirement');
+      // TIETOSUOJA: käyttäjän kirjoittama nimi EI lähde verkkoon (vapaa
+      // tekstikenttä voi sisältää henkilönimiä). Malli saa geneerisen
+      // tunnuksen, joka käännetään takaisin omaksi nimeksi vasta
+      // renderöinnissä (localizePlanNames) — nimi pysyy selaimessa.
+      const alias = 'Suunnitelma ' + (rivit.length + 1);
+      planAliases[alias] = String(p.nimi || alias).slice(0, 40);
       rivit.push({
-        nimi: String(p.nimi || 'Suunnitelma').slice(0, 40),
+        nimi: alias,
         aktiivinen: p.id === planActiveId ? true : undefined,
         ikaNyt: d.ageNow,
         kkSaastoEurKk: Math.round(d.monthly || 0),
@@ -233,7 +243,7 @@
     }
     if (rivit.length < 2) return null;
     return {
-      selite: 'Käyttäjän omat rinnakkaiset suunnitelmat (Suunnitelmani-sivu), moottorin laskemat tunnusluvut. aktiivinen = keskustelun kohteena oleva suunnitelma.',
+      selite: 'Käyttäjän omat rinnakkaiset suunnitelmat (Suunnitelmani-sivu), moottorin laskemat tunnusluvut. aktiivinen = keskustelun kohteena oleva suunnitelma. Nimet ovat geneerisiä tunnuksia tietosuojasyistä — viittaa niihin juuri näin ("Suunnitelma 1").',
       rivit,
     };
   }
@@ -326,8 +336,18 @@
     }).join('');
   }
 
+  /* Geneerinen tunnus takaisin käyttäjän omaksi nimeksi vasta näytöllä —
+     nimi ei ole käynyt verkossa. Enintään 8 suunnitelmaa → yksi numero,
+     joten "Suunnitelma 1" ei voi osua "Suunnitelma 12":n alkuun. */
+  function localizePlanNames(text) {
+    if (!text) return text;
+    const keys = Object.keys(planAliases);
+    if (!keys.length) return text;
+    return text.replace(/\bSuunnitelma (\d)\b/g, (m) => planAliases[m] || m);
+  }
+
   function renderAnswer(el, text, nums, bmap) {
-    el.innerHTML = richHtml(text, nums, bmap);
+    el.innerHTML = richHtml(localizePlanNames(text), nums, bmap);
     return el.querySelectorAll('.tk-doubt').length;
   }
 
@@ -339,7 +359,7 @@
   }
   function renderStreaming(el, full, nums, bmap) {
     // Keskeneräinen sidontatoken piilotetaan virran hännästä ("[[stats.lop")
-    const shown = stripDirectiveTail(full).replace(/\[{1,2}[\w.]*$/, '');
+    const shown = localizePlanNames(stripDirectiveTail(full).replace(/\[{1,2}[\w.]*$/, ''));
     el.innerHTML = richHtml(shown, nums, bmap) +
       '<span class="tk-cursor" aria-hidden="true"></span>';
   }
@@ -367,7 +387,7 @@
       <b>Tulkki</b><small>${t('tekoälyapuri')}</small>
       <button type="button" class="tk-x" id="tkClose" aria-label="${t('Sulje Tulkki')}">✕</button>
     </header>
-    <div class="tk-privacy" title="${t('Vain suunnitelman anonyymi muoto ja kysymys välitetään selitystä varten — ei nimiä eikä tunnisteita.')}">${APPI ? t('🔒 Laskelmasi ei lähde laitteeltasi — palvelin ei tallenna mitään.') : t('🔒 Laskelmasi ei lähde selaimestasi — palvelin ei tallenna mitään.')}</div>
+    <button type="button" class="tk-privacy" id="tkPrivacy" title="${t('Selitystä varten välitetään suunnitelmasi luvut nimettöminä ja kysymyksesi sellaisenaan. Nimiä, tunnisteita eikä muita kirjoittamiasi tekstejä ei lähetetä, eikä palvelin tallenna mitään. Napauta nähdäksesi täsmälleen lähtevät tiedot.')}">${t('🔒 Vain nimettömät luvut ja kysymyksesi välitetään — mitään ei tallenneta.')}</button>
     <div class="tk-log" id="tkLog" aria-live="polite"></div>
     <div class="tk-sugs" id="tkSugs"></div>
     <form class="tk-ask" id="tkForm">
@@ -441,6 +461,7 @@
   }
   handle.addEventListener('click', () => (sheet.hidden ? openSheet() : closeSheet()));
   $t('tkClose').addEventListener('click', closeSheet);
+  $t('tkPrivacy').addEventListener('click', renderPrivacyView);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !sheet.hidden) closeSheet();
   });
@@ -1198,6 +1219,28 @@
   function updateLogBtn() {
     const b = $t('tkLogBtn');
     if (b) b.textContent = t('Tulkin toimet ({0})', tkActions().length);
+  }
+
+  /* "Näytä mitä lähetetään" — sama läpinäkyvyys kuin vertailudatan
+     esikatselussa: tietosuojarivin napautus näyttää täsmälleen sen
+     kontekstin, joka kysymyksen mukana lähtisi. Kaikki lasketaan
+     paikallisesti — tämän avaaminen EI lähetä mitään. */
+  function renderPrivacyView() {
+    const existing = log.querySelector('.tk-priv-view');
+    if (existing) { existing.remove(); return; } // toggle
+    const card = document.createElement('div');
+    card.className = 'tk-priv-view';
+    let json;
+    try { json = JSON.stringify(buildContext(), null, 2); }
+    catch (e) { json = t('Kontekstia ei voitu laskea — kokeile kun suunnitelmassa on lukuja.'); }
+    card.innerHTML =
+      `<div class="tk-kats-head"><span>${t('Mitä Tulkille lähtee?')}</span><button type="button" class="tk-kats-x" aria-label="${t('Sulje')}">✕</button></div>` +
+      `<div class="tk-ch-note">${t('Tämä on täsmälleen se aineisto, joka lähtisi kysymyksesi mukana: moottorin laskemat nimettömät luvut. Rinnakkaisten suunnitelmien nimet on korvattu tunnuksilla (Suunnitelma 1) — oma nimesi näkyy vain sinulle. Mitään ei lähde ennen kuin kysyt.')}</div>` +
+      `<pre class="tk-priv-json">${esc(json)}</pre>`;
+    card.querySelector('.tk-kats-x').addEventListener('click', () => card.remove());
+    log.appendChild(card);
+    log.scrollTop = card.offsetTop;
+    tkTrack('Tulkki tietosuojakatselu');
   }
 
   function renderLogView() {

@@ -403,7 +403,12 @@ server.listen(8134, async () => {
   // Tulkin tietosuojarivi
   await pg.click('.vp-tab:nth-child(3)');
   await pg.waitForTimeout(600);
-  ok(await pg.evaluate(() => document.querySelector('.tk-privacy').textContent.includes('ei lähde laitteeltasi')), 'Tulkin tietosuojarivi: laitteeltasi (appi)');
+  // Tietosuojarivi yhtenäistetty 8/2026: sama täsmällinen muoto webissä ja
+  // apissa (kertoo että nimettömät luvut välitetään — ei "ei lähde" -muotoa).
+  ok(await pg.evaluate(() => {
+    const t = document.querySelector('.tk-privacy').textContent;
+    return t.includes('nimettöm') && !/ei lähde (laitteeltasi|selaimestasi)/.test(t);
+  }), 'Tulkin tietosuojarivi rehellinen myös apissa');
   await ctx.close();
 
   // 13b) Tilastot appissa: ei paluulinkkiä (tabit ovat väylä), portti ja

@@ -69,7 +69,10 @@ statik.listen(8133, async () => {
   ok(!!captured, 'Tulkki-pyyntö siepattu');
   if (captured) {
     ok(captured.includes('"suunnitelmat"') && captured.includes('rivit'), 'kontekstissa suunnitelmat-osio');
-    ok(captured.includes('Oma polku') && captured.includes('Varovainen'), 'suunnitelmien nimet mukana');
+    // TIETOSUOJA: käyttäjän kirjoittamat nimet EIVÄT saa lähteä verkkoon —
+    // malli saa geneeriset tunnukset (ks. buildOmatSuunnitelmat)
+    ok(!captured.includes('Oma polku') && !captured.includes('Varovainen'), 'omat nimet EIVÄT lähde verkkoon');
+    ok(captured.includes('Suunnitelma 1') && captured.includes('Suunnitelma 2'), 'geneeriset tunnukset mukana');
     ok(captured.includes('onnistumistodennakoisyysPct'), 'tunnusluvut mukana');
     ok(captured.includes('"aktiivinen":true'), 'aktiivinen suunnitelma merkitty');
   }
