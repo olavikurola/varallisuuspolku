@@ -557,9 +557,18 @@ function serialize() {
 
 function applySaved(data) {
   if (!data || typeof data !== 'object') return false;
-  for (const k of ['ageNow', 'ageEnd', 'startCapital', 'monthly', 'allocStocks', 'allocBonds']) {
-    if (typeof data[k] === 'number' && isFinite(data[k])) state[k] = data[k];
+  // Rajat samat kuin MCP:n sanitoi.js:ssä (yksi totuus syötteen rajoista).
+  // isFinite EI riitä: jakolinkki on julkinen syöte, ja esim. ageEnd=1e9
+  // tuottaa moottorissa ~1,2 mrd kuukauden silmukan → välilehti jumittuu
+  // ilman virhettä (auditointilöydös 8/2026).
+  const RAJAT = {
+    ageNow: [0, 105], ageEnd: [2, 105], startCapital: [0, 1e9],
+    monthly: [0, 1e6], allocStocks: [0, 100], allocBonds: [0, 100],
+  };
+  for (const k in RAJAT) {
+    if (typeof data[k] === 'number' && isFinite(data[k])) state[k] = clamp(data[k], RAJAT[k][0], RAJAT[k][1]);
   }
+  if (state.allocStocks + state.allocBonds > 100) state.allocBonds = 100 - state.allocStocks;
   state.glide = !!data.glide;
   state.real = !!data.real;
   state.inflation = typeof data.inflation === 'number' && isFinite(data.inflation) ? clamp(data.inflation, 0, 15) : 2;
