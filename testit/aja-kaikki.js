@@ -60,7 +60,7 @@ function run(name, file, env) {
 
   // 1) Yksikkötestit (ei riippuvuuksia)
   console.log('— Yksikkötestit —');
-  for (const f of ['laskenta.test.js', 'tulkki-proxy.test.js', 'mcp.test.js']) {
+  for (const f of ['laskenta.test.js', 'tulkki-proxy.test.js', 'mcp.test.js', 'palvelin-stats.test.js']) {
     if (filter && !f.includes(filter)) continue;
     results.push(run(f, path.join(__dirname, f), env));
   }

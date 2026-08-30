@@ -4,11 +4,14 @@ Visuaalinen varallisuussuunnittelutyökalu — suunnittele koko elinkaaresi sijo
 **Sinä vedät, kone laskee:** kokoruudun piirtopöydällä tartut suoraan elinkaarikäyrään, tapahtumiin ja
 eläkeikäviivaan — käänteisratkaisija hakee jokaisen vedon hinnan (säästö, kuukausitulo, eläkeikä) heti.
 
-![Teema](https://img.shields.io/badge/teema-tumma-0a0e1a) ![Riippuvuudet](https://img.shields.io/badge/riippuvuudet-ei%20yht%C3%A4%C3%A4n-2dd4bf) ![Lisenssi](https://img.shields.io/badge/lisenssi-MIT-8b7cf6)
+![Teema](https://img.shields.io/badge/teema-tumma-0a0e1a) ![Riippuvuudet](https://img.shields.io/badge/riippuvuudet-ei%20yht%C3%A4%C3%A4n-2dd4bf) ![Lisenssi](https://img.shields.io/badge/lisenssi-MIT-8b7cf6) [![Web-testit](https://github.com/olavikurola/varallisuuspolku/actions/workflows/web-testit.yml/badge.svg)](https://github.com/olavikurola/varallisuuspolku/actions/workflows/web-testit.yml)
 
-Kaikki laskenta ja data pysyy selaimessa — ei evästeitä, ei analytiikkaa. Mitään ei lähetetä
-mihinkään ilman erillistä lupaa; ainoa poikkeus on vapaaehtoinen anonyymi vertailudata, jonka
-sisällön näkee kokonaisuudessaan ennen jakamista.
+Kaikki laskenta ja data pysyy selaimessa — ei evästeitä, ei tilejä, ei henkilötietoja. Suunnitelmaa
+ei lähetetä mihinkään ilman erillistä lupaa; poikkeukset ovat vapaaehtoinen anonyymi vertailudata,
+jonka sisällön näkee kokonaisuudessaan ennen jakamista, ja tekoälyapuri Tulkki, jolle välitetään
+suunnitelman luvut nimettöminä. Kävijämäärät mitataan evästeettömällä
+[Plausible-analytiikalla](https://plausible.io/privacy-focused-web-analytics), joka ei yksilöi
+kävijää eikä näe suunnitelman sisältöä.
 
 ![Piirtopöytä: vedä käyrää — kone laskee vedon hinnan](demo.gif)
 

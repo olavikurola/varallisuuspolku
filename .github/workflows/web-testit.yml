@@ -1,0 +1,56 @@
+name: Web-testit
+
+# Laskentaregressio ei saa päästä mainiin. Ajaa koko patteriston:
+# yksikkötestit (laskenta, Tulkki-proxy, MCP, palvelin/stats) + selaintestit
+# (Playwright). Golden-evalit (testit/evalit.js) EIVÄT ole mukana — ne
+# kutsuvat maksullista upstreamia; ne ajetaan käsin ennen julkaisua.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: web-testit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Repo on tarkoituksella riippuvuudeton: Playwright asennetaan vain
+      # CI-ajoa varten työhakemiston ulkopuolelle, eikä package.json synny.
+      - name: Asenna Playwright (vain CI)
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw"
+          cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null
+          npm i --no-audit --no-fund playwright@1.47.2
+          npx playwright install --with-deps chromium
+
+      - name: Aja koko patteristo
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+          VP_OUT: ${{ runner.temp }}/kaappaukset
+        run: |
+          mkdir -p "$VP_OUT"
+          node testit/aja-kaikki.js
+
+      # Punaisen ajon ruutukaappaukset talteen diagnoosia varten
+      - name: Ruutukaappaukset talteen
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruutukaappaukset
+          path: ${{ runner.temp }}/kaappaukset
+          if-no-files-found: ignore
+          retention-days: 7
