@@ -46,7 +46,9 @@ const server = http.createServer((req, res) => {
   ok(errs.length === 0, 'ei sivuvirheitä (en)', errs.join('; '));
 
   // FI: puhdas konteksti ilman parametria — sanasto ei saa latautua
-  const ctx2 = await b.newContext();
+  // locale eksplisiittisesti: ilman sitä Playwright perii koneen kielen —
+  // CI:n Ubuntu on en-US ja "fi-selaimen" skenaario saisi en-bannerin
+  const ctx2 = await b.newContext({ locale: 'fi-FI' });
   const p2 = await ctx2.newPage();
   await p2.goto(`http://localhost:${PORT}/`);
   await p2.waitForTimeout(2000);
