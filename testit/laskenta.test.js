@@ -617,5 +617,103 @@ console.log('Ero / iso muutos (divorce): kertakulu + toistuva kulunlisäys');
   ok(c2.assets[m0] === 0, 'ei omaisuuserää — kulu, ei omaisuutta');
 }
 
+/* ===== Pääomatuloveron porras: raja on KYNNYS, ei jako =====
+   Auditointilöydös 8/2026: myynti (saleTax) jakoi portaan oikein, mutta
+   kuukausinosto sovelsi koko summaan yhtä kantaa. */
+console.log('Pääomatulovero portaittain');
+{
+  const B = 30000, LO = 0.30, HI = 0.34;
+  ok(close(L.capitalTax(5000, 0, B, LO, HI), 1500, 1e-9), 'täysin rajan alla → 30 %');
+  ok(close(L.capitalTax(30000, 0, B, LO, HI), 9000, 1e-9), 'täsmälleen rajalla → 30 %');
+  ok(close(L.capitalTax(30001, 0, B, LO, HI), 9000 + 0.34, 1e-9), 'raja + 1 € → ylimenevä 34 %');
+  ok(close(L.capitalTax(60000, 0, B, LO, HI), 30000 * LO + 30000 * HI, 1e-9), 'iso voitto jakautuu portaisiin');
+  ok(close(L.capitalTax(5000, 29000, B, LO, HI), 1000 * LO + 4000 * HI, 1e-9), 'ytd kuluttaa rajan: 1000/4000-jako');
+  ok(close(L.capitalTax(5000, 30000, B, LO, HI), 5000 * HI, 1e-9), 'raja jo täynnä → kaikki 34 %');
+  ok(L.capitalTax(0, 0, B, LO, HI) === 0 && L.capitalTax(-5, 0, B, LO, HI) === 0, 'ei voittoa → ei veroa');
+  let inv = true;
+  for (const need of [1000, 21000, 30000, 90000]) {
+    for (const ratio of [0.2, 0.6, 1]) {
+      const g = L.grossUp(need, ratio, 0, B, LO, HI);
+      if (!close(g - L.capitalTax(ratio * g, 0, B, LO, HI), need, 1e-6)) inv = false;
+    }
+  }
+  ok(inv, 'bruttoutus on portaittaisen veron käänteisfunktio (12 tapausta)');
+  const g2 = L.grossUp(20000, 0.5, 29000, B, LO, HI);
+  ok(close(g2 - L.capitalTax(0.5 * g2, 29000, B, LO, HI), 20000, 1e-6), 'bruttoutus huomioi ytd:n');
+}
+
+/* ===== Reaalitila: nimelliset sopimukset deflatoituvat =====
+   Auditointilöydös 8/2026: tuotot ja omaisuuden arvonnousu deflatoitiin,
+   mutta lainaerä ja velkasaldo jäivät nimellisiksi — reaalitilassa laina
+   näytti 25 vuoden päässä 64 % liian kalliilta. */
+console.log('Reaalitila vs. nimellistila');
+{
+  const plan = (real, loanAge) => ({
+    ageNow: 30, ageEnd: 90, startCapital: 20000, monthly: 3000, savingsGrowth: 0,
+    allocStocks: 70, allocBonds: 20, glide: false, real, tax: true,
+    events: [
+      { id: 1, type: 'home', age: loanAge, amount: -300000, financing: 'loan', down: 0, rate: 3.5, years: 25, isAsset: true, appr: 0 },
+      { id: 3, type: 'retirement', age: 65, withdrawal: 2400, pension: 1500, pensionAge: 65 },
+    ],
+  });
+  const i = L.INFLATION; // jo murtolukuna (0.02), ei prosenttina
+  const nom = L.prepareSim(plan(false, 30)).payments;
+  const rea = L.prepareSim(plan(true, 30)).payments;
+  ok(close(nom[1], nom[300], 1e-9), 'nimellistilassa erä on vakio');
+  ok(rea[300] < rea[1] * 0.7, 'reaalitilassa erän ostovoima laskee');
+  let deflOk = true;
+  for (const m of [1, 60, 120, 240, 300]) {
+    if (!close(rea[m], nom[m] * Math.pow(1 + i, -m / 12), 1e-6 * nom[m])) deflOk = false;
+  }
+  ok(deflOk, 'reaalierä = nimelliserä × (1+i)^(−t) joka kuukausi');
+  const nom2 = L.prepareSim(plan(false, 40)).payments;
+  const rea2 = L.prepareSim(plan(true, 40)).payments;
+  const m0 = (40 - 30) * 12;
+  ok(close(rea2[m0 + 1], nom2[m0 + 1] * Math.pow(1 + i, -1 / 12), 1e-6 * nom2[m0 + 1]),
+    'myöhempi laina deflatoituu OSTOHETKESTÄ, ei suunnitelman alusta');
+  ok(rea2[m0 + 1] > rea[m0 + 1] * 1.2, 'ostohetkiankkurointi: myöhempi laina ei perusteettoman halpa');
+  const dN = L.prepareSim(plan(false, 30)).debt, dR = L.prepareSim(plan(true, 30)).debt;
+  ok(close(dR[120], dN[120] * Math.pow(1 + i, -120 / 12), 1e-6 * dN[120]), 'velkasaldo deflatoituu');
+  ok(close(dR[0], dN[0], 1e-9), 'lainan alkusaldo sama molemmissa tiloissa');
+}
+
+/* Vero kohdistuu NIMELLISVOITTOON myös reaalitilassa. */
+console.log('Reaalitilan vero nimellisvoitosta');
+{
+  const plan = (real) => ({
+    ageNow: 30, ageEnd: 90, startCapital: 20000, monthly: 1500, savingsGrowth: 0,
+    allocStocks: 100, allocBonds: 0, glide: false, real, tax: true,
+    events: [{ id: 3, type: 'retirement', age: 65, withdrawal: 3000, pension: 0, pensionAge: 65 }],
+  });
+  const sN = L.simulate(plan(false)), sR = L.simulate(plan(true));
+  ok(sR.taxPaid > 0 && sN.taxPaid > 0, 'molemmissa tiloissa maksetaan veroa');
+  const shareN = sN.taxPaid / Math.max(1, sN.wEnd);
+  const shareR = sR.taxPaid / Math.max(1, sR.wEnd);
+  ok(shareR > shareN * 0.5, 'reaalitilan verorasitus ei romahda (nimellinen voitto-osuus käytössä)');
+}
+
+/* ===== Allokaation invariantti: painojen summa ei ylitä 100 % =====
+   Auditointilöydös 8/2026: tuotu Pro-data pääsi moottoriin sellaisenaan ja
+   tuotti hiljaisen vivutuksen. */
+console.log('Allokaation invariantti');
+{
+  const bare = () => ({ ageNow: 30, ageEnd: 90, startCapital: 0, monthly: 0,
+    allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true, events: [] });
+  const w0 = L.weightsAt(40, 65, bare());
+  ok(close(w0.reduce((a, b) => a + b, 0), 1, 1e-12), 'normaali allokaatio summautuu ykköseen');
+  ok(close(w0[0], 0.7, 1e-12) && close(w0[1], 0.2, 1e-12), 'normaali allokaatio ennallaan (ei skaalausta)');
+  const st = bare();
+  st.proOn = true;
+  st.pro = Object.assign(L.defaultPro(), { assets: [{ key: 'x', name: 'X', mu: 7, sigma: 16, weight: 100 }] });
+  const w1 = L.weightsAt(40, 65, st);
+  ok(close(w1.reduce((a, b) => a + b, 0), 1, 1e-9), '70+20+100 % normalisoituu ykköseen (ei vivutusta)');
+  ok(w1.every((x) => x >= 0), 'yksikään paino ei ole negatiivinen');
+  const st2 = bare();
+  st2.proOn = true;
+  st2.pro = Object.assign(L.defaultPro(), { assets: [{ key: 'y', name: 'Y', mu: 5, sigma: 10, weight: -50 }] });
+  const w2 = L.weightsAt(40, 65, st2);
+  ok(w2.every((x) => x >= 0), 'negatiivinen paino ei tuota lyhyeksimyyntiä');
+}
+
 console.log(failed ? `\n${failed} TESTIÄ EPÄONNISTUI` : '\nKaikki testit läpi.');
 process.exit(failed ? 1 : 0);

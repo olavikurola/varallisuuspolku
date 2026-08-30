@@ -19,6 +19,31 @@ const INFLATION = 0.02;
 // voitto-osuus (arvon ja jäljellä olevan hankintahinnan erotus).
 const TAX_LOW = 0.30, TAX_HIGH = 0.34, TAX_BRACKET = 30000;
 
+/* Pääomatulovero portaittain. Raja on KYNNYS, ei jako: vain sen ylittävä osa
+   verotetaan korkeammalla kannalla, ja vuoden aikana jo realisoitu voitto
+   (ytd) on kuluttanut alemman kannan tilaa. Yksi totuus kaikille
+   pääomatulopoluille — aiemmin nosto sovelsi koko summaan yhtä kantaa
+   (auditointi 8/2026: sama tiedosto laski myynnin oikein, noston väärin).
+   Vero lasketaan aina NIMELLISESSÄ rahassa, koska verolaki on nimellinen. */
+function capitalTax(taxable, ytd, bracket, low, high) {
+  if (!(taxable > 0)) return 0;
+  const room = Math.max(0, bracket - Math.max(0, ytd));
+  const atLow = Math.min(taxable, room);
+  return atLow * low + (taxable - atLow) * high;
+}
+
+/* Bruttoutus portaittaisella verolla: etsii bruttonoston, josta jää käteen
+   need, kun verotettava osuus on gainRatio · brutto. Vero on paloittain
+   lineaarinen, joten ratkaisu on suljetussa muodossa kahdessa haarassa —
+   ei iterointia, joten determinismi ja bisektion nopeus säilyvät. */
+function grossUp(need, gainRatio, ytd, bracket, low, high) {
+  if (!(need > 0)) return need;
+  const room = Math.max(0, bracket - Math.max(0, ytd));
+  const gLow = need / Math.max(0.35, 1 - gainRatio * low);
+  if (gainRatio * gLow <= room) return gLow;
+  return (need - room * (high - low)) / Math.max(0.35, 1 - gainRatio * high);
+}
+
 // Sijoitustili (kuori): 'aot' arvo-osuustili (oletus), 'ost' osakesäästötili,
 // 'ins' sijoitusvakuutus/kapitalisaatiosopimus. Nostojen verotus on kaikissa
 // sama voitto-osuusmenetelmä (OST ja kuoret v. 2020 säännöillä; AOT:lla
@@ -215,8 +240,18 @@ function weightsAt(age, retAge, st) {
   const ns = s * f;
   b += s - ns;
   s = ns;
-  const custom = p ? p.assets.map((a) => a.weight / 100) : [];
-  const cSum = custom.reduce((x, y) => x + y, 0);
+  let custom = p ? p.assets.map((a) => Math.max(0, a.weight / 100)) : [];
+  let cSum = custom.reduce((x, y) => x + y, 0);
+  // Invariantti: painojen summa ≤ 1. Käyttöliittymä estää yliallokaation,
+  // mutta tuotu tai käsin muokattu Pro-data pääsisi muuten moottoriin ja
+  // tuottaisi hiljaisen vivutuksen (esim. 70+20+100 % = 1,9× salkku) —
+  // vipuominaisuutta ei ole tarkoitus olla olemassa (auditointi 8/2026).
+  const yli = s + b + cSum;
+  if (yli > 1 + 1e-9) {
+    const k = 1 / yli;
+    s *= k; b *= k; cSum *= k;
+    custom = custom.map((x) => x * k);
+  }
   const c = Math.max(0, 1 - s - b - cSum);
   return [s, b, c, ...custom];
 }
@@ -311,6 +346,13 @@ function prepareSim(st) {
   // Pro: veroparametrit, nostostrategia ja kulutuksen vaiheistus kontekstiin
   const pro = proOf(st);
   const inflO = inflOf(st);
+  // Reaalitilan inflaatio (0 = nimellistila). Deflatointi koskee NIMELLISIÄ
+  // sopimuksia — lainaeriä, velkasaldoa ja lainan poismaksua myynnissä —
+  // ei käyttäjän tämän päivän rahassa syöttämiä summia.
+  const realI = st.real ? inflO : 0;
+  // Reaali → nimellinen kuukaudessa m. Verolaskenta tehdään aina nimellisessä
+  // rahassa ja tulos muunnetaan takaisin esitysrahaan (ks. capitalTax).
+  const nomAt = (m) => (realI ? Math.pow(1 + realI, m / 12) : 1);
   const taxLow = pro ? pro.tax.low / 100 : TAX_LOW;
   const taxHigh = pro ? pro.tax.high / 100 : TAX_HIGH;
   const taxBracket = pro ? pro.tax.bracket : TAX_BRACKET;
@@ -380,15 +422,21 @@ function prepareSim(st) {
     const pmt = loanPayment(principal, rate, years);
     const rm = rate / 100 / 12;
     const mSell = sellMonthOf(e);
+    // Reaalitila: käyttäjän syöttämä hinta on tämän päivän rahaa, joten
+    // nimelliserä on kiinteä mutta sen OSTOVOIMA laskee ostohetkestä lukien.
+    // Deflatointi suhteessa m0:aan (ei suunnitelman alkuun) — muuten
+    // myöhemmin alkava laina näyttäisi perusteettoman halvalta.
+    // Nimellistilassa dfl ≡ 1 → polku bitilleen entinen.
+    const dfl = (m) => (realI ? Math.pow(1 + realI, -(m - m0) / 12) : 1);
     let bal = principal;
     debt[m0] += bal;
     for (let k = 1; k <= n; k++) {
       const m = m0 + k;
-      if (mSell != null && m >= mSell) { salePayoff.set(e.id, bal); break; }
+      if (mSell != null && m >= mSell) { salePayoff.set(e.id, bal * dfl(m)); break; }
       if (m > months) break;
-      payments[m] += pmt;
+      payments[m] += pmt * dfl(m);
       bal = Math.max(0, bal * (1 + rm) - pmt);
-      debt[m] += bal;
+      debt[m] += bal * dfl(m);
     }
   };
   for (const e of st.events) {
@@ -463,9 +511,10 @@ function prepareSim(st) {
         const heldY = (mSell - m0) / 12 + (e.owned ? Math.max(0, e.ownYears || 0) : 0);
         const cap = (heldY >= 10 ? 0.6 : 0.8) * saleValue;
         const taxable = e.owned ? cap : Math.min(Math.max(0, saleValue - (-e.amount)), cap);
-        saleTax = taxable <= taxBracket
-          ? taxable * taxLow
-          : taxBracket * taxLow + (taxable - taxBracket) * taxHigh;
+        // Vero nimellisessä rahassa (verolaki on nimellinen) ja takaisin
+        // esitysrahaan; nimellistilassa nom = 1 → tulos ennallaan.
+        const nom = nomAt(mSell);
+        saleTax = capitalTax(taxable * nom, 0, taxBracket, taxLow, taxHigh) / nom;
       }
       lump.set(mSell, (lump.get(mSell) || 0) + saleValue - payoff - saleTax);
       saleInfos.push({ id: e.id, age: a0 + mSell / 12, value: saleValue, payoff, tax: saleTax });
@@ -473,7 +522,7 @@ function prepareSim(st) {
   }
   const hasNet = hasAssets || debt.some((d) => d > 0.5);
 
-  return { a0, a1, months, retire, pension, pensionAge, taxOn, growth, saveAbs, lump, payments, debt, assets, assetCats, saleInfos, hasNet,
+  return { a0, a1, months, retire, pension, pensionAge, taxOn, growth, saveAbs, lump, payments, debt, assets, assetCats, saleInfos, hasNet, realI,
     pro, taxLow, taxHigh, taxBracket, taxAcq, wdMode, wdPctM, wdBand, wdAdj, phaseMul };
 }
 
@@ -527,10 +576,16 @@ function buildMu(ctx, st, retAge) {
 
 function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave = st.monthly, shockFn = null, collect = false, stopAt = null, record = null } = {}) {
   const { a0, months, lump, payments, growth, saveAbs, pension, pensionAge, taxOn,
-    taxLow, taxHigh, taxBracket, taxAcq, wdMode, wdPctM, wdBand, wdAdj, phaseMul } = ctx;
+    taxLow, taxHigh, taxBracket, taxAcq, wdMode, wdPctM, wdBand, wdAdj, phaseMul, realI } = ctx;
   let w = st.startCapital;
   let basis = st.startCapital; // salkun hankintahinta myyntivoittoveroa varten
-  let ytdGain = 0;             // kuluvana vuonna realisoidut voitot (30/34 % raja)
+  // Nimellinen hankintahinta: Suomen pääomatulovero kohdistuu NIMELLISVOITTOON.
+  // Reaalitilassa sekä w että basis ovat tämän päivän rahaa, joten pelkkä
+  // (w−basis)/w antaisi reaalivoiton ja aliarvioisi veron systemaattisesti
+  // (auditointi 8/2026). Nimellistilassa basisNom ≡ basis → tulos ennallaan.
+  let basisNom = st.startCapital;
+  let curNom = 1;              // reaali → nimellinen tässä kuukaudessa
+  let ytdGain = 0;             // kuluvana vuonna realisoidut NIMELLISET voitot
   let taxPaid = 0;
   let gw = null, gr0 = 0;      // guardrails: nostotaso ja aloitusprosentti
   if (stopAt === 0) return { stopW: w };
@@ -542,16 +597,21 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
   } : null;
   let depletion = null;
   // Myynti salkusta: pienentää hankintahintaa suhteessa ja palauttaa realisoidun voiton
+  // Palauttaa realisoidun voiton NIMELLISENÄ (verotusta varten); w ja
+  // molemmat hankintahinnat pienenevät suhteessa myytyyn osuuteen.
   const sell = (gross) => {
     if (w <= 0) { w -= gross; return 0; }
     const s = Math.min(gross, w);
-    const gain = Math.max(0, (w - basis) / w) * s;
+    const wN = w * curNom;
+    const gain = Math.max(0, (wN - basisNom) / wN) * s * curNom;
     basis -= basis * (s / w);
+    basisNom -= basisNom * (s / w);
     w -= gross;
     return gain;
   };
   for (let m = 1; m <= months; m++) {
     const age = a0 + m / 12;
+    curNom = realI ? Math.pow(1 + realI, m / 12) : 1;
     if (m % 12 === 1) ytdGain = 0;
     w *= 1 + muM[m] + (shockFn ? shockFn(m) : 0); // tuotto ei muuta hankintahintaa
     if (retAge == null || age <= retAge) {
@@ -563,7 +623,7 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
       // Porrastettu aikataulu (saveAbs) korvaa tasaisen perussäästön kun asetettu.
       const base = saveAbs ? saveAbs[m] : monthlySave;
       const net = base * growth[m] - payments[m];
-      if (net >= 0) { w += net; basis += net; }
+      if (net >= 0) { w += net; basis += net; basisNom += net * curNom; }
       else sell(-net);
       if (fl) fl.contrib[m] = net;
     } else {
@@ -597,21 +657,26 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
       const need = income * (phaseMul ? phaseMul[m] : 1) + payments[m] - pen;
       if (fl) fl.pen[m] = pen;
       if (need <= 0) {
-        w -= need; basis -= need; // ylijäämä (eläke > tarve) takaisin salkkuun
+        w -= need; basis -= need; basisNom -= need * curNom; // ylijäämä (eläke > tarve) takaisin salkkuun
         if (fl) fl.contrib[m] = -need;
       } else if (taxOn) {
-        const rate = ytdGain >= taxBracket ? taxHigh : taxLow;
-        let gainRatio = w > 0 ? Math.max(0, (w - basis) / w) : 0;
+        // Voitto-osuus NIMELLISISTÄ luvuista — vero kohdistuu nimellisvoittoon
+        const wN = w * curNom;
+        let gainRatio = w > 0 ? Math.max(0, (wN - basisNom) / wN) : 0;
         // Hankintameno-olettama nostoihin (Pro): verotettavaa voittoa rajaa
         // 40/20 %-olettama, omistusaika ≈ kuukausia suunnitelman alusta
         if (taxAcq) gainRatio = Math.min(gainRatio, m >= 120 ? 0.6 : 0.8);
-        const gross = need / Math.max(0.35, 1 - gainRatio * rate); // brutto → netto = need veron jälkeen
+        // Bruttoutus ja vero ratkaistaan nimellisessä rahassa portaittaisella
+        // verolla; tulos muunnetaan takaisin esitysrahaan. Nimellistilassa
+        // curNom = 1, joten ainoa muutos entiseen on portaan oikea käsittely.
+        const grossN = grossUp(need * curNom, gainRatio, ytdGain, taxBracket, taxLow, taxHigh);
+        const gross = grossN / curNom; // brutto → netto = need veron jälkeen
         const gain = sell(gross);
         // Olettaman leikatessa verotettava voitto on olettaman mukainen osuus,
         // ei salkun todellinen voitto — muuten taxPaid ja 34 %:n portaan
         // vuosikertymä liioittelevat veroa jonka bruttoutus jo laski oikein
-        const taxable = taxAcq ? Math.min(gain, gainRatio * gross) : gain;
-        taxPaid += taxable * rate;
+        const taxable = taxAcq ? Math.min(gain, gainRatio * grossN) : gain;
+        taxPaid += capitalTax(taxable, ytdGain, taxBracket, taxLow, taxHigh) / curNom;
         ytdGain += taxable;
         if (fl) { fl.gross[m] = gross; fl.tax[m] = gross - need; }
       } else {
@@ -621,7 +686,8 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
     }
     if (lump.has(m)) {
       const L = lump.get(m);
-      if (L >= 0) { w += L; basis += L; } else sell(-L); // menon rahoitus verotta (kertaerä)
+      if (L >= 0) { w += L; basis += L; basisNom += L * curNom; }
+      else sell(-L); // menon rahoitus verotta (kertaerä — tunnettu yksinkertaistus)
     }
     if (clamp0 && w < 0) { if (depletion == null) depletion = age; w = 0; }
     if (arr) arr.push(w);
@@ -1234,7 +1300,7 @@ function householdExp(sims) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     ASSETS, INFLATION, TAX_LOW, TAX_HIGH, TAX_BRACKET, MC_SEED, MC_LIVE, MC_FULL,
-    clamp, loanPayment, mulberry32, round2sig, snapTo, acctOf,
+    clamp, loanPayment, mulberry32, round2sig, snapTo, acctOf, capitalTax, grossUp,
     baseAlloc, allocationAt, portfolioStats,
     prepareSim, buildMu, runPath, mcSuccess, mcCollect, kthSmallest,
     solveSustainable, solveParam, makeDragSolver, solveGoalsMonthly, solveGoalsMonthlyConf,
