@@ -213,9 +213,14 @@ function skannaa(html, sivu) {
   flush();
 }
 
+/* Generoidut lohkot ohitetaan: tilastojen staattiset avainluvut
+   (tyokalut/tilastot-staattinen.js) vaihtuvat viikoittain ja kirjoitetaan
+   fi/en erikseen — ne eivät kuulu sanastoon. */
+const OHITA_LOHKOT = /<!-- VP-STAATTISET-TILASTOT alku -->[\s\S]*?<!-- VP-STAATTISET-TILASTOT loppu -->/g;
+
 for (const sivu of SIVUT) {
   const ennen = avaimet.size;
-  skannaa(fs.readFileSync(path.join(ROOT, sivu), 'utf8'), sivu);
+  skannaa(fs.readFileSync(path.join(ROOT, sivu), 'utf8').replace(OHITA_LOHKOT, ''), sivu);
   console.log(`${sivu}: ${avaimet.size - ennen} uutta avainta`);
 }
 

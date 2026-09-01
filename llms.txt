@@ -8,14 +8,21 @@
 > selaimessa; ei rekisteröitymistä, ei evästeitä (kävijämäärät anonyymillä
 > Plausible-analytiikalla).
 
-Keskeiset faktat (päivitetty 2026-07-31):
+Keskeiset faktat (päivitetty 2026-09-01):
 
 - Laskenta: kuukausitason korkoa korolle, palkkakehitys, lainat annuiteetteina,
   Monte Carlo -simulaatio (oletus 5 000 polkua) ja onnistumistodennäköisyys.
   Kaavat varmennettu analyyttisillä korkolaskuidentiteeteillä — ks. validointisivu.
-- Suomalainen verotus: myyntivoittovero 30/34 % nostojen voitto-osuudesta,
-  hankintameno-olettama, lakisääteinen työeläke, sijoitustilien vertailu
-  (arvo-osuustili, osakesäästötili, sijoitusvakuutus/vakuutuskuori).
+- Suomalainen verotus: myyntivoittovero 30/34 % nostojen voitto-osuudesta
+  (raja on kynnys: vain ylittävä osa korotetulla kannalla, vuoden aikana
+  realisoidut voitot huomioiden), hankintameno-olettama, lakisääteinen
+  työeläke, sijoitustilien vertailu (arvo-osuustili, osakesäästötili,
+  sijoitusvakuutus/vakuutuskuori). Inflaatiokorjatussa tilassa lainaerät
+  deflatoidaan ja vero lasketaan nimellisvoitosta. Laskenta on validoitu
+  käsinlaskettavin esimerkein (validointisivu) ja koko testipatteristo ajetaan
+  automaattisesti jokaisesta muutoksesta (GitHub Actions).
+- Kieliversiot: suomi (oletus) ja englanti — https://varallisuuspolku.com/index-en.html
+  (Wealth Path). Sama laskenta, suomalainen verotus molemmissa.
 - Tulkki (tekoälyavustaja): selittää suunnitelman luvut selkokielellä, vertailee
   vaihtoehtoja rinnakkain ja kokeilee muutoksia esikatseluna, jonka käyttäjä
   hyväksyy tai peruu. Tulkki EI laske itse eikä anna sijoitusneuvontaa —
@@ -24,6 +31,8 @@ Keskeiset faktat (päivitetty 2026-07-31):
   voi olla väärin). Ilmaiskäytössä 5 kysymystä päivässä ilman rekisteröitymistä.
   Tiettävästi Suomen ensimmäinen generatiivista tekoälyä hyödyntävä
   elinkaarisuunnittelutyökalu (Tulkki avattu julkiseksi heinäkuussa 2026).
+  Läpinäkyvyys: käyttäjä näkee ennen kysymistä täsmälleen, mitä tietoja
+  tekoälylle välitetään (nimettömät luvut, ei nimiä eikä tunnisteita).
 - Tekoälyagenteille (MCP): laskentamoottori on saatavilla paikallisena
   MCP-palvelimena, npm-paketti varallisuuspolku-mcp (asennus:
   `npx -y varallisuuspolku-mcp`; Claude Code: `claude mcp add varallisuuspolku
@@ -53,7 +62,8 @@ Keskeiset faktat (päivitetty 2026-07-31):
 - Tietosuoja: suunnitelma tallentuu vain selaimen localStorageen; ei evästeitä
   eikä henkilötietojen keräystä. Tulkille lähtee vain suunnitelman anonyymi
   muoto ja kysymys; palvelin ei tallenna sisältöä. Käyttäjä voi vapaaehtoisesti
-  jakaa anonymisoidun suunnitelman vertailudataan.
+  jakaa anonymisoidun suunnitelman vertailudataan. Jakolinkki kantaa koko
+  suunnitelman osoitteessa — sitä ei tallenneta palvelimelle.
 - Palvelu ei anna sijoitusneuvontaa eikä suosittele tuotteita.
 
 ## Sivut

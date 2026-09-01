@@ -1,0 +1,47 @@
+name: Tilastot staattisiksi
+
+# Kirjoittaa vertailudatan avainluvut Tilastot-sivun HTML:ään (fi + en) ja
+# päivittää tuoreusmetadatan (sitemap lastmod, dateModified, llms.txt), jotta
+# hakukoneet ja kielimallit näkevät luvut ilman JavaScriptiä. Committaa vain,
+# jos jokin muuttui. Viikoittain — data kertyy hitaasti, eikä lastmod saa
+# vilkkua turhaan.
+
+on:
+  schedule:
+    - cron: '41 4 * * 1'   # maanantaisin 04:41 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tilastot-staattinen
+  cancel-in-progress: false
+
+jobs:
+  paivita:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # git log -1 -- tiedosto tarvitsee historian (tuoreus.js)
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Avainluvut HTML:ään
+        run: node tyokalut/tilastot-staattinen.js
+
+      - name: Tuoreusmetadata
+        run: node tyokalut/tuoreus.js
+
+      - name: Commit jos muuttui
+        run: |
+          git config user.name "varallisuuspolku-bot"
+          git config user.email "noreply@varallisuuspolku.com"
+          if git diff --quiet; then echo "ei muutoksia"; exit 0; fi
+          git add analytiikka.html analytiikka-en.html sitemap.xml index.html index-en.html llms.txt
+          git commit -m "Tilastot: staattiset avainluvut ja tuoreusmetadata (automaattinen)."
+          git push
