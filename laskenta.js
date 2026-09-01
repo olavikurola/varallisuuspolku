@@ -542,7 +542,10 @@ function buildMu(ctx, st, retAge) {
   // termit ovat nollia ja polku on bitilleen entinen.
   const acct = acctOf(st);
   const fee = (feeOr0(st.feePct) + (acct === 'ins' ? feeOr0(st.wrapFee) : 0)) / 100;
-  const divTax = acct === 'aot' && st.tax ? (feeOr0(st.divYield) / 100) * 0.85 * TAX_LOW : 0;
+  // Osinkovero seuraa samaa pääomatuloveron kantaa kuin nostot (Pro-tilassa
+  // muokattava). Aiemmin luki moduulivakiota ohi ctx:n → Pro-verokannan
+  // muutos ei vaikuttanut osinkoveroon (kirjattu 8/2026, korjattu 1.9.2026).
+  const divTax = acct === 'aot' && st.tax ? (feeOr0(st.divYield) / 100) * 0.85 * ctx.taxLow : 0;
   // Reaalituotto tarkalla Fisher-kaavalla (1+r)/(1+i), kuten omaisuuserissä —
   // vähennysapproksimaatio yliarvioi reaalituottoa ~0,1 %-yks/v. Nimellistilassa
   // infl = 0 → jakaja on 1 ja polku on bitilleen entinen.

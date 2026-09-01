@@ -715,5 +715,31 @@ console.log('Allokaation invariantti');
   ok(w2.every((x) => x >= 0), 'negatiivinen paino ei tuota lyhyeksimyyntiä');
 }
 
+/* ===== Osinkovero seuraa Pro-verokantaa (ctx.taxLow) =====
+   Kirjattu 8/2026: buildMu luki TAX_LOW-vakiota ohi ctx:n → Pro tax.low ei
+   vaikuttanut AOT:n osinkoveroon. Vertailut Pro–Pro, koska tax.low vaikuttaa
+   myös nostoveroon. */
+console.log('Osinkovero ja Pro-verokanta');
+{
+  const bare = (extra) => Object.assign({ ageNow: 30, ageEnd: 70, startCapital: 50000, monthly: 500, savingsGrowth: 0,
+    allocStocks: 100, allocBonds: 0, glide: false, real: false, tax: true, acct: 'aot', divYield: 3,
+    events: [{ id: 1, type: 'retirement', age: 65, withdrawal: 1000, pension: 0, pensionAge: 65 }] }, extra || {});
+  const proTax = (low) => Object.assign(L.defaultPro(), { tax: { low, high: 34, bracket: 30000, acq: false } });
+  const perus = L.simulate(bare());
+  const eiOsinkoa = L.simulate(bare({ divYield: 0 }));
+  ok(perus.wEnd < eiOsinkoa.wEnd, 'AOT: osinkovero jarruttaa tuottoa perustilassa');
+  // Pro tax.low=0: osinkovero nollaan → divYield ei vaikuta polkuun
+  const p0a = L.simulate(bare({ proOn: true, pro: proTax(0) }));
+  const p0b = L.simulate(bare({ proOn: true, pro: proTax(0), divYield: 0 }));
+  ok(close(p0a.wEnd, p0b.wEnd, 1e-9 * p0b.wEnd), 'Pro tax.low=0 → osinkotuotto ei jarruta (ctx.taxLow, ei vakio)');
+  // Alempi Pro-kanta → pienempi osinkojarru → suurempi loppuvarallisuus
+  const p15 = L.simulate(bare({ proOn: true, pro: proTax(15) }));
+  const p30 = L.simulate(bare({ proOn: true, pro: proTax(30) }));
+  ok(p15.wEnd > p30.wEnd, 'Pro tax.low 15 % antaa suuremman lopun kuin 30 % (osinkovero seuraa kantaa)');
+  // Pro oletuskannalla (30) tulos = perustila bitilleen
+  const proOletus = L.simulate(bare({ proOn: true, pro: L.defaultPro() }));
+  ok(proOletus.wEnd === perus.wEnd, 'Pro oletuskannalla osinkovero bitilleen sama kuin perustilassa');
+}
+
 console.log(failed ? `\n${failed} TESTIÄ EPÄONNISTUI` : '\nKaikki testit läpi.');
 process.exit(failed ? 1 : 0);
