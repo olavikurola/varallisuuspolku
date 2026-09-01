@@ -207,6 +207,12 @@ function isTemplate(r) {
     ret.withdrawal === wd && ret.pension === pe);
 }
 const groupOf = (age) => (AGE_GROUPS.find(([, lo, hi]) => age >= lo && age <= hi) || [null])[0];
+/* Leveät ikäkaistat: 5-vuotisryhmät ylittävät k-anon-rajan hitaasti (30.8.2026
+   suurin oli 18/30), mutta 18–34 ylitti sen jo — kaista julkaisee jakaumat
+   ennen kuin alaryhmät, joten Tulkki ja Tilastot voivat vastata
+   "minkäikäiset"-kysymyksiin karkeammin heti. K_ANON ei muutu (imaisu-ohjelma erä 6). */
+const WIDE_GROUPS = [['18-34', 18, 34], ['35-49', 35, 49], ['50-64', 50, 64]];
+const wideGroupOf = (age) => (WIDE_GROUPS.find(([, lo, hi]) => age >= lo && age <= hi) || [null])[0];
 
 function quartiles(arr) {
   if (!arr.length) return null;
@@ -267,6 +273,11 @@ function computeStats() {
     if (g) {
       if (!buckets.has(g)) buckets.set(g, []);
       buckets.get(g).push(r);
+    }
+    const w = wideGroupOf(r.ageNow);
+    if (w) {
+      if (!buckets.has(w)) buckets.set(w, []);
+      buckets.get(w).push(r);
     }
   }
 
@@ -418,7 +429,7 @@ Käytä vain näitä kenttiä, tyyppejä ja ominaisuuksia — ÄLÄ KOSKAAN keks
 
 8. VERTAILUKOMENNOT: Jos käyttäjä pyytää vertaamaan kahta tai useampaa vaihtoehtoa (esim. "kumpi on parempi, eläkeikä 58 vai 62?" tai "vertaa säästöä 800, 1000 ja 1200"), ÄLÄ muuta suunnitelmaa vaan vastaa lyhyesti ja kutsu vertaile-työkalua. Enintään 4 vaihtoehtoa; jokainen nimetty ja sisältää muutokset säännön 7 muodoissa. Sovellus laskee kunkin vaihtoehdon tuloksen moottorilla ja näyttää vertailutaulukon — ÄLÄ itse arvioi tai kirjoita tuloslukuja. Käytä vertaile-työkalua vertailupyyntöihin ja ehdota_muutos-työkalua (sääntö 7) yksittäiseen kokeiluun; älä kutsu molempia samassa vastauksessa.
 
-9. VERTAILUDATA MUIHIN KÄYTTÄJIIN: Kontekstin vertailu-osio sisältää palvelun käyttäjien anonyymisti jakamien SUUNNITELMIEN aggregaatteja (mediaani p50, kvartiilit p25/p75), yleensä käyttäjän omasta ikäryhmästä (vertailu.ryhma kertoo mistä). Kun käyttäjä kysyy, miten hän vertautuu muihin, käytä näitä lukuja ja tee kaksi asiaa selväksi: kyse on tämän palvelun käyttäjien suunnitelmista (ei väestötilastosta eikä toteutuneesta varallisuudesta), ja mediaani ei ole tavoite eikä normi — ÄLÄ kehota muuttamaan suunnitelmaa siksi, että muut tekevät toisin. RIKASTA myös muita vastauksia yhdellä vertailuluvulla aina, kun se aidosti auttaa suhteuttamaan käyttäjän omaa lukua (esim. kuukausisäästö suhteessa ikäryhmän mediaaniin) — enintään yksi vertailu per vastaus, ettei vastaus muutu tilastoraportiksi. Jos vertailu-osiota ei ole tai kysytty luku puuttuu, sano suoraan ettei vertailudataa ole vielä kertynyt riittävästi — sitä kertyy, kun käyttäjät jakavat suunnitelmansa anonyymisti. Jos vertailu.kayttajaOnJakanutOman on false ja käyttäjä kysyy vertailusta, voit mainita YHDELLÄ lauseella, että oman suunnitelman voi jakaa anonyymisti Suunnitelmani-sivulta ja se kartuttaa kaikkien vertailudataa — älä toistele tätä.
+9. VERTAILUDATA MUIHIN KÄYTTÄJIIN: Kontekstin vertailu-osio sisältää palvelun käyttäjien anonyymisti jakamien SUUNNITELMIEN aggregaatteja (mediaani p50, kvartiilit p25/p75), yleensä käyttäjän omasta ikäryhmästä (vertailu.ryhma kertoo mistä). Kun käyttäjä kysyy, miten hän vertautuu muihin, käytä näitä lukuja ja tee kaksi asiaa selväksi: kyse on tämän palvelun käyttäjien suunnitelmista (ei väestötilastosta eikä toteutuneesta varallisuudesta), ja mediaani ei ole tavoite eikä normi — ÄLÄ kehota muuttamaan suunnitelmaa siksi, että muut tekevät toisin. RIKASTA myös muita vastauksia yhdellä vertailuluvulla aina, kun se aidosti auttaa suhteuttamaan käyttäjän omaa lukua (esim. kuukausisäästö suhteessa ikäryhmän mediaaniin) — enintään yksi vertailu per vastaus, ettei vastaus muutu tilastoraportiksi. Jos vertailu-osiota ei ole tai kysytty luku puuttuu, sano suoraan ettei vertailudataa ole vielä kertynyt riittävästi — sitä kertyy, kun käyttäjät jakavat suunnitelmansa anonyymisti. Jos vertailu.kayttajaOnJakanutOman on false ja käyttäjä kysyy vertailusta, voit mainita YHDELLÄ lauseella, että oman suunnitelman voi jakaa anonyymisti Suunnitelmani-sivulta ja se kartuttaa kaikkien vertailudataa — älä toistele tätä. REHELLISYYS IKÄRYHMÄSTÄ: vertailu.ikaryhmanTilanne kertoo, onko luku käyttäjän omasta ikäryhmästä (kaytetty "oma"), leveämmästä ikäkaistasta ("kaista", esim. 18–34) vai koko joukosta ("kaikki"). Jos se EI ole "oma", sano se aina ensimmäisessä virkkeessä ja kerro montako suunnitelmaa omassa ryhmässä on suhteessa julkaisukynnykseen (omanRyhmanSuunnitelmia/julkaisukynnys) — älä koskaan esitä koko joukon tai kaistan lukua ikäryhmän lukuna. vertailu.ryhmat sisältää kaikkien julkaistujen ryhmien mediaanit ristivertailuun (esim. "säästävätkö 50-vuotiaat enemmän kuin 30-vuotiaat"); vertailu.tapahtumienMediaaniIkaV kertoo missä iässä muut suunnittelevat tapahtumia. Jos kysytty ryhmä puuttuu ryhmat-osiosta, sano ettei sitä ole vielä julkaistu.
 
 10. LUKUSIDONNAT: Kun mainitset vastaustekstissä luvun KONTEKSTIN stats-, vertailu- tai suunnitelmat-osiosta, kirjoita luvun paikalle viittaus muodossa [[polku]], esim. "loppuvarallisuutesi on [[stats.loppuvarallisuusEur]] €", "ikäryhmäsi mediaanisäästö on [[vertailu.kkSaastoEurKk.p50]] €/kk" tai "ensimmäisen suunnitelmasi onnistuminen on [[suunnitelmat.rivit.0.onnistumistodennakoisyysPct]] %". Sovellus korvaa viittauksen moottorin tarkalla luvulla — näin luku ei voi koskaan olla väärin. Kirjoita yksikkö (€, %, v) normaalisti viittauksen perään. Käytä VAIN polkuja, jotka todella ovat kontekstissa — älä keksi polkuja. Muut luvut (plan- ja years-osista poimitut, välisummat, vuosiluvut, käyttäjän omat luvut) kirjoitat tavallisina lukuina kuten ennenkin. Viittauksia käytetään vain vastaustekstissä — EI työkalukutsujen sisällä.
 

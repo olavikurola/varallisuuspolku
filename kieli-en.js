@@ -117,6 +117,7 @@ if (typeof VP_KIELI !== 'undefined' && VP_KIELI === 'en') {
   "🔍 Haasta suunnitelmani": "🔍 Challenge my plan",
   "🔒 Vain nimettömät luvut ja kysymyksesi välitetään — mitään ei tallenneta.": "🔒 Only anonymous figures and your question are sent — nothing is stored.",
   "🗂 Vertaa suunnitelmiani": "🗂 Compare my plans",
+  "🤝 Jaa vertailudataan — ikäryhmäsi {0}/{1}": "🤝 Share to comparison data — your age group {0}/{1}",
   "½ jaettu": "½ shared",
   "Agentit": "Agents",
   "Aikaisin eläkeikä": "Earliest retirement age",

@@ -91,6 +91,10 @@
     ['60-64', 60, 64], ['65+', 65, 120],
   ];
   const tkGroupOf = (age) => (TK_GROUPS.find(([, lo, hi]) => age >= lo && age <= hi) || [null])[0];
+  // Leveät kaistat (palvelin laskee 18-34 / 35-49 / 50-64): jakaumat aukeavat
+  // ennen 5-vuotisryhmiä — vastaus "minkäikäiset" karkeammin, ei hiljaa koko joukolla
+  const TK_WIDE = [['18-34', 18, 34], ['35-49', 35, 49], ['50-64', 50, 64]];
+  const tkWideOf = (age) => (TK_WIDE.find(([, lo, hi]) => age >= lo && age <= hi) || [null])[0];
 
   let vStats = null;   // stats.json sisältö (tai null: ei haettu / ei dataa)
   let vStatsP = null;  // yksi haku per sivulataus — ask() odottaa tätä lyhyesti
@@ -118,20 +122,31 @@
   function buildVertailu() {
     if (!vStats) return null;
     const rnd = Math.round;
+    // Porrastus: oma 5-vuotisryhmä → leveä kaista → koko joukko. Pudotus
+    // kirjataan ikaryhmanTilanne-kenttään, jotta malli SANOO sen ääneen
+    // (aiemmin pudotus oli hiljainen ja käyttäjä luuli saavansa ikäryhmävastauksen)
     const gName = tkGroupOf(state.ageNow);
-    let g = gName && vStats.groups[gName];
-    let ryhma = gName ? 'ikäryhmä ' + gName : null;
-    if (!g || !g.monthly) { g = vStats.groups.all; ryhma = 'kaikki ikäryhmät'; }
+    const wName = tkWideOf(state.ageNow);
+    const own = gName && vStats.groups[gName];
+    let g = own, ryhma = gName ? 'ikäryhmä ' + gName : null, taso = 'oma';
+    if (!g || !g.monthly) { g = wName && vStats.groups[wName]; ryhma = wName ? 'ikäkaista ' + wName : null; taso = 'kaista'; }
+    if (!g || !g.monthly) { g = vStats.groups.all; ryhma = 'kaikki ikäryhmät'; taso = 'kaikki'; }
+    const tilanne = {
+      omaRyhma: gName, omanRyhmanSuunnitelmia: own ? own.n : 0, julkaisukynnys: vStats.kAnon,
+      kaytetty: taso, huom: taso === 'oma' ? undefined
+        : `Oman ikäryhmän (${gName}) jakaumat julkaistaan vasta ${vStats.kAnon} suunnitelmasta (nyt ${own ? own.n : 0}) — vertailu on ${taso === 'kaista' ? 'leveämmästä ikäkaistasta ' + wName : 'koko joukosta'}. Sano tämä käyttäjälle.`,
+    };
     if (!g || !g.monthly) {
       return {
         jaettujaYhteensa: vStats.total,
         huom: `Vertailudataa ei ole vielä kertynyt riittävästi — jakaumat julkaistaan vasta ${vStats.kAnon} suunnitelman ryhmistä.`,
+        ikaryhmanTilanne: tilanne,
         kayttajaOnJakanutOman: hasSharedPlan(),
       };
     }
     const v = {
       selite: 'Palvelun käyttäjien anonyymisti jakamien SUUNNITELMIEN vertailuluvut (mediaani p50, kvartiilit p25/p75). Suunnitelmia, ei toteutunutta varallisuutta — ei normi eikä suositus.',
-      ryhma, suunnitelmiaRyhmassa: g.n, jaettujaYhteensa: vStats.total,
+      ryhma, suunnitelmiaRyhmassa: g.n, jaettujaYhteensa: vStats.total, ikaryhmanTilanne: tilanne,
       kkSaastoEurKk: q3(g.monthly, rnd),
       varallisuusNytEur: q3(g.startCapital, rnd),
       osakepainoPct: q3(g.stocks, rnd),
@@ -140,15 +155,25 @@
     if (g.withdrawal) v.kuukausituloTarveEurKk = q3(g.withdrawal, rnd);
     if (g.penShare) v.tyoelakkeenOsuusTulostaPct = rnd(g.penShare.p50 * 100);
     if (g.successProb) v.onnistumistodennakoisyysPct = q3(g.successProb, (x) => rnd(x * 100));
-    // Tapahtumien mediaani-iät vain käyttäjän omille tapahtumatyypeille
+    // Tapahtumien mediaani-iät KAIKISTA julkaistuista tyypeistä (ei vain omista):
+    // "missä iässä muut ostavat asunnon" on vastattava, vaikka omassa
+    // suunnitelmassa ei asuntoa ole
     if (vStats.eventAges) {
       const ages = {};
-      for (const e of state.events) {
-        const d = vStats.eventAges[e.type];
-        if (d && ages[e.type] == null) ages[e.type] = rnd(d.p50);
-      }
+      for (const k in vStats.eventAges) { const d = vStats.eventAges[k]; if (d && d.p50 != null) ages[k] = rnd(d.p50); }
       if (Object.keys(ages).length) v.tapahtumienMediaaniIkaV = ages;
     }
+    // Kaikkien julkaistujen ryhmien mediaanit ristivertailuun ("säästävätkö
+    // 50-vuotiaat enemmän kuin 30-vuotiaat") — vain kynnyksen ylittäneet
+    const ryhmat = {};
+    for (const k in vStats.groups) {
+      const r = vStats.groups[k];
+      if (k === 'all' || !r || !r.monthly) continue;
+      ryhmat[k] = { n: r.n, kkSaastoEurKk: rnd(r.monthly.p50), varallisuusNytEur: rnd(r.startCapital.p50), osakepainoPct: rnd(r.stocks.p50) };
+      if (r.retireAge) ryhmat[k].elakeikaTavoiteV = rnd(r.retireAge.p50);
+      if (r.successProb) ryhmat[k].onnistumistodennakoisyysPct = rnd(r.successProb.p50 * 100);
+    }
+    if (Object.keys(ryhmat).length) v.ryhmat = ryhmat;
     // Asuntolainan tunnusluvut vain jos omassa suunnitelmassa on asuntolaina
     const hl = vStats.homeLoan;
     if (hl && state.events.some((e) => e.type === 'home' && e.financing === 'loan')) {
@@ -484,7 +509,7 @@
       const huomioissa = s && (s.depletionAge != null || (s.successProb != null && s.successProb < 0.75));
       if (!huomioissa && s && s.successProb != null) sugs.push(t('Miksi onnistumistodennäköisyys on {0} %?', Math.round(s.successProb * 100)));
       // Vertailuchippi vasta kun aggregaattidataa on oikeasti julkaistu
-      if (vStats && ((vStats.groups[tkGroupOf(state.ageNow)] || {}).monthly || (vStats.groups.all || {}).monthly)) {
+      if (vStats && ((vStats.groups[tkGroupOf(state.ageNow)] || {}).monthly || (vStats.groups[tkWideOf(state.ageNow)] || {}).monthly || (vStats.groups.all || {}).monthly)) {
         sugs.push(t('Miten suunnitelmani vertautuu muihin?'));
       }
       sugs.push(t('Mikä suunnitelmassani on suurin epävarmuus?'));
@@ -497,9 +522,16 @@
     } else {
       // Profiilichippi vain kun rinnakkaisia suunnitelmia oikeasti on
       const hasPlans = typeof plans !== 'undefined' && Array.isArray(plans) && plans.length > 1;
+      // Vauhtipyörä: kun oma ikäryhmä ei vielä ylitä julkaisukynnystä eikä
+      // käyttäjä ole jakanut, ikäryhmäkysymys on paras hetki pyytää jakoa —
+      // deterministinen chippi, ei AI-kutsua (erä 6)
+      const ownG = vStats && vStats.groups[tkGroupOf(state.ageNow)];
+      const jakoChip = vStats && ownG && !ownG.monthly && !hasSharedPlan() && typeof openDonateModal === 'function'
+        ? `<button type="button" class="tk-sug tk-jaa">${t('🤝 Jaa vertailudataan — ikäryhmäsi {0}/{1}', ownG.n, vStats.kAnon)}</button>` : '';
       html = (hasRet ? `<button type="button" class="tk-sug tk-market">${t('📉 Markkinatesti')}</button>` : '') +
         `<button type="button" class="tk-sug tk-haasta">${t('🔍 Haasta suunnitelmani')}</button>` +
         (hasPlans ? `<button type="button" class="tk-sug tk-plans">${t('🗂 Vertaa suunnitelmiani')}</button>` : '') +
+        jakoChip +
         `<button type="button" class="tk-sug tk-adv">${t('📋 Kysymyslista varainhoitajalle')}</button>`;
     }
     el.innerHTML = html;
@@ -507,6 +539,7 @@
     el.querySelectorAll('.tk-sug').forEach((b) => {
       b.addEventListener('click', () => {
         if (b.classList.contains('tk-adv')) ask('', 'advisor');
+        else if (b.classList.contains('tk-jaa')) { tkTrack('Tulkki jakokehote'); openDonateModal(); }
         else if (b.classList.contains('tk-plans')) ask(t('Vertaa suunnitelmiani keskenään'), 'explain');
         else if (b.classList.contains('tk-haasta')) ask('', 'haasta');
         else if (b.classList.contains('tk-market')) {

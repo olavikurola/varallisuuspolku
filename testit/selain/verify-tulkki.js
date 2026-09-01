@@ -129,7 +129,7 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   ok(okNums >= 1, 'moottorista löytyvä luku merkitty (99 %)', String(okNums));
   ok(doubts === 1, 'keksitty luku liputettu varoituksella', String(doubts));
   ok(await page.locator('.tk-a b').count() >= 1 && !(await page.locator('.tk-a').first().textContent()).includes('**'), 'lihavointi renderöityy, ei raakoja tähtiä');
-  ok(await page.locator('.tk-sug:not(.tk-adv):not(.tk-haasta):not(.tk-market)').count() === 0, 'kysymyschipit piiloutuvat keskustelun alettua');
+  ok(await page.locator('.tk-sug:not(.tk-adv):not(.tk-haasta):not(.tk-market):not(.tk-plans):not(.tk-jaa)').count() === 0, 'kysymyschipit piiloutuvat keskustelun alettua (toimintochipit saavat jäädä)');
   ok(await page.locator('.tk-sug').count() >= 2, 'toimintochipit jäävät');
   ok((await page.locator('.tk-meta').textContent()).includes('tarkistamatonta'), 'validointiyhteenveto näkyy');
 

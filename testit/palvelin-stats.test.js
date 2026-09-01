@@ -117,5 +117,18 @@ async function statsFrom(port, rows) {
     });
   }
 
+  console.log('Leveät ikäkaistat: 18-34 julkaisee jakaumat ennen 5-vuotisryhmiä');
+  {
+    // 12 × 25-29 + 20 × 30-34 = 32 muokattua 18-34-kaistassa; kumpikaan alaryhmä ei ylitä 30:tä
+    const rows = [...Array(12)].map((_, i) => edited(i, { ageNow: 25 + (i % 5) }))
+      .concat([...Array(20)].map((_, i) => edited(i + 12, { ageNow: 30 + (i % 5) })));
+    const s = await statsFrom(8800, rows);
+    ok(s.groups['18-34'] && s.groups['18-34'].n === 32, 'kaista 18-34 laskettu (n=32)', JSON.stringify(s.groups['18-34'] && s.groups['18-34'].n));
+    ok(!!s.groups['18-34'].monthly, 'kaista ylittää k-anon 30 → jakaumat julki');
+    ok(s.groups['25-29'] && !s.groups['25-29'].monthly && s.groups['30-34'] && !s.groups['30-34'].monthly, '5-vuotisryhmät yhä vain n (alle 30)');
+    ok(!s.groups['35-49'] || !s.groups['35-49'].monthly, 'tyhjä/pieni kaista ei julkaise');
+    ok(s.groups.all.n === 32, 'all ei tuplaa kaistalaskentaa');
+  }
+
   process.exit(failed ? 1 : 0);
 })();
