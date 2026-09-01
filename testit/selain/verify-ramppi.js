@@ -102,7 +102,10 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   await page.goto('http://localhost:8123/#s=' + hash);
   await page.waitForFunction(() => document.querySelectorAll('#chart path').length > 0);
   await page.waitForTimeout(900);
-  ok(await page.locator('.ramp').isHidden(), 'jakolinkillä saapuva ei näe ramppia');
+  // Jakolinkin avaaja ei näe aloituslomaketta — vaan jaetun suunnitelman
+  // vastaanottokortin samassa säiliössä (imaisu-ohjelma A1, ks. verify-jaettu.js)
+  ok(await page.locator('#rampAge').count() === 0, 'jakolinkillä saapuva ei näe ramppilomaketta');
+  ok((await page.locator('#rampCard .ramp-title').textContent()).includes('jaettu'), 'jakolinkillä saapuva näkee vastaanottokortin');
 
   console.log('Testihiljennys (vp-autotour-off)');
   await page.goto('http://localhost:8123/?q=1');

@@ -83,7 +83,9 @@ const { chromium } = require('playwright');
   await page2.waitForTimeout(1000);
   ok(await page2.evaluate(() => !document.body.classList.contains('fs')), 'jakolinkki laskeutuu kojelaudalle');
   ok(await page2.evaluate(() => state.monthly === 777), 'linkin suunnitelma käytössä', String(await page2.evaluate(() => state.monthly)));
-  ok(await page2.evaluate(() => !document.getElementById('tour').hidden), 'opastus käynnistyy myös jakolinkistä');
+  // Jakolinkin avaaja saa vastaanottokortin, EI yleisesittelyä (imaisu-ohjelma A1, verify-jaettu.js)
+  ok(await page2.evaluate(() => document.getElementById('tour').hidden), 'opastus ei käynnisty jakolinkistä');
+  ok(await page2.evaluate(() => !document.getElementById('ramp').hidden && /jaettu/.test(document.querySelector('#rampCard .ramp-title').textContent)), 'jakolinkki avaa vastaanottokortin');
   await page2.close();
 
   // 4) Copy: title kantaa kategoria-avainsanat, og-kortti kansainvälisen nimen

@@ -2194,6 +2194,86 @@ function rampResult(retA) {
   $('rampTour').addEventListener('click', () => { closeRamp(); startTour(); });
 }
 
+/* Jaetun linkin vastaanotto. Jakolinkki on palvelun pääkanava (Vertailujako,
+   in-app-selaimet), ja sen avaaja on jo kiinnostunut — joku läheinen lähetti
+   sen. Aiemmin hän sai eteensä 10-askeleisen yleisesittelyn jaetun
+   suunnitelman päälle (visitKind 'shared' osui kierroshaaraan). Nyt: yksi
+   kortti, joka kertoo mitä linkissä on, ja kaksi polkua — kokeile tätä
+   (veto-vihje) tai tee oma (ramppi uudelle riville). Kierros jää valikkoon.
+   Palaavalle käyttäjälle sama kortti kertoo, että oma suunnitelma on tallessa. */
+function showSharedWelcome(hadOwn) {
+  const s = sim;
+  const ret = state.events.find((e) => e.type === 'retirement');
+  const retA = ret ? Math.round(ret.age) : null;
+  const wr = s && s.wAtRet != null ? Math.round(s.wAtRet) : null;
+  const wd = ret && ret.withdrawal > 0 ? Math.round(ret.withdrawal)
+    : (s && s.solvedWithdrawal != null ? Math.round(s.solvedWithdrawal) : null);
+  const nEv = state.events.filter((e) => e.type !== 'retirement').length;
+  const stats =
+    (retA != null && wr != null
+      ? `<div class="ramp-stat"><div class="k">${t('Sijoitukset {0} vuoden iässä', retA)}</div><div class="v">${fmtEur(wr)}</div><div class="s">${t('odotetulla kehityksellä')}</div></div>` : '') +
+    (wd != null
+      ? `<div class="ramp-stat"><div class="k">${t('Kuukausitulo eläkkeellä')}</div><div class="v">${fmtEur(wd)}/kk</div><div class="s">${retA != null ? t('{0} v alkaen', retA) : ''}</div></div>` : '');
+  const kuvaus = t('Ikä {0} v · eläkkeelle {1} v · {2} elämäntapahtumaa', state.ageNow, retA != null ? retA : '–', nEv);
+  $('rampCard').innerHTML =
+    `<h1 class="ramp-title">${t('Sinulle jaettu suunnitelma')}</h1>` +
+    `<p class="ramp-sub">${kuvaus}</p>` +
+    `<div class="ramp-res">${stats}</div>` +
+    `<p class="ramp-note">${hadOwn
+      ? t('Linkin suunnitelma avattiin omaksi rivikseen Suunnitelmani-sivulle — oma suunnitelmasi on tallessa. Kokeile muutoksia vapaasti: mikään ei muutu lähettäjälle.')
+      : t('Tämä on toisen henkilön suunnitelma. Kokeile muutoksia vapaasti — mikään ei muutu lähettäjälle — tai tee oma polkusi kolmella luvulla.')}</p>` +
+    `<div class="ramp-acts2">` +
+    `<button class="btn" id="jaettuKokeile">${t('Kokeile: vedä eläkeikää')}</button>` +
+    `<button class="btn ghost" id="jaettuOma">${t('Tee oma polkuni')}</button>` +
+    `<button class="btn ghost" id="jaettuTour">${t('Esittelykierros')}</button>` +
+    `</div>`;
+  $('jaettuKokeile').addEventListener('click', () => {
+    closeRamp();
+    track('Jaettu valinta', { valinta: 'kokeile' });
+    // Veto-vihje on kerran-ikinä; jaetun linkin avaajalle se on oikea ensiele
+    // riippumatta siitä onko hän nähnyt sen omalla suunnitelmallaan
+    try { localStorage.removeItem(VETO_HINT_KEY); } catch (e) {}
+    showVetoHint();
+  });
+  $('jaettuOma').addEventListener('click', () => {
+    closeRamp();
+    track('Jaettu valinta', { valinta: 'oma' });
+    newPlanViaRamp(false);
+  });
+  $('jaettuTour').addEventListener('click', () => { closeRamp(); track('Jaettu valinta', { valinta: 'kierros' }); startTour(); });
+  track('Jaettu avattu', { oma: hadOwn ? 'on' : 'ei' });
+  showRamp();
+}
+
+/* In-app-selaimet (WhatsApp, LinkedIn, Facebook, Instagram …): neljännes
+   liikenteestä. Niissä PWA:ta ei voi asentaa eikä localStorage ole luotettava —
+   käyttäjä tekee suunnitelman ja menettää sen. Pieni vihje + linkin kopiointi
+   kerran istunnossa; ei pakoteta ulos (iOS ei salli), vain kerrotaan. */
+const INAPP_RE = /FBAN|FBAV|FB_IAB|Instagram|LinkedInApp|Line\/|MicroMessenger|Twitter|TikTok|Snapchat|; wv\)|\bWebView\b/i;
+function showInAppHint() {
+  try {
+    if (vpNativeApp || !INAPP_RE.test(navigator.userAgent)) return;
+    if (sessionStorage.getItem('vp-inapp-vihje') === '1') return;
+    sessionStorage.setItem('vp-inapp-vihje', '1');
+  } catch (e) { return; }
+  track('Vihje näytetty', { vihje: 'inapp' });
+  const b = document.createElement('div');
+  b.className = 'inapp-hint';
+  b.setAttribute('role', 'status');
+  b.innerHTML =
+    `<span>${t('Olet sovelluksen sisäisessä selaimessa — suunnitelmasi ei välttämättä säily. Avaa varsinaisessa selaimessa.')}</span>` +
+    `<button type="button" class="btn ghost inapp-copy">${t('Kopioi linkki')}</button>` +
+    `<button type="button" class="inapp-x" aria-label="${t('Sulje')}">✕</button>`;
+  b.querySelector('.inapp-copy').addEventListener('click', async () => {
+    const url = location.hash.startsWith('#s=') || location.hash.startsWith('#f=') ? location.href : buildShareLink();
+    try { await navigator.clipboard.writeText(url); toast(t('Linkki kopioitu — liitä se selaimen osoiteriville')); }
+    catch (e) { toast(t('Kopiointi ei onnistunut — kopioi osoite selaimen osoiteriviltä')); }
+    track('Vihje käytetty', { vihje: 'inapp', valinta: 'kopioi' });
+  });
+  b.querySelector('.inapp-x').addEventListener('click', () => b.remove());
+  document.body.appendChild(b);
+}
+
 // Sidonnat funktiona: suunnitelmakoti rakentaa lomakkeen uudelleen (uusi rivi
 // kolmella kysymyksellä) ja tarvitsee samat kuuntelijat tuoreisiin elementteihin
 function bindRampForm() {
@@ -2213,8 +2293,16 @@ try {
   tourSeen = localStorage.getItem(TOUR_KEY) === '1';
   rampSeen = localStorage.getItem(RAMP_KEY) === '1';
 } catch (e) {}
+// In-app-selainvihje ei kilpaile rampin/kortin kanssa: se on erillinen palkki
+// alareunassa ja tulee vasta kun ensimmäinen näkymä on asettunut
+setTimeout(showInAppHint, 2500);
 if (!autoTourOff && visitKind === 'first' && !rampSeen && $('summary').hidden) {
   setTimeout(() => { if (!fsOn && tourStep < 0 && $('summary').hidden) showRamp(); }, 600);
+} else if (!autoTourOff && visitKind === 'shared' && $('summary').hidden) {
+  // Jaettu linkki: oma vastaanotto, EI yleisesittelyä (ks. showSharedWelcome).
+  // hadOwn = linkin avaajalla oli jo omia rivejä → linkki avattiin omaksi rivikseen
+  const hadOwn = plans.length > 1;
+  setTimeout(() => { if (!fsOn && tourStep < 0 && $('summary').hidden) showSharedWelcome(hadOwn); }, 600);
 } else if (!autoTourOff && !tourSeen && visitKind !== 'returning' && $('summary').hidden) {
   setTimeout(() => { if (!fsOn && tourStep < 0 && $('summary').hidden) startTour(); }, 600);
 } else if (!autoTourOff && $('summary').hidden) {
