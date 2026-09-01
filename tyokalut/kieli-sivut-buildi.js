@@ -127,6 +127,13 @@ for (const sivu of SIVUT) {
     sisennys + '<link rel="alternate" hreflang="en" href="' + enUrl + '" />\n' +
     sisennys + '<link rel="alternate" hreflang="x-default" href="' + fiUrl + '" />\n');
 
+  // 4b) kieli-en.js vain en-sivuille: fi-sivu ei tarvitse sanastoa (vp-kieli=en
+  //     ohjaa fi-sivulta -en-pariin ennen renderöintiä), joten fi-lähteessä
+  //     tagia ei ole — ~27 kt gzip pois fi-käyttäjän latauksesta (erä 5)
+  html = html.replace(/([ \t]*)<script src="kieli\.js" defer><\/script>\n/,
+    (m, ind) => m + ind + '<script src="kieli-en.js" defer></script>\n');
+  if (html.includes('<script src="kieli.js" defer>')) vaadi(html.includes('<script src="kieli-en.js" defer>'), sivu + ': kieli-en.js-tagin lisäys ei osunut');
+
   // 5) EI localStorage-injektiota: kieli.js lukee sivun lang-attribuutin
   //    (lang="en" → VP_KIELI en tällä sivulla) eikä pysyvää valintaa kirjoiteta
   //    pelkästä sivulatauksesta — muuten en-linkin kerran avannut suomenkielinen

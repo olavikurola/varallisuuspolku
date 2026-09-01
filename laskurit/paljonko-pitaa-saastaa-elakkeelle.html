@@ -99,7 +99,16 @@
     <p class="ls-note">Varallisuuspolku ei anna sijoitusneuvontaa eikä suosittele tuotteita. Laskelma on suuntaa antava havainnollistus omilla oletuksillasi — ei ennuste.</p>
   </main>
   <script src="../kieli.js" defer></script>
-  <script src="../alapalkki.js" defer></script>
-  <script src="../natiivilisat.js" defer></script>
+  <!-- Natiiviappi (Capacitor): alapalkki + natiivilisät ladataan vain, kun
+       Capacitor-silta on läsnä — webissä ne palaisivat heti ja maksaisivat
+       ~22 kt gzip turhaan mobiilin kriittisellä polulla (imaisu-ohjelma erä 5).
+       Järjestys säilyy: peräkkäin DOMContentLoadedin jälkeen, kun defer-skriptit
+       ovat ajaneet. -->
+  <script>
+  (function(){var C=window.Capacitor;if(!(C&&C.isNativePlatform&&C.isNativePlatform()))return;
+  function l(s,cb){var e=document.createElement('script');e.src=s;if(cb)e.onload=cb;document.body.appendChild(e);}
+  function go(){l('../alapalkki.js',function(){l('../natiivilisat.js');});}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);else go();})();
+  </script>
 </body>
 </html>

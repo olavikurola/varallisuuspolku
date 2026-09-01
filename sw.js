@@ -21,8 +21,6 @@ const CORE = [
   './laajennukset.js',
   './sovellus.js',
   './laskenta.js',
-  './alapalkki.js',
-  './natiivilisat.js',
   './mc-worker.js',
   './analytiikka.html',
   './analytiikka.js',
