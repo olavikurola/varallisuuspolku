@@ -415,6 +415,19 @@ function prepareSim(st) {
   const salePayoff = new Map();
   const sellMonthOf = (e) => e.isAsset && e.sellAge != null && e.sellAge > e.age
     ? Math.round((e.sellAge - a0) * 12) : null;
+  // Varainsiirtovero ostossa (verovuosi 2026): asunto-osake 1,5 %, kiinteistö
+  // (mökki, omakotitalo) 3 %. Oletus tyypistä; transferTaxPct ohittaa (esim.
+  // omakotitalo 3, ensiasunnon vapautus poistui 2024 → ei 0-oletusta).
+  // Omistuksilla (nykytila) ei ostohetkeä → ei veroa. Ei kirjaudu omaisuuden arvoon.
+  const transferTaxOf = (e) => {
+    if (e.owned || !(e.amount < 0) || !e.isAsset) return 0;
+    const pct = e.transferTaxPct != null && isFinite(e.transferTaxPct) ? clamp(e.transferTaxPct, 0, 10) / 100
+      : (e.type === 'home' ? 0.015 : e.type === 'cottage' ? 0.03 : 0);
+    const vero = pct > 0 ? -e.amount * pct : 0;
+    if (vero > 0) transferTax.set(e.id, vero);
+    return vero;
+  };
+  const transferTax = new Map(); // id → varainsiirtovero € (popoverin selitteelle)
   // Annuiteettilainan erät ja velkasaldo kuukausittain — jaettu ostetuille
   // (pääoma = hinta − käsiraha) ja omistuksille (pääoma = jäljellä oleva laina)
   const amort = (e, m0, principal, rate, years) => {
@@ -453,10 +466,11 @@ function prepareSim(st) {
     } else if (e.amount < 0 && e.financing === 'loan') {
       const price = -e.amount;
       const down = clamp(e.down || 0, 0, price);
-      lump.set(m0, (lump.get(m0) || 0) - down);
+      // Varainsiirtovero maksetaan käsirahan tapaan omista varoista ostohetkellä
+      lump.set(m0, (lump.get(m0) || 0) - down - transferTaxOf(e));
       amort(e, m0, price - down, Math.max(0, e.rate || 0), Math.max(1, e.years || 10));
     } else {
-      lump.set(m0, (lump.get(m0) || 0) + e.amount);
+      lump.set(m0, (lump.get(m0) || 0) + e.amount - transferTaxOf(e));
     }
 
     // Toistuva kuukausivaikutus (esim. lapsen kulut, vuokratulo)
@@ -510,7 +524,11 @@ function prepareSim(st) {
         // jo omistetut vuodet (ownYears, johdettu ostovuodesta)
         const heldY = (mSell - m0) / 12 + (e.owned ? Math.max(0, e.ownYears || 0) : 0);
         const cap = (heldY >= 10 ? 0.6 : 0.8) * saleValue;
-        const taxable = e.owned ? cap : Math.min(Math.max(0, saleValue - (-e.amount)), cap);
+        // Hankintahinta: ostetulla kohteella ostohinta, omistuksella valinnainen
+        // buyPrice (ilman sitä olettamaosuus — auditointi 8/2026: aiemmin AINA
+        // olettama, jolloin mökin vero saattoi olla ~3× todellinen)
+        const hankinta = e.owned ? (e.buyPrice > 0 ? e.buyPrice : null) : -e.amount;
+        const taxable = hankinta != null ? Math.min(Math.max(0, saleValue - hankinta), cap) : cap;
         // Vero nimellisessä rahassa (verolaki on nimellinen) ja takaisin
         // esitysrahaan; nimellistilassa nom = 1 → tulos ennallaan.
         const nom = nomAt(mSell);
@@ -522,7 +540,7 @@ function prepareSim(st) {
   }
   const hasNet = hasAssets || debt.some((d) => d > 0.5);
 
-  return { a0, a1, months, retire, pension, pensionAge, taxOn, growth, saveAbs, lump, payments, debt, assets, assetCats, saleInfos, hasNet, realI,
+  return { a0, a1, months, retire, pension, pensionAge, taxOn, growth, saveAbs, lump, payments, debt, assets, assetCats, saleInfos, hasNet, realI, transferTax,
     pro, taxLow, taxHigh, taxBracket, taxAcq, wdMode, wdPctM, wdBand, wdAdj, phaseMul };
 }
 
@@ -588,6 +606,7 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
   // (auditointi 8/2026). Nimellistilassa basisNom ≡ basis → tulos ennallaan.
   let basisNom = st.startCapital;
   let curNom = 1;              // reaali → nimellinen tässä kuukaudessa
+  let curM = 0;                // kuluva kuukausi (hankintameno-olettaman pitoaika)
   let ytdGain = 0;             // kuluvana vuonna realisoidut NIMELLISET voitot
   let taxPaid = 0;
   let gw = null, gr0 = 0;      // guardrails: nostotaso ja aloitusprosentti
@@ -612,9 +631,35 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
     w -= gross;
     return gain;
   };
+  /* Verollinen myynti nettotarpeeseen — SAMA sääntö kaikille sijoituksista
+     rahoitetuille erille: eläkeajan nostot, kertamenot ja säästön ylittävä
+     lainanhoito (aiemmin vain nostot; kertaerät myytiin verotta — "sama
+     salkku, sama myynti, eri sääntö", auditointi 8/2026). Bruttoutus ja vero
+     portaittaisella kannalla NIMELLISESSÄ rahassa (verolaki on nimellinen),
+     tulos esitysrahaan. Verokytkin pois tai ei voittoa → gross = need. */
+  const taxedSell = (need) => {
+    if (!taxOn || !(need > 0)) { sell(need); return { gross: need, tax: 0 }; }
+    const wN = w * curNom;
+    let gainRatio = w > 0 ? Math.max(0, (wN - basisNom) / wN) : 0;
+    // Hankintameno-olettama (Pro): verotettavaa voittoa rajaa 40/20 %-olettama,
+    // omistusaika ≈ kuukausia suunnitelman alusta
+    if (taxAcq) gainRatio = Math.min(gainRatio, curM >= 120 ? 0.6 : 0.8);
+    const grossN = grossUp(need * curNom, gainRatio, ytdGain, taxBracket, taxLow, taxHigh);
+    const gross = grossN / curNom;
+    const gain = sell(gross);
+    // Olettaman leikatessa verotettava voitto on olettaman mukainen osuus,
+    // ei salkun todellinen voitto — muuten taxPaid ja 34 %:n portaan
+    // vuosikertymä liioittelevat veroa jonka bruttoutus jo laski oikein
+    const taxable = taxAcq ? Math.min(gain, gainRatio * grossN) : gain;
+    const tax = capitalTax(taxable, ytdGain, taxBracket, taxLow, taxHigh) / curNom;
+    taxPaid += tax;
+    ytdGain += taxable;
+    return { gross, tax };
+  };
   for (let m = 1; m <= months; m++) {
     const age = a0 + m / 12;
     curNom = realI ? Math.pow(1 + realI, m / 12) : 1;
+    curM = m;
     if (m % 12 === 1) ytdGain = 0;
     w *= 1 + muM[m] + (shockFn ? shockFn(m) : 0); // tuotto ei muuta hankintahintaa
     if (retAge == null || age <= retAge) {
@@ -627,7 +672,7 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
       const base = saveAbs ? saveAbs[m] : monthlySave;
       const net = base * growth[m] - payments[m];
       if (net >= 0) { w += net; basis += net; basisNom += net * curNom; }
-      else sell(-net);
+      else { const r = taxedSell(-net); if (fl) fl.tax[m] += r.tax; }
       if (fl) fl.contrib[m] = net;
     } else {
       // Eläkkeellä: kuukausitulo strategian mukaan + lainanhoito, josta
@@ -662,35 +707,15 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
       if (need <= 0) {
         w -= need; basis -= need; basisNom -= need * curNom; // ylijäämä (eläke > tarve) takaisin salkkuun
         if (fl) fl.contrib[m] = -need;
-      } else if (taxOn) {
-        // Voitto-osuus NIMELLISISTÄ luvuista — vero kohdistuu nimellisvoittoon
-        const wN = w * curNom;
-        let gainRatio = w > 0 ? Math.max(0, (wN - basisNom) / wN) : 0;
-        // Hankintameno-olettama nostoihin (Pro): verotettavaa voittoa rajaa
-        // 40/20 %-olettama, omistusaika ≈ kuukausia suunnitelman alusta
-        if (taxAcq) gainRatio = Math.min(gainRatio, m >= 120 ? 0.6 : 0.8);
-        // Bruttoutus ja vero ratkaistaan nimellisessä rahassa portaittaisella
-        // verolla; tulos muunnetaan takaisin esitysrahaan. Nimellistilassa
-        // curNom = 1, joten ainoa muutos entiseen on portaan oikea käsittely.
-        const grossN = grossUp(need * curNom, gainRatio, ytdGain, taxBracket, taxLow, taxHigh);
-        const gross = grossN / curNom; // brutto → netto = need veron jälkeen
-        const gain = sell(gross);
-        // Olettaman leikatessa verotettava voitto on olettaman mukainen osuus,
-        // ei salkun todellinen voitto — muuten taxPaid ja 34 %:n portaan
-        // vuosikertymä liioittelevat veroa jonka bruttoutus jo laski oikein
-        const taxable = taxAcq ? Math.min(gain, gainRatio * grossN) : gain;
-        taxPaid += capitalTax(taxable, ytdGain, taxBracket, taxLow, taxHigh) / curNom;
-        ytdGain += taxable;
-        if (fl) { fl.gross[m] = gross; fl.tax[m] = gross - need; }
       } else {
-        sell(need);
-        if (fl) fl.gross[m] = need;
+        const r = taxedSell(need); // brutto → netto = need veron jälkeen
+        if (fl) { fl.gross[m] = r.gross; fl.tax[m] += r.tax; }
       }
     }
     if (lump.has(m)) {
       const L = lump.get(m);
       if (L >= 0) { w += L; basis += L; basisNom += L * curNom; }
-      else sell(-L); // menon rahoitus verotta (kertaerä — tunnettu yksinkertaistus)
+      else { const r = taxedSell(-L); if (fl) fl.tax[m] += r.tax; } // kertameno salkusta: verollinen myynti kuten nostot
     }
     if (clamp0 && w < 0) { if (depletion == null) depletion = age; w = 0; }
     if (arr) arr.push(w);
@@ -869,7 +894,9 @@ function solveGoalsMonthly(st, points, sim) {
     const solved = solveParam((ms) => s.wealthAtMonthly(ms, p.age), p.value, 0, HI, true);
     if (solved > req) { req = solved; binding = idx; }
   }
-  return { monthly: Math.max(0, Math.round(req)), bindingIndex: binding };
+  // Ylöspäin: 1 € kuukausisäästössä on satoja euroja tavoitepisteessä, joten
+  // pyöristys alaspäin jättäisi pisteen täpärästi alle ("Ratkaise" lupaa osuman)
+  return { monthly: Math.max(0, Math.ceil(req)), bindingIndex: binding };
 }
 
 // Varmuustasomoodi: pienin säästö, jolla vähintään conf-osuus MC-poluista
@@ -920,7 +947,9 @@ function solveGoalsMonthlyConf(st, points, conf, paths, onProgress) {
     }
     if (fhi > req) { req = fhi; binding = idx; }
   }
-  return { monthly: Math.max(0, Math.round(req)), bindingIndex: binding };
+  // Ylöspäin: 1 € kuukausisäästössä on satoja euroja tavoitepisteessä, joten
+  // pyöristys alaspäin jättäisi pisteen täpärästi alle ("Ratkaise" lupaa osuman)
+  return { monthly: Math.max(0, Math.ceil(req)), bindingIndex: binding };
 }
 
 /* ===================== Simulaattori ===================== */

@@ -634,6 +634,8 @@ function applySaved(data) {
         if (!numOk(e.amount)) e.amount = EVENT_TYPES[e.type].amount || 0;
         if (e.financing !== 'loan') delete e.financing;
         for (const k of ['down', 'rate', 'years', 'appr']) if (e[k] != null && !numOk(e[k])) delete e[k];
+        // Varainsiirtovero-% (valinnainen ohitus, 0–10) — puuttuva = tyypin oletus
+        if (e.transferTaxPct != null) { if (numOk(e.transferTaxPct)) e.transferTaxPct = clamp(e.transferTaxPct, 0, 10); else delete e.transferTaxPct; }
         if (e.financing === 'loan') initLoanFields(e);
         // Toistuva erä: nolla tai viallinen arvo = ei toistoa
         if (e.recMonthly != null && (!numOk(e.recMonthly) || e.recMonthly === 0)) delete e.recMonthly;
@@ -678,10 +680,12 @@ function applySaved(data) {
         }
         const yNow = new Date().getFullYear();
         if (!numOk(e.boughtYear) || e.boughtYear < 1950 || e.boughtYear > yNow) delete e.boughtYear;
+        // Ostohinta (valinnainen): verollisen myynnin voitto todellisesta hankintahinnasta
+        if (e.buyPrice != null) { if (numOk(e.buyPrice) && e.buyPrice > 0) e.buyPrice = clamp(e.buyPrice, 0, 1e9); else delete e.buyPrice; }
         e.ownYears = e.boughtYear != null ? clamp(yNow - e.boughtYear, 0, 90) : 0;
         if (e.sellAge != null && e.sellAge <= state.ageNow) { delete e.sellAge; delete e.sellTaxFree; }
       } else {
-        delete e.owned; delete e.loanLeft; delete e.boughtYear; delete e.ownYears;
+        delete e.owned; delete e.loanLeft; delete e.boughtYear; delete e.ownYears; delete e.buyPrice;
       }
     }
     idSeq = maxId + 1;

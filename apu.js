@@ -18,6 +18,11 @@ const EVENT_TYPES = {
   renovation:  { icon: '🛠️', label: 'Remontti',            amount: -30000,  loan: { share: 0.1,  rate: 4.5, years: 10 }, defaultFin: 'loan' },
   travel:      { icon: '✈️', label: 'Unelmamatka',         amount: -8000,   loan: CONSUMER_LOAN, defaultFin: 'cash' },
   recurring:   { icon: '💳', label: 'Kuukausimeno',        amount: 0,       loan: CONSUMER_LOAN, defaultFin: 'cash', rec: { monthly: -200, years: 10 } },
+  // Tulokatko: työttömyys, perhevapaa, osa-aika, sapatti — säästö katkeaa
+  // (tai pienenee) määräajaksi. Sama laskenta kuin Kuukausimenolla; oma tyyppi,
+  // jotta katko saa nimen, ikonin ja Tulkin haasta-tehtävä osaa käyttää sitä
+  // (auditointi 8/2026: aiemmin kierrettiin "monthly pienemmäksi").
+  income_gap:  { icon: '⏸️', label: 'Tulokatko',           amount: 0,       loan: CONSUMER_LOAN, defaultFin: 'cash', rec: { monthly: -600, years: 1 } },
   sidegig:     { icon: '💼', label: 'Sivutulo',            amount: 0,       loan: CONSUMER_LOAN, defaultFin: 'cash', rec: { monthly: 300, years: 10 } },
   cottage:     { icon: '🏡', label: 'Mökki / vene',        amount: -120000, loan: { share: 0.25, rate: 4.0, years: 15 }, defaultFin: 'loan', asset: { appr: 2.0 } },
   // Omistukset: nykytila alkuehtona — ei ostohetken kassavirtaa, vain jäljellä

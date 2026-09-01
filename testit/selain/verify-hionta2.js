@@ -122,8 +122,12 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
     });
     await page.waitForFunction((n) => document.querySelectorAll('.tk-a').length > n, nMsg);
     await page.waitForTimeout(300);
-    // täysi euroarvo kysymykseen, vaikka kortissa näkyy tiivis (v-alt)
-    ok(asked && /Verot yhteensä/.test(asked) && /85\s?575|85.575/.test(norm(asked)), 'kysymyksessä ehjä otsikko ja täysi arvo', JSON.stringify(asked));
+    // täysi euroarvo kysymykseen, vaikka kortissa näkyy tiivis (v-alt) —
+    // odotettu luku moottorista, ei kovakoodattuna (verosäännöt tarkentuvat)
+    const veroFull = await page.evaluate(() => String(Math.round(simulate(state).taxPaid)));
+    // vertailu pelkin numeroin: ryhmittelyväli voi olla NBSP, kapea NBSP tai piste
+    const veroRe = { test: (t) => String(t).replace(/[^\d]/g, '').includes(veroFull) };
+    ok(asked && /Verot yhteensä/.test(asked) && veroRe.test(norm(asked)), 'kysymyksessä ehjä otsikko ja täysi arvo (' + veroFull + ' €)', JSON.stringify(asked));
   }
 
   await page.screenshot({ path: require('path').join(require('os').tmpdir(), 'tulkki-hionta2.png') });

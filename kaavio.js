@@ -807,8 +807,8 @@ function openPopover(id) {
           `</div></div>`
         : '') +
       `<div class="row2">` +
-      `<label class="field"><span class="field-label">${t('Työeläke (arvio)')}</span>` +
-      `<span class="input"><input id="pv-pen" type="number" min="0" step="100" value="${penVal}" /><em>${VP_YKS_EKK}</em></span></label>` +
+      `<label class="field"><span class="field-label">${t('Työeläke käteen')} <small>${t('netto — ETK:n ote näyttää bruton, vähennä n. 20–25 %')}</small></span>` +
+      `<span class="input"><input id="pv-pen" type="number" min="0" step="100" value="${penVal}" title="${t('Arvio käteen jäävästä työeläkkeestä kuukaudessa. Työeläke on ansiotuloa: ETK:n bruttoarviosta jää verojen jälkeen tyypillisesti 75–80 %.')}" /><em>${VP_YKS_EKK}</em></span></label>` +
       `<label class="field"><span class="field-label">${t('Eläke alkaa')}</span>` +
       `<span class="input"><input id="pv-penage" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${penAgeVal}" /><em>${VP_YKS_V}</em></span></label>` +
       `</div>` +
@@ -873,7 +873,11 @@ function openPopover(id) {
         `<span>${t('Verovapaa myynti')} <small>${t('esim. oma asunto, asuttu ≥ 2 v')}</small></span></label>` +
         (!ev.sellTaxFree
           ? `<label class="field" style="margin-top:10px"><span class="field-label">${t('Ostovuosi')} <small>${t('hankintameno-olettamaan')}</small></span>` +
-            `<span class="input"><input id="pv-own-year" type="number" min="1950" max="${new Date().getFullYear()}" step="1" value="${ev.boughtYear || ''}" placeholder="${t('esim. 2019')}" /></span></label>`
+            `<span class="input"><input id="pv-own-year" type="number" min="1950" max="${new Date().getFullYear()}" step="1" value="${ev.boughtYear || ''}" placeholder="${t('esim. 2019')}" /></span></label>` +
+            // Ostohinta omalla rivillään (kaksisarakerivi katkoi placeholderit):
+            // ilman sitä vero olettamaosuudesta, joka voi olla moninkertainen todelliseen nähden
+            `<label class="field" style="margin-top:10px"><span class="field-label">${t('Ostohinta')} <small>${t('vero todellisesta voitosta — valinnainen')}</small></span>` +
+            `<span class="input"><input id="pv-own-buy" type="number" min="0" step="5000" value="${ev.buyPrice || ''}" placeholder="${t('esim. 150 000')}" /><em>€</em></span></label>`
           : '') +
         `<p class="note sale-note" id="pv-sale-note"></p>`;
     }
@@ -924,6 +928,15 @@ function openPopover(id) {
         `<div class="field"><span class="field-label">${t('Rahoitus')}</span>` +
         `<div class="seg"><button type="button" id="pv-fin-cash" class="${isLoan ? '' : 'on'}">${t('Säästöistä')}</button>` +
         `<button type="button" id="pv-fin-loan" class="${isLoan ? 'on' : ''}">${t('Lainalla')}</button></div></div>`;
+      // Varainsiirtovero (asunto-osake 1,5 %, kiinteistö 3 %): maksetaan omista
+      // varoista ostohetkellä; prosentin voi vaihtaa (omakotitalo 3 %)
+      if (ev.isAsset && (ev.type === 'home' || ev.type === 'cottage')) {
+        const vsvPct = ev.transferTaxPct != null ? ev.transferTaxPct : (ev.type === 'home' ? 1.5 : 3);
+        fields +=
+          `<label class="field"><span class="field-label">${t('Varainsiirtovero')} <small>${t('asunto-osake 1,5 %, kiinteistö 3 % — omista varoista')}</small></span>` +
+          `<span class="input"><input id="pv-vsv" type="number" min="0" max="10" step="0.5" value="${vsvPct}" /><em>%</em></span></label>` +
+          `<p class="note" id="pv-vsv-note">${t('Vero ostohetkellä noin {0}', fmtEur(Math.round(Math.abs(ev.amount) * vsvPct / 100)))}</p>`;
+      }
       if (isLoan) {
         initLoanFields(ev);
         fields +=
@@ -1048,6 +1061,13 @@ function openPopover(id) {
     // 0 ↔ >0: korko- ja aikakentät ilmestyvät tai poistuvat
     ownLoan.addEventListener('change', () => openPopover(id));
   }
+  const ownBuy = $('pv-own-buy');
+  if (ownBuy) ownBuy.addEventListener('input', (e) => {
+    const v = parseFloat(e.target.value);
+    if (!isNaN(v) && v > 0) ev.buyPrice = clamp(v, 0, 1e9); else delete ev.buyPrice;
+    renderAllKeepPopover();
+    updateSaleNote();
+  });
   const ownYear = $('pv-own-year');
   if (ownYear) ownYear.addEventListener('change', (e) => {
     const v = parseInt(e.target.value, 10);
@@ -1190,6 +1210,14 @@ function openPopover(id) {
     initLoanFields(ev);
     renderAllKeepPopover();
     openPopover(id);
+  });
+  const vsv = $('pv-vsv');
+  if (vsv) vsv.addEventListener('input', (e) => {
+    const v = parseFloat(e.target.value);
+    if (!isNaN(v)) ev.transferTaxPct = clamp(v, 0, 10); else delete ev.transferTaxPct;
+    const n = $('pv-vsv-note');
+    if (n) n.textContent = t('Vero ostohetkellä noin {0}', fmtEur(Math.round(Math.abs(ev.amount) * (ev.transferTaxPct != null ? ev.transferTaxPct : 0) / 100)));
+    renderAllKeepPopover();
   });
   const down = $('pv-down');
   if (down) down.addEventListener('input', (e) => {

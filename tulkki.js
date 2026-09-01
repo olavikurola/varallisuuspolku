@@ -784,7 +784,7 @@
     home: 'Asunto', car: 'Auto', cottage: 'Mökki', child: 'Lapsi', divorce: 'Ero',
     renovation: 'Remontti', travel: 'Matka', study: 'Opiskelu', wedding: 'Häät',
     inheritance: 'Perintö', bonus: 'Bonus', sidegig: 'Sivutulo',
-    recurring: 'Kuukausierä', goal: 'Tavoite',
+    recurring: 'Kuukausierä', income_gap: 'Tulokatko', goal: 'Tavoite',
     ownHome: 'Oma asunto', ownFlat: 'Sijoitusasunto', ownCottage: 'Oma mökki / vene',
   };
   // Omistukset ovat nykytilaa: d-muoto pakottaa iän nykyhetkeen, loanLeft

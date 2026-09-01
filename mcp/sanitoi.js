@@ -29,6 +29,7 @@ const EVENT_TYPES = {
   renovation:  { label: 'Remontti',             amount: -30000,  loan: { share: 0.1,  rate: 4.5, years: 10 }, defaultFin: 'loan' },
   travel:      { label: 'Unelmamatka',          amount: -8000,   loan: CONSUMER_LOAN, defaultFin: 'cash' },
   recurring:   { label: 'Kuukausimeno',         amount: 0,       loan: CONSUMER_LOAN, defaultFin: 'cash', rec: { monthly: -200, years: 10 } },
+  income_gap:  { label: 'Tulokatko (työttömyys, perhevapaa, sapatti)', amount: 0, loan: CONSUMER_LOAN, defaultFin: 'cash', rec: { monthly: -600, years: 1 } },
   sidegig:     { label: 'Sivutulo',             amount: 0,       loan: CONSUMER_LOAN, defaultFin: 'cash', rec: { monthly: 300, years: 10 } },
   cottage:     { label: 'Mökki / vene',         amount: -120000, loan: { share: 0.25, rate: 4.0, years: 15 }, defaultFin: 'loan', asset: { appr: 2.0 } },
   ownHome:     { label: 'Oma asunto (omistan jo)',     amount: -250000, owned: true, asset: { appr: 2.0 }, own: { loanLeft: 120000, rate: 3.5, years: 18 } },
@@ -203,6 +204,8 @@ function sanitoiSuunnitelma(data) {
           e.boughtYear = Math.round(raw.boughtYear);
           e.ownYears = clamp(yNow - e.boughtYear, 0, 90);
         } else e.ownYears = 0;
+        // Ostohinta (valinnainen): verollisen myynnin voitto todellisesta hankintahinnasta
+        if (numOk(raw.buyPrice) && raw.buyPrice > 0) e.buyPrice = clamp(raw.buyPrice, 0, 1e9);
         if (e.sellAge != null && e.sellAge <= st.ageNow) { delete e.sellAge; delete e.sellTaxFree; }
       }
     }

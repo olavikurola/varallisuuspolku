@@ -741,5 +741,88 @@ console.log('Osinkovero ja Pro-verokanta');
   ok(proOletus.wEnd === perus.wEnd, 'Pro oletuskannalla osinkovero bitilleen sama kuin perustilassa');
 }
 
+/* ===== Erä 3 (1.9.2026): sama salkku, sama myynti, sama sääntö =====
+   Sijoituksista rahoitetut kertamenot ja säästön ylittävä lainanhoito
+   realisoivat myyntivoittoveron kuten eläkeajan nostot (aiemmin verotta —
+   Claude+GPT-konvergenssi). */
+console.log('Kertaerien ja lainanhoidon myyntivoittovero');
+{
+  // Salkussa iso realisoitumaton voitto: aloituspääoma 200 k€, säästö 0 → 10 v tuottoa, sitten 60 k€ remontti
+  const plan = (tax, extra) => Object.assign({ ageNow: 30, ageEnd: 60, startCapital: 200000, monthly: 0, savingsGrowth: 0,
+    allocStocks: 100, allocBonds: 0, glide: false, real: false, tax,
+    events: [{ id: 1, type: 'renovation', age: 40, amount: -60000, financing: 'cash' },
+      { id: 2, type: 'retirement', age: 59, withdrawal: 1, pension: 0, pensionAge: 65 }] }, extra || {});
+  const veroton = L.simulate(plan(false));
+  const verollinen = L.simulate(plan(true));
+  ok(verollinen.taxPaid > 5000, 'kertaerä salkusta realisoi veron (voitto-osuus × 30 %)', String(Math.round(verollinen.taxPaid)));
+  ok(verollinen.wEnd < veroton.wEnd, 'vero pienentää loppuvarallisuutta');
+  ok(veroton.taxPaid < 1, 'verokytkin pois → ei veroa (ennallaan)');
+  // Vero täsmää bruttoutuksen tuottamaan veroon: netto 60 000 € käteen
+  const c = L.prepareSim(plan(true));
+  ok(c.lump.get((40 - 30) * 12) === -60000, 'kertaerä on nettotarve (60 000 € käteen)');
+  // Lainanhoito yli säästökyvyn: sama sääntö
+  const lainaPlan = (tax) => ({ ageNow: 30, ageEnd: 60, startCapital: 300000, monthly: 100, savingsGrowth: 0,
+    allocStocks: 100, allocBonds: 0, glide: false, real: false, tax,
+    events: [{ id: 1, type: 'home', age: 35, amount: -300000, financing: 'loan', down: 0, rate: 4, years: 10, isAsset: true, appr: 0 },
+      { id: 2, type: 'retirement', age: 59, withdrawal: 1, pension: 0, pensionAge: 65 }] });
+  const lv = L.simulate(lainaPlan(true)), l0 = L.simulate(lainaPlan(false));
+  ok(lv.taxPaid > 1000 && lv.wEnd < l0.wEnd, 'säästön ylittävä lainanhoito salkusta on verollinen myynti', String(Math.round(lv.taxPaid)));
+}
+
+console.log('Omistuksen ostohinta (buyPrice) myyntiverossa');
+{
+  const yNow = new Date().getFullYear();
+  const own = (extra) => ({ ageNow: 45, ageEnd: 90, startCapital: 10000, monthly: 0, savingsGrowth: 0,
+    allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true,
+    events: [Object.assign({ id: 1, type: 'ownCottage', age: 45, amount: -250000, owned: true, isAsset: true, appr: 0,
+      sellAge: 50, sellTaxFree: false, boughtYear: yNow - 15, ownYears: 15 }, extra || {}),
+      { id: 2, type: 'retirement', age: 65, withdrawal: 1000, pension: 0, pensionAge: 65 }] });
+  const ilman = L.prepareSim(own()).saleInfos[0];
+  const kanssa = L.prepareSim(own({ buyPrice: 200000 })).saleInfos[0];
+  ok(ilman.tax > 40000, 'ilman ostohintaa vero olettamaosuudesta (60 % × 250 k€ × 30/34 %) — ennallaan', String(Math.round(ilman.tax)));
+  ok(kanssa.tax < 16000 && kanssa.tax > 14000, 'ostohinnalla vero todellisesta voitosta (50 k€ → 15 k€)', String(Math.round(kanssa.tax)));
+  const kallis = L.prepareSim(own({ buyPrice: 300000 })).saleInfos[0];
+  ok(kallis.tax === 0, 'tappiollinen myynti: ei veroa');
+  // Olettama pysyy kattona: ostohinta 10 k€ → voitto 240 k€ > olettamaosuus 150 k€ → verotetaan 150 k€
+  const katto = L.prepareSim(own({ buyPrice: 10000 })).saleInfos[0];
+  ok(close(katto.tax, ilman.tax, 1), 'hankintameno-olettama on edelleen katto (iso voitto → olettama)');
+}
+
+console.log('Varainsiirtovero asunnon ja mökin ostossa');
+{
+  const base = (ev) => ({ ageNow: 30, ageEnd: 90, startCapital: 100000, monthly: 500, savingsGrowth: 0,
+    allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true,
+    events: [ev, { id: 9, type: 'retirement', age: 65, withdrawal: 2000, pension: 1500, pensionAge: 65 }] });
+  const m0 = 5 * 12;
+  const asuntoKateinen = L.prepareSim(base({ id: 1, type: 'home', age: 35, amount: -200000, financing: 'cash', isAsset: true, appr: 2 }));
+  ok(close(asuntoKateinen.lump.get(m0), -(200000 + 3000), 1e-6), 'asunto käteisellä: kertaerä = hinta + 1,5 % varainsiirtovero');
+  const asuntoLaina = L.prepareSim(base({ id: 1, type: 'home', age: 35, amount: -200000, financing: 'loan', down: 40000, rate: 3.5, years: 25, isAsset: true, appr: 2 }));
+  ok(close(asuntoLaina.lump.get(m0), -(40000 + 3000), 1e-6), 'asunto lainalla: käsiraha + varainsiirtovero, laina ennallaan');
+  ok(close(asuntoLaina.debt[m0], 160000, 1e-6), 'varainsiirtovero ei kasvata lainaa');
+  const mokki = L.prepareSim(base({ id: 1, type: 'cottage', age: 35, amount: -100000, financing: 'cash', isAsset: true, appr: 2 }));
+  ok(close(mokki.lump.get(m0), -(100000 + 3000), 1e-6), 'mökki (kiinteistö): 3 %');
+  const kiinteisto = L.prepareSim(base({ id: 1, type: 'home', age: 35, amount: -200000, financing: 'cash', isAsset: true, appr: 2, transferTaxPct: 3 }));
+  ok(close(kiinteisto.lump.get(m0), -(200000 + 6000), 1e-6), 'omakotitalo: transferTaxPct 3 ohittaa oletuksen');
+  const auto = L.prepareSim(base({ id: 1, type: 'car', age: 35, amount: -20000, financing: 'cash', isAsset: true, appr: -10 }));
+  ok(close(auto.lump.get(m0), -20000, 1e-6), 'auto: ei varainsiirtoveroa');
+  ok(asuntoKateinen.assets[m0] > 199000 && asuntoKateinen.assets[m0] < 201000, 'vero ei kirjaudu omaisuuden arvoon');
+  const omistus = L.prepareSim(base({ id: 1, type: 'ownHome', age: 30, amount: -250000, owned: true, isAsset: true, appr: 2 }));
+  ok(!omistus.lump.get(0), 'omistuksella (nykytila) ei ostohetken veroa');
+}
+
+console.log('Tulokatko (income_gap) tapahtumatyyppinä');
+{
+  const plan = (ev) => ({ ageNow: 30, ageEnd: 90, startCapital: 20000, monthly: 1000, savingsGrowth: 0,
+    allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true,
+    events: (ev ? [ev] : []).concat([{ id: 9, type: 'retirement', age: 65, withdrawal: 2000, pension: 1500, pensionAge: 65 }]) });
+  const perus = L.simulate(plan(null));
+  const katko = L.simulate(plan({ id: 1, type: 'income_gap', age: 40, amount: 0, recMonthly: -1000, recYears: 1 }));
+  const c = L.prepareSim(plan({ id: 1, type: 'income_gap', age: 40, amount: 0, recMonthly: -1000, recYears: 1 }));
+  const m0 = 10 * 12;
+  ok(close(c.payments[m0 + 1], 1000, 1e-9) && close(c.payments[m0 + 12], 1000, 1e-9) && c.payments[m0 + 13] === 0, 'katko syö säästön täsmälleen 12 kk');
+  ok(katko.wEnd < perus.wEnd, 'vuoden tulokatko pienentää loppuvarallisuutta');
+  ok(!c.lump.get(m0), 'ei kertaerää');
+}
+
 console.log(failed ? `\n${failed} TESTIÄ EPÄONNISTUI` : '\nKaikki testit läpi.');
 process.exit(failed ? 1 : 0);
