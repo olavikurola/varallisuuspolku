@@ -87,5 +87,35 @@ async function statsFrom(port, rows) {
     ok(s.editedN === 1, 'vain aidosti muokattu jää (1/5)', String(s.editedN));
   }
 
+  console.log('Vienti (/vienti): avaimella koko tiedosto, ilman avainta 403, ilman envia 404');
+  {
+    const rows = [...Array(7)].map((_, i) => edited(i));
+    const withServer = async (port, env, fn) => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vp-vienti-'));
+      fs.writeFileSync(path.join(dir, 'lahjoitukset.jsonl'), rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+      const proc = spawn(process.execPath, [SERVER], { env: { ...process.env, PORT: String(port), DATA_DIR: dir, ...env }, stdio: 'ignore' });
+      try {
+        for (let i = 0; i < 50; i++) { try { await fetch(`http://127.0.0.1:${port}/health`); break; } catch (e) { await new Promise((r) => setTimeout(r, 100)); } }
+        await fn(`http://127.0.0.1:${port}`);
+      } finally { proc.kill(); }
+    };
+    await withServer(8798, { VIENTI_AVAIN: 'testiavain-123' }, async (base) => {
+      const r0 = await fetch(`${base}/vienti`);
+      ok(r0.status === 403, 'ilman avainta 403', String(r0.status));
+      const r1 = await fetch(`${base}/vienti`, { headers: { 'x-vp-vienti': 'vaara' } });
+      ok(r1.status === 403, 'väärällä avaimella 403', String(r1.status));
+      const r2 = await fetch(`${base}/vienti`, { headers: { 'x-vp-vienti': 'testiavain-123' } });
+      const txt = await r2.text();
+      const lines = txt.split('\n').filter(Boolean);
+      ok(r2.status === 200 && (r2.headers.get('content-type') || '').includes('x-ndjson'), 'oikealla avaimella 200 + NDJSON', String(r2.status));
+      ok(lines.length === 7 && lines.every((l) => JSON.parse(l).ageNow > 0), 'kaikki 7 riviä tulevat sellaisinaan', String(lines.length));
+      ok((r2.headers.get('cache-control') || '').includes('no-store'), 'vientiä ei välimuistiteta');
+    });
+    await withServer(8799, { VIENTI_AVAIN: '' }, async (base) => {
+      const r = await fetch(`${base}/vienti`, { headers: { 'x-vp-vienti': 'mikä-tahansa' } });
+      ok(r.status === 404, 'ilman VIENTI_AVAIN-envia pääte on pois päältä (404)', String(r.status));
+    });
+  }
+
   process.exit(failed ? 1 : 0);
 })();

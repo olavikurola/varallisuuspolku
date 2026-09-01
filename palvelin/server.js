@@ -28,6 +28,9 @@ const crypto = require('crypto');
 const PORT = process.env.PORT || 8787;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const FILE = path.join(DATA_DIR, 'lahjoitukset.jsonl');
+// Varmuuskopiovienti: GET /vienti otsikolla x-vp-vienti: <VIENTI_AVAIN>.
+// Tyhjä = pääte pois päältä (404). Ks. .github/workflows/vertailudata-vienti.yml
+const VIENTI_AVAIN = (process.env.VIENTI_AVAIN || '').trim();
 const K_ANON = 30;            // jakaumat julki vasta tällä ryhmäkoolla
 const MAX_BODY = 20 * 1024;   // 20 KB riittää reilusti
 const RATE_LIMIT = 10;        // lahjoitusta / IP / tunti
@@ -762,6 +765,21 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'GET' && (url === '/stats.json' || url === '/avoin-data.json')) {
     return send(res, 200, computeStats());
+  }
+
+  // Vertailudatan vienti varmuuskopiota varten (auditointi 8/2026: raakadata
+  // oli yhdessä JSONL:ssä Railwayn volumella ilman vientiä — anonyymi
+  // suunnitelmadata on palvelun ainoa kopioimaton pääoma). Päällä vain kun
+  // VIENTI_AVAIN on asetettu; avain otsikossa, ei URL:ssä (ei lokitu).
+  // Rivit ovat jo anonyymejä (sanitize + k-anon-suunnittelu), mutta raakarivi
+  // ei ole julkinen aggregaatti → vain avaimella, ja workflow salaa sen.
+  if (req.method === 'GET' && url === '/vienti') {
+    if (!VIENTI_AVAIN) return send(res, 404, { error: 'not_found' });
+    if ((req.headers['x-vp-vienti'] || '') !== VIENTI_AVAIN) return send(res, 403, { error: 'forbidden' });
+    if (!fs.existsSync(FILE)) return send(res, 200, '', 'application/x-ndjson');
+    res.writeHead(200, { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-store' });
+    fs.createReadStream(FILE).on('error', () => res.end()).pipe(res);
+    return;
   }
 
   if (req.method === 'POST' && url === '/donate') {

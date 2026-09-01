@@ -30,10 +30,14 @@ taustadokumentit: [PRO.md](PRO.md), [PERHE.md](PERHE.md),
 3. Jos muutit laskenta.js:ää tai muita sovellusskriptejä: **bumppaa SW-cache**
    ([sw.js](sw.js) `CACHE`-vakio) — offline-asennuksen skriptipari pysyy eheänä.
    Uusi sivuston tiedosto lisätään myös sw.js:n CORE-listaan.
-4. Isot julkaisut: päivitä [llms.txt](llms.txt) (GEO-faktatiedosto),
-   sitemap-lastmod ja tarvittaessa Tietoa-UKK (JSON-LD-FAQ:n pitää peilata
-   näkyvää sisältöä 1:1).
+4. Isot julkaisut: päivitä [llms.txt](llms.txt) (GEO-faktatiedosto) ja
+   tarvittaessa Tietoa-UKK (JSON-LD-FAQ:n pitää peilata näkyvää sisältöä 1:1).
+   Aja `node tyokalut/tuoreus.js` — se päivittää sitemap-lastmodit (git-pvm),
+   etusivun `dateModified`-skeeman ja llms.txt:n päiväyksen. Tilastojen
+   staattiset avainluvut: `node tyokalut/tilastot-staattinen.js` (myös
+   viikoittain automaattisesti, workflow `tilastot-staattinen.yml`).
 5. `git push` → verifioi tuotanto (etusivu 200, tarvittaessa Railway-reitit).
+   Web-testit ajetaan Actionsissa jokaisesta pushista (`web-testit.yml`).
 
 ## Vuosihuolto (vähintään kerran vuodessa, verovuoden vaihtuessa)
 
@@ -58,7 +62,8 @@ taustadokumentit: [PRO.md](PRO.md), [PERHE.md](PERHE.md),
 |---|---|---|
 | Sivusto | GitHub Pages | push = julkaisu; CNAME + https_enforced |
 | Domain | Namecheap | varallisuuspolku.com; apex 4×A + www-CNAME; info@-forward → iCloud |
-| Palvelin | Railway (Hobby) | root dir `palvelin`, volume `/data`, PORT=8080; envit: `ANTHROPIC_API_KEY` (spend limit ~50 €/kk!), `TULKKI_KEYS`, `TULKKI_PUBLIC`, `TULKKI_DAILY_MAX`, `TULKKI_MODEL` |
+| Palvelin | Railway (Hobby) | root dir `palvelin`, volume `/data`, PORT=8080; envit: `ANTHROPIC_API_KEY` (spend limit ~50 €/kk!), `TULKKI_KEYS`, `TULKKI_PUBLIC`, `TULKKI_DAILY_MAX`, `TULKKI_MODEL`, `VIENTI_AVAIN` (varmuuskopiovienti) |
+| Vertailudatan varmuuskopio | GitHub Actions (`vertailudata-vienti.yml`) | päivittäin 03:17 UTC: hakee `/vienti`, salaa (AES-256), palautustesti, artefakti 90 pv. Secretit: `VIENTI_AVAIN` (= Railwayn), `VIENTI_SALASANA` (myös salasanavarastoon!). Palautus: `tyokalut/vienti-palauta.js` |
 | MCP-paketti | npmjs (olkurola) | publish vaatii 2FA:n Olavin terminaalissa |
 | Analytiikka | Plausible | custom goalit + propertyt 'tyyppi'/'mode' lisätään käsin hallintaan |
 | Haku | GSC + Bing | sitemap lähetetty; jatkotoimet hakusanadatan pohjalta |

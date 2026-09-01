@@ -1,0 +1,87 @@
+name: Vertailudatan varmuuskopio
+
+# Anonyymi vertailudata on palvelun ainoa kopioimaton pääoma, ja se elää
+# yhtenä JSONL-tiedostona Railwayn volumella. Tämä workflow hakee sen
+# päivittäin palvelimen /vienti-päätteestä, salaa sen (AES-256, PBKDF2) ja
+# tallettaa GitHub-artefaktina 90 päiväksi — toinen sijainti, eri toimittaja.
+# Sama ajo tekee palautustestin: purkaa salauksen ja validoi rivit, jotta
+# kopio on todistetusti käyttökelpoinen eikä vain olemassa.
+#
+# Tarvitsee kaksi GitHub-secretiä (Settings → Secrets → Actions):
+#   VIENTI_AVAIN     — sama arvo kuin Railwayn VIENTI_AVAIN-ympäristömuuttuja
+#   VIENTI_SALASANA  — salauksen salasana (pitkä, satunnainen; talleta myös
+#                      salasanavarastoon — ilman sitä kopiot eivät aukea)
+# Palautus: node tyokalut/vienti-palauta.js <ladattu .enc> → palvelin/data/
+# Ei ajeta, jos secretit puuttuvat (hiljainen ohitus, ei punaista).
+
+on:
+  schedule:
+    - cron: '17 3 * * *'   # 03:17 UTC päivittäin
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vienti:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      API: https://varallisuuspolku-data.up.railway.app
+    steps:
+      - name: Tarkista secretit
+        id: secrets
+        run: |
+          if [ -z "${{ secrets.VIENTI_AVAIN }}" ] || [ -z "${{ secrets.VIENTI_SALASANA }}" ]; then
+            echo "::warning::VIENTI_AVAIN tai VIENTI_SALASANA puuttuu — varmuuskopiota ei tehdä (ohjeet workflow-tiedostossa)."
+            echo "ok=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Hae vertailudata
+        if: steps.secrets.outputs.ok == '1'
+        run: |
+          set -o pipefail
+          code=$(curl -sS -o lahjoitukset.jsonl -w '%{http_code}' -H "x-vp-vienti: ${{ secrets.VIENTI_AVAIN }}" "$API/vienti")
+          if [ "$code" != "200" ]; then echo "::error::/vienti vastasi $code (avain väärin tai pääte pois päältä?)"; exit 1; fi
+          n=$(grep -c . lahjoitukset.jsonl || true)
+          echo "rivejä: $n"
+          if [ "$n" -lt 1 ]; then echo "::error::vienti oli tyhjä"; exit 1; fi
+          echo "RIVIT=$n" >> "$GITHUB_ENV"
+
+      - name: Salaa
+        if: steps.secrets.outputs.ok == '1'
+        run: |
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
+            -in lahjoitukset.jsonl -out "vertailudata-$(date -u +%Y%m%d).jsonl.enc" \
+            -pass env:SALASANA
+          rm lahjoitukset.jsonl
+          ls -la *.enc
+        env:
+          SALASANA: ${{ secrets.VIENTI_SALASANA }}
+
+      # Palautustesti: kopio, jota ei ole koskaan purettu, ei ole varmuuskopio
+      - name: Palautustesti
+        if: steps.secrets.outputs.ok == '1'
+        run: |
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in *.enc -out palautettu.jsonl -pass env:SALASANA
+          node -e '
+            const fs=require("fs");
+            const lines=fs.readFileSync("palautettu.jsonl","utf8").split("\n").filter(Boolean);
+            let bad=0; for (const l of lines) { try { const o=JSON.parse(l); if (typeof o.ageNow!=="number") bad++; } catch(e) { bad++; } }
+            console.log("palautettu:", lines.length, "riviä, viallisia:", bad);
+            if (bad>0 || lines.length!==Number(process.env.RIVIT)) { console.error("PALAUTUS EPÄONNISTUI"); process.exit(1); }
+          '
+          rm palautettu.jsonl
+        env:
+          SALASANA: ${{ secrets.VIENTI_SALASANA }}
+
+      - name: Talleta salattu kopio (90 pv)
+        if: steps.secrets.outputs.ok == '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: vertailudata-${{ github.run_number }}
+          path: '*.enc'
+          retention-days: 90
+          if-no-files-found: error

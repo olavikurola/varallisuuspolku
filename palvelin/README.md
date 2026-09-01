@@ -30,3 +30,14 @@ node server.js          # http://localhost:8787
    niin se päivitetään sovelluksen `DATA_API`-vakioon).
 
 Palvelin kuuntelee Railwayn antamaa `PORT`-muuttujaa automaattisesti.
+
+## Varmuuskopio (vertailudata)
+
+Vertailudata on yksi JSONL-tiedosto volumella — ilman vientiä se katoaa
+yhdessä levyhäiriössä. Aseta Railwayhin `VIENTI_AVAIN` (pitkä satunnainen
+merkkijono): sen jälkeen `GET /vienti` otsikolla `x-vp-vienti: <avain>`
+palauttaa tiedoston sellaisenaan (ilman avainta pääte vastaa 404).
+GitHub-workflow `vertailudata-vienti.yml` hakee, salaa ja säilyttää kopion
+päivittäin ja ajaa palautustestin; palautus `tyokalut/vienti-palauta.js`.
+Rivit ovat anonyymejä, mutta raakarivi ei ole julkinen aggregaatti — siksi
+avain ja salaus.
