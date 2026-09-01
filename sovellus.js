@@ -160,6 +160,66 @@ function closeExamplesMenu() {
   if (examplesMenuEl) { examplesMenuEl.remove(); examplesMenuEl = null; }
 }
 
+/* Kysymyskirjasto (apu.js KYSYMYKSET): lavastus NYKYISEEN suunnitelmaan —
+   ei korvaa sitä. Ctrl+Z palauttaa. Plausible 'Kysymys' {id}. */
+let questionsMenuEl = null;
+function closeQuestionsMenu() { if (questionsMenuEl) { questionsMenuEl.remove(); questionsMenuEl = null; } }
+function applyQuestion(k) {
+  const o = k.ops || {};
+  pushUndoNow();
+  let ret = state.events.find((e) => e.type === 'retirement');
+  if (!ret && (o.retAge != null || o.goal || o.withdrawal != null || o.conf != null)) {
+    const def = EVENT_TYPES.retirement;
+    ret = { id: idSeq++, type: 'retirement', age: Math.max(65, state.ageNow + 1), withdrawal: def.withdrawal, pension: def.pension, pensionAge: def.pensionAge };
+    state.events.push(ret);
+  }
+  if (ret) {
+    if (o.retAge != null) ret.age = clamp(o.retAge, state.ageNow + 1, state.ageEnd - 1);
+    if (o.withdrawal != null) ret.withdrawal = o.withdrawal;
+    if (o.goal) ret.goal = o.goal === 'manual' ? undefined : o.goal;
+    if (o.conf != null) ret.conf = o.conf; else if (o.goal === 'manual') delete ret.conf;
+    if (ret.pensionAge < ret.age && o.retAge == null) { /* ennallaan */ }
+  }
+  if (o.event) {
+    const ev = o.event;
+    const age = clamp(state.ageNow + (ev.dAge || 0), state.ageNow, state.ageEnd - 1);
+    const e = addEvent(ev.type, age); // avaa popoverin — suljetaan alla, lavastus riittää
+    if (e && e.type === ev.type) {
+      if (ev.amount != null) e.amount = ev.amount;
+      if (ev.dMonthly) e.recMonthly = -Math.max(1, Math.round(state.monthly));
+      if (ev.recYears != null) e.recYears = ev.recYears;
+      if (ev.recMonthly != null) e.recMonthly = ev.recMonthly;
+    }
+  }
+  syncInputs();
+  closePopover();
+  renderAll();
+  track('Kysymys', { id: k.id });
+  toast(t('Kysymys lavastettu — Ctrl+Z palauttaa'));
+}
+function openQuestionsMenu(anchor) {
+  if (questionsMenuEl) { closeQuestionsMenu(); return; }
+  closeExamplesMenu();
+  const menu = document.createElement('div');
+  menu.className = 'menu';
+  for (const k of KYSYMYKSET) {
+    const b = document.createElement('button');
+    b.dataset.kysymys = k.id;
+    b.innerHTML = `<div>${t(k.q)}</div><div class="mdesc">${t(k.desc)}</div>`;
+    b.addEventListener('click', () => { closeQuestionsMenu(); applyQuestion(k); });
+    menu.appendChild(b);
+  }
+  const note = document.createElement('div');
+  note.className = 'mnote';
+  note.textContent = t('Lavastaa nykyiseen suunnitelmaasi — Ctrl+Z palauttaa.');
+  menu.appendChild(note);
+  document.body.appendChild(menu);
+  const r = anchor.getBoundingClientRect();
+  menu.style.top = r.bottom + 8 + 'px';
+  menu.style.left = Math.min(r.left, window.innerWidth - menu.offsetWidth - 10) + 'px';
+  questionsMenuEl = menu;
+}
+
 function openExamplesMenu(anchor) {
   if (examplesMenuEl) { closeExamplesMenu(); return; }
   const menu = document.createElement('div');
@@ -191,6 +251,7 @@ function openExamplesMenu(anchor) {
 
 document.addEventListener('pointerdown', (e) => {
   if (examplesMenuEl && !examplesMenuEl.contains(e.target) && !(e.target.closest && e.target.closest('.examples-trigger'))) closeExamplesMenu();
+  if (questionsMenuEl && !questionsMenuEl.contains(e.target) && !(e.target.closest && e.target.closest('.questions-trigger'))) closeQuestionsMenu();
   if (moreMenuEl && !moreMenuEl.contains(e.target) && e.target.id !== 'moreBtn') closeMoreMenu();
   if (fsAddMenuEl && !fsAddMenuEl.contains(e.target) && e.target.id !== 'fsAddBtn') closeFsAddMenu();
   if (famAddMenuEl && !famAddMenuEl.contains(e.target) && !(e.target.closest && e.target.closest('[data-fam="add"]'))) closeFamAddMenu();
@@ -705,6 +766,7 @@ function saveState() {
 // ensivierailulta (tallenne puuttuu) — sessionStorage-lippu erottaa sen,
 // jotta paluu on dashboardille eikä piirtopöydälle.
 let visitKind = 'returning'; // 'first' | 'shared' | 'returning'
+let sharedIsExample = false;  // #e=: laskurisivun esimerkki (vastaanottokortin sanamuoto)
 let resetVisit = false;
 
 function loadState() {
@@ -729,12 +791,17 @@ function loadState() {
     }
   } catch (e) { /* viallinen perhelinkki — ohitetaan */ }
   try {
-    if (location.hash.startsWith('#s=')) {
+    // #s= jaettu suunnitelma; #e= esimerkki laskurisivulta (sama sisältö,
+    // eri vastaanotto: "valmis esimerkki, vaihda luvut omiksesi", ei
+    // "toisen henkilön suunnitelma") — imaisu-ohjelma B8
+    const esim = location.hash.startsWith('#e=');
+    if (location.hash.startsWith('#s=') || esim) {
       const json = decodeURIComponent(escape(atob(location.hash.slice(3))));
       if (applySaved(JSON.parse(json))) {
         history.replaceState(null, '', location.pathname);
         saveState();
         visitKind = 'shared';
+        sharedIsExample = esim;
         return;
       }
     }
@@ -884,6 +951,10 @@ function bindActions() {
   // Esimerkkisuunnitelmat: avautuu aloitusvinkistä ja tapahtumakortin linkistä
   for (const trigger of document.querySelectorAll('.examples-trigger')) {
     trigger.addEventListener('click', (e) => { e.preventDefault(); openExamplesMenu(trigger); });
+  }
+  // Kysymyskirjasto: yhden napautuksen lavastukset nykyiseen suunnitelmaan
+  for (const trigger of document.querySelectorAll('.questions-trigger')) {
+    trigger.addEventListener('click', (e) => { e.preventDefault(); openQuestionsMenu(trigger); });
   }
 
   // Vuositaulukko
@@ -2066,6 +2137,11 @@ function showVetoHint() {
   const off = () => {
     alive = false;
     tip.remove();
+    // Vihjeketju jatkuu jo ENSIMMÄISESSÄ istunnossa: veto-vihjeen jälkeen
+    // sirupalkki (työeläke / asunto / lapsi). Aiemmin ketju laukesi vain
+    // palaavalle käyttäjälle, ja ensikäynti jäi omilleen juuri siinä kohdassa,
+    // jossa suppilo vuotaa (35 % lisää oman tapahtuman) — imaisu-ohjelma A4.
+    setTimeout(nextHint, 1800);
     const g = document.querySelector(`#chart .marker[data-id="${ret.id}"]`);
     if (g) g.classList.remove('veto-pulse');
     document.removeEventListener('pointerdown', off, true);
@@ -2219,13 +2295,18 @@ function showSharedWelcome(hadOwn) {
     (wd != null
       ? `<div class="ramp-stat"><div class="k">${t('Kuukausitulo eläkkeellä')}</div><div class="v">${fmtEur(wd)}/kk</div><div class="s">${retA != null ? t('{0} v alkaen', retA) : ''}</div></div>` : '');
   const kuvaus = t('Ikä {0} v · eläkkeelle {1} v · {2} elämäntapahtumaa', state.ageNow, retA != null ? retA : '–', nEv);
+  const esim = sharedIsExample;
   $('rampCard').innerHTML =
-    `<h1 class="ramp-title">${t('Sinulle jaettu suunnitelma')}</h1>` +
+    `<h1 class="ramp-title">${esim ? t('Valmis esimerkki laskurista') : t('Sinulle jaettu suunnitelma')}</h1>` +
     `<p class="ramp-sub">${kuvaus}</p>` +
     `<div class="ramp-res">${stats}</div>` +
-    `<p class="ramp-note">${hadOwn
-      ? t('Linkin suunnitelma avattiin omaksi rivikseen Suunnitelmani-sivulle — oma suunnitelmasi on tallessa. Kokeile muutoksia vapaasti: mikään ei muutu lähettäjälle.')
-      : t('Tämä on toisen henkilön suunnitelma. Kokeile muutoksia vapaasti — mikään ei muutu lähettäjälle — tai tee oma polkusi kolmella luvulla.')}</p>` +
+    `<p class="ramp-note">${esim
+      ? (hadOwn
+        ? t('Esimerkki avattiin omaksi rivikseen Suunnitelmani-sivulle — oma suunnitelmasi on tallessa. Vaihda luvut omiksesi Perustiedot-kortista.')
+        : t('Tämä on laskurisivun esimerkki, ei sinun suunnitelmasi. Vaihda luvut omiksesi Perustiedot-kortista — tai tee oma polkusi kolmella luvulla.'))
+      : (hadOwn
+        ? t('Linkin suunnitelma avattiin omaksi rivikseen Suunnitelmani-sivulle — oma suunnitelmasi on tallessa. Kokeile muutoksia vapaasti: mikään ei muutu lähettäjälle.')
+        : t('Tämä on toisen henkilön suunnitelma. Kokeile muutoksia vapaasti — mikään ei muutu lähettäjälle — tai tee oma polkusi kolmella luvulla.'))}</p>` +
     `<div class="ramp-acts2">` +
     `<button class="btn" id="jaettuKokeile">${t('Kokeile: vedä eläkeikää')}</button>` +
     `<button class="btn ghost" id="jaettuOma">${t('Tee oma polkuni')}</button>` +
@@ -2245,7 +2326,7 @@ function showSharedWelcome(hadOwn) {
     newPlanViaRamp(false);
   });
   $('jaettuTour').addEventListener('click', () => { closeRamp(); track('Jaettu valinta', { valinta: 'kierros' }); startTour(); });
-  track('Jaettu avattu', { oma: hadOwn ? 'on' : 'ei' });
+  track('Jaettu avattu', { oma: hadOwn ? 'on' : 'ei', laji: esim ? 'esimerkki' : 'jaettu' });
   showRamp();
 }
 
@@ -2300,6 +2381,16 @@ try {
 // In-app-selainvihje ei kilpaile rampin/kortin kanssa: se on erillinen palkki
 // alareunassa ja tulee vasta kun ensimmäinen näkymä on asettunut
 setTimeout(showInAppHint, 2500);
+// Kapealla näytöllä Pro-kytkin siirtyy tapahtumakortin alle: ensikertalaiselle
+// ammattilaissäädöt heti graafin alla olivat ennenaikaiset, ja tapahtumapaletti
+// (jonne halutaan) jäi kaksi ruudullista alemmas (imaisu-ohjelma A4)
+try {
+  if (matchMedia('(max-width: 980px)').matches) {
+    const evCard = document.querySelector('.card[data-card="events"]');
+    const proSw = $('proSwitch');
+    if (evCard && proSw) evCard.insertAdjacentElement('afterend', proSw);
+  }
+} catch (e) {}
 if (!autoTourOff && visitKind === 'first' && !rampSeen && $('summary').hidden) {
   setTimeout(() => { if (!fsOn && tourStep < 0 && $('summary').hidden) showRamp(); }, 600);
 } else if (!autoTourOff && visitKind === 'shared' && $('summary').hidden) {

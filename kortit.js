@@ -45,7 +45,7 @@ function renderStats() {
       k: t('Netto {0} v iässä', Math.round(s.a1)),
       v: fmtEur(s.net[s.months]),
       va: fmtCompact(s.net[s.months]),
-      cls: 'net',
+      cls: 'net', end: true,
       s: t('sis. sijoitukset {0} · {1}', fmtCompact(s.wEnd), state.real ? t('nykyrahassa') : t('nimellisarvoin')),
       d: dRow(s.net[s.months], g && (g.net ? g.net[g.months] : g.wEnd), fmtCompact, 500),
     });
@@ -54,7 +54,7 @@ function renderStats() {
       k: t('Sijoitukset {0} v iässä', Math.round(s.a1)),
       v: fmtEur(s.wEnd),
       va: fmtCompact(s.wEnd),
-      cls: '',
+      cls: '', end: true,
       s: state.real ? 'nykyrahassa' : 'nimellisarvoin',
       d: dRow(s.wEnd, g && g.wEnd, fmtCompact, 500),
     });
@@ -79,30 +79,44 @@ function renderStats() {
       ? { k: 'Tarvittava säästö', v: t('{0}/kk', fmtEur(s.requiredMonthly)), cls: s.requiredMonthly > state.monthly ? 'accent' : 'ok', s: t('nyt {0}/kk', fmtEur(state.monthly)) + (confTxt ? ` · ${confTxt}` : '') }
       : { k: 'Tarvittava säästö', v: 'Ei toteudu', cls: 'bad', s: 'tulotavoite on liian suuri tälle eläkeiälle' });
   }
-  // Riittävyys ja onnistumis-% samassa kortissa — kertovat samaa asiaa
+  // Riittävyys ja onnistumis-% samassa kortissa — kertovat samaa asiaa.
+  // Kortti on ENSIMMÄINEN (unshift): "riittävätkö rahani" on palvelun luvattu
+  // vastaus, ja onnistumis-% on sen arvo, ei alaotsikko (imaisu-ohjelma A4:
+  // ensikäyttäjä näki sen pienellä neljännen tiilen alarivinä).
   const pDelta = p != null && ghostP != null ? dRow(p, Math.round(ghostP * 100), (x) => t('{0} %-yks', x), 1) : '';
+  const pCls = p == null ? '' : p >= 85 ? 'ok' : p >= 65 ? 'accent' : 'bad';
+  const pOsuus = t('osuus markkinapoluista, joilla varat riittävät');
   if (s.goal === 'withdrawal' && s.goalUnreachable) {
-    cards.push({ k: 'Kestävä kuukausitulo', v: 'Ei toteudu', cls: 'bad', s: t('edes 0 €/kk ei riitä {0}', confTxt || '').trim() });
+    cards.push({ k: 'Kestävä kuukausitulo', v: 'Ei toteudu', cls: 'bad', s: t('edes 0 €/kk ei riitä {0}', confTxt || '').trim() });
   } else if (s.solvedWithdrawal != null && (s.depletionAge == null || s.depletionAge >= s.a1 - 1)) {
-    cards.push({ k: 'Kestävä kuukausitulo', v: t('{0}/kk', fmtEur(s.solvedWithdrawal)), cls: 'accent',
-      s: [s.pension > 0 ? t('sis. työeläke {0}/kk', fmtEur(s.pension)) : null, confTxt || pTxt].filter(Boolean).join(' · ') || t('varat loppuun {0} v mennessä', Math.round(s.a1)),
-      d: dRow(s.solvedWithdrawal, g && (g.solvedWithdrawal != null ? g.solvedWithdrawal : g.sustainableWd), (x) => `${fmtLuku(Math.round(x))} ${VP_YKS_EKK}`, 20) });
+    // Kestävässä nostossa varat käytetään määritelmällisesti loppuun → onnistumis-%
+    // on ~50 % eikä kerro riittävyydestä; kestävä tulo ON vastaus ja siksi
+    // ensimmäinen tiili (tiilimäärä pysyy viidessä)
+    cards.unshift({ k: 'Kestävä kuukausitulo', v: t('{0}/kk', fmtEur(s.solvedWithdrawal)), cls: 'accent',
+      s: [s.pension > 0 ? t('sis. työeläke {0}/kk', fmtEur(s.pension)) : null, confTxt, t('varat mitoitettu käytettäviksi {0} v mennessä', Math.round(s.a1))].filter(Boolean).join(' · '),
+      d: dRow(s.solvedWithdrawal, g && (g.solvedWithdrawal != null ? g.solvedWithdrawal : g.sustainableWd), (x) => `${fmtLuku(Math.round(x))} ${VP_YKS_EKK}`, 20) });
   } else if (s.depletionAge != null) {
     // %-nostossa "ehtyminen" tarkoittaa tulotarpeen alittumista (salkku ei ehdy)
     const pmWd = proOf(state);
     const pctMode = pmWd && pmWd.wd.mode === 'pct';
-    cards.push({
-      k: 'Riittävyys',
-      v: pctMode ? t('Tulo alittaa tarpeen ~{0} v', Math.round(s.depletionAge)) : t('Ehtyy ~{0} v', Math.round(s.depletionAge)),
-      cls: 'bad',
+    cards.unshift({
+      k: 'Riittävätkö rahat?',
+      v: p != null ? `${p} %` : (pctMode ? t('Tulo alittaa tarpeen ~{0} v', Math.round(s.depletionAge)) : t('Ehtyy ~{0} v', Math.round(s.depletionAge))),
+      cls: p != null ? pCls : 'bad',
       s: pctMode
-        ? [pTxt, t('nosto + työeläke ei kata kuukausitulon tarvetta')].filter(Boolean).join(' · ')
-        : [pTxt, t('kokeile lisätä säästöä')].filter(Boolean).join(' · '),
+        ? [t('tulo alittaa tarpeen ~{0} v', Math.round(s.depletionAge)), t('nosto + työeläke ei kata kuukausitulon tarvetta')].join(' · ')
+        : [t('odotetulla polulla varat ehtyvät ~{0} v', Math.round(s.depletionAge)), p != null ? pOsuus : t('kokeile lisätä säästöä')].join(' · '),
       d: pDelta,
     });
   } else {
-    cards.push({ k: 'Riittävyys', v: 'Varat riittävät ✓', cls: 'ok',
-      s: [t('{0} v ikään asti', Math.round(s.a1)), pTxt].filter(Boolean).join(' · '), d: pDelta });
+    cards.unshift({ k: 'Riittävätkö rahat?', v: p != null ? `${p} %` : t('Riittävät ✓'), cls: p != null ? pCls : 'ok',
+      s: [t('varat riittävät {0} v ikään asti', Math.round(s.a1)), p != null ? pOsuus : null].filter(Boolean).join(' · '), d: pDelta });
+  }
+  // "Sijoitukset N v iässä" pienenä lukuna näytti ensikertalaisesta virheeltä
+  // (432 509 € → 404 €): kerrotaan miksi, kun varat on mitoitettu käytettäviksi
+  if (s.goal === 'withdrawal' && s.solvedWithdrawal != null) {
+    const endCard = cards.find((c) => c.end);
+    if (endCard) endCard.s = t('varat käytetään suunnitellusti') + ' · ' + endCard.s;
   }
 
   if (s.taxPaid > 0.5) {

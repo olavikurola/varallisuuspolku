@@ -42,6 +42,34 @@ const EVENT_TYPES = {
   retirement:  { icon: '🌴', label: 'Eläkkeelle jäänti',   withdrawal: 2400, pension: 1500, pensionAge: 65, unique: true },
 };
 
+/* Kysymyskirjasto: yhden napautuksen lavastukset NYKYISEEN suunnitelmaan
+   (ei korvaa sitä kuten Esimerkit). Moottori osaa kaiken jo — tämä on
+   sisäänkäynti (strategia: parannussuunta #2; imaisu-ohjelma A4: mitattu
+   pullonkaula on oman tapahtuman lisääminen). Operaatiot ovat deklaratiivisia,
+   jotta sama luettelo syöttää myös hakuaikeiden laskeutumissivut
+   (tyokalut/laskeutumissivut.js rakentaa niistä #s=-esimerkkilinkit):
+   - retAge: eläkeikä · goal: 'manual'|'age'|'saving'|'withdrawal' · conf: varmuustaso
+   - withdrawal: tulotarve €/kk · event: { type, dAge (vuosia nykyhetkestä), ...kentät }
+   dMonthly: recMonthly = −kuukausisäästö (tulokatko syö säästön). */
+const KYSYMYKSET = [
+  { id: 'elake60', q: 'Onko minulla varaa eläkkeelle 60-vuotiaana?', desc: 'Eläkeikä 60 — katso onnistumis-% ja mitä sijoituksista pitää nostaa',
+    ops: { retAge: 60, goal: 'manual' } },
+  { id: 'aikaisin85', q: 'Kuinka aikaisin voin lopettaa työt 85 % varmuudella?', desc: 'Ratkaisija hakee aikaisimman eläkeiän nykyisellä tulotarpeella',
+    ops: { goal: 'age', conf: 0.85 } },
+  { id: 'saasto65', q: 'Paljonko pitää säästää, jotta eläke riittää 65-vuotiaana?', desc: 'Ratkaisija hakee kuukausisäästön nykyiselle tulotarpeelle',
+    ops: { retAge: 65, goal: 'saving' } },
+  { id: 'asunto5', q: 'Mitä jos ostan asunnon viiden vuoden päästä?', desc: 'Asunnon osto lainalla, oletushinta — säädä popoverista',
+    ops: { event: { type: 'home', dAge: 5 } } },
+  { id: 'tyoton1', q: 'Mitä jos jään vuodeksi työttömäksi?', desc: 'Tulokatko: kuukausisäästö katkeaa 12 kuukaudeksi kahden vuoden päästä',
+    ops: { event: { type: 'income_gap', dAge: 2, dMonthly: true, recYears: 1 } } },
+  { id: 'lapsi', q: 'Mitä lapsi tekee polulleni?', desc: 'Lapsi kolmen vuoden päästä: kertakulu + 300 €/kk 18 vuotta',
+    ops: { event: { type: 'child', dAge: 3 } } },
+  { id: 'perinto50', q: 'Entä jos saan 50 000 € perinnön?', desc: 'Kertasumma kymmenen vuoden päästä',
+    ops: { event: { type: 'inheritance', dAge: 10, amount: 50000 } } },
+  { id: 'tulo3000', q: 'Riittävätkö varani 3 000 €/kk eläkkeellä?', desc: 'Kuukausitulon tarve 3 000 € — katso riittävyys ja ehtymisikä',
+    ops: { withdrawal: 3000, goal: 'manual' } },
+];
+
 function initLoanFields(ev) {
   const def = EVENT_TYPES[ev.type].loan || CONSUMER_LOAN;
   const price = Math.max(0, -ev.amount);

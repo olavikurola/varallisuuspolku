@@ -55,6 +55,8 @@ const TAULUT = {
                   ['PLAN_SRC_LABELS', /: '((?:[^'\\]|\\.)+)'/g],
                   ['EXAMPLES', /(?:name|desc): '((?:[^'\\]|\\.)+)'/g]],
   'kaavio.js': [['goalNotes', /: '((?:[^'\\]|\\.)+)'/g]],
+  // Kysymyskirjasto: q/desc kulkevat datana ja käännetään valikon t()-nielussa
+  'apu.js': [['KYSYMYKSET', /(?:q|desc): '((?:[^'\\]|\\.)+)'/g]],
   'analytiikka.js': [['LABELS', /: '((?:[^'\\]|\\.)+)'/g]],
 };
 
@@ -169,7 +171,8 @@ for (const f of skannatut) {
     }
   }
   for (const [nimi, re] of TAULUT[f] || []) {
-    const b = lohko(teksti, nimi);
+    // KYSYMYKSET on taulukko ([...]) — lohko() hakisi vain ensimmäisen olion
+    const b = nimi === 'KYSYMYKSET' ? lohkoTaulukko(teksti, 'const ' + nimi) : lohko(teksti, nimi);
     while ((m = re.exec(b))) lisaa(m[1], `${f}/${nimi}`);
   }
   if (KVS_TIEDOSTOT.includes(f)) {
