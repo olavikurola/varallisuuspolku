@@ -1334,7 +1334,7 @@ if (typeof module !== 'undefined' && module.exports) {
     ASSETS, INFLATION, TAX_LOW, TAX_HIGH, TAX_BRACKET, MC_SEED, MC_LIVE, MC_FULL,
     clamp, loanPayment, mulberry32, round2sig, snapTo, acctOf, capitalTax, grossUp,
     baseAlloc, allocationAt, portfolioStats,
-    prepareSim, buildMu, runPath, mcSuccess, mcCollect, kthSmallest,
+    prepareSim, buildMu, runPath, mcSuccess, mcCollect, kthSmallest, makeShock,
     solveSustainable, solveParam, makeDragSolver, solveGoalsMonthly, solveGoalsMonthlyConf,
     simulate, mcBand,
     defaultPro, proOf, inflOf, classesOf, weightsAt, portfolioStatsPro,

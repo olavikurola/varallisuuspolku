@@ -590,6 +590,7 @@ function serialize() {
   // vaikka ageNow olisi muuttunut lisäyksen jälkeen
   for (const e of state.events) if (e.owned) e.age = state.ageNow;
   const o = {
+    sv: SCHEMA_VERSION, // skeemaversio (migratePlan); vanhat linkit ilman = 1
     ageNow: state.ageNow, ageEnd: state.ageEnd,
     startCapital: state.startCapital, monthly: state.monthly,
     savingsGrowth: state.savingsGrowth,
@@ -616,8 +617,27 @@ function serialize() {
   return o;
 }
 
+/* Suunnitelman skeemaversio (erä 7). Vanhoissa tallenteissa ja linkeissä ei
+   ole versiokenttää = versio 1. Kentät ovat tähän asti olleet additiivisia
+   (puuttuva = neutraali oletus), joten migraatio on toistaiseksi tunnistus +
+   eteenpäin-yhteensopivuus: tuntematon uudempi versio ladataan parhaan
+   kyvyn mukaan ja siitä kerrotaan konsolissa. Taloudellista merkitystä
+   muuttavat muutokset tehdään TÄSSÄ, versionumerolla ja testillä
+   (testit/skeema-golden.test.js vartioi, etteivät vanhat linkit muutu hiljaa). */
+const SCHEMA_VERSION = 2;
+function migratePlan(data) {
+  if (!data || typeof data !== 'object') return data;
+  const sv = typeof data.sv === 'number' && isFinite(data.sv) ? data.sv : 1;
+  if (sv > SCHEMA_VERSION) {
+    try { console.warn(`Varallisuuspolku: suunnitelman skeemaversio ${sv} on uudempi kuin tämä sovellus (${SCHEMA_VERSION}) — ladataan parhaan kyvyn mukaan.`); } catch (e) {}
+  }
+  // v1 → v2: ei kenttämuutoksia (versiokenttä otettiin käyttöön 2.9.2026)
+  return data;
+}
+
 function applySaved(data) {
   if (!data || typeof data !== 'object') return false;
+  data = migratePlan(data);
   // Rajat samat kuin MCP:n sanitoi.js:ssä (yksi totuus syötteen rajoista).
   // isFinite EI riitä: jakolinkki on julkinen syöte, ja esim. ageEnd=1e9
   // tuottaa moottorissa ~1,2 mrd kuukauden silmukan → välilehti jumittuu
