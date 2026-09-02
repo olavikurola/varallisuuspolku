@@ -16,4 +16,6 @@ if (!fs.existsSync(lahde)) {
   process.exit(1);
 }
 fs.copyFileSync(lahde, kohde);
-console.error('kopioi-laskenta: laskenta.js kopioitu pakettiin.');
+// pakkaus.js: jakolinkin LZW-purku (sanitoi.js vaatii; sama koodi kuin selaimessa)
+fs.copyFileSync(path.join(__dirname, '..', 'pakkaus.js'), path.join(__dirname, 'pakkaus.js'));
+console.error('kopioi-laskenta: laskenta.js ja pakkaus.js kopioitu pakettiin.');

@@ -787,6 +787,11 @@ function saveState() {
 // palaava käyttäjä saa normaalinäkymän kuten ennen. Nollaus näyttää
 // ensivierailulta (tallenne puuttuu) — sessionStorage-lippu erottaa sen,
 // jotta paluu on dashboardille eikä piirtopöydälle.
+/* Jakolinkin koodaus (pakkaus.js, erä 7): uudet linkit pakataan LZW:llä
+   (~-etuliite payloadissa, −50…60 % pituudesta); vanhat base64-linkit purkautuvat
+   ennallaan. Sama koodi MCP:ssä (mcp/sanitoi.js). */
+const vpPakkaaLinkki = (json) => (typeof VP_PAKKAUS !== 'undefined' ? VP_PAKKAUS.pakkaa(json) : btoa(unescape(encodeURIComponent(json))));
+const vpPuraLinkki = (s) => (typeof VP_PAKKAUS !== 'undefined' && VP_PAKKAUS.onPakattu(s) ? VP_PAKKAUS.pura(s) : decodeURIComponent(escape(atob(s))));
 let visitKind = 'returning'; // 'first' | 'shared' | 'returning'
 let sharedIsExample = false;  // #e=: laskurisivun esimerkki (vastaanottokortin sanamuoto)
 let resetVisit = false;
@@ -794,7 +799,7 @@ let resetVisit = false;
 function loadState() {
   try {
     if (location.hash.startsWith('#f=')) {
-      const o = JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(3)))));
+      const o = JSON.parse(vpPuraLinkki(location.hash.slice(3)));
       if (validFamily(o) && o.persons.length >= 2) {
         family = {
           persons: o.persons.map((p) => ({ pid: p.pid, name: String(p.name || t('Henkilö')).slice(0, 16), role: p.role, child: !!p.child, data: p.data })),
@@ -818,7 +823,7 @@ function loadState() {
     // "toisen henkilön suunnitelma") — imaisu-ohjelma B8
     const esim = location.hash.startsWith('#e=');
     if (location.hash.startsWith('#s=') || esim) {
-      const json = decodeURIComponent(escape(atob(location.hash.slice(3))));
+      const json = vpPuraLinkki(location.hash.slice(3));
       if (applySaved(JSON.parse(json))) {
         history.replaceState(null, '', location.pathname);
         saveState();
@@ -922,9 +927,9 @@ function bindAcct() {
 const makeShareUrl = () => {
   if (familyOn()) {
     saveActiveIntoFamily();
-    return location.origin + location.pathname + '#f=' + btoa(unescape(encodeURIComponent(JSON.stringify(family))));
+    return location.origin + location.pathname + '#f=' + vpPakkaaLinkki(JSON.stringify(family));
   }
-  return location.origin + location.pathname + '#s=' + btoa(unescape(encodeURIComponent(JSON.stringify(serialize()))));
+  return location.origin + location.pathname + '#s=' + vpPakkaaLinkki(JSON.stringify(serialize()));
 };
 
 async function copyShareUrl(btn) {
@@ -1822,9 +1827,9 @@ function confirmDeletePlan(p, rowEl) {
 
 function planShareUrl(p) {
   if (p.family && p.family.persons && p.family.persons.length > 1) {
-    return location.origin + location.pathname + '#f=' + btoa(unescape(encodeURIComponent(JSON.stringify(p.family))));
+    return location.origin + location.pathname + '#f=' + vpPakkaaLinkki(JSON.stringify(p.family));
   }
-  return location.origin + location.pathname + '#s=' + btoa(unescape(encodeURIComponent(JSON.stringify(p.data))));
+  return location.origin + location.pathname + '#s=' + vpPakkaaLinkki(JSON.stringify(p.data));
 }
 
 function planFileName(p) {
@@ -1855,10 +1860,10 @@ function sanitizePlanData(o) {
 }
 
 function importPlanLink(txt) {
-  const m = String(txt || '').match(/#(s|f)=([A-Za-z0-9+/=]+)/);
+  const m = String(txt || '').match(/#(s|f|e)=([~A-Za-z0-9+/=_-]+)/);
   if (!m) { toast('Linkistä ei löytynyt suunnitelmaa — liitä koko jakolinkki'); return; }
   try {
-    const o = JSON.parse(decodeURIComponent(escape(atob(m[2]))));
+    const o = JSON.parse(vpPuraLinkki(m[2]));
     let row = null;
     if (m[1] === 'f') {
       if (!(validFamily(o) && o.persons.length >= 2)) throw new Error('fam');

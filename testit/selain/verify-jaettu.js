@@ -162,6 +162,25 @@ statik.listen(8138, async () => {
     await ctx2.close();
   }
 
+  // 5) Pakattu jakolinkki (pakkaus.js): #s=~… avautuu, ja uusi linkki syntyy pakattuna
+  {
+    const P = require('../../pakkaus.js');
+    // HUOM: vp-autotour-off hiljentäisi myös vastaanottokortin — ei aseteta tässä
+    const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, locale: 'fi-FI' });
+    await ctx.addInitScript(() => { localStorage.setItem('vp-tour-done', '1'); localStorage.setItem('vp-veto-vihje', '1'); });
+    const pg = await ctx.newPage();
+    const z = '#s=' + P.pakkaa(JSON.stringify(PLAN));
+    ok(z.length < LINK.length * 0.85, 'pakattu linkki on lyhyempi myös pienellä suunnitelmalla (' + LINK.length + ' → ' + z.length + ')');
+    await pg.goto('http://localhost:8138/' + z);
+    await pg.waitForTimeout(1800);
+    const v = await pg.evaluate(() => ({ age: state.ageNow, ret: state.events.find((e) => e.type === 'retirement').age, kortti: !document.getElementById('ramp').hidden,
+      uusi: makeShareUrl(), tuonti: (() => { try { importPlanLink('https://varallisuuspolku.com/' + makeShareUrl().split('#')[1] ? '#' + makeShareUrl().split('#')[1] : ''); return plans.length; } catch (e) { return 'virhe ' + e.message; } })() }));
+    ok(v.age === 41 && v.ret === 63 && v.kortti, 'pakattu #s=~ latautuu kuten vanha base64-linkki');
+    ok(/#s=~[A-Za-z0-9_-]+$/.test(v.uusi), 'makeShareUrl tuottaa pakatun linkin', v.uusi.slice(-40));
+    ok(typeof v.tuonti === 'number' && v.tuonti >= 2, '"Tuo linkistä" ymmärtää pakatun linkin', String(v.tuonti));
+    await ctx.close();
+  }
+
   await b.close();
   statik.close();
   console.log(fail ? 'VIRHEITÄ: ' + fail : 'Kaikki tarkistukset läpi.');

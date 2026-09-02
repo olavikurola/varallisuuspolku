@@ -266,6 +266,23 @@ const kutsu = (name, args) => rpc('tools/call', { name, arguments: args });
   }
 
   child.stdin.end();
+  console.log('Pakatut jakolinkit (#s=~ / #f=~, pakkaus.js)');
+  {
+    const P = require('../pakkaus.js');
+    const plan = { ageNow: 41, ageEnd: 90, startCapital: 120000, monthly: 900, allocStocks: 70, allocBonds: 20, tax: true,
+      events: [{ type: 'retirement', age: 63, withdrawal: 2500, pension: 1700, pensionAge: 65 }] };
+    const z = 'https://varallisuuspolku.com/#s=' + P.pakkaa(JSON.stringify(plan));
+    const st = S.sanitoiSuunnitelma(S.puraSuunnitelma(z));
+    ok(st.ageNow === 41 && st.events[0].age === 63, 'pakattu #s=~ purkautuu ja sanitoituu');
+    const perhe = { persons: [{ pid: 'a', name: 'A', role: 'me', data: plan }, { pid: 'b', name: 'B', role: 'spouse', data: Object.assign({}, plan, { ageNow: 39 }) }], active: 0 };
+    const zf = 'https://varallisuuspolku.com/#f=' + P.pakkaa(JSON.stringify(perhe));
+    const hh = S.luePerhe(S.puraPerhe(zf));
+    ok(hh.length === 2 && hh[1].st.ageNow === 39, 'pakattu #f=~ purkautuu perheeksi');
+    let viallinen = false;
+    try { S.puraSuunnitelma('https://varallisuuspolku.com/#s=~!!!'); } catch (e) { viallinen = /purkaudu|kelvollista/.test(e.message); }
+    ok(viallinen, 'viallinen pakattu payload → selkeä virhe');
+  }
+
   console.log(failed ? `\n${failed} TESTIÄ PUNAISENA` : '\nKaikki MCP-testit vihreitä.');
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.error('Testiajo kaatui:', e); child.kill(); process.exit(1); });

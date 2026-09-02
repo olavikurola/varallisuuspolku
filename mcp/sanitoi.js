@@ -13,6 +13,14 @@
    Virheet ovat suomeksi ja kertovat mikä kenttä ja miksi — agentti osaa
    korjata syötteen niiden perusteella. */
 
+// Jakolinkin LZW-purku (repo: ../pakkaus.js; julkaistu paketti: ./pakkaus.js, prepack kopioi)
+let PAKKAUS;
+try { PAKKAUS = require('./pakkaus.js'); } catch (e) { PAKKAUS = require('../pakkaus.js'); }
+const puraPayload = (b64, virheTeksti) => {
+  if (PAKKAUS.onPakattu(b64)) { try { return PAKKAUS.pura(b64); } catch (e) { virhe(virheTeksti); } }
+  try { return Buffer.from(b64, 'base64').toString('utf8'); } catch (e) { virhe(virheTeksti); }
+};
+
 const NAME_MAX = 40;
 const EVENTS_MAX = 40;
 const CONSUMER_LOAN = { share: 0.3, rate: 8.0, years: 5 };
@@ -69,9 +77,7 @@ function puraSuunnitelma(input) {
     try { return JSON.parse(s); }
     catch (e) { virhe('Suunnitelma-JSON ei jäsenny: ' + e.message); }
   } else b64 = s;
-  let json;
-  try { json = Buffer.from(b64, 'base64').toString('utf8'); }
-  catch (e) { virhe('Jakolinkin base64-osa ei purkaudu.'); }
+  const json = puraPayload(b64, 'Jakolinkin koodattu osa ei purkaudu.');
   try { return JSON.parse(json); }
   catch (e) { virhe('Jakolinkki ei sisällä kelvollista suunnitelmaa (JSON ei jäsenny). Tarkista että linkki kopioitui kokonaan.'); }
 }
@@ -242,9 +248,7 @@ function puraPerhe(input) {
     try { return JSON.parse(s); }
     catch (e) { virhe('Perhe-JSON ei jäsenny: ' + e.message); }
   } else b64 = s;
-  let json;
-  try { json = Buffer.from(b64, 'base64').toString('utf8'); }
-  catch (e) { virhe('Perhelinkin base64-osa ei purkaudu.'); }
+  const json = puraPayload(b64, 'Perhelinkin koodattu osa ei purkaudu.');
   try { return JSON.parse(json); }
   catch (e) { virhe('Perhelinkki ei sisällä kelvollista perhettä (JSON ei jäsenny). Tarkista että linkki kopioitui kokonaan.'); }
 }

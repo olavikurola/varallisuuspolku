@@ -53,7 +53,8 @@ function rakenna(ops, muutos) {
 }
 // #e= = esimerkki: sovellus näyttää "valmis esimerkki, vaihda luvut omiksesi"
 // -kortin (ei "toisen henkilön suunnitelma" kuten #s=-jakolinkillä)
-const linkki = (st) => './#e=' + Buffer.from(JSON.stringify(st), 'utf8').toString('base64');
+const P = require('../pakkaus.js');
+const linkki = (st) => './#e=' + P.pakkaa(JSON.stringify(st)); // pakattu (~), ks. pakkaus.js
 
 /* ---------- sivut ---------- */
 const SIVUT = [

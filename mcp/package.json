@@ -18,6 +18,7 @@
     "tyokalut.js",
     "sanitoi.js",
     "laskenta.js",
+    "pakkaus.js",
     "README.md"
   ],
   "scripts": {
