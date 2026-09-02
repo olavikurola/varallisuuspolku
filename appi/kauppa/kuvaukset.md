@@ -363,12 +363,12 @@ korjattu. Älä palauta väitettä ilman että toteutus muuttuu.
 ## Versio 1.2 — What's New (luonnos 2.9.2026, kuluttajamuoto)
 
 Kenttä: ASC → versiosivu 1.2 → "What's New in This Version" (max 4000 merkkiä),
-täytetään erikseen molemmille kielille. Viisi bullettia, hyöty edellä, ei
-teknisiä termejä; "jotkin luvut voivat muuttua" on tarkoituksellinen
-rehellisyysrivi. Sisältö = web-erät 1–7 (2.9.2026); laskurisivut ovat vain
+täytetään erikseen molemmille kielille. Neljä bullettia: vain käyttäjälle uudet toiminnot, hyöty edellä, ei
+teknisiä termejä (Olavin linjaus 2.9.2026: Tulkin tietosuojarivi ei ole
+tuotetoiminto, lukujen muutos -maininta tarpeeton — validointisivu kertoo). Sisältö = web-erät 1–7 (2.9.2026); laskurisivut ovat vain
 webissä eivätkä kuulu tähän.
 
-### Suomeksi (fi) — 778 merkkiä
+### Suomeksi (fi) — 604 merkkiä
 
 ```
 Riittävätkö rahat? Vastaus on nyt ensimmäinen luku, jonka näet.
@@ -376,10 +376,8 @@ Riittävätkö rahat? Vastaus on nyt ensimmäinen luku, jonka näet.
 • Kokeile elämää yhdellä napautuksella: "Onko varaa eläkkeelle
   60-vuotiaana?", "Mitä jos jään vuodeksi työttömäksi?", "Entä jos saan
   perinnön?" — kumoa palauttaa.
-• Näet ennen kysymistä täsmälleen, mitä Tulkki-apurille lähtee. Nimesi
-  ja suunnitelmiesi nimet eivät koskaan lähde laitteeltasi.
 • Laskenta on entistä tarkempi: verot, varainsiirtovero ja työeläke
-  käteen jäävänä — siksi jotkin luvut voivat muuttua hieman.
+  käteen jäävänä.
 • Uutta suunnitelmaan: tulokatko (työttömyys, perhevapaa, sapatti) ja
   lainan kiinteä korko. Pro-tilassa myös korkojen nousun stressitesti.
 • Jaettu linkki on puolet lyhyempi, ja sen avaaja saa selkeän
@@ -388,17 +386,14 @@ Riittävätkö rahat? Vastaus on nyt ensimmäinen luku, jonka näet.
 Kaikki laskenta pysyy omalla laitteellasi — ei tiliä, ei seurantaa.
 ```
 
-### English (en-US) — 731 merkkiä
+### English (en-US) — 567 merkkiä
 
 ```
 Will the money last? The answer is now the first number you see.
 
 • Try life with one tap: "Can I afford to retire at 60?", "What if I'm
   unemployed for a year?", "What if I inherit?" — undo restores.
-• See exactly what is sent to the Tulkki assistant before you ask. Your
-  name and your plan names never leave your device.
-• More accurate calculation: taxes, transfer tax and take-home pension —
-  so some figures may change slightly.
+• More accurate calculation: taxes, transfer tax and take-home pension.
 • New in your plan: an income gap (unemployment, parental leave,
   sabbatical) and a fixed-rate loan option. In Pro, a rising-rates
   stress test too.
