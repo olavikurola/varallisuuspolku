@@ -358,3 +358,101 @@ korjattu. Älä palauta väitettä ilman että toteutus muuttuu.
 - en-US-lokalisoinnin kentät: tämän tiedoston edellinen osio (nimi/alaotsikko/promo/kuvaus/avainsanat)
 - Ikärajakysely uudelleen (tekoälykeskustelu-kysymys) — ks. App Privacy -osio
 - TestFlight ensin → X-toivojat DM-kutsulla → julkinen release manuaalisesti
+
+
+## Versio 1.2 — What's New (luonnos 2.9.2026)
+
+Kenttä: ASC → versiosivu 1.2 → "What's New in This Version" (max 4000 merkkiä),
+täytetään erikseen molemmille kielille. Sisältö = web-erät 1–7 (2.9.2026),
+jotka kulkevat appiin sync:ios:n kautta; laskurisivut (laskurit/) ovat
+vain webissä eivätkä kuulu tähän tekstiin.
+
+### Suomeksi (fi) — 1411 merkkiä
+
+```
+Riittävätkö rahat? — vastaus on nyt ensimmäinen luku.
+
+Työtilan ensimmäinen tiili kertoo suoraan, riittävätkö varat ja kuinka
+suurella osalla markkinapoluista. Uusi kysymyskirjasto lavastaa yhdellä
+napautuksella tilanteita omaan suunnitelmaasi: "Onko varaa eläkkeelle
+60-vuotiaana?", "Mitä jos jään vuodeksi työttömäksi?", "Entä jos saan
+50 000 € perinnön?" — Ctrl+Z palauttaa.
+
+Tekoälyapuri Tulkki:
+• Näet ennen kysymistä täsmälleen, mitä tietoja Tulkille välitetään —
+  napauta tietosuojariviä. Suunnitelmiesi nimet eivät koskaan lähde
+  laitteeltasi
+• Vertailu muihin kertoo rehellisesti, onko luku omasta ikäryhmästäsi
+  vai laajemmasta joukosta
+
+Laskenta tarkentui — osa luvuista muuttuu:
+• Sijoituksista rahoitetut kertamenot ja lainanhoito realisoivat nyt
+  myyntivoittoveron kuten nostot
+• Varainsiirtovero asunnon ja mökin ostossa
+• Työeläke kysytään käteen jäävänä (ETK:n ote on brutto)
+• Jo omistetulle kohteelle voi antaa ostohinnan, jolloin myynnin vero
+  lasketaan todellisesta voitosta
+• Uusi tapahtuma Tulokatko (työttömyys, perhevapaa, sapatti) ja lainoille
+  Kiinteä korko -valinta
+• Pro: korkoshokki-stressi (+2 %-yks) ja lainakorko herkkyysanalyysissä
+
+Lisäksi: jaettu linkki avautuu vastaanottajalle omalla kortillaan,
+jakolinkit ovat noin puolet lyhyempiä, ja tapahtumavihjeet näkyvät jo
+ensimmäisellä käynnillä.
+
+Kaikki laskenta pysyy edelleen omalla laitteellasi: ei tiliä, ei seurantaa.
+```
+
+### English (en-US) — 1382 merkkiä
+
+```
+Will the money last? — the answer is now the first number you see.
+
+The first tile in the workspace tells you directly whether your assets
+last and on what share of market paths. A new question library stages
+situations onto your own plan with one tap: "Can I afford to retire at
+60?", "What if I'm unemployed for a year?", "What if I inherit
+€50,000?" — undo restores.
+
+Tulkki, the AI explainer:
+• See exactly what is sent to Tulkki before you ask — tap the privacy
+  row. Your plan names never leave your device
+• Comparisons with others say honestly whether a figure is from your
+  own age group or a wider one
+
+More accurate calculation — some figures change:
+• One-off expenses and loan servicing funded from investments now
+  realise capital gains tax, just like withdrawals
+• Transfer tax when buying a home or cottage
+• Pension is asked as take-home (the pension statement shows gross)
+• Give an already-owned asset a purchase price, and the sale is taxed
+  on the actual gain
+• New event Income gap (unemployment, parental leave, sabbatical) and a
+  Fixed rate option for loans
+• Pro: rate-shock stress (+2 pp) and loan rate in the sensitivity analysis
+
+Also: a shared link opens for the recipient with its own card, share
+links are about half as long, and event hints appear on the first visit.
+
+All calculations still run entirely on your device: no account, no
+tracking.
+```
+
+**Tarkistettu koodista 2.9.2026:** jokainen kohta vastaa committeja 35683f8…d73beff
+(Tulkin esikatselu ja nimipeite, kysymyskirjasto, sankaritiili, moottori-PR 2,
+korkoshokki, rateFixed, jaetun linkin vastaanotto, pakkaus, leveät ikäkaistat).
+"Osa luvuista muuttuu" on tarkoituksellinen rehellisyysrivi — validointisivun
+muutosloki 29.8. ja 2.9.2026 kertoo yksityiskohdat.
+
+### ASC-muistilista 1.2:lle
+- 1.1-juna on suljettu ASC:ssä → MARKETING_VERSION 1.2 (bc12c76, ×4 pbxproj);
+  TestFlight-buildi 1.2 onnistui 2.9.2026 (run 33592029348)
+- Luo versiosivu 1.2 ASC:hen, What's New molemmille kielille yllä
+- Kuvakaappaukset: ensimmäinen tiili on nyt "Riittävätkö rahat?" — päivitä
+  työtilan kuvakaappaus, jos siinä näkyy vanha tiilijärjestys
+- App Privacy: ei muutoksia (Tulkille välitetään edelleen vain nimettömät luvut;
+  esikatselu vahvistaa tämän käyttäjälle)
+- Ennen submitia: golden-evalit (kehote muuttui), npm publish 0.3.0, viikko
+  TestFlight- ja web-palautetta
+- Play: ensimmäinen Android-versio samalla sisällöllä vasta kun iOS 1.2 on
+  todettu kunnossa (versionName 1.0 → 1.2)
