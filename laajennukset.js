@@ -1006,7 +1006,7 @@ const peerAgeOf = (age, od) => clamp(age - state.ageNow + od.ageNow, od.ageNow, 
 // Jaettu hankinta: kulu puoliksi molemmille aikuisille. Kumpikin puolikas on
 // tavallinen tapahtuma omassa suunnitelmassa (moottori ei tiedä jaosta mitään);
 // linkId+peerPid pitävät parin synkassa täsmälleen kuten siirroissa.
-const SHARE_FIELDS = ['financing', 'down', 'rate', 'years', 'recMonthly', 'recYears', 'isAsset', 'appr', 'sellTaxFree', 'owned', 'loanLeft', 'boughtYear', 'buyPrice', 'transferTaxPct'];
+const SHARE_FIELDS = ['financing', 'down', 'rate', 'years', 'recMonthly', 'recYears', 'isAsset', 'appr', 'sellTaxFree', 'owned', 'loanLeft', 'boughtYear', 'buyPrice', 'transferTaxPct', 'rateFixed'];
 const SHARE_PRESET = new Set(['home', 'car', 'cottage', 'renovation', 'wedding', 'ownHome', 'ownCottage']); // dialogin esivalinta
 const shareable = (e) => {
   const def = EVENT_TYPES[e.type];

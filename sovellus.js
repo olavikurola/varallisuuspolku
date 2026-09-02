@@ -717,6 +717,8 @@ function applySaved(data) {
         for (const k of ['down', 'rate', 'years', 'appr']) if (e[k] != null && !numOk(e[k])) delete e[k];
         // Varainsiirtovero-% (valinnainen ohitus, 0–10) — puuttuva = tyypin oletus
         if (e.transferTaxPct != null) { if (numOk(e.transferTaxPct)) e.transferTaxPct = clamp(e.transferTaxPct, 0, 10); else delete e.transferTaxPct; }
+        // Kiinteä korko (korkoshokki ohittaa): vain tosi-arvo tallennetaan
+        if (e.rateFixed) e.rateFixed = true; else delete e.rateFixed;
         if (e.financing === 'loan') initLoanFields(e);
         // Toistuva erä: nolla tai viallinen arvo = ei toistoa
         if (e.recMonthly != null && (!numOk(e.recMonthly) || e.recMonthly === 0)) delete e.recMonthly;

@@ -170,6 +170,7 @@ function sanitoiSuunnitelma(data) {
         const price = Math.max(0, -e.amount);
         if (e.down == null) e.down = Math.round(price * loan.share);
         e.down = clamp(e.down, 0, 1e9);
+        if (raw.rateFixed === true) e.rateFixed = true; // kiinteä korko: korkoshokki ei koske
         e.rate = e.rate == null ? loan.rate : clamp(e.rate, 0, 25);
         e.years = e.years == null ? loan.years : clamp(e.years, 1, 40);
       }
@@ -198,6 +199,7 @@ function sanitoiSuunnitelma(data) {
         if (e.loanLeft > 0) {
           e.rate = numOk(raw.rate) ? clamp(raw.rate, 0, 25) : def.own.rate;
           e.years = numOk(raw.years) ? clamp(raw.years, 1, 40) : def.own.years;
+          if (raw.rateFixed === true) e.rateFixed = true;
         }
         const yNow = new Date().getFullYear();
         if (numOk(raw.boughtYear) && raw.boughtYear >= 1950 && raw.boughtYear <= yNow) {

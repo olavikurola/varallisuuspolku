@@ -326,6 +326,7 @@ if (typeof VP_KIELI !== 'undefined' && VP_KIELI === 'en') {
   "Kieli": "Language",
   "Kiinteistöt": "Real estate",
   "kiinteä": "fixed",
+  "Kiinteä korko": "Fixed rate",
   "Kiinteä kuukausitulo — perusversion käytös. Eläketavoitteet ja piirtopöydän vedot toimivat täysillään.": "Fixed monthly income — the basic behaviour. Retirement goals and drawing-board drags work at full power.",
   "Kiitos — kiinnostus kirjattu ✓": "Thanks — interest recorded ✓",
   "Kiitos! Suunnitelmasi on nyt anonyymisti mukana vertailudatassa.": "Thank you! Your plan is now anonymously part of the comparison data.",
@@ -366,6 +367,7 @@ if (typeof VP_KIELI !== 'undefined' && VP_KIELI === 'en') {
   "Korko": "Interest rate",
   "Korko-oletus": "Interest rate assumption",
   "Korkopaino": "Bond weight",
+  "korkoshokki-stressi ei koske tätä lainaa": "the rate-shock stress does not apply to this loan",
   "Korot": "Bonds",
   "Korot +2 %-yks pysyvästi": "Rates +2 pp permanently",
   "korotettu": "higher",
@@ -1006,8 +1008,6 @@ if (typeof VP_KIELI !== 'undefined' && VP_KIELI === 'en') {
   "Yhteys Tulkkiin epäonnistui — tarkista verkko.": "Connection to Tulkki failed — check your network.",
   "Yksityisselaimessa tiedot katoavat ikkunan sulkeutuessa — ota varmuuskopio": "In private browsing, data disappears when the window closes — make a backup",
   "Yleisin: {0}": "Most common: {0}",
-  "ylimmässä neljänneksessä": "in the top quarter",
-  "Lainakorko +1 %-yks": "Loan rate +1 pp",
-  "Lainakorko −1 %-yks": "Loan rate −1 pp"
+  "ylimmässä neljänneksessä": "in the top quarter"
 });
 }

@@ -860,6 +860,8 @@ function openPopover(id) {
         `<label class="field"><span class="field-label">${t('Vuosia jäljellä')}</span>` +
         `<span class="input"><input id="pv-years" type="number" min="1" max="40" step="1" value="${ev.years != null ? ev.years : 10}" /><em>${VP_YKS_V}</em></span></label>` +
         `</div>` +
+        `<label class="toggle"><input id="pv-ratefixed" type="checkbox" ${ev.rateFixed ? 'checked' : ''} /><span class="switch"></span>` +
+        `<span>${t('Kiinteä korko')} <small>${t('korkoshokki-stressi ei koske tätä lainaa')}</small></span></label>` +
         `<p class="note loan-note" id="pv-loan-note"></p>`;
     }
     fields +=
@@ -948,6 +950,8 @@ function openPopover(id) {
           `<label class="field"><span class="field-label">${t('Laina-aika')}</span>` +
           `<span class="input"><input id="pv-years" type="number" min="1" max="40" step="1" value="${ev.years}" /><em>${VP_YKS_V}</em></span></label>` +
           `</div>` +
+          `<label class="toggle"><input id="pv-ratefixed" type="checkbox" ${ev.rateFixed ? 'checked' : ''} /><span class="switch"></span>` +
+          `<span>${t('Kiinteä korko')} <small>${t('korkoshokki-stressi ei koske tätä lainaa')}</small></span></label>` +
           `<p class="note loan-note" id="pv-loan-note"></p>`;
       }
       fields +=
@@ -1223,6 +1227,12 @@ function openPopover(id) {
   if (down) down.addEventListener('input', (e) => {
     const v = parseFloat(e.target.value);
     if (!isNaN(v)) { ev.down = clamp(v, 0, Math.max(0, -ev.amount)); updateLoanNote(); renderAllKeepPopover(); }
+  });
+  // Kiinteä korko: korkoshokki-stressi ja tornadon lainakorko ohittavat lainan
+  const rateFixed = $('pv-ratefixed');
+  if (rateFixed) rateFixed.addEventListener('change', (e) => {
+    if (e.target.checked) ev.rateFixed = true; else delete ev.rateFixed;
+    renderAllKeepPopover();
   });
   const rate = $('pv-rate');
   if (rate) rate.addEventListener('input', (e) => {
