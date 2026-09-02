@@ -11,6 +11,10 @@ Tuotantoon (GitHub Pages, Railway) tämä kansio ei vaikuta millään tavalla.
   tiedostot `www/`-kansioon ja riisuu Plausible-analytiikan (appikäyttö ei saa
   sekoittua webin kävijämittaukseen, ja kauppojen tietosuojakortti pysyy puhtaana).
   `www/` ja `node_modules/` on gitignoroitu — generoituvat aina uudelleen.
+  Linkkivartija: koonti kaatuu, jos appiin kopioitu sivu linkittää tiedostoon,
+  jota paketissa ei ole (WKWebView näyttäisi tyhjän ruudun ilman paluuta).
+  Natiivissa piilotetut alueet ohitetaan: Tietoa-kortti ja `.vain-web`-elementit
+  (alapalkki.js:n CSS). Uusi linkki uuteen sivuun → FILES-listaan tai `.vain-web`.
 - `capacitor.config.json` — appId `com.varallisuuspolku.app`, tumma tausta,
   Android edge-to-edge -marginaalit.
 - `android/`, `ios/` — Capacitorin generoimat natiiviprojektit (versionhallinnassa,

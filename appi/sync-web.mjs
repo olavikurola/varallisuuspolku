@@ -21,6 +21,7 @@ const FILES = [
   // sivut (myös generoidut -en-parit: kieli.js ohjaa niille kun valinta on en)
   'index.html', 'analytiikka.html', 'saavutettavuus.html', 'validointi.html', 'agentit.html',
   'index-en.html', 'analytiikka-en.html', 'saavutettavuus-en.html', 'validointi-en.html', 'agentit-en.html',
+  'tietosuoja.html', 'tietosuoja-en.html', // Tietoa palvelusta -sivu linkittää selosteeseen — oltava appissa
   // tyylit ja fontit
   'style.css', 'fonts.css', 'fonts/inter-latin.woff2', 'fonts/inter-latin-ext.woff2',
   // ajonaikainen JS (sw.js tarkoituksella pois)
@@ -71,6 +72,35 @@ for (const f of FILES.filter((x) => x.endsWith('.html'))) {
   writeFileSync(p, html);
 }
 
+/* Linkkivartija: appiin kopioitu sivu ei saa linkittää tiedostoon, jota
+   paketissa ei ole — WKWebView näyttäisi tyhjän ruudun ilman paluuta.
+   Ohitetaan alueet, jotka alapalkki.js piilottaa natiivissa (CSS-säännöt
+   body.vp-has-tabbar …): Tietoa-kortti (data-card=about) ja .vain-web-elementit.
+   Uusi linkki etusivulta uuteen sivuun → joko FILES-listaan tai .vain-web. */
+const OHITA = [
+  /<section class="card" data-card="about">[\s\S]*?<\/section>/g,
+  /<(\w+)\b[^>]*class="[^"]*\bvain-web\b[^"]*"[^>]*>[\s\S]*?<\/\1>/g,
+];
+const kuolleet = new Set();
+for (const f of FILES.filter((x) => x.endsWith('.html'))) {
+  let html = readFileSync(join(WWW, f), 'utf8');
+  for (const re of OHITA) html = html.replace(re, '');
+  const re = /\b(?:href|src)="([^"]+)"/g;
+  let m;
+  while ((m = re.exec(html))) {
+    const u = m[1];
+    if (/^(?:https?:|mailto:|data:|\/\/|#)/.test(u)) continue;
+    const kohde = u.split('#')[0].split('?')[0];
+    if (kohde && !existsSync(join(WWW, dirname(f), kohde))) kuolleet.add(`${f} → ${u}`);
+  }
+}
+if (kuolleet.size) {
+  console.error('VIRHE: appiin kopioitu sivu linkittää tiedostoon, jota paketissa ei ole:\n  '
+    + [...kuolleet].join('\n  ')
+    + '\n  → lisää kohde FILES-listaan tai merkitse linkki class="vain-web" (alapalkki.js piilottaa natiivissa).');
+  process.exit(1);
+}
+
 /* Windows-suoja: `npx cap sync ios` kirjoittaa Windowsilla Package.swiftiin
    kenoviivapolut, jotka kaatavat SPM:n macOS:llä ("invalid escape sequence").
    Normalisoidaan erottimet aina — CI ajaa tämän ennen jokaista iOS-käännöstä. */
@@ -84,4 +114,4 @@ if (existsSync(SPM)) {
   }
 }
 
-console.log(`OK: www koottu (${FILES.length} tiedostoa), Plausible riisuttu HTML-sivuilta.`);
+console.log(`OK: www koottu (${FILES.length} tiedostoa), Plausible riisuttu HTML-sivuilta, linkkikohteet tarkistettu.`);

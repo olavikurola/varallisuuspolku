@@ -188,7 +188,7 @@
   "Lisää tavoite tai elämäntapahtuma graafille": "Add a goal or life event to the chart",
   "Lopeta vertailu": "Stop comparing",
   "Lähdekoodi": "Source code",
-  "Lähdekoodi <a href=\"https://github.com/olavikurola/varallisuuspolku\" rel=\"noopener\">GitHubissa</a> (MIT). Koneluettava palvelukuvaus indeksoijille: <a href=\"llms.txt\">llms.txt</a>.": "Source code on <a href=\"https://github.com/olavikurola/varallisuuspolku\" rel=\"noopener\">GitHub</a> (MIT). Machine-readable service description for indexers: <a href=\"llms.txt\">llms.txt</a>.",
+  "Lähdekoodi <a href=\"https://github.com/olavikurola/varallisuuspolku\" rel=\"noopener\">GitHubissa</a> (MIT). <span class=\"vain-web\">Koneluettava palvelukuvaus indeksoijille: <a href=\"llms.txt\">llms.txt</a>.</span>": "Source code on <a href=\"https://github.com/olavikurola/varallisuuspolku\" rel=\"noopener\">GitHub</a> (MIT). <span class=\"vain-web\">Machine-readable service description for indexers: <a href=\"llms.txt\">llms.txt</a>.</span>",
   "Markkinaoletukset <i class=\"pro-tag\" aria-hidden=\"true\">Pro</i>": "Market assumptions <i class=\"pro-tag\" aria-hidden=\"true\">Pro</i>",
   "MC-laboratorio <i class=\"pro-tag\" aria-hidden=\"true\">Pro</i>": "MC lab <i class=\"pro-tag\" aria-hidden=\"true\">Pro</i>",
   "MCP-palvelin toimii agentin koneella, ei käytä verkkoa eikä tallenna mitään — sama tietosuojalupaus kuin sivustolla, nyt myös agenttikäytössä.": "The MCP server runs on the agent's machine, uses no network and stores nothing — the same privacy promise as on the site, now in agent use too.",

@@ -113,6 +113,9 @@
        App Store -badge on webin mainos — appissa ollaan jo perillä */
     'body.vp-has-tabbar .card[data-card=about]{display:none;}',
     'body.vp-has-tabbar .appstore-alue{display:none;}',
+    /* .vain-web: sisältö, jonka kohde on olemassa vain webissä (esim. llms.txt-linkki);
+       sync-web.mjs:n linkkivartija ohittaa nämä — pidä listat samassa linjassa */
+    'body.vp-has-tabbar .vain-web{display:none;}',
     'body.vp-has-tabbar .pro-switch{display:none;}',
     /* Lisää-sivun ryhmäkortit: Sivut ja Asetukset erottuvat kokonaisuuksina
        (Olavin havainto 8.8.) — kortti, sisäiset erotinviivat, kytkinrivit */
