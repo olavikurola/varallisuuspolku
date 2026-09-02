@@ -8,7 +8,7 @@
 > selaimessa; ei rekisteröitymistä, ei evästeitä (kävijämäärät anonyymillä
 > Plausible-analytiikalla).
 
-Keskeiset faktat (päivitetty 2026-09-01):
+Keskeiset faktat (päivitetty 2026-09-02):
 
 - Laskenta: kuukausitason korkoa korolle, palkkakehitys, lainat annuiteetteina,
   Monte Carlo -simulaatio (oletus 5 000 polkua) ja onnistumistodennäköisyys.
@@ -46,6 +46,12 @@ Keskeiset faktat (päivitetty 2026-09-01):
   Agenttituen esittely: https://varallisuuspolku.com/agentit.html
 - Vuorovaikutus: graafi on ohjain — käyrään, tapahtumiin ja eläkeikäviivaan
   tartutaan ja vedetään, kone ratkaisee jokaisen vedon hinnan heti.
+- Kysymyskirjasto: yhden napautuksen lavastukset nykyiseen suunnitelmaan
+  ("Onko varaa eläkkeelle 60-vuotiaana?", "Mitä jos jään vuodeksi
+  työttömäksi?", "Entä jos saan 50 000 € perinnön?") — moottori laskee, Ctrl+Z
+  palauttaa. Stressitestit: karhu eläkkeen alussa, menetetty vuosikymmen,
+  stagflaatio, romahdus −50 % ja korkoshokki (+2 %-yks vaihtuvakorkoisiin
+  lainoihin).
 - Perhe: enintään 4 henkilöä (puoliso + lapset), perheen yhteinen
   onnistumis-% samassa markkinahistoriassa, rahasiirrot, jaetut hankinnat,
   leskiturvatarkastelu.
@@ -79,6 +85,11 @@ Keskeiset faktat (päivitetty 2026-09-01):
   saavutettavuusseloste (näppäimistökäyttö, ruudunlukija, vähennetty liike)
 - [Agentit](https://varallisuuspolku.com/agentit.html): agenttituen esittely —
   MCP-työkalut, käyttöönotto ja jakolinkit rajapintana
+- Laskurisivut (hakuaikeittain, kukin sisältää aidon vastauksen, UKK:n ja
+  valmiin esimerkkisuunnitelman): [Eläkelaskuri](https://varallisuuspolku.com/laskurit/elakelaskuri.html),
+  [FIRE-laskuri](https://varallisuuspolku.com/laskurit/fire-laskuri.html),
+  [Paljonko pitää säästää eläkkeelle](https://varallisuuspolku.com/laskurit/paljonko-pitaa-saastaa-elakkeelle.html),
+  [Osakesäästötili vai arvo-osuustili](https://varallisuuspolku.com/laskurit/osakesaastotili-vai-arvo-osuustili.html)
 - [Lähdekoodi](https://github.com/olavikurola/varallisuuspolku): avoin GitHubissa
 - [MCP-paketti](https://www.npmjs.com/package/varallisuuspolku-mcp):
   laskentamoottori tekoälyagenttien työkaluna (npm, paikallinen)

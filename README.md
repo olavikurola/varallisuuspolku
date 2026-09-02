@@ -20,6 +20,8 @@ kävijää eikä näe suunnitelman sisältöä.
 ## Ominaisuudet
 
 - **Piirtopöytä** — kokoruudun piirtotila (⛶ tai F): valitse käyrän segmentti, tapahtuma, eläkeikäviiva tai tavoitepiste ja raahaa; chippi näyttää muuttuvan parametrin (vanha → uusi, delta) ja HUD seuraukset haamukäyrää vasten. Toimii myös pelkällä näppäimistöllä (Tab kiertää, nuolet säätävät, Enter muokkaa)
+- **Kysymyskirjasto ja laskurisivut** — yhden napautuksen lavastukset ("Onko varaa eläkkeelle 60-vuotiaana?", "Mitä jos jään vuodeksi työttömäksi?") nykyiseen suunnitelmaan, ja hakuaikeittain omat sivut ([laskurit/](laskurit/)) aidolla vastauksella ja valmiilla esimerkillä
+- **Jakolinkki kantaa koko suunnitelman** — pakattuna (oma synkroninen LZW, −50…60 %), ei palvelinta; vanhat linkit toimivat ennallaan
 - **Käänteisratkaisija** — käyrä on kuin naru: tartuntapiste seuraa osoitinta ja bisektio hakee kuukausisäästön tai kuukausitulon, jolla odotuspolku kulkee pisteen kautta — deterministisesti joka framella
 - **Tavoitepisteet** — 🎯 mittari graafille: pystyvaje ("iässä 55 puuttuu 80 000 €"), saavutusikä ja osuus markkinapoluista, jotka ylittävät pisteen; Ratkaise hakee säästön odotuspolulle tai valitulle varmuustasolle — tiukin piste sitoo
 - **Interaktiivinen aikajana** — varallisuuden kehitys iän ja kalenterivuoden mukaan, odotettu kehitys ja P10–P90-viuhka samasta Monte Carlo -polkujoukosta
