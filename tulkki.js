@@ -1342,7 +1342,7 @@
   // EI AI-kutsua. bear/seqNow on opetuspari: sama karhu eläkkeen alussa vs.
   // heti tänään näyttää sekvenssiriskin suuruuden.
 
-  const STRESS_KEYS = ['bear', 'seqNow', 'crash', 'lost', 'stagf'];
+  const STRESS_KEYS = ['bear', 'seqNow', 'crash', 'lost', 'stagf', 'rates'];
 
   function runMarketStress() {
     const base = JSON.parse(JSON.stringify(serialize()));

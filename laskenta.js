@@ -85,6 +85,11 @@ const STRESS_DEFS = {
   crash:  { name: 'Romahdus −50 % eläkkeen alussa', months: 12, annual: -0.50, from: 'retire' },
   stagf:  { name: 'Stagflaation vuosikymmen', months: 120, annual: 0.02,  from: 'retire' },
   lost:   { name: 'Menetetty vuosikymmen',    months: 120, annual: 0.00,  from: 'retire' },
+  // Korkoriski: suomalainen asuntolaina on tyypillisesti euribor-sidonnainen —
+  // 2022–2023 realisoitunut riski, jota tuottoshokit eivät kuvaa. Pysyvä
+  // +2 %-yks kaikkiin lainoihin nykyhetkestä (rateFixed: true -lainat ohitetaan).
+  // Ei tuotto-overlayta: skenaario lasketaan omalla prepareSim(rateShock)-kontekstilla.
+  rates:  { name: 'Korot +2 %-yks pysyvästi', months: 0,   annual: 0,     from: 'now', rateShock: 2 },
 };
 
 function defaultPro() {
@@ -338,7 +343,10 @@ function portfolioStats(alloc) {
 // (kuukausisäästö, nostotaso): kertaerät, lainanhoito, velka, omaisuuserät.
 // Raahauksen bisektio valmistelee tämän kerran ja ajaa vain runPathia.
 
-function prepareSim(st) {
+function prepareSim(st, opts = {}) {
+  // opts.rateShock: %-yksikköä kaikkien vaihtuvakorkoisten lainojen korkoon
+  // (korkoshokki-stressi ja tornado-herkkyys); rateFixed-lainat ohitetaan
+  const rateShock = opts.rateShock || 0;
   const a0 = st.ageNow;
   const a1 = Math.max(st.ageEnd, a0 + 2);
   const months = Math.round((a1 - a0) * 12);
@@ -430,8 +438,11 @@ function prepareSim(st) {
   const transferTax = new Map(); // id → varainsiirtovero € (popoverin selitteelle)
   // Annuiteettilainan erät ja velkasaldo kuukausittain — jaettu ostetuille
   // (pääoma = hinta − käsiraha) ja omistuksille (pääoma = jäljellä oleva laina)
-  const amort = (e, m0, principal, rate, years) => {
+  const amort = (e, m0, principal, rate0, years) => {
     const n = Math.round(years * 12);
+    // Korkoshokki vaihtuvakorkoisiin (oletus Suomessa); kiinteäkorkoinen ohittaa.
+    // Suomalainen käytäntö: kuukausierä nousee, laina-aika säilyy.
+    const rate = Math.max(0, rate0 + (e.rateFixed ? 0 : rateShock));
     const pmt = loanPayment(principal, rate, years);
     const rm = rate / 100 / 12;
     const mSell = sellMonthOf(e);
@@ -1132,6 +1143,13 @@ function simulate(st, opts = {}) {
     const m0 = clamp(Math.round((retireAge - a0) * 12), 0, months);
     out.stress = ctx.pro.mc.stress.map((key) => {
       const def = STRESS_DEFS[key];
+      // Korkoshokki: ei tuotto-overlayta vaan oma konteksti korotetuilla
+      // lainaerillä (sama muM — kuukaudet ja ikä eivät muutu)
+      if (def.rateShock) {
+        const ctxR = prepareSim(st, { rateShock: def.rateShock });
+        const r = runPath(ctxR, st, withdrawal, retireAge, muM, { clamp0: true, collect: true });
+        return { key, name: def.name, arr: r.arr, depletion: r.depletion };
+      }
       const rM = Math.pow(1 + def.annual, 1 / 12) - 1;
       // from:'now' = shokki alkaa heti (sekvenssiriskin vertailupari:
       // sama karhu säästövaiheessa on lievä, eläkkeen alussa kallis)
@@ -1222,13 +1240,19 @@ function sustainableByAge(st, step = 2) {
 // loppuvarallisuuteen odotuspolulla. Palauttaa suurimmasta pienimpään.
 function tornado(st) {
   const wEnd0 = baseWEnd(st);
-  const bump = (mut, label) => {
+  const bump = (mut, label, opts) => {
     const c = JSON.parse(JSON.stringify(st));
     mut(c);
-    return { label, delta: baseWEnd(c) - wEnd0 };
+    return { label, delta: baseWEnd(c, opts) - wEnd0 };
   };
   const rows = [];
   const retire = st.events.find((e) => e.type === 'retirement');
+  // Lainakorko omana muuttujanaan, kun suunnitelmassa on vaihtuvakorkoinen laina
+  // (suomalaisen kotitalouden todellisin riski — auditointi 8/2026)
+  if (st.events.some((e) => !e.rateFixed && ((e.financing === 'loan' && e.amount < 0) || (e.owned && e.loanLeft > 0)))) {
+    rows.push(bump(() => {}, 'Lainakorko +1 %-yks', { rateShock: 1 }));
+    rows.push(bump(() => {}, 'Lainakorko −1 %-yks', { rateShock: -1 }));
+  }
   rows.push(bump((c) => { proMuBump(c, 1); }, 'Tuotto-odotus +1 %-yks'));
   rows.push(bump((c) => { proMuBump(c, -1); }, 'Tuotto-odotus −1 %-yks'));
   rows.push(bump((c) => { c.monthly *= 1.1; }, 'Kuukausisäästö +10 %'));
@@ -1246,8 +1270,8 @@ function tornado(st) {
 }
 
 // Odotuspolun loppuvarallisuus ilman MC:tä (tornadon evaluointi)
-function baseWEnd(st) {
-  const ctx = prepareSim(st);
+function baseWEnd(st, opts) {
+  const ctx = prepareSim(st, opts || {});
   const retire = ctx.retire;
   const retAge = retire ? retire.age : null;
   const wd = retire ? retire.withdrawal : 0;

@@ -96,19 +96,19 @@ statik.listen(8133, async () => {
     const labels = boxes.map((x) => x.closest('label').textContent);
     return { n: boxes.length, txt: labels.join(' | ') };
   });
-  ok(pro.n === 5, 'Pro-panelissa 5 stressiskenaariota (' + pro.n + ')');
+  ok(pro.n === 6, 'Pro-panelissa 6 stressiskenaariota (' + pro.n + ')');
   ok(pro.txt.includes('Sama karhu jo tänään') && pro.txt.includes('heti nykyhetkestä'), 'seqNow-selite oikein');
   ok(pro.txt.includes('Romahdus −50'), 'crash-skenaario listassa');
 
-  // 5) Markkinatestin taulukko: 5 stressiä + dynaaminen otsikko (moottoriajo suoraan)
+  // 5) Markkinatestin taulukko: 6 stressiä + dynaaminen otsikko (moottoriajo suoraan)
   const mt = await pg.evaluate(() => {
     const mod = JSON.parse(JSON.stringify(serialize()));
     mod.proOn = true;
-    mod.pro = { mc: { stress: ['bear', 'seqNow', 'crash', 'lost', 'stagf'] } };
+    mod.pro = { mc: { stress: ['bear', 'seqNow', 'crash', 'lost', 'stagf', 'rates'] } };
     const s = simulate(mod);
     return { n: s.stress.length, names: s.stress.map((x) => x.name).join(' | ') };
   });
-  ok(mt.n === 5, 'moottori ajaa 5 stressiä selaimessa');
+  ok(mt.n === 6, 'moottori ajaa 6 stressiä selaimessa (ml. korkoshokki)');
   ok(mt.names.includes('Sama karhu jo tänään'), 'uudet skenaariot moottorissa');
 
   await ctx.close();

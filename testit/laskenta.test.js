@@ -824,5 +824,27 @@ console.log('Tulokatko (income_gap) tapahtumatyyppinä');
   ok(!c.lump.get(m0), 'ei kertaerää');
 }
 
+/* ===== Korkoshokki-stressi (erä 7): +2 %-yks vaihtuvakorkoisiin lainoihin ===== */
+console.log('Korkoshokki');
+{
+  const plan = (rateFixed) => ({ ageNow: 30, ageEnd: 90, startCapital: 30000, monthly: 2200, savingsGrowth: 0,
+    allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true,
+    proOn: true, pro: Object.assign(L.defaultPro(), { mc: Object.assign(L.defaultPro().mc, { stress: ['rates', 'bear'] }) }),
+    events: [{ id: 1, type: 'home', age: 32, amount: -300000, financing: 'loan', down: 30000, rate: 3.0, years: 25, isAsset: true, appr: 2, rateFixed: !!rateFixed },
+      { id: 2, type: 'retirement', age: 65, withdrawal: 2200, pension: 1500, pensionAge: 65 }] });
+  const c0 = L.prepareSim(plan(false));
+  const c2 = L.prepareSim(plan(false), { rateShock: 2 });
+  const m = (32 - 30) * 12 + 1;
+  ok(c2.payments[m] > c0.payments[m] * 1.2, 'korkoshokki nostaa kuukausierää (' + Math.round(c0.payments[m]) + ' → ' + Math.round(c2.payments[m]) + ')');
+  ok(close(L.prepareSim(plan(true), { rateShock: 2 }).payments[m], c0.payments[m], 1e-9), 'kiinteäkorkoinen laina (rateFixed) ei reagoi');
+  const s = L.simulate(plan(false));
+  const rates = s.stress.find((x) => x.key === 'rates');
+  ok(!!rates && rates.name.includes('Korot'), 'rates-stressi ajetaan simulaatiossa');
+  ok(rates.arr[s.months] < s.exp[s.months], 'korkoshokki pienentää loppuvarallisuutta');
+  const bear = s.stress.find((x) => x.key === 'bear');
+  ok(!!bear, 'tuottoshokit toimivat ennallaan rinnalla');
+  ok(L.STRESS_DEFS.rates && L.STRESS_DEFS.rates.rateShock === 2, 'STRESS_DEFS.rates määritelty');
+}
+
 console.log(failed ? `\n${failed} TESTIÄ EPÄONNISTUI` : '\nKaikki testit läpi.');
 process.exit(failed ? 1 : 0);

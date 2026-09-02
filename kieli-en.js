@@ -367,6 +367,7 @@ if (typeof VP_KIELI !== 'undefined' && VP_KIELI === 'en') {
   "Korko-oletus": "Interest rate assumption",
   "Korkopaino": "Bond weight",
   "Korot": "Bonds",
+  "Korot +2 %-yks pysyvästi": "Rates +2 pp permanently",
   "korotettu": "higher",
   "Korrelaatiomatriisi": "Correlation matrix",
   "korrelaatiomatriisi — perustila olettaa täyskorrelaation": "correlation matrix — the default assumes full correlation",
@@ -1005,6 +1006,8 @@ if (typeof VP_KIELI !== 'undefined' && VP_KIELI === 'en') {
   "Yhteys Tulkkiin epäonnistui — tarkista verkko.": "Connection to Tulkki failed — check your network.",
   "Yksityisselaimessa tiedot katoavat ikkunan sulkeutuessa — ota varmuuskopio": "In private browsing, data disappears when the window closes — make a backup",
   "Yleisin: {0}": "Most common: {0}",
-  "ylimmässä neljänneksessä": "in the top quarter"
+  "ylimmässä neljänneksessä": "in the top quarter",
+  "Lainakorko +1 %-yks": "Loan rate +1 pp",
+  "Lainakorko −1 %-yks": "Loan rate −1 pp"
 });
 }

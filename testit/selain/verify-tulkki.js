@@ -237,7 +237,7 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   const mCols = await page.locator('.tk-cmp-tbl').last().locator('tr:first-child th').allTextContents();
   ok(mCols.length === 3 && /Loppuvar/.test(mCols[1]) && /riittävät/.test(mCols[2]), 'metriikkasarakkeet (loppuvarallisuus, riittävyys)', JSON.stringify(mCols));
   const mRows = await page.locator('.tk-cmp-tbl').last().locator('tr:not(:first-child) th').allTextContents();
-  ok(mRows.length === 6 && mRows[0] === 'Nykyinen', 'Nykyinen + 5 stressiskenaariota riveinä (25.7. laajennus)', JSON.stringify(mRows));
+  ok(mRows.length === 7 && mRows[0] === 'Nykyinen', 'Nykyinen + 6 stressiskenaariota riveinä (korkoshokki 2.9.2026)', JSON.stringify(mRows));
   ok(mRows.some((h) => /karhu/i.test(h)), 'karhumarkkina-skenaario mukana');
   ok(await page.evaluate(() => state.monthly) === stM, 'markkinatesti ei muuttanut tilaa (lukupohjainen)');
 
