@@ -360,82 +360,52 @@ korjattu. Älä palauta väitettä ilman että toteutus muuttuu.
 - TestFlight ensin → X-toivojat DM-kutsulla → julkinen release manuaalisesti
 
 
-## Versio 1.2 — What's New (luonnos 2.9.2026)
+## Versio 1.2 — What's New (luonnos 2.9.2026, kuluttajamuoto)
 
 Kenttä: ASC → versiosivu 1.2 → "What's New in This Version" (max 4000 merkkiä),
-täytetään erikseen molemmille kielille. Sisältö = web-erät 1–7 (2.9.2026),
-jotka kulkevat appiin sync:ios:n kautta; laskurisivut (laskurit/) ovat
-vain webissä eivätkä kuulu tähän tekstiin.
+täytetään erikseen molemmille kielille. Viisi bullettia, hyöty edellä, ei
+teknisiä termejä; "jotkin luvut voivat muuttua" on tarkoituksellinen
+rehellisyysrivi. Sisältö = web-erät 1–7 (2.9.2026); laskurisivut ovat vain
+webissä eivätkä kuulu tähän.
 
-### Suomeksi (fi) — 1411 merkkiä
-
-```
-Riittävätkö rahat? — vastaus on nyt ensimmäinen luku.
-
-Työtilan ensimmäinen tiili kertoo suoraan, riittävätkö varat ja kuinka
-suurella osalla markkinapoluista. Uusi kysymyskirjasto lavastaa yhdellä
-napautuksella tilanteita omaan suunnitelmaasi: "Onko varaa eläkkeelle
-60-vuotiaana?", "Mitä jos jään vuodeksi työttömäksi?", "Entä jos saan
-50 000 € perinnön?" — Ctrl+Z palauttaa.
-
-Tekoälyapuri Tulkki:
-• Näet ennen kysymistä täsmälleen, mitä tietoja Tulkille välitetään —
-  napauta tietosuojariviä. Suunnitelmiesi nimet eivät koskaan lähde
-  laitteeltasi
-• Vertailu muihin kertoo rehellisesti, onko luku omasta ikäryhmästäsi
-  vai laajemmasta joukosta
-
-Laskenta tarkentui — osa luvuista muuttuu:
-• Sijoituksista rahoitetut kertamenot ja lainanhoito realisoivat nyt
-  myyntivoittoveron kuten nostot
-• Varainsiirtovero asunnon ja mökin ostossa
-• Työeläke kysytään käteen jäävänä (ETK:n ote on brutto)
-• Jo omistetulle kohteelle voi antaa ostohinnan, jolloin myynnin vero
-  lasketaan todellisesta voitosta
-• Uusi tapahtuma Tulokatko (työttömyys, perhevapaa, sapatti) ja lainoille
-  Kiinteä korko -valinta
-• Pro: korkoshokki-stressi (+2 %-yks) ja lainakorko herkkyysanalyysissä
-
-Lisäksi: jaettu linkki avautuu vastaanottajalle omalla kortillaan,
-jakolinkit ovat noin puolet lyhyempiä, ja tapahtumavihjeet näkyvät jo
-ensimmäisellä käynnillä.
-
-Kaikki laskenta pysyy edelleen omalla laitteellasi: ei tiliä, ei seurantaa.
-```
-
-### English (en-US) — 1382 merkkiä
+### Suomeksi (fi) — 778 merkkiä
 
 ```
-Will the money last? — the answer is now the first number you see.
+Riittävätkö rahat? Vastaus on nyt ensimmäinen luku, jonka näet.
 
-The first tile in the workspace tells you directly whether your assets
-last and on what share of market paths. A new question library stages
-situations onto your own plan with one tap: "Can I afford to retire at
-60?", "What if I'm unemployed for a year?", "What if I inherit
-€50,000?" — undo restores.
+• Kokeile elämää yhdellä napautuksella: "Onko varaa eläkkeelle
+  60-vuotiaana?", "Mitä jos jään vuodeksi työttömäksi?", "Entä jos saan
+  perinnön?" — kumoa palauttaa.
+• Näet ennen kysymistä täsmälleen, mitä Tulkki-apurille lähtee. Nimesi
+  ja suunnitelmiesi nimet eivät koskaan lähde laitteeltasi.
+• Laskenta on entistä tarkempi: verot, varainsiirtovero ja työeläke
+  käteen jäävänä — siksi jotkin luvut voivat muuttua hieman.
+• Uutta suunnitelmaan: tulokatko (työttömyys, perhevapaa, sapatti) ja
+  lainan kiinteä korko. Pro-tilassa myös korkojen nousun stressitesti.
+• Jaettu linkki on puolet lyhyempi, ja sen avaaja saa selkeän
+  vastaanoton.
 
-Tulkki, the AI explainer:
-• See exactly what is sent to Tulkki before you ask — tap the privacy
-  row. Your plan names never leave your device
-• Comparisons with others say honestly whether a figure is from your
-  own age group or a wider one
+Kaikki laskenta pysyy omalla laitteellasi — ei tiliä, ei seurantaa.
+```
 
-More accurate calculation — some figures change:
-• One-off expenses and loan servicing funded from investments now
-  realise capital gains tax, just like withdrawals
-• Transfer tax when buying a home or cottage
-• Pension is asked as take-home (the pension statement shows gross)
-• Give an already-owned asset a purchase price, and the sale is taxed
-  on the actual gain
-• New event Income gap (unemployment, parental leave, sabbatical) and a
-  Fixed rate option for loans
-• Pro: rate-shock stress (+2 pp) and loan rate in the sensitivity analysis
+### English (en-US) — 731 merkkiä
 
-Also: a shared link opens for the recipient with its own card, share
-links are about half as long, and event hints appear on the first visit.
+```
+Will the money last? The answer is now the first number you see.
 
-All calculations still run entirely on your device: no account, no
-tracking.
+• Try life with one tap: "Can I afford to retire at 60?", "What if I'm
+  unemployed for a year?", "What if I inherit?" — undo restores.
+• See exactly what is sent to the Tulkki assistant before you ask. Your
+  name and your plan names never leave your device.
+• More accurate calculation: taxes, transfer tax and take-home pension —
+  so some figures may change slightly.
+• New in your plan: an income gap (unemployment, parental leave,
+  sabbatical) and a fixed-rate loan option. In Pro, a rising-rates
+  stress test too.
+• A shared link is half as long, and whoever opens it gets a clear
+  welcome.
+
+All calculations stay on your device — no account, no tracking.
 ```
 
 **Tarkistettu koodista 2.9.2026:** jokainen kohta vastaa committeja 35683f8…d73beff
