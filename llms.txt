@@ -89,7 +89,9 @@ Keskeiset faktat (päivitetty 2026-09-02):
   valmiin esimerkkisuunnitelman): [Eläkelaskuri](https://varallisuuspolku.com/laskurit/elakelaskuri.html),
   [FIRE-laskuri](https://varallisuuspolku.com/laskurit/fire-laskuri.html),
   [Paljonko pitää säästää eläkkeelle](https://varallisuuspolku.com/laskurit/paljonko-pitaa-saastaa-elakkeelle.html),
-  [Osakesäästötili vai arvo-osuustili](https://varallisuuspolku.com/laskurit/osakesaastotili-vai-arvo-osuustili.html)
+  [Osakesäästötili vai arvo-osuustili](https://varallisuuspolku.com/laskurit/osakesaastotili-vai-arvo-osuustili.html),
+  [Milloin voin jäädä eläkkeelle](https://varallisuuspolku.com/laskurit/milloin-voin-jaada-elakkeelle.html),
+  [Asuntolaina vai sijoittaminen](https://varallisuuspolku.com/laskurit/asuntolaina-vai-sijoittaminen.html)
 - [Lähdekoodi](https://github.com/olavikurola/varallisuuspolku): avoin GitHubissa
 - [MCP-paketti](https://www.npmjs.com/package/varallisuuspolku-mcp):
   laskentamoottori tekoälyagenttien työkaluna (npm, paikallinen)

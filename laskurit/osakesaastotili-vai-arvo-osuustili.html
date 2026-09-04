@@ -29,6 +29,10 @@
     .ls-ukk h3 { font-size: 15.5px; margin: 14px 0 4px; }
     .ls-note { font-size: 12.5px; color: var(--text-faint); line-height: 1.6; margin-top: 22px; }
     .ls-muut { font-size: 13px; color: var(--text-faint); margin-top: 18px; }
+    .ls-tbl h2 { font-size: 20px; margin: 24px 0 6px; }
+    .ls-tbl .ls-tbl-intro { font-size: 14px; margin: 0 0 10px; }
+    .ls-tbl table { width: 100%; }
+    .ls-tbl .ls-note { margin-top: 8px; }
   </style>
   <script type="application/ld+json">
   {
@@ -40,6 +44,16 @@
       { "@type": "Question", "name": "Miten osinkojen verotus eroaa?", "acceptedAnswer": { "@type": "Answer", "text": "Arvo-osuustilillä 85 % osingosta on veronalaista pääomatuloa heti. Osakesäästötilillä ja vakuutuskuoressa osingot kertyvät verotta ja verotetaan vasta nostossa voiton osuutena." } },
       { "@type": "Question", "name": "Onko osakesäästötilillä katto?", "acceptedAnswer": { "@type": "Answer", "text": "Kyllä, talletuksille 100 000 €. Tuotto saa kasvattaa tiliä katon yli. Laskuri varoittaa, kun talletuksesi ylittävät katon." } },
       { "@type": "Question", "name": "Mitä vakuutuskuori maksaa?", "acceptedAnswer": { "@type": "Answer", "text": "Kuorella on oma vuosikulu tilin sisällä olevista varoista. Laskurissa kulun voi asettaa itse — oletuksena se on nolla, jotta vertailu lähtee tasan." } }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Varallisuuspolku", "item": "https://varallisuuspolku.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Osakesäästötili vai arvo-osuustili?", "item": "https://varallisuuspolku.com/laskurit/osakesaastotili-vai-arvo-osuustili.html" }
     ]
   }
   </script>
@@ -78,6 +92,21 @@
     <p>Kumpi voittaa, riippuu osinkotuotosta, sijoitusajasta, kuluista ja siitä, kuinka paljon nostat eläkkeellä vuodessa. Pitkällä sijoitusajalla veron lykkääminen kasvattaa salkkua korkoa korolle; toisaalta osakesäästötilillä on 100 000 euron talletuskatto, eikä tappioita voi vähentää samalla tavalla kuin arvo-osuustilillä.</p>
     <p>Varallisuuspolku laskee kolme tilityyppiä samalla elinkaarimallilla: valitse tili Allokaatio-kortista, aseta osinkotuotto ja kulut, ja vertaa haamukäyrällä. Nostovaiheessa laskuri soveltaa myyntivoittoveron portaita (30 % / 34 % yli 30 000 € vuodessa) ja Pro-tilassa hankintameno-olettamaa.</p>
     <p>Laskuri ei kerro, kumpi tili sinun pitäisi avata. Se näyttää, mitä valinta maksaa tai tuottaa omilla luvuillasi — päätös on sinun.</p>
+
+    <section class="ls-tbl">
+      <h2>Esimerkki: sama salkku kahdella tilillä</h2>
+      <p class="ls-tbl-intro">35-vuotias, sijoituksia 40&nbsp;000&nbsp;€, säästö 800&nbsp;€/kk (+1,5&nbsp;%/v), osakepaino 80&nbsp;%, eläkkeelle 65, työeläke 1&nbsp;500&nbsp;€/kk, luvut nykyrahassa. Osinkotuotto on osa 7&nbsp;%:n kokonaistuotto-odotusta — arvo-osuustilillä siitä menee vero vuosittain, osakesäästötilillä vasta nostossa.</p>
+      <div class="table-scroll"><table class="sum-table">
+        <thead><tr><th>Tili</th><th class="num">Sijoitukset 65-vuotiaana</th><th class="num">Kestävä kuukausitulo</th><th class="num">Verot yhteensä</th></tr></thead>
+        <tbody>
+          <tr><td>Arvo-osuustili, osinkotuotto 3&nbsp;%</td><td class="num">605&nbsp;557&nbsp;€</td><td class="num">3&nbsp;618&nbsp;€/kk</td><td class="num">182&nbsp;699&nbsp;€</td></tr>
+          <tr><td>Osakesäästötili, osinkotuotto 3&nbsp;%</td><td class="num">671&nbsp;688&nbsp;€</td><td class="num">3&nbsp;953&nbsp;€/kk</td><td class="num">233&nbsp;592&nbsp;€</td></tr>
+          <tr><td>Arvo-osuustili, kasvurahastot (osinko 0&nbsp;%)</td><td class="num">671&nbsp;688&nbsp;€</td><td class="num">3&nbsp;953&nbsp;€/kk</td><td class="num">233&nbsp;592&nbsp;€</td></tr>
+          <tr><td>Osakesäästötili, kasvurahastot</td><td class="num">671&nbsp;688&nbsp;€</td><td class="num">3&nbsp;953&nbsp;€/kk</td><td class="num">233&nbsp;592&nbsp;€</td></tr>
+        </tbody>
+      </table></div>
+      <p class="ls-note">Ero syntyy osinkojen verotuksen ajoituksesta; kasvurahastoilla (ei osinkoja) tilit ovat perusversiossa yhtä hyvät. Osakesäästötilin suurempi verosumma johtuu suuremmista nostoista — vero maksetaan myöhemmin ja isommasta salkusta. Osakesäästötilin 100&nbsp;000&nbsp;€:n talletuskatto ei täyty tässä esimerkissä. Laskettu 2026-09-04.</p>
+    </section>
     <div class="ls-cta">
       <a class="btn" href="../#e=~PYiMJnMpON53EQ6GY1FkDgpFNxkhQ5GEOOZ0MJyOhDMJwNMZNkKGgwksWERtN5uOhoNh5hQ4ksXMJ2NJuM5zI5yhEshQxF0NgZsNhvMZTOlFNZzmEnMNDopClRkpY6GNBM5sNJkMsKM1OOZlhxyMtOhR0OR1sIijJ4s1otRlOxlldULcCrU-hx0PJwrg6EVjOhpsZtuZ0EUOgl-G1BO8gNBkORhO9lHQykknvpuOZplU-GsyEWazkqIMFhWMPpdhxkNJ2LJpMpsicLxJjMeHv5vjAiPo">Osakesäästötili, 3 % osinkotuotto →</a>
       <a class="btn" href="../#e=~PYiMJnMpON53EQ6GY1FkDgpFNxkhQ5GEOOZ0MJyOhDMJwNMZNkKGgwksWERtN5uOhoNh5hQ4ksXMJ2NJuM5zI5yhEshQxF0NgZsNhvMZTOlFNZzmEnMNDopClRkpY6GNBM5sNJkMsKM1OOZlhxyMtOhR0OR1sIijJ4s1otRlOxlldULcCrU-hx0PJwrg6EVjOhpsZtuZ0EUOgl-G1BO8gNBkORhO9lHQykknvpuOZplU-GsyEWazkqIMFhWMPpdhxkNJ2LJpMpsicLxJjMeHv5hN-HPo">Arvo-osuustili, sama salkku →</a>
@@ -94,7 +123,7 @@
       <p>Kuorella on oma vuosikulu tilin sisällä olevista varoista. Laskurissa kulun voi asettaa itse — oletuksena se on nolla, jotta vertailu lähtee tasan.</p>
     </section>
 
-    <p class="ls-muut">Muut laskurit: <a href="elakelaskuri.html">Eläkelaskuri</a> · <a href="fire-laskuri.html">FIRE-laskuri</a> · <a href="paljonko-pitaa-saastaa-elakkeelle.html">Paljonko pitää säästää eläkkeelle</a> · <a href="../validointi.html">Näin laskenta on validoitu</a> · <a href="../analytiikka.html">Miten muut suunnittelevat</a></p>
+    <p class="ls-muut">Muut laskurit: <a href="elakelaskuri.html">Eläkelaskuri</a> · <a href="fire-laskuri.html">FIRE-laskuri</a> · <a href="paljonko-pitaa-saastaa-elakkeelle.html">Paljonko pitää säästää eläkkeelle</a> · <a href="milloin-voin-jaada-elakkeelle.html">Milloin voin jäädä eläkkeelle</a> · <a href="asuntolaina-vai-sijoittaminen.html">Asuntolainan lyhennys vai sijoittaminen</a> · <a href="../validointi.html">Näin laskenta on validoitu</a> · <a href="../analytiikka.html">Miten muut suunnittelevat</a></p>
     <p class="ls-note">Varallisuuspolku ei anna sijoitusneuvontaa eikä suosittele tuotteita. Laskelma on suuntaa antava havainnollistus omilla oletuksillasi — ei ennuste.</p>
   </main>
   <script src="../kieli.js" defer></script>

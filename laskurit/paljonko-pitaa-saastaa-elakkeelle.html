@@ -29,6 +29,10 @@
     .ls-ukk h3 { font-size: 15.5px; margin: 14px 0 4px; }
     .ls-note { font-size: 12.5px; color: var(--text-faint); line-height: 1.6; margin-top: 22px; }
     .ls-muut { font-size: 13px; color: var(--text-faint); margin-top: 18px; }
+    .ls-tbl h2 { font-size: 20px; margin: 24px 0 6px; }
+    .ls-tbl .ls-tbl-intro { font-size: 14px; margin: 0 0 10px; }
+    .ls-tbl table { width: 100%; }
+    .ls-tbl .ls-note { margin-top: 8px; }
   </style>
   <script type="application/ld+json">
   {
@@ -40,6 +44,16 @@
       { "@type": "Question", "name": "Mitä laskuri olettaa tuotosta?", "acceptedAnswer": { "@type": "Answer", "text": "Oletuksena osakkeet 7 %, korot 3 % ja käteinen 1,5 % vuodessa nimellisesti, inflaatio 2 %. Kaikki ovat muokattavissa, ja oletukset on dokumentoitu validointisivulla." } },
       { "@type": "Question", "name": "Riittääkö 100 € kuukaudessa?", "acceptedAnswer": { "@type": "Answer", "text": "Se riippuu iästäsi ja tavoitteestasi. Laskuri näyttää, mihin 100 €/kk kantaa — ja mitä tavoitteesi vaatisi. Aloita omilla luvuillasi." } },
       { "@type": "Question", "name": "Entä jos en pysty säästämään joka kuukausi?", "acceptedAnswer": { "@type": "Answer", "text": "Porrasta säästö ikävaiheittain tai lisää tulokatko (työttömyys, perhevapaa). Laskuri näyttää katkon hinnan suunnitelman lopussa." } }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Varallisuuspolku", "item": "https://varallisuuspolku.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Paljonko pitää säästää eläkkeelle?", "item": "https://varallisuuspolku.com/laskurit/paljonko-pitaa-saastaa-elakkeelle.html" }
     ]
   }
   </script>
@@ -78,6 +92,20 @@
     <p>Lähtökohta on työeläke. Suomalaisella palkansaajalla se kattaa tyypillisesti 40–60 % eläkkeen tulotarpeesta; loput pitää tulla omista sijoituksista. Jos tulotarve on 2 500 € kuukaudessa ja käteen jäävä työeläke 1 500 €, sijoitusten on kannettava 1 000 € kuukaudessa — ja vero sen päälle, koska nostosta menee myyntivoittovero voiton osuudesta.</p>
     <p>Varallisuuspolku ratkaisee säästötarpeen deterministisesti odotetulla tuotolla tai valitsemallasi varmuustasolla Monte Carlo -poluista. Voit porrastaa säästön elämänvaiheittain (vähemmän lapsivuosina, enemmän myöhemmin) ja lisätä isot hankinnat lainoineen — laskuri näyttää, miten asunnon osto tai lapsi muuttaa tarvittavaa säästöä.</p>
     <p>Palvelu ei suosittele tuotteita eikä ota kantaa siihen, mihin säästät. Se laskee, kuinka paljon — sinun omilla oletuksillasi, joita voit muuttaa.</p>
+
+    <section class="ls-tbl">
+      <h2>Esimerkki: tarvittava kuukausisäästö</h2>
+      <p class="ls-tbl-intro">35-vuotias, sijoituksia 40&nbsp;000&nbsp;€, osakepaino 80&nbsp;%, säästö kasvaa 1,5&nbsp;%/v, työeläkearvio 1&nbsp;500&nbsp;€/kk käteen 65-vuotiaana, luvut nykyrahassa, varat mitoitettu 90-vuotiaaksi.</p>
+      <div class="table-scroll"><table class="sum-table">
+        <thead><tr><th>Tulotarve eläkkeellä</th><th class="num">Eläkkeelle 65 (mediaanipolku)</th><th class="num">Eläkkeelle 65 (85&nbsp;% varmuus)</th><th class="num">Eläkkeelle 60 (mediaanipolku)</th></tr></thead>
+        <tbody>
+          <tr><td>2&nbsp;000&nbsp;€/kk</td><td class="num">55&nbsp;€/kk</td><td class="num">206&nbsp;€/kk</td><td class="num">391&nbsp;€/kk</td></tr>
+          <tr><td>2&nbsp;500&nbsp;€/kk</td><td class="num">242&nbsp;€/kk</td><td class="num">514&nbsp;€/kk</td><td class="num">675&nbsp;€/kk</td></tr>
+          <tr><td>3&nbsp;000&nbsp;€/kk</td><td class="num">433&nbsp;€/kk</td><td class="num">829&nbsp;€/kk</td><td class="num">963&nbsp;€/kk</td></tr>
+        </tbody>
+      </table></div>
+      <p class="ls-note">Säästö tarkoittaa tämän päivän summaa, joka kasvaa palkkakehityksen mukana 1,5&nbsp;%/v. 60-vuotiaana eläköityvän työeläke on pienempi (karttuma päättyy) ja välivuodet 60–65 katetaan kokonaan sijoituksista. Laskettu 2026-09-04.</p>
+    </section>
     <div class="ls-cta">
       <a class="btn" href="../#e=~PYiMJnMpON53EQ6GY1FkDgpFNxkhQ5GEOOZ0MJyOhDMJwNMZNkKGgwksWERtN5uOhoNh5hQ1ksXMJ2NJuM5zI5yhEshQxF0NgZsNhvMZTOlFNZzhQ4k5hodFIUqMlLHQxoJnNhpMhlhRmp5zMsOORlp8KOhyOtiEUZPFntNrMp2MsrqpbgVbn0OOh5OFdHQish0NNkNt0Ogih0Ev42oJ3kBoMhyMJ3sw6GUxk9-NxzNMqn2Zh2bzsqIMFhWNhxnN-WERzmk2M4iPpdPo">Tarvittava säästö eläkkeelle 65 v, 2 500 €/kk →</a>
       <a class="btn" href="../#e=~PYiMJnMpON53EQ6GY1FkDgpFNxkhQ5GEOOZ0MJyOhDMJwNMZNkKGgwksWERtN5uOhoNh5hQ1ksXMJ2NJuM5zI5yhEshQxF0NgZsNhvMZTOlFNZzhQ4k5hodFIUqMlLHQxoJnNhpMhlhRmp5zMsOORlp8KOhyOtiEUZPFntNrMp2MsrqpbgVbn0OOh5OFdHQish0NNkNt0Ogih0Ev42k53kBoMhyMJ3sw6GUxk9-NxzNMqn2Zh2bzsqIMFhQ2rBvywiOc0mxnER9Lp9">Sama eläkkeelle 60 v →</a>
@@ -95,7 +123,7 @@
       <p>Porrasta säästö ikävaiheittain tai lisää tulokatko (työttömyys, perhevapaa). Laskuri näyttää katkon hinnan suunnitelman lopussa.</p>
     </section>
 
-    <p class="ls-muut">Muut laskurit: <a href="elakelaskuri.html">Eläkelaskuri</a> · <a href="fire-laskuri.html">FIRE-laskuri</a> · <a href="osakesaastotili-vai-arvo-osuustili.html">Osakesäästötili vai arvo-osuustili</a> · <a href="../validointi.html">Näin laskenta on validoitu</a> · <a href="../analytiikka.html">Miten muut suunnittelevat</a></p>
+    <p class="ls-muut">Muut laskurit: <a href="elakelaskuri.html">Eläkelaskuri</a> · <a href="fire-laskuri.html">FIRE-laskuri</a> · <a href="osakesaastotili-vai-arvo-osuustili.html">Osakesäästötili vai arvo-osuustili</a> · <a href="milloin-voin-jaada-elakkeelle.html">Milloin voin jäädä eläkkeelle</a> · <a href="asuntolaina-vai-sijoittaminen.html">Asuntolainan lyhennys vai sijoittaminen</a> · <a href="../validointi.html">Näin laskenta on validoitu</a> · <a href="../analytiikka.html">Miten muut suunnittelevat</a></p>
     <p class="ls-note">Varallisuuspolku ei anna sijoitusneuvontaa eikä suosittele tuotteita. Laskelma on suuntaa antava havainnollistus omilla oletuksillasi — ei ennuste.</p>
   </main>
   <script src="../kieli.js" defer></script>
