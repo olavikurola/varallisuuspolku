@@ -206,7 +206,8 @@
       varallisuusElakkeellaEur: s.wAtRet != null ? Math.round(s.wAtRet) : null,
       verotYhteensaEur: Math.round(s.taxPaid || 0),
       elakeika: ret ? ret.age : null,
-      tyoelakeEurKk: ret && ret.pension > 0 ? Math.round(ret.pension) : 0,
+      tyoelakeEurKk: s.pension != null ? Math.round(s.pension) : (ret && ret.pension > 0 ? Math.round(ret.pension) : 0),
+      tyoelakeArvioEurKk: ret && ret.pension > 0 ? Math.round(ret.pension) : 0,
       kuukausituloTarveEurKk: ret ? Math.round(ret.withdrawal || 0) : null,
     };
     // Vuosivirrat harvennettuna (~max 20 riviä): eläkevuosi ja viimeinen aina mukaan

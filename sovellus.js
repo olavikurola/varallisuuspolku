@@ -711,6 +711,7 @@ function applySaved(data) {
         // Työeläke: puuttuva = 0 (vanhat linkit ennallaan), ei uutta oletusta
         e.pension = numOk(e.pension) ? Math.max(0, e.pension) : 0;
         e.pensionAge = numOk(e.pensionAge) ? clamp(e.pensionAge, 0, 120) : 65;
+        if (e.pensionFixed === true) e.pensionFixed = true; else delete e.pensionFixed;
       } else {
         if (!numOk(e.amount)) e.amount = EVENT_TYPES[e.type].amount || 0;
         if (e.financing !== 'loan') delete e.financing;
@@ -1142,7 +1143,8 @@ function summaryPoints(s) {
     else pts.push({ html: t('Jään eläkkeelle iässä {0}, tavoitteena {1} kuukausitulo{2}.', ageStr, wd, confSuffix) });
     if (s.pension > 0) {
       const draw = Math.max(0, s.withdrawal - s.pension);
-      pts.push({ html: t('Lakisääteinen työeläkkeeni on <b>{0}/kk</b> (alk. {1} v) — sijoituksista nostan noin <b>{2}/kk</b>', fmtEur(s.pension), Math.round(s.pensionAge), fmtEur(draw)) + (state.tax ? t(' (+ myyntivoittovero)') : '') + '.' });
+      pts.push({ html: t('Lakisääteinen työeläkkeeni on <b>{0}/kk</b> (alk. {1} v) — sijoituksista nostan noin <b>{2}/kk</b>', fmtEur(s.pension), Math.round(s.pensionAge), fmtEur(draw)) + (state.tax ? t(' (+ myyntivoittovero)') : '') + '.'
+        + (s.pensionInput > s.pension + 0.5 ? ' ' + t('Arvioni työeläkeiässä on {0}/kk — jään eläkkeelle aiemmin, joten karttuma päättyy.', fmtEur(s.pensionInput)) : '') });
     }
     if (state.tax && s.taxPaid > 0.5) {
       pts.push({ html: t('Varaudun eläkeaikana yhteensä noin <b>{0}</b> myyntivoittoveroon (30/34&nbsp;% nostojen voitto-osuudesta).', fmtEur(s.taxPaid)) });
@@ -2362,6 +2364,28 @@ function showSharedWelcome(hadOwn) {
    käyttäjä tekee suunnitelman ja menettää sen. Pieni vihje + linkin kopiointi
    kerran istunnossa; ei pakoteta ulos (iOS ei salli), vain kerrotaan. */
 const INAPP_RE = /FBAN|FBAV|FB_IAB|Instagram|LinkedInApp|Line\/|MicroMessenger|Twitter|TikTok|Snapchat|; wv\)|\bWebView\b/i;
+// Laskenta tarkentui 4.9.2026 (mediaanipäälinja + työeläke seuraa eläkeikää):
+// palaava käyttäjä näkee kerran palkin, josta pääsee validointisivun muutoslokiin.
+// Uudelle käyttäjälle ei ole "aiempaa" johon verrata → lippu asetetaan hiljaa.
+function showLaskentaNotice() {
+  const KEY = 'vp-ilmoitus-laskenta-2026-09';
+  try {
+    if (localStorage.getItem(KEY) === '1') return;
+    localStorage.setItem(KEY, '1');
+    if (visitKind !== 'returning') return;
+  } catch (e) { return; }
+  track('Vihje näytetty', { vihje: 'laskenta-2026-09' });
+  const b = document.createElement('div');
+  b.className = 'inapp-hint';
+  b.setAttribute('role', 'status');
+  b.innerHTML =
+    `<span>${t('Laskenta tarkentui 4.9.2026: päälinja on nyt tyypillinen (mediaani) kehitys ja työeläke seuraa eläkeikää — luvut voivat olla aiempaa varovaisemmat.')}</span>` +
+    `<a class="btn ghost" href="validointi.html">${t('Mitä muuttui')}</a>` +
+    `<button type="button" class="inapp-x" aria-label="${t('Sulje')}">✕</button>`;
+  b.querySelector('.inapp-x').addEventListener('click', () => b.remove());
+  document.body.appendChild(b);
+}
+
 function showInAppHint() {
   try {
     if (vpNativeApp || !INAPP_RE.test(navigator.userAgent)) return;
@@ -2408,6 +2432,8 @@ try {
 // In-app-selainvihje ei kilpaile rampin/kortin kanssa: se on erillinen palkki
 // alareunassa ja tulee vasta kun ensimmäinen näkymä on asettunut
 setTimeout(showInAppHint, 2500);
+// Kertailmoitus laskennan tarkennuksesta (4.9.2026) vain palaaville käyttäjille
+setTimeout(showLaskentaNotice, 3200);
 // Kapealla näytöllä Pro-kytkin siirtyy tapahtumakortin alle: ensikertalaiselle
 // ammattilaissäädöt heti graafin alla olivat ennenaikaiset, ja tapahtumapaletti
 // (jonne halutaan) jäi kaksi ruudullista alemmas (imaisu-ohjelma A4)

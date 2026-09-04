@@ -144,6 +144,7 @@ function buildDonationPayload(st, s) {
         pension: round2sig(e.pension || 0),
       };
       if (e.pensionAge != null) ev.pensionAge = Math.round(e.pensionAge);
+      if (e.pensionFixed === true) ev.pensionFixed = true;
       if (e.goal) ev.goal = e.goal;
       if (e.conf != null) ev.conf = e.conf;
       events.push(ev);

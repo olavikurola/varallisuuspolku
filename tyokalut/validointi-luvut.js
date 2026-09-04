@@ -3,7 +3,9 @@
    Ajo: node validointi-luvut.js */
 const L = require('../laskenta.js');
 
-const k = Math.pow(1.07, 1 / 12);
+// Päälinja kulkee mediaanidriftillä (4.9.2026): k = (1+μ)^(1/12)·e^(−σ²/24), σ = 16 % (100 % osakkeet)
+const drag = Math.exp(-0.16 * 0.16 / 24);
+const k = Math.pow(1.07, 1 / 12) * drag;
 const fmt = (v) => v.toLocaleString('fi-FI', { maximumFractionDigits: 2 });
 const row = (name, hand, engine) =>
   console.log(`${name}\n  käsin:    ${fmt(hand)}\n  moottori: ${fmt(engine)}\n  ero:      ${Math.abs(hand - engine).toExponential(2)}\n`);
@@ -11,7 +13,7 @@ const row = (name, hand, engine) =>
 // 1) Kertasijoitus 50 000 €, 100 % osakkeet (7 %/v), 10 v, ei veroa
 const acc = { ageNow: 30, ageEnd: 40, startCapital: 50000, monthly: 0, savingsGrowth: 0,
   allocStocks: 100, allocBonds: 0, glide: false, real: false, tax: false, events: [] };
-row('1) Kertasijoitus S·1,07^10', 50000 * Math.pow(1.07, 10), L.simulate(acc).exp[120]);
+row('1) Kertasijoitus S·k^120 (mediaanidrift)', 50000 * Math.pow(k, 120), L.simulate(acc).exp[120]);
 
 // 2) Kuukausisäästö 500 €/kk, 7 %/v, 10 v — annuiteetin päätearvo
 const sav = { ...acc, startCapital: 0, monthly: 500 };
@@ -32,7 +34,7 @@ row('4) Nostovaihe S·k^120 − W·(k^120−1)/(k−1)',
 
 // 5) Inflaatiokorjaus (Fisher): 50 000 €, 7 % nimellinen, 2 % inflaatio, 10 v
 const rl = { ...acc, real: true };
-row('5) Fisher S·(1,07/1,02)^10', 50000 * Math.pow(1.07 / 1.02, 10), L.simulate(rl).exp[120]);
+row('5) Fisher S·((1,07/1,02)^(1/12)·d)^120', 50000 * Math.pow(Math.pow(1.07 / 1.02, 1 / 12) * drag, 120), L.simulate(rl).exp[120]);
 
 // 6) Omaisuuserä: 220 000 € asunto, +2 %/v, arvo 10 v kohdalla
 const ast = { ...acc, startCapital: 0,

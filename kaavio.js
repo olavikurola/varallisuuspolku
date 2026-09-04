@@ -808,11 +808,13 @@ function openPopover(id) {
         : '') +
       `<div class="row2">` +
       `<label class="field"><span class="field-label">${t('Työeläke käteen')} <small>${t('netto — ETK:n ote näyttää bruton, vähennä n. 20–25 %')}</small></span>` +
-      `<span class="input"><input id="pv-pen" type="number" min="0" step="100" value="${penVal}" title="${t('Arvio käteen jäävästä työeläkkeestä kuukaudessa. Työeläke on ansiotuloa: ETK:n bruttoarviosta jää verojen jälkeen tyypillisesti 75–80 %.')}" /><em>${VP_YKS_EKK}</em></span></label>` +
+      `<span class="input"><input id="pv-pen" type="number" min="0" step="100" value="${penVal}" title="${t('Arvio käteen jäävästä työeläkkeestä kuukaudessa työeläkeiässä, jos työ jatkuu siihen asti (ETK:n arvio tehdään samoin). Työeläke on ansiotuloa: ETK:n bruttoarviosta jää verojen jälkeen tyypillisesti 75–80 %. Jos jäät eläkkeelle aiemmin, laskenta pienentää eläkettä päättyvän karttuman verran.')}" /><em>${VP_YKS_EKK}</em></span></label>` +
       `<label class="field"><span class="field-label">${t('Eläke alkaa')}</span>` +
       `<span class="input"><input id="pv-penage" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${penAgeVal}" /><em>${VP_YKS_V}</em></span></label>` +
       `</div>` +
       `<p class="note pen-note" id="pv-pen-note"></p>` +
+      `<label class="toggle"><input id="pv-penfixed" type="checkbox" ${ev.pensionFixed ? 'checked' : ''} /><span class="switch"></span>` +
+      `<span>${t('Työeläke ei riipu eläkeiästä')} <small>${t('arvio on laskettu valmiiksi omaan eläkeikääni')}</small></span></label>` +
       (g === 'saving' || g === 'age' ? `<p class="note req-note" id="pv-req"></p>` : '');
   } else if (def.metric) {
     // Tavoitepiste: mittari, ei kassavirtaa — vain ikä ja tavoitesumma
@@ -1147,12 +1149,26 @@ function openPopover(id) {
       note.innerHTML = t('Ei työeläkettä — koko kuukausitulo nostetaan sijoituksista.');
       return;
     }
-    const draw = Math.max(0, wdEff - p);
-    const paStr = Math.round(ev.pensionAge != null ? ev.pensionAge : 65);
-    note.innerHTML = t('Työeläke kattaa <b>{0}/kk</b> (alk. {1} v). ', fmtEur(p), paStr) +
+    // Eläkeiän mukainen työeläke: karttuma päättyy, jos eläkkeelle jäädään
+    // ennen työeläkeikää (sama sääntö kuin moottorissa, laskenta.js pensionAt)
+    const retA = sim && sim.retireAge != null ? sim.retireAge : ev.age;
+    const pa = ev.pensionAge != null ? ev.pensionAge : 65;
+    const pEff = pensionAt({ pension0: p, pensionAge: pa, pensionFixed: !!ev.pensionFixed }, retA);
+    const draw = Math.max(0, wdEff - pEff);
+    const paStr = Math.round(pa);
+    const head = pEff < p - 0.5
+      ? t('Eläkkeelle {0} v → karttuma päättyy: työeläke arviolta <b>{1}/kk</b> alk. {2} v (arviosi työeläkeiässä {3}/kk). ', Math.round(retA), fmtEur(pEff), paStr, fmtEur(p))
+      : t('Työeläke kattaa <b>{0}/kk</b> (alk. {1} v). ', fmtEur(p), paStr);
+    note.innerHTML = head +
       (draw > 0 ? t('Sijoituksista noin <b>{0}/kk</b>{1}.', fmtEur(draw), state.tax ? t(' + vero') : '') : t('Sijoituksia ei tarvitse nostaa.'));
   };
   updatePenNote();
+  const penFixed = $('pv-penfixed');
+  if (penFixed) penFixed.addEventListener('change', (e) => {
+    if (e.target.checked) ev.pensionFixed = true; else delete ev.pensionFixed;
+    updatePenNote();
+    renderAllKeepPopover();
+  });
   const goalsBox = $('pv-goals');
   if (goalsBox) for (const b of goalsBox.querySelectorAll('button')) {
     b.addEventListener('click', () => {

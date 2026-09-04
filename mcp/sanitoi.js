@@ -155,6 +155,7 @@ function sanitoiSuunnitelma(data) {
       e.withdrawal = numOk(raw.withdrawal) ? Math.max(0, raw.withdrawal) : def.withdrawal;
       e.pension = numOk(raw.pension) ? Math.max(0, raw.pension) : 0;
       e.pensionAge = numOk(raw.pensionAge) ? clamp(raw.pensionAge, 0, 120) : 65;
+      if (raw.pensionFixed === true) e.pensionFixed = true; // työeläke ei riipu eläkeiästä (karttuma-säätö pois)
       if (raw.goal != null) {
         if (!['manual', 'withdrawal', 'age', 'saving'].includes(raw.goal)) {
           virhe(`eläketapahtuman goal "${raw.goal}" on tuntematon — sallitut: manual, withdrawal, age, saving.`);

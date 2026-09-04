@@ -154,7 +154,9 @@ console.log('Pro: markkinaoletukset');
   const cov = L.simulate(st2);
   const base = L.simulate(plan());
   ok(cov.successProb >= base.successProb, 'hajautushyöty ei heikennä onnistumista', `${cov.successProb} vs ${base.successProb}`);
-  ok(cov.exp.every((v, i) => v === base.exp[i]), 'korrelaatiot eivät muuta odotuspolkua');
+  // Mediaanipäälinja (4.9.2026): pienempi hajonta → pienempi drag → päälinja hieman ylempänä
+  ok(cov.exp.every((v, i) => v >= base.exp[i] - 1e-6) && cov.exp[cov.months] < base.exp[base.months] * 1.15,
+    'korrelaatiot nostavat päälinjaa vain dragin verran (< 15 %)', `${cov.exp[cov.months]} vs ${base.exp[base.months]}`);
   // PSD-pakotus: mahdoton matriisi kutistuu eikä kaada laskentaa
   const badM = L.corrMatrixOf(3, [1, -0.5, 1]);
   const fixed = L.ensurePSD(badM);
@@ -286,9 +288,11 @@ console.log('Kotitalous (Perhevirta): koherentti perhe-MC');
 
 console.log('Korkoa korolle: analyyttiset identiteetit joka elinkaarivaiheessa');
 {
-  // Suljetun muodon kaavat: k = kuukausikerroin (1+mu)^(1/12).
-  // Moottorin odotuspolun on osuttava näihin liukulukutarkkuudella.
-  const k = Math.pow(1.07, 1 / 12);
+  // Suljetun muodon kaavat: k = kuukausikerroin (1+mu)^(1/12)·e^(−σ²/24)
+  // — päälinja kulkee mediaanidriftillä (4.9.2026), σ = 16 % (100 % osakkeet).
+  // Moottorin päälinjan on osuttava näihin liukulukutarkkuudella.
+  const drag = Math.exp(-0.16 * 0.16 / 24);
+  const k = Math.pow(1.07, 1 / 12) * drag;
   const relClose = (a, b, tol, name, extra) => ok(Math.abs(a - b) <= tol * Math.abs(b), name, `${a} vs ${b}${extra || ''}`);
 
   // (1) Kertyminen pelkällä alkupääomalla: w_n = S·1,07^(n/12)
@@ -297,7 +301,7 @@ console.log('Korkoa korolle: analyyttiset identiteetit joka elinkaarivaiheessa')
     allocStocks: 100, allocBonds: 0, glide: false, real: false, tax: false, events: [],
   };
   const rAcc = L.simulate(acc);
-  relClose(rAcc.exp[120], 50000 * Math.pow(1.07, 10), 1e-9, 'pääoma kompoundaa: S·(1+r)^t');
+  relClose(rAcc.exp[120], 50000 * Math.pow(k, 120), 1e-9, 'pääoma kompoundaa: S·k^n (mediaanidrift)');
 
   // (2) Kuukausisäästö: annuiteetin päätearvo w_n = C·(k^n − 1)/(k − 1)
   const sav = { ...acc, startCapital: 0, monthly: 500, events: [] };
@@ -328,7 +332,7 @@ console.log('Korkoa korolle: analyyttiset identiteetit joka elinkaarivaiheessa')
   // (4b) Inflaatiokorjaus tarkalla Fisher-kaavalla: w_n = S·(1,07/1,02)^(n/12)
   const rl = { ...acc, real: true };
   const rRl = L.simulate(rl);
-  relClose(rRl.exp[120], 50000 * Math.pow(1.07 / 1.02, 10), 1e-9,
+  relClose(rRl.exp[120], 50000 * Math.pow(Math.pow(1.07 / 1.02, 1 / 12) * drag, 120), 1e-9,
     'reaalituotto Fisher-kaavalla (sama kuin omaisuuserissä)');
 
   // (4c) Käyttäjän oma inflaatio-oletus: asettamaton = 2 % (ennallaan);
@@ -443,6 +447,7 @@ console.log('%-nostostrategia: onnistuminen mittaa tulotarpeen täyttymistä');
     const st = fire(12, 1500);
     st.events[0].pension = 1600;
     st.events[0].pensionAge = 75;
+    st.events[0].pensionFixed = true; // vyöhykkeen semantiikka, ei karttuma
     return st;
   })());
   ok(rec.dryZones.length >= 1 && rec.dryZones.every((z) => z.to <= 75.2),
@@ -844,6 +849,49 @@ console.log('Korkoshokki');
   const bear = s.stress.find((x) => x.key === 'bear');
   ok(!!bear, 'tuottoshokit toimivat ennallaan rinnalla');
   ok(L.STRESS_DEFS.rates && L.STRESS_DEFS.rates.rateShock === 2, 'STRESS_DEFS.rates määritelty');
+}
+
+console.log('Työeläke reagoi eläkeikään (4.9.2026)');
+{
+  const early = plan(); early.events[2].age = 55; early.startCapital = 400000; // työeläke 1500 @ 65, eläkkeelle 55
+  const sE = L.simulate(early);
+  const expect = 1500 * (55 - 23) / (65 - 23);
+  ok(Math.abs(sE.pension - expect) < 1e-9, 'eläkkeelle 55 v, työeläkeikä 65 → karttuma 32/42 → ' + Math.round(expect) + ' €/kk', String(sE.pension));
+  const fixed = plan(); fixed.events[2].age = 55; fixed.startCapital = 400000; fixed.events[2].pensionFixed = true;
+  ok(L.simulate(fixed).pension === 1500, 'pensionFixed pitää arvion ennallaan');
+  ok(L.simulate(plan()).pension === 1500, 'eläkeikä = työeläkeikä → ennallaan');
+  const late = plan(); late.events[2].age = 68;
+  ok(L.simulate(late).pension === 1500, 'eläkeikä > työeläkeikä → ennallaan (ei lykkäyskorotusta)');
+  ok(sE.wEnd < L.simulate(fixed).wEnd, 'pienempi työeläke → pienempi loppuvarallisuus');
+  const ctx = L.prepareSim(early);
+  ok(L.pensionAt(ctx, 23) === 0 && L.pensionAt(ctx, 20) === 0, 'ennen työuran alkua ei karttumaa');
+  ok(L.pensionAt(ctx, 65) === 1500 && L.pensionAt(ctx, 70) === 1500, 'täysi työura → täysi arvio');
+  // Ratkaisija: aikaisin eläkeikä kokeilee ikiä → työeläke seuraa kokeiltavaa ikää
+  const g = plan(); g.monthly = 3000; g.events[2].goal = 'age'; g.events[2].age = 50;
+  const gF = JSON.parse(JSON.stringify(g)); gF.events[2].pensionFixed = true;
+  const rA = L.simulate(g).solvedRetireAge, rF = L.simulate(gF).solvedRetireAge;
+  ok(rA != null && rF != null && rA >= rF, 'karttuman menetys ei aikaista ratkaistua eläkeikää', `${rA} vs ${rF}`);
+}
+
+console.log('Mediaanipäälinja (4.9.2026): päälinja ≈ MC-P50, MC ennallaan');
+{
+  const st = plan();
+  const ctx = L.prepareSim(st);
+  const { muM, sigA, muMc } = L.buildMu(ctx, st, 65);
+  ok(muM.mc === muMc && muMc.every((v, m) => m === 0 || v > muM[m]), 'buildMu: mediaanidrift < aritmeettinen joka kuukausi');
+  // MC-polut kulkevat aritmeettisella driftillä: nollashokki = aritmeettinen deterministinen polku
+  const zero = L.runPath(ctx, st, 2400, 65, muM, { shockFn: () => 0 }).endW;
+  const arith = L.runPath(ctx, st, 2400, 65, muMc, {}).endW;
+  ok(zero === arith, 'shokkipolku nollashokilla = aritmeettinen polku bitilleen');
+  // Päälinja osuu MC-jakauman mediaaniin (±12 %)
+  const ends = [];
+  for (let i = 0; i < 1500; i++) ends.push(L.runPath(ctx, st, 2400, 65, muM, { clamp0: true, shockFn: L.makeShock(st, sigA, i) }).endW);
+  ends.sort((a, b) => a - b);
+  const p50 = ends[750];
+  const det = L.runPath(ctx, st, 2400, 65, muM, { clamp0: true }).endW;
+  ok(Math.abs(det / p50 - 1) < 0.12, 'päälinjan loppuvarallisuus ≈ MC-P50 (±12 %)', `${Math.round(det)} vs P50 ${Math.round(p50)}`);
+  const mean = ends.reduce((a, b) => a + b, 0) / ends.length;
+  ok(mean > p50, 'MC:n keskiarvo > mediaani (jakauma vino oikealle — drag on MC:ssä)');
 }
 
 console.log(failed ? `\n${failed} TESTIÄ EPÄONNISTUI` : '\nKaikki testit läpi.');

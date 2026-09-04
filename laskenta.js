@@ -66,6 +66,23 @@ const MC_FULL = 5000;  // worker-tarkennus irrotuksen jälkeen
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
+/* ===================== Työeläke ja eläkeikä ===================== */
+// Työeläkekenttä on arvio työeläkeiässä olettaen, että työ jatkuu siihen asti
+// (ETK:n oma arvio tehdään samoin). Jos eläkkeelle jäädään aiemmin, karttuma
+// päättyy ja eläke jää pienemmäksi. Karttuma-approksimaatio ilman palkkatietoa:
+// P × (eläkeikä − työuran alku) / (työeläkeikä − työuran alku), työuran alku 23 v.
+// Lykkäyskorotusta (0,4 %/kk) ei lisätä: käyttäjän arvio on jo omassa iässään.
+// pensionFixed ohittaa säädön (arvio laskettu valmiiksi omaan eläkeikään).
+// Muutos 4.9.2026 — aiemmin työeläke oli vakio eläkeiästä riippumatta.
+const CAREER_START = 23;
+function pensionAt(ctx, retAge) {
+  const p = ctx.pension0;
+  if (!(p > 0) || ctx.pensionFixed || retAge == null || retAge >= ctx.pensionAge) return p;
+  const full = ctx.pensionAge - CAREER_START;
+  if (full <= 0) return p;
+  return p * clamp((retAge - CAREER_START) / full, 0, 1);
+}
+
 /* ===================== Pro-tila ===================== */
 // Pro avaa oletukset säädettäviksi. proOf(st) palauttaa normalisoidun
 // konfiguraation TAI null (perustila). Kaikilla oletusarvoilla laskenta
@@ -385,10 +402,14 @@ function prepareSim(st, opts = {}) {
   const retireAge0 = retire ? retire.age : null;
   // Lakisääteinen työeläke: kuukausitulo, joka pienentää sijoituksista
   // tarvittavaa nostoa. Voi alkaa eri iässä kuin eläkkeelle jäänti.
-  const pension = retire && retire.pension > 0 ? Math.max(0, retire.pension) : 0;
-  const pensionAge = pension > 0 && retire.pensionAge != null
+  const pension0 = retire && retire.pension > 0 ? Math.max(0, retire.pension) : 0;
+  const pensionAge = pension0 > 0 && retire.pensionAge != null
     ? clamp(retire.pensionAge, a0, a1)
     : (retireAge0 != null ? retireAge0 : a1);
+  const pensionFixed = !!(retire && retire.pensionFixed);
+  // Eläkeiän mukainen työeläke suunnitelman omalla eläkeiällä (pensionAt);
+  // ratkaisijat laskevat sen uudelleen kokeiltavalle iälle runPathissa.
+  const pension = pensionAt({ pension0, pensionAge, pensionFixed }, retireAge0);
   const taxOn = !!st.tax;
   // Säästön vuosikasvu (palkkakehitys): kuukausisijoitus kasvaa vuosittain
   const g = (st.savingsGrowth || 0) / 100;
@@ -551,7 +572,7 @@ function prepareSim(st, opts = {}) {
   }
   const hasNet = hasAssets || debt.some((d) => d > 0.5);
 
-  return { a0, a1, months, retire, pension, pensionAge, taxOn, growth, saveAbs, lump, payments, debt, assets, assetCats, saleInfos, hasNet, realI, transferTax,
+  return { a0, a1, months, retire, pension, pension0, pensionAge, pensionFixed, taxOn, growth, saveAbs, lump, payments, debt, assets, assetCats, saleInfos, hasNet, realI, transferTax,
     pro, taxLow, taxHigh, taxBracket, taxAcq, wdMode, wdPctM, wdBand, wdAdj, phaseMul };
 }
 
@@ -560,7 +581,8 @@ function prepareSim(st, opts = {}) {
 // kovarianssi, oma glidepath, TER ja inflaatio-oletus.
 function buildMu(ctx, st, retAge) {
   const { months, a0 } = ctx;
-  const muM = new Float64Array(months + 1);
+  const muM = new Float64Array(months + 1);  // mediaanidrift: deterministinen päälinja
+  const muMc = new Float64Array(months + 1); // aritmeettinen drift: Monte Carlo
   const sigA = new Float64Array(months + 1);
   const p = proOf(st);
   const infl = st.real ? inflOf(st) : 0;
@@ -584,18 +606,27 @@ function buildMu(ctx, st, retAge) {
     for (let m = 1; m <= months; m++) {
       const w = weightsAt(a0 + m / 12, retAge, st);
       const { mu, sigma } = portfolioStatsPro(w, classes, corrM, p.ter);
-      muM[m] = Math.pow((1 + mu - fee - divTax * w[0]) / (1 + infl), 1 / 12) - 1;
+      muMc[m] = Math.pow((1 + mu - fee - divTax * w[0]) / (1 + infl), 1 / 12) - 1;
       sigA[m] = sigma;
     }
   } else {
     for (let m = 1; m <= months; m++) {
       const alloc = allocationAt(a0 + m / 12, retAge, st);
       const { mu, sigma } = portfolioStats(alloc);
-      muM[m] = Math.pow((1 + mu - fee - divTax * alloc.s) / (1 + infl), 1 / 12) - 1;
+      muMc[m] = Math.pow((1 + mu - fee - divTax * alloc.s) / (1 + infl), 1 / 12) - 1;
       sigA[m] = sigma;
     }
   }
-  return { muM, sigA };
+  // Mediaani-päälinja (4.9.2026): odotusarvopolku (aritmeettinen keskiarvo)
+  // yliarvioi tyypillisen lopputuloksen, koska tuoton heilunta syö
+  // geometrista kasvua (volatility drag ≈ σ²/2 vuodessa). Päälinja ja
+  // deterministiset ratkaisijat kulkevat mediaaniapproksimaatiolla
+  // (1+μ)·e^(−σ²/24) kuukaudessa, joka osuu MC-jakauman P50:een ±10 %.
+  // Monte Carlo käyttää aritmeettista driftiä (muM.mc) — shokit tuottavat
+  // dragin itse, joten viuhka, onnistumis-% ja varmuustasot EIVÄT muutu.
+  for (let m = 1; m <= months; m++) muM[m] = (1 + muMc[m]) * Math.exp(-sigA[m] * sigA[m] / 24) - 1;
+  muM.mc = muMc;
+  return { muM, sigA, muMc };
 }
 
 /* ===================== Kehityspolku ===================== */
@@ -607,8 +638,13 @@ function buildMu(ctx, st, retAge) {
 // record(m, w) kirjaa polun MC-matriisiin.
 
 function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave = st.monthly, shockFn = null, collect = false, stopAt = null, record = null } = {}) {
-  const { a0, months, lump, payments, growth, saveAbs, pension, pensionAge, taxOn,
+  const { a0, months, lump, payments, growth, saveAbs, pensionAge, taxOn,
     taxLow, taxHigh, taxBracket, taxAcq, wdMode, wdPctM, wdBand, wdAdj, phaseMul, realI } = ctx;
+  // Työeläke kokeiltavan eläkeiän mukaan (ratkaisijat vaihtavat retAgea)
+  const pension = pensionAt(ctx, retAge);
+  // Tuotto: deterministinen polku kulkee mediaanidriftillä (muM), Monte Carlo
+  // aritmeettisella (muM.mc) — shokit kantavat volatility dragin itse (buildMu)
+  const mu = shockFn && muM.mc ? muM.mc : muM;
   let w = st.startCapital;
   let basis = st.startCapital; // salkun hankintahinta myyntivoittoveroa varten
   // Nimellinen hankintahinta: Suomen pääomatulovero kohdistuu NIMELLISVOITTOON.
@@ -672,7 +708,7 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
     curNom = realI ? Math.pow(1 + realI, m / 12) : 1;
     curM = m;
     if (m % 12 === 1) ytdGain = 0;
-    w *= 1 + muM[m] + (shockFn ? shockFn(m) : 0); // tuotto ei muuta hankintahintaa
+    w *= 1 + mu[m] + (shockFn ? shockFn(m) : 0); // tuotto ei muuta hankintahintaa
     if (retAge == null || age <= retAge) {
       // Työuralla lainanhoito vähentää kuukausisäästöä. Jos erät ylittävät
       // säästön, EROTUS MYYDÄÄN SALKUSTA (kertaerän tapaan verotta) — aiempi
@@ -1107,7 +1143,7 @@ function simulate(st, opts = {}) {
       ? (m) => {
           const age = a0 + m / 12;
           if (age <= retireAge) return false;
-          const pen = age >= ctx.pensionAge ? ctx.pension : 0;
+          const pen = age >= ctx.pensionAge ? pensionAt(ctx, retireAge) : 0;
           return exp[m] * ctx.wdPctM + pen < withdrawal * (ctx.phaseMul ? ctx.phaseMul[m] : 1);
         }
       : (m) => exp[m] < 0.5;
@@ -1154,8 +1190,11 @@ function simulate(st, opts = {}) {
       // from:'now' = shokki alkaa heti (sekvenssiriskin vertailupari:
       // sama karhu säästövaiheessa on lievä, eläkkeen alussa kallis)
       const start = def.from === 'now' ? 0 : m0;
-      const shockFn = (m) => (m > start && m <= start + def.months ? rM - muM[m] : 0);
-      const r = runPath(ctx, st, withdrawal, retireAge, muM, { clamp0: true, collect: true, shockFn });
+      // Deterministinen overlay: kopio päälinjan driftistä (ilman .mc-viitettä),
+      // shokkikuukausina tuotto on täsmälleen rM
+      const muS = new Float64Array(muM);
+      for (let m = start + 1; m <= Math.min(months, start + def.months); m++) muS[m] = rM;
+      const r = runPath(ctx, st, withdrawal, retireAge, muS, { clamp0: true, collect: true });
       return { key, name: def.name, arr: r.arr, depletion: r.depletion };
     });
   }
@@ -1208,6 +1247,8 @@ function simulate(st, opts = {}) {
   const retM = retireAge != null ? clamp(Math.round((retireAge - a0) * 12), 0, months) : null;
   out.wAtRet = retM != null ? out.exp[retM] : null;
   out.wEnd = out.exp[months];
+  out.pension = pensionAt(ctx, retireAge); // eläkeiän mukainen (ratkaistu ikä)
+  out.pensionInput = ctx.pension0;          // käyttäjän arvio työeläkeiässä
   return out;
 }
 
@@ -1365,5 +1406,6 @@ if (typeof module !== 'undefined' && module.exports) {
     corrMatrixOf, ensurePSD, STRESS_DEFS, PRO_BASE_ASSETS,
     sustainableByAge, tornado, baseWEnd,
     mcHousehold, householdExp,
+    pensionAt, CAREER_START,
   };
 }

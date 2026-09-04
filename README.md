@@ -22,9 +22,9 @@ kävijää eikä näe suunnitelman sisältöä.
 - **Piirtopöytä** — kokoruudun piirtotila (⛶ tai F): valitse käyrän segmentti, tapahtuma, eläkeikäviiva tai tavoitepiste ja raahaa; chippi näyttää muuttuvan parametrin (vanha → uusi, delta) ja HUD seuraukset haamukäyrää vasten. Toimii myös pelkällä näppäimistöllä (Tab kiertää, nuolet säätävät, Enter muokkaa)
 - **Kysymyskirjasto ja laskurisivut** — yhden napautuksen lavastukset ("Onko varaa eläkkeelle 60-vuotiaana?", "Mitä jos jään vuodeksi työttömäksi?") nykyiseen suunnitelmaan, ja hakuaikeittain omat sivut ([laskurit/](laskurit/)) aidolla vastauksella ja valmiilla esimerkillä
 - **Jakolinkki kantaa koko suunnitelman** — pakattuna (oma synkroninen LZW, −50…60 %), ei palvelinta; vanhat linkit toimivat ennallaan
-- **Käänteisratkaisija** — käyrä on kuin naru: tartuntapiste seuraa osoitinta ja bisektio hakee kuukausisäästön tai kuukausitulon, jolla odotuspolku kulkee pisteen kautta — deterministisesti joka framella
-- **Tavoitepisteet** — 🎯 mittari graafille: pystyvaje ("iässä 55 puuttuu 80 000 €"), saavutusikä ja osuus markkinapoluista, jotka ylittävät pisteen; Ratkaise hakee säästön odotuspolulle tai valitulle varmuustasolle — tiukin piste sitoo
-- **Interaktiivinen aikajana** — varallisuuden kehitys iän ja kalenterivuoden mukaan, odotettu kehitys ja P10–P90-viuhka samasta Monte Carlo -polkujoukosta
+- **Käänteisratkaisija** — käyrä on kuin naru: tartuntapiste seuraa osoitinta ja bisektio hakee kuukausisäästön tai kuukausitulon, jolla tyypillinen (mediaani)polku kulkee pisteen kautta — deterministisesti joka framella
+- **Tavoitepisteet** — 🎯 mittari graafille: pystyvaje ("iässä 55 puuttuu 80 000 €"), saavutusikä ja osuus markkinapoluista, jotka ylittävät pisteen; Ratkaise hakee säästön mediaanipolulle tai valitulle varmuustasolle — tiukin piste sitoo
+- **Interaktiivinen aikajana** — varallisuuden kehitys iän ja kalenterivuoden mukaan, tyypillinen (mediaani) kehitys ja P10–P90-viuhka samasta Monte Carlo -polkujoukosta
 - **Raahattavat elämäntapahtumat** — asunnon osto, opiskelu, auto, häät, lapsi, ero, remontti, mökki, perintö, eläkkeelle jäänti ym. pudotetaan graafille ja siirretään haluttuun ikään
 - **Allokointimoottori** — osake/korko/käteinen-painot, tuotto-odotus ja volatiliteetti, valinnainen ikäsidonnainen allokaatio (glidepath) ja inflaatiokorjaus
 - **Palkkakehitys** — kuukausisijoitus voi kasvaa vuosittain, mikä vastaa uran tuomia korotuksia
@@ -34,7 +34,7 @@ kävijää eikä näe suunnitelman sisältöä.
 - **Omaisuuden myynti** — kohteen voi myydä valitussa iässä: arvo siirtyy sijoituksiin, laina maksetaan pois ja voitosta peritään vero (hankintameno-olettama; oma asunto voi olla verovapaa)
 - **Tase-paneeli** — varallisuus pylväinä nollaviivan yläpuolella, velka alapuolella, nettovarallisuus käyränä; yhteinen kohdistin pääkäyrän kanssa
 - **Varallisuusjakauma** — donitsikaavio omaisuusluokittain (osakkeet, korot, käteinen, kiinteistöt, ajoneuvot), seuraa kohdistinta
-- **Lakisääteinen työeläke** — eläketuloksi arvioitu kuukausieläke, joka pienentää sijoituksista tarvittavaa nostoa ja voi alkaa eri iässä kuin eläkkeelle jäänti
+- **Lakisääteinen työeläke** — eläketuloksi arvioitu kuukausieläke, joka pienentää sijoituksista tarvittavaa nostoa ja voi alkaa eri iässä kuin eläkkeelle jäänti; pienenee päättyvän karttuman verran, jos työ päättyy ennen työeläkeikää
 - **Myyntivoittovero** — eläkeajan nostoista huomioidaan Suomen pääomatulovero (30/34 %) noston voitto-osuudesta; seuraa salkun hankintahintaa
 - **Eläkesuunnittelu tavoitteella** — valitse mikä joustaa: kestävä kuukausitulo (ikä lukittu), aikaisin eläkeikä (tulo lukittu) tai tarvittava kuukausisäästö (ikä ja tulo lukittu) ratkaistaan automaattisesti
 - **Varmuustaso** — tavoitteen voi ratkaista myös Monte Carlo -onnistumisosuudelle (75/85/95 % poluista onnistuu) pelkän odotetun kehityksen sijaan

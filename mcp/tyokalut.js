@@ -417,6 +417,7 @@ const TYOKALUT = [
             withdrawal: `kuukausitulon tarve eläkkeellä €/kk (oletus ${def.withdrawal}; sisältää työeläkkeen)`,
             pension: `lakisääteinen työeläke €/kk (oletus 0 jos ei annettu; UI-oletus ${def.pension})`,
             pensionAge: `työeläkkeen alkamisikä (oletus ${def.pensionAge}; voi olla myöhempi kuin age — välivuodet katetaan sijoituksista)`,
+            pensionFixed: 'true = työeläke ei riipu eläkeiästä (oletus false: jos age < pensionAge, karttuma päättyy ja eläke pienenee suhteessa (age−23)/(pensionAge−23) — pension on arvio työeläkeiässä työn jatkuessa siihen asti)',
             goal: 'valinnainen tavoitetila: "withdrawal" (ratkaise kestävä tulo), "age" (ratkaise aikaisin eläkeikä), "saving" (ratkaise tarvittava säästö), "manual" (ei ratkaisua)',
             conf: 'valinnainen Monte Carlo -varmuustaso tavoitteelle (0.5–0.99, tyypillisesti 0.75/0.85/0.95)',
           };
