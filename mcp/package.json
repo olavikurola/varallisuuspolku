@@ -1,6 +1,6 @@
 {
   "name": "varallisuuspolku-mcp",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Varallisuuspolku (varallisuuspolku.com) MCP-palvelimena: deterministinen suomalainen elinkaari- ja eläkelaskenta tekoälyagenteille — paikallisesti, ilman verkkoa. Finnish lifecycle wealth & retirement engine as a local MCP server for AI agents.",
   "license": "MIT",
   "author": "Olavi Kurola",

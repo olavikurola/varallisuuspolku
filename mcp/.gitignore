@@ -1,4 +1,5 @@
 # prepack kopioi tämän juuren laskenta.js:stä — ei komitoida (yksi totuus)
 laskenta.js
+pakkaus.js
 node_modules/
 *.tgz
