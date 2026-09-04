@@ -94,6 +94,13 @@ gh auth login
 - [tyokalut/](tyokalut/) — og-kuvan ja demovideoiden generaattorit, UX-auditointi,
   validointisivun lukujen laskin
 
+## Tavaramerkki
+
+Lähdekoodi on MIT-lisensoitu, mutta nimi **Varallisuuspolku**, **Wealth Path** ja logo ovat
+Olavi Kurolan tavaramerkkejä, joihin lisenssi ei anna oikeutta. Fork saa sanoa perustuvansa
+Varallisuuspolun avoimeen koodiin, mutta ei esiintyä sen nimellä — ks. [TAVARAMERKKI.md](TAVARAMERKKI.md)
+/ [TRADEMARK.md](TRADEMARK.md).
+
 ## Huomio
 
 Laskelma on suuntaa antava havainnollistus, ei sijoitussuositus.
