@@ -72,10 +72,13 @@ statik.listen(8138, async () => {
     const k = await pg.evaluate(() => ({
       kortti: !document.getElementById('ramp').hidden,
       vihje: !!document.querySelector('.veto-hint'),
+      fs: !!(typeof fsOn !== 'undefined' && fsOn),
       kierros: !document.getElementById('tour').hidden,
     }));
     ok(!k.kortti, 'Kokeile sulkee kortin');
-    ok(k.vihje, 'Kokeile näyttää veto-vihjeen (tartu merkkiin)');
+    // UX-auditointi 5.9.2026 U10: lupaus "vedä eläkeikää" lunastetaan piirtopöydällä heti
+    ok(k.fs || k.vihje, 'Kokeile avaa piirtopöydän (tai näyttää veto-vihjeen)');
+    await pg.keyboard.press('Escape'); await pg.waitForTimeout(300);
     ok(!k.kierros, 'kierros ei käynnisty Kokeilen jälkeen');
     await ctx.close();
   }

@@ -99,11 +99,16 @@ const { chromium } = require('playwright');
   // ilman kahvaa) — siksi klikataan kunnes viimeinen askel näkyy.
   // HUOM: 18.7. alkaen ensivierailu saa RAMPIN — kierros käynnistyy
   // automaattisesti vain kun ramppi on jo nähty (vp-ramp-done).
+  // 5.9.2026 (UX-auditointi U2): kierros ei käynnisty enää automaattisesti
+  // toisella käynnillä — se pyydetään tuloskortista tai ☰-valikosta.
   await page.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-ramp-done', '1'); });
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForTimeout(1000); // autokäynnistyksen viive (600 ms)
+  await page.waitForTimeout(1000);
   ok(await page.evaluate(() => !document.body.classList.contains('fs')), 'laskeutuminen kojelaudalle');
-  ok(await page.evaluate(() => !document.getElementById('tour').hidden), 'kierros käynnistyy automaattisesti');
+  ok(await page.evaluate(() => document.getElementById('tour').hidden), 'kierros EI käynnisty automaattisesti toisella käynnillä');
+  await page.evaluate(() => startTour());
+  await page.waitForTimeout(300);
+  ok(await page.evaluate(() => !document.getElementById('tour').hidden), 'kierros käynnistyy pyydettäessä');
   ok(await page.evaluate(() => document.getElementById('tourCard').textContent.includes('Tervetuloa')), 'aloituskortti näkyy');
   for (let i = 0; i < 12; i++) {
     if (await page.evaluate(() => document.getElementById('tourCard').textContent.includes('Valikko'))) break;

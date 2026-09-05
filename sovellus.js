@@ -5,7 +5,7 @@
 /* ===================== Toast ===================== */
 
 let toastEl = null, toastTimer = null;
-function toast(msg) {
+function toast(msg, ms) {
   if (!toastEl) {
     toastEl = document.createElement('div');
     toastEl.className = 'toast';
@@ -14,7 +14,7 @@ function toast(msg) {
   toastEl.textContent = t(msg); // nielukäärintä: staattiset viestit kääntyvät, koostetut valuvat suomena (KIELIVERSIO.md)
   toastEl.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms || 2400);
 }
 
 /* ===================== Kumoa (Ctrl+Z) ===================== */
@@ -167,6 +167,10 @@ function closeQuestionsMenu() { if (questionsMenuEl) { questionsMenuEl.remove();
 function applyQuestion(k) {
   const o = k.ops || {};
   pushUndoNow();
+  // Ennen-luvut yhden lauseen vastausta varten; haamukäyrä näyttää eron
+  // graafilla (UX-auditointi 5.9.2026 W2)
+  const before = sim ? { p: sim.successProb, wd: sim.solvedWithdrawal, wr: sim.wAtRet } : null;
+  if (!baseline) setBaseline(t('Ennen kysymystä'));
   let ret = state.events.find((e) => e.type === 'retirement');
   if (!ret && (o.retAge != null || o.goal || o.withdrawal != null || o.conf != null)) {
     const def = EVENT_TYPES.retirement;
@@ -195,7 +199,21 @@ function applyQuestion(k) {
   closePopover();
   renderAll();
   track('Kysymys', { id: k.id });
-  toast(t('Kysymys lavastettu — Ctrl+Z palauttaa'));
+  toast(questionSentence(k, before), 6500);
+}
+
+// Yksi lause: mitä kysymys muutti — moottorin luvut, ei arviota
+function questionSentence(k, before) {
+  const s = sim; if (!s) return t('Kysymys lavastettu — Ctrl+Z palauttaa');
+  const p = s.successProb != null ? Math.round(s.successProb * 100) : null;
+  const dp = before && before.p != null && p != null ? p - Math.round(before.p * 100) : null;
+  const dTxt = dp == null || dp === 0 ? '' : ` (${dp > 0 ? '+' : ''}${dp} %-yks)`;
+  const parts = [];
+  if (s.solvedRetireAge != null) parts.push(t('aikaisin eläkeikä {0}', fmtAge(s.solvedRetireAge)));
+  else if (s.requiredMonthly != null) parts.push(t('tarvittava säästö {0}/kk (nyt {1})', fmtEur(s.requiredMonthly), fmtEur(state.monthly)));
+  else if (s.solvedWithdrawal != null) parts.push(t('kestävä tulo {0}/kk', fmtEur(s.solvedWithdrawal)) + (before && before.wd != null ? ` (${s.solvedWithdrawal - before.wd >= 0 ? '+' : '−'}${fmtEur(Math.abs(Math.round(s.solvedWithdrawal - before.wd)))})` : ''));
+  if (p != null) parts.push(t('onnistumis-% {0}', p) + dTxt);
+  return t('{0}: {1} — haamukäyrä näyttää eron, Ctrl+Z palauttaa', t(k.q).replace(/\?$/, ''), parts.join(' · '));
 }
 function openQuestionsMenu(anchor) {
   if (questionsMenuEl) { closeQuestionsMenu(); return; }
@@ -530,7 +548,7 @@ function openMoreMenu(anchor) {
       if (baseline) { clearBaseline(); toast('Vertailu poistettu'); }
       else { setBaseline(); toast('Vertailukohta tallennettu — erot näkyvät, kun muutat suunnitelmaa'); }
     });
-  add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti yhdeksällä klikkauksella',
+  add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti kuudella klikkauksella',
     () => startTour());
 
   sect('Sivut');
@@ -2284,22 +2302,56 @@ function nextHint() {
 
 function rampResult(retA) {
   const s = sim;
+  const ret = state.events.find((e) => e.type === 'retirement');
+  const pen = ret && ret.pension > 0 ? Math.round(ret.pension) : 0;
   const wd = s && s.solvedWithdrawal != null ? Math.round(s.solvedWithdrawal) : null;
   const wr = s && s.wAtRet != null ? Math.round(s.wAtRet) : null;
+  // Rahan arvo: nimellistilassa ensimmäinen luku on 30 vuoden päästä olevaa
+  // rahaa — kerrotaan ostovoima nykyrahassa, ettei ensivaikutelma liioittele
+  // (UX-auditointi 5.9.2026 U1). Reaalitilassa luvut ovat jo nykyrahaa.
+  const years = Math.max(0, retA - state.ageNow);
+  const defl = state.real ? 1 : Math.pow(1 + inflOf(state), -years);
+  const wdReal = wd != null ? Math.round(wd * defl) : null;
+  const wdS = pen > 0
+    ? t('sis. työeläke {0}/kk · {1} v alkaen · tyypillisellä kehityksellä', fmtEur(pen), retA)
+    : t('sijoituksistasi {0} v alkaen · tyypillisellä kehityksellä', retA);
   $('rampCard').innerHTML =
-    `<h1 class="ramp-title">Polkusi on piirretty</h1>` +
+    `<h1 class="ramp-title">${t('Polkusi on piirretty')}</h1>` +
     `<div class="ramp-res">` +
-    `<div class="ramp-stat"><div class="k">Sijoituksesi ${retA} vuoden iässä</div><div class="v">${wr != null ? fmtEur(wr) : '–'}</div><div class="s">odotetulla kehityksellä</div></div>` +
-    `<div class="ramp-stat"><div class="k">Kestävä kuukausitulo eläkkeellä</div><div class="v">${wd != null ? fmtEur(wd) + '/kk' : '–'}</div><div class="s">sijoituksistasi ${retA} v alkaen — ilman työeläkettä</div></div>` +
+    `<div class="ramp-stat"><div class="k">${pen > 0 ? t('Kestävä kuukausitulo eläkkeellä') : t('Kestävä kuukausitulo sijoituksistasi')}</div><div class="v">${wd != null ? fmtEur(wd) + '/kk' : '–'}</div><div class="s">${wdS}${wdReal != null && !state.real && years > 0 ? ' · ' + t('nykyrahassa noin {0}/kk', fmtEur(wdReal)) : ''}</div></div>` +
+    `<div class="ramp-stat"><div class="k">${t('Sijoituksesi {0} vuoden iässä', retA)}</div><div class="v">${wr != null ? fmtEur(wr) : '–'}</div><div class="s">${t('tyypillisellä (mediaani) kehityksellä')}${state.real ? ' · ' + t('nykyrahassa') : ' · ' + t('nimellisarvoin')}</div></div>` +
     `</div>` +
-    `<p class="ramp-note">Tarkenna kuvaa työtilassa: lisää työeläkkeesi ja elämäsi isot hankinnat, ja kokeile eläkeikää vetämällä käyrästä.</p>` +
+    // Työeläke on vaikuttavin puuttuva tieto: kenttä suoraan korttiin, ei
+    // paletin viimeiseen nappiin (UX-auditointi U1/U7)
+    `<label class="ramp-pen"><span>${pen > 0 ? t('Työeläkkeesi käteen') : t('Työeläkkeesi tulee tämän päälle — lisää ETK-arvio käteen')}</span>` +
+    `<span class="input"><input id="rampPension" type="number" min="0" step="100" inputmode="numeric" placeholder="${t('esim. 1 500')}" value="${pen > 0 ? pen : ''}" /><em>€/kk</em></span></label>` +
     `<div class="ramp-acts2">` +
-    `<button class="btn" id="rampOpen">Avaa suunnitelmani</button>` +
-    `<button class="btn ghost" id="rampOwn">🔑 Omistan jo asunnon</button>` +
-    `<button class="btn ghost" id="rampShare">📸 Jaa tuloskuva</button>` +
-    `<button class="btn ghost" id="rampTour">Esittelykierros</button>` +
+    `<button class="btn primary-wide" id="rampDrag">✋ ${t('Kokeile: vedä eläkeikää')}</button>` +
+    `<button class="btn ghost" id="rampOpen">${t('Avaa suunnitelmani')}</button>` +
+    `<button class="btn ghost" id="rampOwn">🔑 ${t('Omistan jo asunnon')}</button>` +
+    `<button class="btn ghost" id="rampShare">📸 ${t('Jaa tuloskuva')}</button>` +
+    `<button class="btn ghost" id="rampTour">${t('Esittelykierros')}</button>` +
     `</div>`;
-  $('rampOpen').addEventListener('click', () => { closeRamp(); showVetoHint(); toast(t('Vinkki: Esittelykierros löytyy {0}-valikosta', vpNativeApp ? t('Lisää') : '☰')); });
+  // Työeläke: arvo tilaan ja kortti uusiksi — kohdistin pysyy kentässä
+  const penEl = $('rampPension');
+  penEl.addEventListener('change', () => {
+    const v = clamp(parseFloat(penEl.value) || 0, 0, 1e6);
+    const r = state.events.find((e) => e.type === 'retirement');
+    if (!r) return;
+    r.pension = v; r.pensionAge = retA;
+    syncInputs(); renderAll();
+    track('Ramppi työeläke', { annettu: v > 0 ? 'on' : 'ei' });
+    rampResult(retA);
+    try { $('rampPension').focus(); } catch (e) {}
+  });
+  // Ensimmäinen veto: tuotteen vahvin hetki heti tuloksen jälkeen —
+  // piirtopöytä auki eläkeikäviiva valittuna (UX-auditointi W1)
+  $('rampDrag').addEventListener('click', () => {
+    closeRamp();
+    track('Ramppi valinta', { valinta: 'veto' });
+    try { enterFs(); drawSelect('retline', null, true); } catch (e) { showVetoHint(); }
+  });
+  $('rampOpen').addEventListener('click', () => { closeRamp(); track('Ramppi valinta', { valinta: 'tyotila' }); showVetoHint(); });
   // Jakonappi ei sulje ramppia — jakoarkki avautuu päälle ja käyttäjä jatkaa siitä
   $('rampShare').addEventListener('click', () => shareResultImage('ramppi'));
   // Omistuksen sisäänkäynti: jo omistettu asunto lainoineen puuttuu muuten
@@ -2354,10 +2406,10 @@ function showSharedWelcome(hadOwn) {
   $('jaettuKokeile').addEventListener('click', () => {
     closeRamp();
     track('Jaettu valinta', { valinta: 'kokeile' });
-    // Veto-vihje on kerran-ikinä; jaetun linkin avaajalle se on oikea ensiele
-    // riippumatta siitä onko hän nähnyt sen omalla suunnitelmallaan
+    // Lupaus "vedä eläkeikää" lunastetaan heti: piirtopöytä auki eläkeikäviiva
+    // valittuna (UX-auditointi 5.9.2026 U10) — vihje jää varapoluksi
     try { localStorage.removeItem(VETO_HINT_KEY); } catch (e) {}
-    showVetoHint();
+    try { enterFs(); drawSelect('retline', null, true); } catch (e) { showVetoHint(); }
   });
   $('jaettuOma').addEventListener('click', () => {
     closeRamp();
@@ -2424,6 +2476,33 @@ function showInAppHint() {
 // kolmella kysymyksellä) ja tarvitsee samat kuuntelijat tuoreisiin elementteihin
 function bindRampForm() {
   if ($('rampGo')) $('rampGo').addEventListener('click', rampSubmit);
+  // Kysymyschipit graafin alla: yhden napautuksen "mitä jos" ilman
+  // sivupaneelia (UX-auditointi 5.9.2026 U5/W2); loput valikosta
+  (function buildQuestionChips() {
+    const box = $('qChips'); if (!box || typeof KYSYMYKSET === 'undefined') return;
+    box.innerHTML = '';
+    for (const k of KYSYMYKSET.slice(0, 3)) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'q-chip'; b.dataset.kysymys = k.id;
+      b.textContent = t(k.q);
+      b.addEventListener('click', () => applyQuestion(k));
+      box.appendChild(b);
+    }
+    const more = document.createElement('button');
+    more.type = 'button'; more.className = 'q-chip q-more'; more.id = 'qChipsMore';
+    more.textContent = t('Lisää kysymyksiä…');
+    more.addEventListener('click', () => openQuestionsMenu(more));
+    box.appendChild(more);
+    box.hidden = false;
+  })();
+  // Mobiili: graafista ei voi tarttua (sivu vierittää) → pilleri avaa piirtopöydän
+  if ($('dragPill')) {
+    $('dragPill').hidden = false;
+    $('dragPill').addEventListener('click', () => {
+      track('Piirtopöytä avattu', { lahde: 'pilleri' });
+      try { enterFs(); drawSelect('retline', null, true); } catch (e) {}
+    });
+  }
   if ($('rampSkip')) $('rampSkip').addEventListener('click', (e) => { e.preventDefault(); rampSkip(); });
   for (const id of ['rampAge', 'rampWealth', 'rampMonthly']) {
     if ($(id)) $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); rampSubmit(); } });
@@ -2461,9 +2540,10 @@ if (!autoTourOff && visitKind === 'first' && !rampSeen && $('summary').hidden) {
   // hadOwn = linkin avaajalla oli jo omia rivejä → linkki avattiin omaksi rivikseen
   const hadOwn = plans.length > 1;
   setTimeout(() => { if (!fsOn && tourStep < 0 && $('summary').hidden) showSharedWelcome(hadOwn); }, 600);
-} else if (!autoTourOff && !tourSeen && visitKind !== 'returning' && $('summary').hidden) {
-  setTimeout(() => { if (!fsOn && tourStep < 0 && $('summary').hidden) startTour(); }, 600);
 } else if (!autoTourOff && $('summary').hidden) {
+  // Kierros ei käynnisty enää automaattisesti (aiemmin: ramppi tehty mutta
+  // suunnitelmaa ei tallentunut → toinen käynti sai 10 askeleen esittelyn).
+  // Se löytyy tuloskortista ja ☰-valikosta; tässä vihjeketjun vuoro.
   // Palaava käyttäjä ilman ramppia/kierrosta: vihjeketjun vuoro. Viive antaa
   // ensimmäisen laskennan ja käyrän asettua ennen kuin mitään ehdotetaan.
   setTimeout(nextHint, 4000);

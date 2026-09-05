@@ -33,6 +33,18 @@
     .ls-tbl .ls-tbl-intro { font-size: 14px; margin: 0 0 10px; }
     .ls-tbl table { width: 100%; }
     .ls-tbl .ls-note { margin-top: 8px; }
+    .ls-muut a, .ls-note a { color: var(--accent); }
+    /* Kapealla näytöllä taulukon rivi = kortti: kaikki sarakkeet näkyvissä ilman vaakavieritystä (UX-auditointi 5.9.2026 U8) */
+    @media (max-width: 640px) {
+      .ls-tbl table, .ls-tbl tbody, .ls-tbl tr, .ls-tbl td { display: block; width: 100%; box-sizing: border-box; }
+      .ls-tbl thead { display: none; }
+      .ls-tbl tr { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; background: var(--card-2); }
+      .ls-tbl td, .ls-tbl .table-scroll .sum-table td, .ls-tbl .table-scroll .sum-table td:first-child { display: flex; justify-content: space-between; gap: 12px; text-align: left; padding: 3px 0; border: 0; white-space: normal; }
+      .ls-tbl td::before { content: attr(data-label); color: var(--text-faint); font-size: 12px; flex: 1 1 50%; }
+      .ls-tbl td:first-child { font-weight: 600; color: var(--text); }
+      .ls-tbl td:first-child::before { content: none; }
+      .ls-tbl .table-scroll { overflow: visible; }
+    }
   </style>
   <script type="application/ld+json">
   {
@@ -99,9 +111,9 @@
       <div class="table-scroll"><table class="sum-table">
         <thead><tr><th>Tili</th><th class="num">Sijoitukset 65-vuotiaana</th><th class="num">Kestävä kuukausitulo</th><th class="num">Verot nostoista ja myynneistä</th></tr></thead>
         <tbody>
-          <tr><td>Suorat osakkeet arvo-osuustilillä, osinkotuotto 3&nbsp;%</td><td class="num">163&nbsp;523&nbsp;€</td><td class="num">2&nbsp;065&nbsp;€/kk</td><td class="num">50&nbsp;898&nbsp;€</td></tr>
-          <tr><td>Samat osakkeet osakesäästötilillä</td><td class="num">187&nbsp;628&nbsp;€</td><td class="num">2&nbsp;180&nbsp;€/kk</td><td class="num">65&nbsp;640&nbsp;€</td></tr>
-          <tr><td>Vaihtoehto: kasvurahasto arvo-osuustilillä (ei osinkoja; ei mahdollinen OST:lle)</td><td class="num">187&nbsp;628&nbsp;€</td><td class="num">2&nbsp;180&nbsp;€/kk</td><td class="num">65&nbsp;640&nbsp;€</td></tr>
+          <tr><td data-label="Tili">Suorat osakkeet arvo-osuustilillä, osinkotuotto 3&nbsp;%</td><td class="num" data-label="Sijoitukset 65-vuotiaana">163&nbsp;523&nbsp;€</td><td class="num" data-label="Kestävä kuukausitulo">2&nbsp;065&nbsp;€/kk</td><td class="num" data-label="Verot nostoista ja myynneistä">50&nbsp;898&nbsp;€</td></tr>
+          <tr><td data-label="Tili">Samat osakkeet osakesäästötilillä</td><td class="num" data-label="Sijoitukset 65-vuotiaana">187&nbsp;628&nbsp;€</td><td class="num" data-label="Kestävä kuukausitulo">2&nbsp;180&nbsp;€/kk</td><td class="num" data-label="Verot nostoista ja myynneistä">65&nbsp;640&nbsp;€</td></tr>
+          <tr><td data-label="Tili">Vaihtoehto: kasvurahasto arvo-osuustilillä (ei osinkoja; ei mahdollinen OST:lle)</td><td class="num" data-label="Sijoitukset 65-vuotiaana">187&nbsp;628&nbsp;€</td><td class="num" data-label="Kestävä kuukausitulo">2&nbsp;180&nbsp;€/kk</td><td class="num" data-label="Verot nostoista ja myynneistä">65&nbsp;640&nbsp;€</td></tr>
         </tbody>
       </table></div>
       <p class="ls-note">Ero syntyy osinkojen verotuksen ajoituksesta. Sarakkeen verot ovat eläkeajan nostojen veroja: arvo-osuustilin vuosittainen osinkovero on vähennetty tuotosta eikä näy tässä summassa. Osakesäästötilin suurempi verosumma johtuu suuremmista nostoista — vero maksetaan myöhemmin ja isommasta salkusta. Jos talletukset ylittäisivät 100&nbsp;000&nbsp;€, loput pitäisi sijoittaa toiselle tilille — laskuri ei mallinna tilin täyttymistä. Osakesäästötilin 100&nbsp;000&nbsp;€:n talletuskatto ei täyty tässä esimerkissä. Laskettu 2026-09-05, Monte Carlo 5&nbsp;000 polkua.</p>

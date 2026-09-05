@@ -45,7 +45,7 @@ statik.listen(8139, async () => {
     const tiles = await pg.evaluate(() => [...document.querySelectorAll('#stats .stat')].map((s) => ({ k: s.querySelector('.k').textContent.trim(), v: s.querySelector('.v').innerText.trim(), s: (s.querySelector('.s') || {}).textContent || '' })));
     ok(tiles.length === 5, 'viisi tiiltä', String(tiles.length));
     ok(/Kestävä kuukausitulo|Riittävätkö rahat/.test(tiles[0].k), 'ensimmäinen tiili on vastaus riittävyyteen', tiles[0].k);
-    ok(/mitoitettu käytettäviksi|riittävät|osuus markkinapoluista/.test(tiles[0].s), 'sankaritiilen alarivi selittää', tiles[0].s);
+    ok(/varat käytetään|onnistumis-%|riittävät|osuus markkinapoluista/.test(tiles[0].s), 'sankaritiilen alarivi selittää', tiles[0].s);
     const endTile = tiles.find((x) => /v iässä$/.test(x.k) && !/eläkkeellä/.test(x.k));
     ok(endTile && /käytetään suunnitellusti/.test(endTile.s), '"Sijoitukset N v iässä" pieni luku selitetään', endTile ? endTile.s : '-');
     // Pro-rivi tapahtumakortin alla mobiilissa

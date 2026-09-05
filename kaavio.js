@@ -610,7 +610,14 @@ function startMarkerDrag(e, ev) {
 function buildPalette() {
   const pal = $('palette');
   pal.innerHTML = '';
-  for (const [type, def] of Object.entries(EVENT_TYPES)) {
+  // Järjestys: yleisimmät ja vaikuttavimmat ensin (UX-auditointi 5.9.2026 U7);
+  // eläketapahtuma on ainutkertainen ja avaa olemassa olevan (työeläke, eläkeikä)
+  const KARKI = ['retirement', 'home', 'child', 'income_gap', 'inheritance', 'car'];
+  const entries = Object.entries(EVENT_TYPES).sort((a, b) => {
+    const ia = KARKI.indexOf(a[0]), ib = KARKI.indexOf(b[0]);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+  for (const [type, def] of entries) {
     if (def.familyOnly && !familyOn()) continue; // siirrot vain perhetilassa
     const chip = document.createElement('div');
     chip.className = 'chip';
@@ -636,6 +643,13 @@ function buildPalette() {
     });
     pal.appendChild(chip);
   }
+  // Kapealla näytöllä loput avataan napista (CSS piilottaa 7. chipistä alkaen)
+  const tg = document.createElement('button');
+  tg.type = 'button'; tg.className = 'chip pal-toggle';
+  const setTg = () => { tg.textContent = pal.classList.contains('open') ? t('Näytä vähemmän') : t('Näytä kaikki tapahtumat'); };
+  tg.addEventListener('click', () => { pal.classList.toggle('open'); setTg(); });
+  setTg();
+  pal.appendChild(tg);
 }
 
 function startPaletteDrag(e, type) {

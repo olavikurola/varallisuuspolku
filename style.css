@@ -457,6 +457,30 @@ input[type="range"]::-moz-range-thumb {
 .stat .v.bad { color: var(--danger); }
 .stat .v.accent { background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
+/* ---------- Kysymyschipit graafin alla (UX-auditointi 5.9.2026 U5) ---------- */
+.q-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 6px 0 2px; margin-top: 2px; }
+.q-chips::-webkit-scrollbar { display: none; }
+.q-chip {
+  flex: 0 0 auto; white-space: nowrap; font-size: 12.5px; font-weight: 500;
+  padding: 6px 11px; border-radius: 999px; cursor: pointer;
+  background: var(--card-2); border: 1px solid var(--border); color: var(--text);
+}
+.q-chip:hover { border-color: var(--accent); color: var(--accent); }
+.q-chip.q-more { color: var(--text-dim); }
+body.fs .q-chips { display: none; }
+/* Mobiili: graafista ei voi tarttua → pilleri avaa piirtopöydän (U3) */
+.drag-pill {
+  display: none; position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%);
+  padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;
+  background: rgba(var(--ink), 0.85); border: 1px solid var(--accent); color: var(--accent);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); cursor: pointer;
+}
+@media (max-width: 980px) { .drag-pill:not([hidden]) { display: inline-flex; } body.fs .drag-pill { display: none; } }
+/* Rampin työeläkekenttä ja ensimmäinen veto */
+.ramp-pen { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 2px; font-size: 13px; color: var(--text-dim); }
+.ramp-pen .input { max-width: 220px; }
+.ramp-acts2 .btn.primary-wide { flex: 1 1 100%; }
+
 /* ---------- Vertailuchipit (vertailumodaali) ---------- */
 .cmp-chip {
   display: inline-flex; align-items: baseline; gap: 6px;
@@ -1246,17 +1270,16 @@ a.btn { text-decoration: none; }
   .chart-col { padding: 12px; gap: 10px; }
   .panel { padding: 12px 12px 20px; }
 
-  /* Tunnusluvut: pyyhkäistävä nauha korttiseinän sijaan — graafi heti näkyviin */
+  /* Tunnusluvut: sankaritiili koko leveydelle, muut 2×2 alle — pyyhkäistävä
+     nauha piilotti onnistumis-%:n ja kestävän tulon (UX-auditointi 5.9.2026 U4) */
   .stats {
-    display: flex;
-    overflow-x: auto;
-    scrollbar-width: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 8px;
-    margin: 0 -12px;
-    padding: 0 12px;
   }
-  .stats::-webkit-scrollbar { display: none; }
-  .stat { flex: 0 0 auto; width: 168px; padding: 9px 12px; }
+  .stat { padding: 9px 12px; }
+  .stat:first-child { grid-column: 1 / -1; }
+  .stat:first-child .v { font-size: 22px; }
   .stat .k { font-size: 9.5px; letter-spacing: 0.6px; }
   .stat .v { font-size: 16px; }
   .stat .s { font-size: 10.5px; }
@@ -2518,6 +2541,12 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
 @media (max-width: 980px) {
   .ph-thead, .ph-row { grid-template-columns: 22px minmax(130px, 1.2fr) 42px 66px 82px 66px 84px 118px; }
   .plans-home .c-saasto, .plans-home .c-kestava, .plans-home .c-spark { display: none; }
+}
+.pal-toggle { display: none; grid-column: 1 / -1; justify-content: center; cursor: pointer; color: var(--text-dim); font-family: inherit; }
+@media (max-width: 980px) {
+  /* Paletti: kärkitapahtumat näkyvissä, loput "Näytä kaikki" -napin takana (U7) */
+  .palette:not(.open) .chip:nth-child(n+7):not(.pal-toggle) { display: none; }
+  .pal-toggle { display: flex; }
 }
 @media (max-width: 640px) {
   .ph-thead, .ph-row { grid-template-columns: 20px minmax(64px, 1.2fr) 62px 78px 86px; gap: 0 6px; padding: 0 10px; }

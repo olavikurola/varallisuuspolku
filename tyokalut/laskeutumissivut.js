@@ -77,7 +77,7 @@ function taulukkoHtml(t) {
       <div class="table-scroll"><table class="sum-table">
         <thead><tr>${t.sarakkeet.map((c, i) => `<th${i ? ' class="num"' : ''}>${c}</th>`).join('')}</tr></thead>
         <tbody>
-${t.rivit.map((r) => `          <tr>${r.map((c, i) => `<td${i ? ' class="num"' : ''}>${c}</td>`).join('')}</tr>`).join('\n')}
+${t.rivit.map((r) => `          <tr>${r.map((c, i) => `<td${i ? ' class="num"' : ''} data-label="${t.sarakkeet[i].replace(/<[^>]+>/g, '').replace(/"/g, '&quot;')}">${c}</td>`).join('')}</tr>`).join('\n')}
         </tbody>
       </table></div>
       <p class="ls-note">${t.huom}</p>
@@ -189,19 +189,19 @@ const SIVUT = [
       <div class="table-scroll"><table class="sum-table">
         <thead><tr><th>Syntymävuosi</th><th class="num">Alin vanhuuseläkeikä</th><th class="num">Tila</th></tr></thead>
         <tbody>
-          <tr><td>1958</td><td class="num">64&nbsp;v</td><td class="num">laki</td></tr>
-          <tr><td>1959</td><td class="num">64&nbsp;v 3&nbsp;kk</td><td class="num">laki</td></tr>
-          <tr><td>1960</td><td class="num">64&nbsp;v 6&nbsp;kk</td><td class="num">laki</td></tr>
-          <tr><td>1961</td><td class="num">64&nbsp;v 9&nbsp;kk</td><td class="num">laki</td></tr>
-          <tr><td>1962–1964</td><td class="num">65&nbsp;v</td><td class="num">laki</td></tr>
-          <tr><td>1965</td><td class="num">65&nbsp;v 2&nbsp;kk</td><td class="num">arvio</td></tr>
-          <tr><td>1970</td><td class="num">65&nbsp;v 8–10&nbsp;kk</td><td class="num">arvio</td></tr>
-          <tr><td>1975</td><td class="num">66&nbsp;v 4&nbsp;kk</td><td class="num">arvio</td></tr>
-          <tr><td>1980</td><td class="num">66&nbsp;v 10&nbsp;kk</td><td class="num">arvio</td></tr>
-          <tr><td>1985</td><td class="num">67&nbsp;v 4&nbsp;kk</td><td class="num">arvio</td></tr>
-          <tr><td>1990</td><td class="num">67&nbsp;v 9&nbsp;kk</td><td class="num">arvio</td></tr>
-          <tr><td>1995</td><td class="num">68&nbsp;v 2&nbsp;kk</td><td class="num">arvio</td></tr>
-          <tr><td>2000</td><td class="num">68&nbsp;v 7&nbsp;kk</td><td class="num">arvio</td></tr>
+          <tr><td data-label="Syntymävuosi">1958</td><td class="num" data-label="Alin vanhuuseläkeikä">64&nbsp;v</td><td class="num" data-label="Tila">laki</td></tr>
+          <tr><td data-label="Syntymävuosi">1959</td><td class="num" data-label="Alin vanhuuseläkeikä">64&nbsp;v 3&nbsp;kk</td><td class="num" data-label="Tila">laki</td></tr>
+          <tr><td data-label="Syntymävuosi">1960</td><td class="num" data-label="Alin vanhuuseläkeikä">64&nbsp;v 6&nbsp;kk</td><td class="num" data-label="Tila">laki</td></tr>
+          <tr><td data-label="Syntymävuosi">1961</td><td class="num" data-label="Alin vanhuuseläkeikä">64&nbsp;v 9&nbsp;kk</td><td class="num" data-label="Tila">laki</td></tr>
+          <tr><td data-label="Syntymävuosi">1962–1964</td><td class="num" data-label="Alin vanhuuseläkeikä">65&nbsp;v</td><td class="num" data-label="Tila">laki</td></tr>
+          <tr><td data-label="Syntymävuosi">1965</td><td class="num" data-label="Alin vanhuuseläkeikä">65&nbsp;v 2&nbsp;kk</td><td class="num" data-label="Tila">arvio</td></tr>
+          <tr><td data-label="Syntymävuosi">1970</td><td class="num" data-label="Alin vanhuuseläkeikä">65&nbsp;v 8–10&nbsp;kk</td><td class="num" data-label="Tila">arvio</td></tr>
+          <tr><td data-label="Syntymävuosi">1975</td><td class="num" data-label="Alin vanhuuseläkeikä">66&nbsp;v 4&nbsp;kk</td><td class="num" data-label="Tila">arvio</td></tr>
+          <tr><td data-label="Syntymävuosi">1980</td><td class="num" data-label="Alin vanhuuseläkeikä">66&nbsp;v 10&nbsp;kk</td><td class="num" data-label="Tila">arvio</td></tr>
+          <tr><td data-label="Syntymävuosi">1985</td><td class="num" data-label="Alin vanhuuseläkeikä">67&nbsp;v 4&nbsp;kk</td><td class="num" data-label="Tila">arvio</td></tr>
+          <tr><td data-label="Syntymävuosi">1990</td><td class="num" data-label="Alin vanhuuseläkeikä">67&nbsp;v 9&nbsp;kk</td><td class="num" data-label="Tila">arvio</td></tr>
+          <tr><td data-label="Syntymävuosi">1995</td><td class="num" data-label="Alin vanhuuseläkeikä">68&nbsp;v 2&nbsp;kk</td><td class="num" data-label="Tila">arvio</td></tr>
+          <tr><td data-label="Syntymävuosi">2000</td><td class="num" data-label="Alin vanhuuseläkeikä">68&nbsp;v 7&nbsp;kk</td><td class="num" data-label="Tila">arvio</td></tr>
         </tbody>
       </table></div>
       <p class="ls-note">Lähteet: <a href="https://www.tyoelake.fi/elakkeet-eri-elamantilanteissa/vanhuuselake-elakeika-maaraytyy-syntymavuoden-mukaan/" rel="noopener">Työeläke.fi</a> (säädetyt ikärajat), <a href="https://www.tela.fi/ajankohtaista/qa-tietopaketit/elakeika/" rel="noopener">Tela</a> ja Eläketurvakeskuksen ennusteet (arviot; 1970 syntyneille lähteet antavat 65 v 8 kk – 65 v 10 kk ennustevuodesta riippuen). Tarkista oma ikärajasi työeläkeotteelta. Työeläke karttuu 1,5 % vuosiansioista, ja alimman eläkeiän jälkeen lykätty eläke saa 0,4 % korotuksen kuukaudessa.</p>
@@ -375,6 +375,18 @@ function sivuHtml(p) {
     .ls-tbl .ls-tbl-intro { font-size: 14px; margin: 0 0 10px; }
     .ls-tbl table { width: 100%; }
     .ls-tbl .ls-note { margin-top: 8px; }
+    .ls-muut a, .ls-note a { color: var(--accent); }
+    /* Kapealla näytöllä taulukon rivi = kortti: kaikki sarakkeet näkyvissä ilman vaakavieritystä (UX-auditointi 5.9.2026 U8) */
+    @media (max-width: 640px) {
+      .ls-tbl table, .ls-tbl tbody, .ls-tbl tr, .ls-tbl td { display: block; width: 100%; box-sizing: border-box; }
+      .ls-tbl thead { display: none; }
+      .ls-tbl tr { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; background: var(--card-2); }
+      .ls-tbl td, .ls-tbl .table-scroll .sum-table td, .ls-tbl .table-scroll .sum-table td:first-child { display: flex; justify-content: space-between; gap: 12px; text-align: left; padding: 3px 0; border: 0; white-space: normal; }
+      .ls-tbl td::before { content: attr(data-label); color: var(--text-faint); font-size: 12px; flex: 1 1 50%; }
+      .ls-tbl td:first-child { font-weight: 600; color: var(--text); }
+      .ls-tbl td:first-child::before { content: none; }
+      .ls-tbl .table-scroll { overflow: visible; }
+    }
   </style>
   <script type="application/ld+json">
   {
