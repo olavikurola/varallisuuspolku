@@ -61,7 +61,7 @@ const linkki = (st) => './#e=' + P.pakkaa(JSON.stringify(st)); // pakattu (~), k
    lukuja, eivät "vedä käyrää" -kuvauksia. Jokainen luku tulee laskenta.js:stä
    samoilla oletuksilla kuin sovelluksessa — taulukko ei voi erota tuotteesta. */
 const L = require('../laskenta.js');
-const MC_PATHS = 1500;
+const MC_PATHS = 5000; // sama tarkkuus kuin sovelluksen worker-tarkennus (auditointi 5.9.2026 F-05)
 const sim = (st) => L.simulate(st, { paths: MC_PATHS });
 const nbsp = (t) => String(t).replace(/\u00a0/g, '&nbsp;');
 const eur = (v) => nbsp(Math.round(v).toLocaleString('fi-FI')) + '&nbsp;€';
@@ -114,14 +114,14 @@ const SIVUT = [
     h1: 'FIRE-laskuri: aikaisin eläkeikä halutulla varmuudella',
     kuvaus: 'FIRE-laskuri suomalaisella verotuksella: aikaisin eläkeikä 75/85/95 % varmuudella, kestävä nostotaso ja sekvenssiriskin stressitestit — ei 4 %:n sääntöä vaan koko elinkaari.',
     vastaus: [
-      'Useimmat FIRE-laskurit kertovat, milloin salkkusi on 25 kertaa vuosikulusi — eli soveltavat 4 %:n sääntöä. Sääntö on yhdysvaltalainen, nimellinen ja vero-vapaa oletus, joka ei tunne suomalaista myyntivoittoveroa, työeläkettä eikä sitä, että 45-vuotiaana aloitettu nosto voi kestää 45 vuotta.',
+      'Useimmat FIRE-laskurit kertovat, milloin salkkusi on 25 kertaa vuosikulusi — eli soveltavat 4 %:n sääntöä. Sääntö perustuu Yhdysvaltain markkinahistoriaan ja 30 vuoden nostoaikaan (nostot inflaatiokorjattuina), eikä se tunne suomalaista myyntivoittoveroa, työeläkettä eikä sitä, että 45-vuotiaana aloitettu nosto voi kestää 45 vuotta.',
       'Varallisuuspolun FIRE-laskuri ratkaisee kysymyksen toisin päin: <b>kuinka aikaisin voit lopettaa työt, kun haluat, että varat riittävät X %:n varmuudella</b>. Valitset kuukausitulon tarpeen ja varmuustason (75, 85 tai 95 % simuloiduista markkinapoluista), ja ratkaisija hakee aikaisimman eläkeiän. Työeläke alkaa omalla iällään — ennen sitä koko tulo nostetaan sijoituksista, ja siitä menee vero voiton osuudesta.',
       'Sekvenssiriski — huono markkinavuosi juuri nostojen alkaessa — on FIRE-suunnitelman suurin yksittäinen riski. Laskurin Markkinatesti ajaa suunnitelman viiden deterministisen stressiskenaarion läpi (karhu heti eläkkeellä, menetetty vuosikymmen, stagflaatio, romahdus −50 %) ja näyttää, missä iässä varat loppuisivat kussakin.',
       'Kaikki on ilmaista, ilman rekisteröitymistä, ja suunnitelma pysyy omalla laitteellasi. Laskuri ei anna sijoitusneuvontaa: se laskee, sinä päätät.',
     ],
     ukk: [
-      ['Miksi ei 4 %:n sääntö?', 'Sääntö olettaa 30 vuoden nostoajan, Yhdysvaltain historiallisia tuottoja ja nollaveroa. Suomessa nostoista maksetaan myyntivoittovero, ja varhainen eläke voi kestää 40–50 vuotta. Elinkaarisimulaatio omilla luvuillasi on rehellisempi.'],
-      ['Mikä varmuustaso kannattaa valita?', 'Laskuri ei suosittele — se näyttää, mitä kukin taso maksaa. 85 % on yleinen kompromissi: 15 % simuloiduista poluista jää alle tavoitteen, mutta niissäkin on yleensä aikaa reagoida.'],
+      ['Miksi ei 4 %:n sääntö?', 'Sääntö olettaa 30 vuoden nostoajan, Yhdysvaltain historiallisia tuottoja ja nollaveroa (nostot inflaatiokorjattuina). Suomessa nostoista maksetaan myyntivoittovero, ja varhainen eläke voi kestää 40–50 vuotta. Elinkaarisimulaatio omilla luvuillasi on rehellisempi.'],
+      ['Mikä varmuustaso kannattaa valita?', 'Laskuri ei suosittele — se näyttää, mitä kukin taso maksaa. Esimerkiksi 85 % tarkoittaa, että 15 % simuloiduista poluista jää alle tavoitteen — niissäkin on yleensä aikaa reagoida. Taso on sinun valintasi.'],
       ['Huomioiko laskuri työeläkkeen?', 'Kyllä. Työeläke alkaa valitsemastasi iästä ja pienentää sijoituksista nostettavaa summaa. Syötä se käteen jäävänä arviona.'],
     ],
     kokeile: [
@@ -136,7 +136,7 @@ const SIVUT = [
     kuvaus: 'Laskuri kertoo tarvittavan kuukausisäästön, jotta eläkeajan tulotarve toteutuu — työeläke, verot ja markkinoiden heilunta huomioiden. Ilmainen, kaikki laskenta selaimessa.',
     vastaus: [
       'Kysymykseen ei ole yhtä lukua, koska vastaus riippuu kolmesta valinnasta: <b>milloin</b> haluat jäädä eläkkeelle, <b>paljonko</b> haluat käyttää kuukaudessa ja <b>kuinka varmasti</b> haluat rahojen riittävän. Laskuri tekee näistä valinnoista luvun: kuukausisäästön, jolla suunnitelma toteutuu.',
-      'Lähtökohta on työeläke. Suomalaisella palkansaajalla se kattaa tyypillisesti 40–60 % eläkkeen tulotarpeesta; loput pitää tulla omista sijoituksista. Jos tulotarve on 2 500 € kuukaudessa ja käteen jäävä työeläke 1 500 €, sijoitusten on kannettava 1 000 € kuukaudessa — ja vero sen päälle, koska nostosta menee myyntivoittovero voiton osuudesta.',
+      'Lähtökohta on työeläke: se kattaa osan tulotarpeesta, ja loput pitää tulla omista sijoituksista. Katso oma arviosi työeläkeotteelta — se ratkaisee säästötarpeen enemmän kuin mikään muu yksittäinen luku. Jos tulotarve on 2 500 € kuukaudessa ja käteen jäävä työeläke 1 500 €, sijoitusten on kannettava 1 000 € kuukaudessa — ja vero sen päälle, koska nostosta menee myyntivoittovero voiton osuudesta.',
       'Varallisuuspolku ratkaisee säästötarpeen deterministisesti odotetulla tuotolla tai valitsemallasi varmuustasolla Monte Carlo -poluista. Voit porrastaa säästön elämänvaiheittain (vähemmän lapsivuosina, enemmän myöhemmin) ja lisätä isot hankinnat lainoineen — laskuri näyttää, miten asunnon osto tai lapsi muuttaa tarvittavaa säästöä.',
       'Palvelu ei suosittele tuotteita eikä ota kantaa siihen, mihin säästät. Se laskee, kuinka paljon — sinun omilla oletuksillasi, joita voit muuttaa.',
     ],
@@ -252,9 +252,9 @@ const TAULUKOT = {
     return {
       otsikko: 'Esimerkki: mitä eläkeikä maksaa',
       selite: '35-vuotias, sijoituksia 40&nbsp;000&nbsp;€, säästö 500&nbsp;€/kk (+1,5&nbsp;%/v), osakepaino 80&nbsp;%, työeläkearvio 1&nbsp;500&nbsp;€/kk käteen 65-vuotiaana, tulotarve 2&nbsp;400&nbsp;€/kk, luvut nykyrahassa. Työeläke pienenee, jos työ päättyy ennen 65:tä (karttuma päättyy).',
-      sarakkeet: ['Eläkeikä', 'Työeläke eläkeiässä', 'Sijoitukset eläkeiässä', 'Kestävä kuukausitulo', 'Onnistumis-% (2&nbsp;400&nbsp;€/kk)'],
+      sarakkeet: ['Eläkeikä', 'Työeläke eläkeiässä', 'Sijoitukset eläkeiässä', 'Kestävä kuukausitulo (sis. työeläkkeen)', 'Onnistumis-% (2&nbsp;400&nbsp;€/kk)'],
       rivit,
-      huom: 'Kestävä kuukausitulo = sijoitusten kantama tulo työeläkkeen päälle laskettuna niin, että varat riittävät 90-vuotiaaksi tyypillisellä (mediaani) markkinakehityksellä. Onnistumis-% = osuus simuloiduista markkinapoluista, joilla 2&nbsp;400&nbsp;€/kk riittää. Laskettu Varallisuuspolun moottorilla ' + PVM + '.',
+      huom: 'Kestävä kuukausitulo = sijoitusten kantama tulo työeläkkeen päälle laskettuna niin, että varat riittävät 90-vuotiaaksi tyypillisellä (mediaani) markkinakehityksellä. Onnistumis-% = osuus simuloiduista markkinapoluista, joilla 2&nbsp;400&nbsp;€/kk riittää. Laskettu Varallisuuspolun moottorilla ' + PVM + ', Monte Carlo ' + MC_PATHS.toLocaleString('fi-FI').replace(/\u00a0/g, '&nbsp;') + ' polkua.',
     };
   },
   'fire-laskuri'() {
@@ -267,7 +267,7 @@ const TAULUKOT = {
       selite: '32-vuotias, sijoituksia 60&nbsp;000&nbsp;€, osakepaino 95&nbsp;%, tulotarve 2&nbsp;200&nbsp;€/kk nykyrahassa, työeläkearvio 1&nbsp;500&nbsp;€/kk 65-vuotiaana (pienenee, kun työ päättyy aiemmin), suunnitelma 90-vuotiaaksi.',
       sarakkeet: ['Säästö', 'Aikaisin eläkeikä 75&nbsp;%', '85&nbsp;%', '95&nbsp;%'],
       rivit,
-      huom: 'Varmuustaso = osuus simuloiduista markkinapoluista, joilla varat riittävät 90-vuotiaaksi. Vertailun vuoksi 4&nbsp;%:n sääntö antaisi saman kysymyksen vastaukseksi salkun koon 660&nbsp;000&nbsp;€ — se ei tunne veroja, työeläkettä eikä nostoajan pituutta. Laskettu ' + PVM + '.',
+      huom: 'Varmuustaso = osuus simuloiduista markkinapoluista, joilla varat riittävät 90-vuotiaaksi. Vertailun vuoksi 4&nbsp;%:n sääntö antaisi saman kysymyksen vastaukseksi salkun koon 660&nbsp;000&nbsp;€ — se ei tunne veroja, työeläkettä eikä nostoajan pituutta. Laskettu ' + PVM + ', Monte Carlo ' + MC_PATHS.toLocaleString('fi-FI').replace(/\u00a0/g, '&nbsp;') + ' polkua.',
     };
   },
   'paljonko-pitaa-saastaa-elakkeelle'() {
@@ -283,21 +283,21 @@ const TAULUKOT = {
       selite: '35-vuotias, sijoituksia 40&nbsp;000&nbsp;€, osakepaino 80&nbsp;%, säästö kasvaa 1,5&nbsp;%/v, työeläkearvio 1&nbsp;500&nbsp;€/kk käteen 65-vuotiaana, luvut nykyrahassa, varat mitoitettu 90-vuotiaaksi.',
       sarakkeet: ['Tulotarve eläkkeellä', 'Eläkkeelle 65 (mediaanipolku)', 'Eläkkeelle 65 (85&nbsp;% varmuus)', 'Eläkkeelle 60 (mediaanipolku)'],
       rivit,
-      huom: 'Säästö tarkoittaa tämän päivän summaa, joka kasvaa palkkakehityksen mukana 1,5&nbsp;%/v. 60-vuotiaana eläköityvän työeläke on pienempi (karttuma päättyy) ja välivuodet 60–65 katetaan kokonaan sijoituksista. Laskettu ' + PVM + '.',
+      huom: 'Säästö tarkoittaa tämän päivän summaa, joka kasvaa palkkakehityksen mukana 1,5&nbsp;%/v. 60-vuotiaana eläköityvän työeläke on pienempi (karttuma päättyy) ja välivuodet 60–65 katetaan kokonaan sijoituksista. Laskettu ' + PVM + ', Monte Carlo ' + MC_PATHS.toLocaleString('fi-FI').replace(/\u00a0/g, '&nbsp;') + ' polkua.',
     };
   },
   'osakesaastotili-vai-arvo-osuustili'() {
     const rivit = [];
-    for (const [nimi, acct, div] of [['Arvo-osuustili, osinkotuotto 3&nbsp;%', 'aot', 3], ['Osakesäästötili, osinkotuotto 3&nbsp;%', 'ost', 3], ['Arvo-osuustili, kasvurahastot (osinko 0&nbsp;%)', 'aot', 0], ['Osakesäästötili, kasvurahastot', 'ost', 0]]) {
-      const m = sim(rakenna({ acct, retAge: 65, goal: 'withdrawal' }, { divYield: div, monthly: 800 }));
+    for (const [nimi, acct, div] of [['Suorat osakkeet arvo-osuustilillä, osinkotuotto 3&nbsp;%', 'aot', 3], ['Samat osakkeet osakesäästötilillä', 'ost', 3], ['Vaihtoehto: kasvurahasto arvo-osuustilillä (ei osinkoja; ei mahdollinen OST:lle)', 'aot', 0]]) {
+      const m = sim(rakenna({ acct, retAge: 65, goal: 'withdrawal' }, { divYield: div, monthly: 150, savingsGrowth: 0 }));
       rivit.push([nimi, eur(m.wAtRet), eurKk(m.solvedWithdrawal), eur(m.taxPaid)]);
     }
     return {
-      otsikko: 'Esimerkki: sama salkku kahdella tilillä',
-      selite: '35-vuotias, sijoituksia 40&nbsp;000&nbsp;€, säästö 800&nbsp;€/kk (+1,5&nbsp;%/v), osakepaino 80&nbsp;%, eläkkeelle 65, työeläke 1&nbsp;500&nbsp;€/kk, luvut nykyrahassa. Osinkotuotto on osa 7&nbsp;%:n kokonaistuotto-odotusta — arvo-osuustilillä siitä menee vero vuosittain, osakesäästötilillä vasta nostossa.',
-      sarakkeet: ['Tili', 'Sijoitukset 65-vuotiaana', 'Kestävä kuukausitulo', 'Verot yhteensä'],
+      otsikko: 'Esimerkki: samat osakkeet kahdella tilillä',
+      selite: '35-vuotias, sijoituksia 40&nbsp;000&nbsp;€ ja säästö 150&nbsp;€/kk (talletukset yhteensä 94&nbsp;000&nbsp;€ eli osakesäästötilin 100&nbsp;000&nbsp;€:n katon alle), osakepaino 80&nbsp;%, eläkkeelle 65, työeläke 1&nbsp;500&nbsp;€/kk, luvut nykyrahassa. Osinkotuotto on osa 7&nbsp;%:n kokonaistuotto-odotusta — arvo-osuustilillä siitä menee vero vuosittain, osakesäästötilillä vasta nostossa. Osakesäästötilille voi ostaa vain pörssiosakkeita, ei rahastoja tai ETF:iä.',
+      sarakkeet: ['Tili', 'Sijoitukset 65-vuotiaana', 'Kestävä kuukausitulo', 'Verot nostoista ja myynneistä'],
       rivit,
-      huom: 'Ero syntyy osinkojen verotuksen ajoituksesta; kasvurahastoilla (ei osinkoja) tilit ovat perusversiossa yhtä hyvät. Osakesäästötilin suurempi verosumma johtuu suuremmista nostoista — vero maksetaan myöhemmin ja isommasta salkusta. Osakesäästötilin 100&nbsp;000&nbsp;€:n talletuskatto ei täyty tässä esimerkissä. Laskettu ' + PVM + '.',
+      huom: 'Ero syntyy osinkojen verotuksen ajoituksesta. Sarakkeen verot ovat eläkeajan nostojen veroja: arvo-osuustilin vuosittainen osinkovero on vähennetty tuotosta eikä näy tässä summassa. Osakesäästötilin suurempi verosumma johtuu suuremmista nostoista — vero maksetaan myöhemmin ja isommasta salkusta. Jos talletukset ylittäisivät 100&nbsp;000&nbsp;€, loput pitäisi sijoittaa toiselle tilille — laskuri ei mallinna tilin täyttymistä. Osakesäästötilin 100&nbsp;000&nbsp;€:n talletuskatto ei täyty tässä esimerkissä. Laskettu ' + PVM + ', Monte Carlo ' + MC_PATHS.toLocaleString('fi-FI').replace(/\u00a0/g, '&nbsp;') + ' polkua.',
     };
   },
   'milloin-voin-jaada-elakkeelle'() {
@@ -312,7 +312,7 @@ const TAULUKOT = {
       selite: '40-vuotias, sijoituksia 100&nbsp;000&nbsp;€, osakepaino 80&nbsp;%, tulotarve 2&nbsp;500&nbsp;€/kk nykyrahassa, työeläkearvio 1&nbsp;800&nbsp;€/kk käteen 65-vuotiaana, suunnitelma 90-vuotiaaksi.',
       sarakkeet: ['Säästö', 'Aikaisin eläkeikä (mediaanipolku)', 'Aikaisin eläkeikä (85&nbsp;% varmuus)', 'Työeläke tuossa iässä'],
       rivit,
-      huom: 'Työeläke pienenee, kun ansiot päättyvät ennen 65:tä — laskuri vähentää karttuman suhteessa menetettyihin työvuosiin. Ennen 65:tä koko tulo nostetaan sijoituksista ja nostosta menee myyntivoittovero. Laskettu ' + PVM + '.',
+      huom: 'Työeläke pienenee, kun ansiot päättyvät ennen 65:tä — laskuri vähentää karttuman suhteessa menetettyihin työvuosiin. Ennen 65:tä koko tulo nostetaan sijoituksista ja nostosta menee myyntivoittovero. Laskettu ' + PVM + ', Monte Carlo ' + MC_PATHS.toLocaleString('fi-FI').replace(/\u00a0/g, '&nbsp;') + ' polkua.',
     };
   },
   'asuntolaina-vai-sijoittaminen'() {
@@ -324,10 +324,10 @@ const TAULUKOT = {
     });
     return {
       otsikko: 'Esimerkki: sama asunto, eri laina-aika',
-      selite: '35-vuotias ostaa 280&nbsp;000&nbsp;€:n asunnon 42&nbsp;000&nbsp;€:n käsirahalla, laina 238&nbsp;000&nbsp;€ korolla 3,5&nbsp;%. Säästökyky 1&nbsp;500&nbsp;€/kk ennen lainanhoitoa (+1,5&nbsp;%/v), osakepaino 80&nbsp;%, eläkkeelle 65, tulotarve 2&nbsp;400&nbsp;€/kk, työeläke 1&nbsp;500&nbsp;€/kk, luvut nykyrahassa.',
-      sarakkeet: ['Laina-aika', 'Kuukausierä', 'Sijoitukset 65-vuotiaana', 'Loppuvarallisuus 90 v', 'Onnistumis-%'],
+      selite: '35-vuotias ostaa 36-vuotiaana 280&nbsp;000&nbsp;€:n asunnon 42&nbsp;000&nbsp;€:n käsirahalla, laina 238&nbsp;000&nbsp;€ korolla 3,5&nbsp;%. Säästökyky 1&nbsp;500&nbsp;€/kk ennen lainanhoitoa (+1,5&nbsp;%/v), osakepaino 80&nbsp;%, eläkkeelle 65, tulotarve 2&nbsp;400&nbsp;€/kk, työeläke 1&nbsp;500&nbsp;€/kk, luvut nykyrahassa.',
+      sarakkeet: ['Laina-aika', 'Kuukausierä', 'Sijoitukset 65-vuotiaana', 'Sijoitukset 90-vuotiaana', 'Onnistumis-%'],
       rivit,
-      huom: 'Sijoitukset = sijoitussalkku ilman asuntoa; asunto on kaikissa riveissä sama. Pidempi laina jättää enemmän sijoitettavaa, mutta korkoriski ja markkinariski kasvavat — katso viuhka ja Markkinatesti sovelluksessa. Laskettu ' + PVM + '.',
+      huom: 'Sijoitukset = sijoitussalkku ilman asuntoa (sovelluksen Netto sisältää myös asunnon); asunto on kaikissa riveissä sama. Vertailu koskee laina-ajan valintaa; olemassa olevan lainan ylimääräinen lyhennys on sama kysymys käänteisenä. Pidempi laina jättää enemmän sijoitettavaa, mutta korkoriski ja markkinariski kasvavat — katso viuhka ja Markkinatesti sovelluksessa. Laskettu ' + PVM + ', Monte Carlo ' + MC_PATHS.toLocaleString('fi-FI').replace(/\u00a0/g, '&nbsp;') + ' polkua.',
     };
   },
 };

@@ -61,6 +61,9 @@ const feeOr0 = (v) => (typeof v === 'number' && isFinite(v) ? clamp(v, 0, 10) : 
 // viuhka ja onnistumis-% eivät väpätä säätöjen välillä ja deltat ovat reiluja.
 // ÄLÄ sido siementä istuntoon tai suunnitelmaan — se rikkoisi tämän.
 const MC_SEED = (i) => 1337 + i * 7919;
+// Moottoriversio: päivitä kun tulosten taloudellinen merkitys muuttuu (validointisivun muutosloki).
+// Kulkee vertailudatan mukana, jotta eri versioiden johdetut tulokset erottuvat (auditointi 5.9.2026 D-03).
+const ENGINE_VERSION = '2026-09-05';
 const MC_LIVE = 300;   // synkroninen laskenta päälangassa
 const MC_FULL = 5000;  // worker-tarkennus irrotuksen jälkeen
 
@@ -525,6 +528,7 @@ function prepareSim(st, opts = {}) {
   };
   let hasAssets = false;
   const saleInfos = [];
+  const saleGains = new Map(); // kuukausi → [{id, taxableNom}] — verotetaan runPathissa vuosikertymällä
   for (const e of st.events) {
     if (e.type === 'retirement' || e.type === 'goal' || e.amount >= 0 || !e.isAsset) continue;
     const m0 = e.owned ? 0 : Math.round((e.age - a0) * 12);
@@ -549,30 +553,36 @@ function prepareSim(st, opts = {}) {
     if (mSell != null && mSell <= months) {
       const saleValue = v;
       const payoff = salePayoff.get(e.id) || 0;
-      let saleTax = 0;
+      let saleTax = 0, taxableNom = 0;
       if (taxOn && !e.sellTaxFree) {
-        // Omistukselle ostohintaa ei kysytä → verotettava on suoraan
-        // hankintameno-olettamaosuus myyntihinnasta; pitoaikaan lasketaan
-        // jo omistetut vuodet (ownYears, johdettu ostovuodesta)
+        // Pitoaikaan lasketaan jo omistetut vuodet (ownYears, johdettu ostovuodesta)
         const heldY = (mSell - m0) / 12 + (e.owned ? Math.max(0, e.ownYears || 0) : 0);
-        const cap = (heldY >= 10 ? 0.6 : 0.8) * saleValue;
-        // Hankintahinta: ostetulla kohteella ostohinta, omistuksella valinnainen
-        // buyPrice (ilman sitä olettamaosuus — auditointi 8/2026: aiemmin AINA
-        // olettama, jolloin mökin vero saattoi olla ~3× todellinen)
-        const hankinta = e.owned ? (e.buyPrice > 0 ? e.buyPrice : null) : -e.amount;
-        const taxable = hankinta != null ? Math.min(Math.max(0, saleValue - hankinta), cap) : cap;
-        // Vero nimellisessä rahassa (verolaki on nimellinen) ja takaisin
-        // esitysrahaan; nimellistilassa nom = 1 → tulos ennallaan.
-        const nom = nomAt(mSell);
-        saleTax = capitalTax(taxable * nom, 0, taxBracket, taxLow, taxHigh) / nom;
+        // Voitto lasketaan NIMELLISENÄ (verolaki on nimellinen): myyntihinta
+        // myyntihetken nimellisrahassa, hankintameno ostohetken nimellisrahassa.
+        // Auditointi 5.9.2026 (F-02): aiemmin reaalitilassa esitysrahainen
+        // myyntiarvo − nimellinen ostohinta → inflaation verran arvonnousua
+        // näytti verottomalta ja mökin vero oli 0 €. Nimellistilassa nom = 1.
+        const nomSell = nomAt(mSell);
+        const saleValueNom = saleValue * nomSell;
+        const cap = (heldY >= 10 ? 0.6 : 0.8) * saleValueNom;
+        // Hankintameno: ostettu kohde = summa ostohetken nimellisrahassa;
+        // omistus = valinnainen buyPrice (historiallinen nimellinen), ilman
+        // sitä olettamaosuus (auditointi 8/2026: aiemmin AINA olettama)
+        const hankintaNom = e.owned ? (e.buyPrice > 0 ? e.buyPrice : null) : -e.amount * nomAt(m0);
+        taxableNom = hankintaNom != null ? Math.min(Math.max(0, saleValueNom - hankintaNom), cap) : cap;
+        // Esitysarvio yksittäiselle myynnille (vuosikertymä 0); todellinen vero
+        // peritään runPathissa yhteisestä vuosikertymästä nostojen kanssa
+        // (auditointi 5.9.2026 F-03: aiemmin joka myynti aloitti portaan nollasta)
+        saleTax = capitalTax(taxableNom, 0, taxBracket, taxLow, taxHigh) / nomSell;
       }
-      lump.set(mSell, (lump.get(mSell) || 0) + saleValue - payoff - saleTax);
-      saleInfos.push({ id: e.id, age: a0 + mSell / 12, value: saleValue, payoff, tax: saleTax });
+      lump.set(mSell, (lump.get(mSell) || 0) + saleValue - payoff);
+      if (taxableNom > 0) { const list = saleGains.get(mSell) || []; list.push({ id: e.id, taxableNom }); saleGains.set(mSell, list); }
+      saleInfos.push({ id: e.id, age: a0 + mSell / 12, value: saleValue, payoff, tax: saleTax, taxableNom });
     }
   }
   const hasNet = hasAssets || debt.some((d) => d > 0.5);
 
-  return { a0, a1, months, retire, pension, pension0, pensionAge, pensionFixed, taxOn, growth, saveAbs, lump, payments, debt, assets, assetCats, saleInfos, hasNet, realI, transferTax,
+  return { a0, a1, months, retire, pension, pension0, pensionAge, pensionFixed, taxOn, growth, saveAbs, lump, payments, debt, assets, assetCats, saleInfos, saleGains, hasNet, realI, transferTax,
     pro, taxLow, taxHigh, taxBracket, taxAcq, wdMode, wdPctM, wdBand, wdAdj, phaseMul };
 }
 
@@ -638,7 +648,7 @@ function buildMu(ctx, st, retAge) {
 // record(m, w) kirjaa polun MC-matriisiin.
 
 function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave = st.monthly, shockFn = null, collect = false, stopAt = null, record = null } = {}) {
-  const { a0, months, lump, payments, growth, saveAbs, pensionAge, taxOn,
+  const { a0, months, lump, payments, growth, saveAbs, pensionAge, taxOn, saleGains,
     taxLow, taxHigh, taxBracket, taxAcq, wdMode, wdPctM, wdBand, wdAdj, phaseMul, realI } = ctx;
   // Työeläke kokeiltavan eläkeiän mukaan (ratkaisijat vaihtavat retAgea)
   const pension = pensionAt(ctx, retAge);
@@ -660,6 +670,7 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
   if (stopAt === 0) return { stopW: w };
   const arr = collect ? [w] : null;
   // Rahavirrat vuositaulukkoa varten (vain collect-ajossa)
+  const saleTax = collect ? {} : null; // myyntikohtainen vero (esitys: saleInfos)
   const fl = collect ? {
     contrib: new Float64Array(months + 1), gross: new Float64Array(months + 1),
     tax: new Float64Array(months + 1), pen: new Float64Array(months + 1),
@@ -764,12 +775,25 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
       if (L >= 0) { w += L; basis += L; basisNom += L * curNom; }
       else { const r = taxedSell(-L); if (fl) fl.tax[m] += r.tax; } // kertameno salkusta: verollinen myynti kuten nostot
     }
+    // Omaisuuden myyntivoittovero samasta vuosikertymästä kuin nostot ja
+    // kertaerät: 30 %:n porras on henkilön, ei kohteen (auditointi 5.9.2026 F-03)
+    if (saleGains && saleGains.has(m)) {
+      for (const g of saleGains.get(m)) {
+        const taxN = capitalTax(g.taxableNom, ytdGain, taxBracket, taxLow, taxHigh);
+        ytdGain += g.taxableNom;
+        const tax = taxN / curNom;
+        // vero maksetaan juuri sijoitetusta myyntitulosta → myös hankintahinta pienenee
+        w -= tax; basis -= tax; basisNom -= tax * curNom; taxPaid += tax;
+        if (fl) fl.tax[m] += tax;
+        if (saleTax) saleTax[g.id] = (saleTax[g.id] || 0) + tax;
+      }
+    }
     if (clamp0 && w < 0) { if (depletion == null) depletion = age; w = 0; }
     if (arr) arr.push(w);
     if (record) record(m, w);
     if (stopAt === m) return { stopW: w };
   }
-  return { arr, depletion, endW: w, taxPaid, flows: fl };
+  return { arr, depletion, endW: w, taxPaid, flows: fl, saleTax };
 }
 
 /* ===================== Monte Carlo ===================== */
@@ -1130,7 +1154,9 @@ function simulate(st, opts = {}) {
   const depletionAge = final.depletion;
   out.exp = exp;
   out.flows = final.flows;
-  out.taxPaid = final.taxPaid + ctx.saleInfos.reduce((a, x) => a + x.tax, 0);
+  out.taxPaid = final.taxPaid; // sisältää myyntiverot (vuosikertymä)
+  // Myyntikohtainen vero päälinjalta (vuosikertymän kanssa), esitysarvio varalla
+  out.saleInfos = ctx.saleInfos.map((si) => ({ ...si, tax: final.saleTax && final.saleTax[si.id] != null ? final.saleTax[si.id] : si.tax }));
 
   // Ehtymisjaksot graafin varoitusvyöhykkeiksi. %-nostossa salkku ei ehdy —
   // vyöhyke näyttää jaksot, joissa tulo (nosto + työeläke) alittaa tarpeen
@@ -1406,6 +1432,6 @@ if (typeof module !== 'undefined' && module.exports) {
     corrMatrixOf, ensurePSD, STRESS_DEFS, PRO_BASE_ASSETS,
     sustainableByAge, tornado, baseWEnd,
     mcHousehold, householdExp,
-    pensionAt, CAREER_START,
+    pensionAt, CAREER_START, ENGINE_VERSION,
   };
 }

@@ -73,7 +73,33 @@
         "p50": 63,
         "p75": 65
       },
-      "kayttajaOnJakanutOman": false
+      "kayttajaOnJakanutOman": false,
+      "omaSuhteessa": {
+        "kkSaasto": {
+          "oma": 600,
+          "mediaani": 800,
+          "ero": -200,
+          "luokka": "alle mediaanin",
+          "asema": "kvartiilien P25–P75 välissä",
+          "yksikko": "€/kk"
+        },
+        "varallisuusNyt": {
+          "oma": 80000,
+          "mediaani": 60000,
+          "ero": 20000,
+          "luokka": "yli mediaanin",
+          "asema": "kvartiilien P25–P75 välissä",
+          "yksikko": "€"
+        },
+        "osakepaino": {
+          "oma": 75,
+          "mediaani": 75,
+          "ero": 0,
+          "luokka": "mediaanin tasolla",
+          "asema": "kvartiilien P25–P75 välissä",
+          "yksikko": "%"
+        }
+      }
     },
     "years": {
       "selite": "[ikä, sijoitukset €, säästöt €/v, nostot brutto €/v, verot €/v, työeläke €/v]",
@@ -293,6 +319,19 @@
         ],
         "numerokuri": true
       }
+    },
+    {
+      "nimi": "vertailu-suhde-koodista",
+      "mode": "explain",
+      "question": "Miten 600 euron kuukausisäästöni vertautuu muihin? Kerro suoraan, onko se alle vai yli mediaanin.",
+      "odota": {
+        "tyokalu": null,
+        "tekstissa": [
+          "alle mediaanin|mediaania pienempi|pienempi kuin mediaani|alle .{0,20}mediaani"
+        ],
+        "numerokuri": true
+      },
+      "selite": "Auditointi 5.9.2026 AI-01: oma 600 vs mediaani 800 → luokka \"alle mediaanin\" tulee vertailu.omaSuhteessa-kentästä, ei mallin päättelystä."
     }
   ]
 }

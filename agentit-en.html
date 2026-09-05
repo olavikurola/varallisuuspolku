@@ -77,7 +77,7 @@
   </header>
 
   <main class="an-main">
-    <p class="an-intro">Varallisuuspolku's calculation engine can be used as a tool for your own AI assistant. The same deterministic engine that runs on this site — statutory earnings-related pension, Finnish capital gains taxation, loans as annuities, Monte Carlo with fixed seeds — is available as a local <b>MCP server</b> (Model Context Protocol) that Claude and other MCP-compatible agents can use. The agent converses, the engine computes: the numbers never come from the language model.</p>
+    <p class="an-intro">Varallisuuspolku's calculation engine can be used as a tool by your own AI assistant. The same deterministic engine that runs on this site — statutory earnings-related pension, Finnish capital gains taxation, loans as annuities, Monte Carlo with fixed seeds — is available as a local <b>MCP server</b> (Model Context Protocol), which Claude and other MCP-compatible agents can use. The agent converses, the engine computes: the numbers never come from the language model. Note that the local calculation covers only the MCP server: the AI client you connect it to (for example Claude Desktop) handles the conversation and the tool results under its own terms.</p>
 
     <section class="an-card">
       <h2>What agent support makes possible</h2>
@@ -130,7 +130,7 @@
           <tr><td>Local</td><td>The MCP server runs on the agent's machine, uses no network and stores nothing — the same privacy promise as on the site, now in agent use too.</td></tr>
           <tr><td>Deterministic</td><td>Fixed Monte Carlo seeds: the same input always gives exactly the same answer, and the calculation can be checked on the <a href="validointi-en.html">validation page</a>.</td></tr>
           <tr><td>Not investment advice</td><td>The tools compute and compare — they don't recommend products or actions, and every answer carries this reminder.</td></tr>
-          <tr><td>Open</td><td>Source code <a href="https://github.com/olavikurola/varallisuuspolku" rel="noopener">GitHubissa</a> (MIT). <span class="vain-web">Koneluettava palvelukuvaus indeksoijille: <a href="llms.txt">llms.txt</a>.</span></td></tr>
+          <tr><td>Open</td><td>Source code <a href="https://github.com/olavikurola/varallisuuspolku" rel="noopener">on GitHub</a> (MIT). <span class="vain-web">Machine-readable service description for indexers: <a href="llms.txt">llms.txt</a>.</span></td></tr>
         </tbody>
       </table>
       <p class="ag-note">Tulkki — the site's built-in AI assistant — is a different thing from agent support: Tulkki lives in this service, agent support brings the engine to your assistant. The same division of labour applies to both: the AI explains, the engine computes.</p>

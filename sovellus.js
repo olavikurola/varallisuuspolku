@@ -777,8 +777,14 @@ function applySaved(data) {
   return true;
 }
 
+let saveWarned = false; // tallennusvirhe kerrotaan kerran (auditointi 5.9.2026 T-04)
 function saveState() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(serialize())); } catch (e) { /* yksityistila tms. */ }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(serialize())); }
+  catch (e) {
+    // Yksityistila, täysi tila tai estetty tallennus: käyttäjä luulisi muuten
+    // suunnitelman olevan tallessa
+    if (!saveWarned) { saveWarned = true; try { toast(t('Tallennus laitteelle epäonnistui — suunnitelma ei säily. Vie se talteen Suunnitelmani-sivulta tai kopioi jakolinkki.')); } catch (_) {} }
+  }
   if (family) { reconcileTransfers(); saveActiveIntoFamily(); persistFamily(); }
   syncActivePlan(); // aktiivinen suunnitelmarivi seuraa työtilaa automaattisesti
   pushUndoDebounced();
@@ -1183,7 +1189,9 @@ function summaryTalks(s) {
 }
 
 function renderSummary() {
-  const s = simulate(state, { goals: simGoals() });
+  // Sama tulos kuin päänäkymässä: workerin tarkentama sim (5 000 polkua) jos
+  // ajan tasalla — ei erillistä 300 polun laskentaa (auditointi 5.9.2026 F-05)
+  const s = (sim && !sim.successStale && sim.goalShares !== undefined) ? sim : simulate(state, { goals: simGoals() });
   const yearNow = new Date().getFullYear();
   const yearOf = (age) => `~${yearNow + Math.round(age - state.ageNow)}`;
   const retire = state.events.find((e) => e.type === 'retirement') || null;

@@ -894,5 +894,39 @@ console.log('Mediaanipäälinja (4.9.2026): päälinja ≈ MC-P50, MC ennallaan'
   ok(mean > p50, 'MC:n keskiarvo > mediaani (jakauma vino oikealle — drag on MC:ssä)');
 }
 
+console.log('Myyntivoittovero: nimellinen voitto ja yhteinen vuosikertymä (auditointi 5.9.2026)');
+{
+  const owned = { ageNow: 40, ageEnd: 60, startCapital: 0, monthly: 0, savingsGrowth: 0, allocStocks: 0, allocBonds: 0, glide: false, real: false, tax: true, inflation: 2,
+    events: [{ id: 1, type: 'ownCottage', age: 40, amount: -100000, owned: true, buyPrice: 100000, ownYears: 0, isAsset: true, appr: 2, sellAge: 50, sellTaxFree: false }] };
+  const cp = (x) => JSON.parse(JSON.stringify(x));
+  const nom = L.simulate(cp(owned)), re = L.simulate({ ...cp(owned), real: true });
+  ok(nom.saleInfos[0].tax > 6000, 'nimellistila: 2 %/v arvonnousu verotetaan', String(nom.saleInfos[0].tax));
+  ok(re.saleInfos[0].tax > 0, 'reaalitila: inflaation verran nouseva arvo EI ole verotonta (F-02)', String(re.saleInfos[0].tax));
+  ok(Math.abs(re.saleInfos[0].tax * Math.pow(1.02, 10) - nom.saleInfos[0].tax) < 1e-6, 'reaalivero = nimellisvero deflatoituna myyntihetkeen');
+  ok(Math.abs(re.taxPaid - re.saleInfos[0].tax) < 1e-9 && Math.abs(nom.taxPaid - nom.saleInfos[0].tax) < 1e-9, 'taxPaid sisältää myyntiveron (ei erillistä summausta)');
+  // Tuleva osto reaalitilassa: hankintameno ostohetken nimellisrahassa → sama vero kuin nimellistilassa deflatoituna
+  const buy = { ...cp(owned), events: [{ id: 1, type: 'cottage', age: 45, amount: -100000, financing: 'cash', isAsset: true, appr: 2, sellAge: 55, sellTaxFree: false }] };
+  const bn = L.simulate(cp(buy)), br = L.simulate({ ...cp(buy), real: true });
+  // Reaalitilassa ostosumma on tämän päivän rahaa → nimellinen hankintameno on 5 v päästä 1,02^5-kertainen,
+  // ja koko kauppa skaalautuu samalla kertoimella: verotettava voitto = nimellistilan voitto × 1,02^5
+  ok(Math.abs(br.saleInfos[0].taxableNom - bn.saleInfos[0].taxableNom * Math.pow(1.02, 5)) < 1e-6, 'tuleva osto: hankintameno ostohetken nimellisrahassa (voitto skaalautuu ostohetken hintatasolla)', `${br.saleInfos[0].taxableNom} vs ${bn.saleInfos[0].taxableNom}`);
+  ok(br.saleInfos[0].tax > 0 && br.saleInfos[0].tax < bn.saleInfos[0].tax * Math.pow(1.02, 5), 'tuleva osto reaalitilassa: vero > 0 ja deflatoitu');
+  // F-03: kaksi 30 000 €:n voittoa samana vuonna → 30 000 € 30 %:lla, loput 34 %:lla
+  const e = { ...owned.events[0], appr: 0, buyPrice: 70000 };
+  const two = L.simulate({ ...cp(owned), events: [e, { ...e, id: 2 }] });
+  ok(Math.abs(two.taxPaid - L.capitalTax(60000, 0, 30000, 0.30, 0.34)) < 1e-6, 'kaksi myyntiä samana vuonna jakavat 30 000 €:n portaan (19 200 €)', String(two.taxPaid));
+  ok(Math.abs(two.saleInfos[0].tax - 9000) < 1e-6 && Math.abs(two.saleInfos[1].tax - 10200) < 1e-6, 'myyntikohtainen vero seuraa kertymää (9 000 + 10 200)');
+  const swapped = L.simulate({ ...cp(owned), events: [{ ...e, id: 2 }, e] });
+  ok(Math.abs(swapped.taxPaid - two.taxPaid) < 1e-6, 'tapahtumien järjestys ei muuta vuoden kokonaisveroa');
+  // Nostot ja myynti samana vuonna: myynti verotetaan nostojen kuluttaman portaan päälle
+  const mix = { ageNow: 40, ageEnd: 60, startCapital: 800000, monthly: 0, savingsGrowth: 0, allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true,
+    events: [{ id: 1, type: 'retirement', age: 41, withdrawal: 6000, pension: 0, pensionAge: 65 }, { ...e, id: 2, sellAge: 45 }] };
+  const mx = L.simulate(mix);
+  ok(mx.saleInfos[0].tax > 9000 && mx.saleInfos[0].tax <= 10200, 'myynti nostovuonna: vero 9 000–10 200 € kertymän mukaan', String(mx.saleInfos[0].tax));
+  // Verottomana merkitty ja vero pois → ei myyntiveroa
+  const free = L.simulate({ ...cp(owned), events: [{ ...owned.events[0], sellTaxFree: true }] });
+  ok(free.saleInfos[0].tax === 0 && free.taxPaid === 0, 'verovapaa myynti: 0 €');
+}
+
 console.log(failed ? `\n${failed} TESTIÄ EPÄONNISTUI` : '\nKaikki testit läpi.');
 process.exit(failed ? 1 : 0);

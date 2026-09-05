@@ -93,7 +93,9 @@ function renderStats() {
     // on ~50 % eikä kerro riittävyydestä; kestävä tulo ON vastaus ja siksi
     // ensimmäinen tiili (tiilimäärä pysyy viidessä)
     cards.unshift({ k: 'Kestävä kuukausitulo', v: t('{0}/kk', fmtEur(s.solvedWithdrawal)), cls: 'accent',
-      s: [s.pension > 0 ? t('sis. työeläke {0}/kk', fmtEur(s.pension)) : null, confTxt, t('varat mitoitettu käytettäviksi {0} v mennessä', Math.round(s.a1))].filter(Boolean).join(' · '),
+      // Riskiehto ja rahan arvo samaan tiileen (auditointi 5.9.2026 F-01): ilman
+      // varmuustasoa tulo on mediaanipolun ratkaisu ja onnistumis-% ~50
+      s: [s.pension > 0 ? t('sis. työeläke {0}/kk', fmtEur(s.pension)) : null, confTxt || (p != null ? t('mediaanipolku · onnistumis-% {0}', p) : null), state.real ? t('nykyrahassa') : t('nimellisarvoin'), t('varat mitoitettu käytettäviksi {0} v mennessä', Math.round(s.a1))].filter(Boolean).join(' · '),
       d: dRow(s.solvedWithdrawal, g && (g.solvedWithdrawal != null ? g.solvedWithdrawal : g.sustainableWd), (x) => `${fmtLuku(Math.round(x))} ${VP_YKS_EKK}`, 20) });
   } else if (s.depletionAge != null) {
     // %-nostossa "ehtyminen" tarkoittaa tulotarpeen alittumista (salkku ei ehdy)
@@ -121,7 +123,7 @@ function renderStats() {
 
   if (s.taxPaid > 0.5) {
     // sama nimi kuin Tulkin vertailurivillä; lyhyet sanat rivittyvät siististi
-    cards.push({ k: 'Verot yhteensä', v: fmtEur(s.taxPaid), va: fmtCompact(s.taxPaid), cls: '', s: 'arvio nostoista ja myynneistä',
+    cards.push({ k: 'Verot yhteensä', v: fmtEur(s.taxPaid), va: fmtCompact(s.taxPaid), cls: '', s: 'nostoista ja myynneistä · osinkovero vähennetty tuotosta',
       d: dRow(s.taxPaid, g && g.taxPaid, fmtCompact, 500, false) });
   }
 

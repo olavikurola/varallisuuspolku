@@ -5,7 +5,7 @@
    välimuistista. Näin julkaisut päivittyvät heti kun verkko on käytössä,
    mutta sovellus toimii myös kokonaan ilman yhteyttä. */
 
-const CACHE = 'varallisuuspolku-v65'; // bump isoissa julkaisuissa: asennuserä pysyy eheänä parina
+const CACHE = 'varallisuuspolku-v66'; // bump isoissa julkaisuissa: asennuserä pysyy eheänä parina
 const CORE = [
   './',
   './index.html',
@@ -35,12 +35,16 @@ const CORE = [
   './icon-192.png',
   './icon-512.png',
 ];
+// Valinnaiset: puuttuminen ei estä asennusta (haetaan käytössä dynaamisesti)
+const EXTRA = ['./tulkki.js', './validointi.html', './validointi-en.html', './tietosuoja.html', './tietosuoja-en.html', './saavutettavuus.html', './agentit.html', './icon-512-maskable.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE)
-      // Yksittäisen tiedoston puuttuminen ei saa estää asennusta
-      .then((c) => Promise.allSettled(CORE.map((u) => c.add(u))))
+      // Ydin asennetaan kokonaan tai ei lainkaan: osittainen asennus + skipWaiting
+      // sekoittaisi eri versioiden skriptejä (auditointi 5.9.2026 T-02).
+      // Valinnaiset sivut saavat puuttua.
+      .then((c) => c.addAll(CORE).then(() => Promise.allSettled(EXTRA.map((u) => c.add(u)))))
       .then(() => self.skipWaiting())
   );
 });

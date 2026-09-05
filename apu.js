@@ -192,8 +192,10 @@ function buildDonationPayload(st, s) {
   if (st.acct === 'ost' || st.acct === 'ins') payload.acct = st.acct;
   const feeTot = (st.feePct || 0) + (st.acct === 'ins' ? st.wrapFee || 0 : 0);
   if (feeTot > 0) payload.feePct = Math.round(feeTot * 100) / 100;
+  if (typeof ENGINE_VERSION === 'string') payload.engine = ENGINE_VERSION; // vertailukelpoisuus (D-03)
   if (s) {
     payload.derived = { wEnd: round2sig(Math.max(0, s.wEnd)) };
+    if (s.mcPaths) payload.derived.mcPaths = s.mcPaths;
     if (s.wAtRet != null) payload.derived.wAtRet = round2sig(Math.max(0, s.wAtRet));
     if (s.successProb != null) payload.derived.successProb = Math.round(s.successProb * 100) / 100;
     if (s.retireAge != null) payload.derived.retireAge = Math.round(s.retireAge * 10) / 10;

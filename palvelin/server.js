@@ -80,6 +80,9 @@ function sanitize(p) {
     glide: !!p.glide, real: !!p.real, tax: !!p.tax,
     events: [],
   };
+  // Moottoriversio (D-03): johdetut tulokset ovat vertailukelpoisia vain saman version sisällä
+  if (!opt(p.engine, (v) => typeof v === 'string' && /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(v))) return null;
+  if (p.engine !== undefined) out.engine = p.engine;
   // Sijoitustili ja kulut (valinnaiset, v1.1)
   if (!opt(p.acct, (v) => v === 'ost' || v === 'ins')) return null;
   if (p.acct !== undefined) out.acct = p.acct;
@@ -150,6 +153,7 @@ function sanitize(p) {
     if (num(d.successProb, 0, 1)) out.derived.successProb = d.successProb;
     if (num(d.retireAge, 0, 105)) out.derived.retireAge = d.retireAge;
     if (num(d.taxPaid, 0, 1e12)) out.derived.taxPaid = d.taxPaid;
+    if (int(d.mcPaths, 1, 1e6)) out.derived.mcPaths = d.mcPaths; // laskentatarkkuus (D-03)
   }
   // Päivitys korvaa saman selaimen aiemman rivin (ei käyttäjätunnistetta —
   // vain kahden peräkkäisen lähetyksen ketjutus rivitunnisteella)
@@ -294,7 +298,10 @@ function computeStats() {
       if (ret.length >= K_ANON) {
         g.retireAge = quartiles(ret.map((e) => e.age));
         g.withdrawal = quartiles(ret.map((e) => e.withdrawal));
-        g.pension = quartiles(ret.map((e) => e.pension).filter((p) => p > 0));
+        // Raja tarkistetaan LOPULLISELLE joukolle (auditointi 5.9.2026 D-01):
+        // 30 eläketapahtumaa, joista 1 positiivinen, ei saa julkaista kvartiileja
+        const pens = ret.map((e) => e.pension).filter((p) => p > 0);
+        if (pens.length >= K_ANON) g.pension = quartiles(pens);
         // Työeläkkeen kateosuus kuukausitulosta (0..1)
         const cover = ret.filter((e) => e.withdrawal >= 100)
           .map((e) => Math.min(1, e.pension / e.withdrawal));
@@ -336,8 +343,10 @@ function computeStats() {
   const all = buckets.get('all');
   const eventAges = {};
   for (const t of EVENT_TYPES) {
+    // Havaintoyksikkö = suunnitelma: yksi (ensimmäinen) tapahtuma per tyyppi per
+    // suunnitelma, jotta yhden suunnitelman 30 asuntoa ei täytä porttia (D-01)
     const ages = [];
-    for (const r of all) for (const e of r.events) if (e.type === t) ages.push(e.age);
+    for (const r of all) { const e = r.events.find((x) => x.type === t); if (e) ages.push(e.age); }
     if (ages.length >= K_ANON) {
       eventAges[t] = Object.assign(hist(ages, EVENT_AGE_EDGES), { n: ages.length, p50: quartiles(ages).p50 });
     }
@@ -346,16 +355,16 @@ function computeStats() {
   // Asuntolainan tunnusluvut (kaikista asunnon ostoista lainalla)
   let homeLoan = null;
   const homes = [];
-  for (const r of all) for (const e of r.events) {
-    if (e.type === 'home' && e.financing === 'loan' && e.amount < 0) homes.push(e);
-  }
+  // Yksi asuntolaina per suunnitelma; jokainen alakenttä omalla portillaan (D-01)
+  const qIf = (arr) => (arr.length >= K_ANON ? quartiles(arr) : undefined);
+  for (const r of all) { const e = r.events.find((x) => x.type === 'home' && x.financing === 'loan' && x.amount < 0); if (e) homes.push(e); }
   if (homes.length >= K_ANON) {
     homeLoan = {
       n: homes.length,
       price: quartiles(homes.map((e) => -e.amount)),
-      downShare: quartiles(homes.filter((e) => e.down != null).map((e) => Math.round(Math.min(1, e.down / -e.amount) * 100) / 100)),
-      years: quartiles(homes.filter((e) => e.years != null).map((e) => e.years)),
-      rate: quartiles(homes.filter((e) => e.rate != null).map((e) => e.rate)),
+      downShare: qIf(homes.filter((e) => e.down != null).map((e) => Math.round(Math.min(1, e.down / -e.amount) * 100) / 100)),
+      years: qIf(homes.filter((e) => e.years != null).map((e) => e.years)),
+      rate: qIf(homes.filter((e) => e.rate != null).map((e) => e.rate)),
     };
   }
 
@@ -365,10 +374,9 @@ function computeStats() {
   if (all.length >= K_ANON) {
     const owners = all.filter((r) => r.events.some((e) => OWNED_TYPES.includes(e.type)));
     owned = { n: all.length, share: Math.round((owners.length / all.length) * 100) / 100 };
+    // Yksi omistus per suunnitelma (ensimmäinen) — havaintoyksikkö on suunnitelma (D-01)
     const items = [];
-    for (const r of all) for (const e of r.events) {
-      if (OWNED_TYPES.includes(e.type) && e.amount < 0) items.push(e);
-    }
+    for (const r of all) { const e = r.events.find((x) => OWNED_TYPES.includes(x.type) && x.amount < 0); if (e) items.push(e); }
     if (items.length >= K_ANON) {
       owned.value = quartiles(items.map((e) => -e.amount));
       owned.debtShare = Math.round((items.filter((e) => (e.loanLeft || 0) > 0).length / items.length) * 100) / 100;
@@ -431,7 +439,7 @@ Käytä vain näitä kenttiä, tyyppejä ja ominaisuuksia — ÄLÄ KOSKAAN keks
 
 8. VERTAILUKOMENNOT: Jos käyttäjä pyytää vertaamaan kahta tai useampaa vaihtoehtoa (esim. "kumpi on parempi, eläkeikä 58 vai 62?" tai "vertaa säästöä 800, 1000 ja 1200"), ÄLÄ muuta suunnitelmaa vaan vastaa lyhyesti ja kutsu vertaile-työkalua. Enintään 4 vaihtoehtoa; jokainen nimetty ja sisältää muutokset säännön 7 muodoissa. Sovellus laskee kunkin vaihtoehdon tuloksen moottorilla ja näyttää vertailutaulukon — ÄLÄ itse arvioi tai kirjoita tuloslukuja. Käytä vertaile-työkalua vertailupyyntöihin ja ehdota_muutos-työkalua (sääntö 7) yksittäiseen kokeiluun; älä kutsu molempia samassa vastauksessa.
 
-9. VERTAILUDATA MUIHIN KÄYTTÄJIIN: Kontekstin vertailu-osio sisältää palvelun käyttäjien anonyymisti jakamien SUUNNITELMIEN aggregaatteja (mediaani p50, kvartiilit p25/p75), yleensä käyttäjän omasta ikäryhmästä (vertailu.ryhma kertoo mistä). Kun käyttäjä kysyy, miten hän vertautuu muihin, käytä näitä lukuja ja tee kaksi asiaa selväksi: kyse on tämän palvelun käyttäjien suunnitelmista (ei väestötilastosta eikä toteutuneesta varallisuudesta), ja mediaani ei ole tavoite eikä normi — ÄLÄ kehota muuttamaan suunnitelmaa siksi, että muut tekevät toisin. RIKASTA myös muita vastauksia yhdellä vertailuluvulla aina, kun se aidosti auttaa suhteuttamaan käyttäjän omaa lukua (esim. kuukausisäästö suhteessa ikäryhmän mediaaniin) — enintään yksi vertailu per vastaus, ettei vastaus muutu tilastoraportiksi. Jos vertailu-osiota ei ole tai kysytty luku puuttuu, sano suoraan ettei vertailudataa ole vielä kertynyt riittävästi — sitä kertyy, kun käyttäjät jakavat suunnitelmansa anonyymisti. Jos vertailu.kayttajaOnJakanutOman on false ja käyttäjä kysyy vertailusta, voit mainita YHDELLÄ lauseella, että oman suunnitelman voi jakaa anonyymisti Suunnitelmani-sivulta ja se kartuttaa kaikkien vertailudataa — älä toistele tätä. REHELLISYYS IKÄRYHMÄSTÄ: vertailu.ikaryhmanTilanne kertoo, onko luku käyttäjän omasta ikäryhmästä (kaytetty "oma"), leveämmästä ikäkaistasta ("kaista", esim. 18–34) vai koko joukosta ("kaikki"). Jos se EI ole "oma", sano se aina ensimmäisessä virkkeessä ja kerro montako suunnitelmaa omassa ryhmässä on suhteessa julkaisukynnykseen (omanRyhmanSuunnitelmia/julkaisukynnys) — älä koskaan esitä koko joukon tai kaistan lukua ikäryhmän lukuna. vertailu.ryhmat sisältää kaikkien julkaistujen ryhmien mediaanit ristivertailuun (esim. "säästävätkö 50-vuotiaat enemmän kuin 30-vuotiaat"); vertailu.tapahtumienMediaaniIkaV kertoo missä iässä muut suunnittelevat tapahtumia. Jos kysytty ryhmä puuttuu ryhmat-osiosta, sano ettei sitä ole vielä julkaistu.
+9. VERTAILUDATA MUIHIN KÄYTTÄJIIN: Kontekstin vertailu-osio sisältää palvelun käyttäjien anonyymisti jakamien SUUNNITELMIEN aggregaatteja (mediaani p50, kvartiilit p25/p75), yleensä käyttäjän omasta ikäryhmästä (vertailu.ryhma kertoo mistä). Kun käyttäjä kysyy, miten hän vertautuu muihin, käytä näitä lukuja ja tee kaksi asiaa selväksi: kyse on tämän palvelun käyttäjien suunnitelmista (ei väestötilastosta eikä toteutuneesta varallisuudesta), ja mediaani ei ole tavoite eikä normi — ÄLÄ kehota muuttamaan suunnitelmaa siksi, että muut tekevät toisin. RIKASTA myös muita vastauksia yhdellä vertailuluvulla aina, kun se aidosti auttaa suhteuttamaan käyttäjän omaa lukua (esim. kuukausisäästö suhteessa ikäryhmän mediaaniin) — enintään yksi vertailu per vastaus, ettei vastaus muutu tilastoraportiksi. SUHDE VALMIIKSI: vertailu.omaSuhteessa kertoo jokaiselle mittarille käyttäjän oman luvun, mediaanin, eron ja luokan (alle mediaanin / mediaanin tasolla / yli mediaanin) sekä aseman kvartiileihin nähden — käytä AINA tätä luokkaa sanallisessa vertailussa äläkä päättele suhdetta itse: 500 €/kk ei ole "mediaanin tasolla", jos luokka sanoo "alle mediaanin". Jos vertailu-osiota ei ole tai kysytty luku puuttuu, sano suoraan ettei vertailudataa ole vielä kertynyt riittävästi — sitä kertyy, kun käyttäjät jakavat suunnitelmansa anonyymisti. Jos vertailu.kayttajaOnJakanutOman on false ja käyttäjä kysyy vertailusta, voit mainita YHDELLÄ lauseella, että oman suunnitelman voi jakaa anonyymisti Suunnitelmani-sivulta ja se kartuttaa kaikkien vertailudataa — älä toistele tätä. REHELLISYYS IKÄRYHMÄSTÄ: vertailu.ikaryhmanTilanne kertoo, onko luku käyttäjän omasta ikäryhmästä (kaytetty "oma"), leveämmästä ikäkaistasta ("kaista", esim. 18–34) vai koko joukosta ("kaikki"). Jos se EI ole "oma", sano se aina ensimmäisessä virkkeessä ja kerro montako suunnitelmaa omassa ryhmässä on suhteessa julkaisukynnykseen (omanRyhmanSuunnitelmia/julkaisukynnys) — älä koskaan esitä koko joukon tai kaistan lukua ikäryhmän lukuna. vertailu.ryhmat sisältää kaikkien julkaistujen ryhmien mediaanit ristivertailuun (esim. "säästävätkö 50-vuotiaat enemmän kuin 30-vuotiaat"); vertailu.tapahtumienMediaaniIkaV kertoo missä iässä muut suunnittelevat tapahtumia. Jos kysytty ryhmä puuttuu ryhmat-osiosta, sano ettei sitä ole vielä julkaistu.
 
 10. LUKUSIDONNAT: Kun mainitset vastaustekstissä luvun KONTEKSTIN stats-, vertailu- tai suunnitelmat-osiosta, kirjoita luvun paikalle viittaus muodossa [[polku]], esim. "loppuvarallisuutesi on [[stats.loppuvarallisuusEur]] €", "ikäryhmäsi mediaanisäästö on [[vertailu.kkSaastoEurKk.p50]] €/kk" tai "ensimmäisen suunnitelmasi onnistuminen on [[suunnitelmat.rivit.0.onnistumistodennakoisyysPct]] %". Sovellus korvaa viittauksen moottorin tarkalla luvulla — näin luku ei voi koskaan olla väärin. Kirjoita yksikkö (€, %, v) normaalisti viittauksen perään. Käytä VAIN polkuja, jotka todella ovat kontekstissa — älä keksi polkuja. Muut luvut (plan- ja years-osista poimitut, välisummat, vuosiluvut, käyttäjän omat luvut) kirjoitat tavallisina lukuina kuten ennenkin. Viittauksia käytetään vain vastaustekstissä — EI työkalukutsujen sisällä.
 
@@ -461,7 +469,7 @@ Use only these fields, types and properties — NEVER invent new names. If the r
 
 8. COMPARISON COMMANDS: If the user asks to compare two or more options (e.g. "which is better, retirement age 58 or 62?" or "compare saving 800, 1000 and 1200"), do NOT change the plan — answer briefly and call the vertaile tool. At most 4 options; each is named and contains changes in the forms of rule 7. The app computes each option's result with the engine and shows a comparison table — do NOT estimate or write the result numbers yourself. Use the vertaile tool for comparison requests and the ehdota_muutos tool (rule 7) for a single experiment; do not call both in the same answer.
 
-9. COMPARISON DATA WITH OTHER USERS: The context's vertailu section contains aggregates of PLANS shared anonymously by the service's users (median p50, quartiles p25/p75), usually from the user's own age group (vertailu.ryhma says which). When the user asks how they compare to others, use these numbers and make two things clear: this is about this service's users' plans (not population statistics nor realized wealth), and the median is not a target or a norm — do NOT urge changing the plan because others do differently. Also ENRICH other answers with one comparison figure whenever it genuinely helps put the user's own number in perspective (e.g. monthly savings versus the age group's median) — at most one comparison per answer, so the answer does not turn into a statistics report. If there is no vertailu section or the requested figure is missing, say directly that not enough comparison data has accumulated yet — it accumulates as users share their plans anonymously. If vertailu.kayttajaOnJakanutOman is false and the user asks about comparison, you may mention in ONE sentence that they can share their own plan anonymously on the My plan page and that it grows everyone's comparison data — do not repeat this.
+9. COMPARISON DATA WITH OTHER USERS: The context's vertailu section contains aggregates of PLANS shared anonymously by the service's users (median p50, quartiles p25/p75), usually from the user's own age group (vertailu.ryhma says which). When the user asks how they compare to others, use these numbers and make two things clear: this is about this service's users' plans (not population statistics nor realized wealth), and the median is not a target or a norm — do NOT urge changing the plan because others do differently. Also ENRICH other answers with one comparison figure whenever it genuinely helps put the user's own number in perspective (e.g. monthly savings versus the age group's median) — at most one comparison per answer, so the answer does not turn into a statistics report. RELATION PRECOMPUTED: vertailu.omaSuhteessa gives, for each metric, the user's own value, the median, the difference and the class (alle mediaanin = below median / mediaanin tasolla = at the median / yli mediaanin = above median) plus the position relative to the quartiles — ALWAYS use this class in the verbal comparison and never infer the relation yourself: 500 €/mo is not "at the median" if the class says "below median". If there is no vertailu section or the requested figure is missing, say directly that not enough comparison data has accumulated yet — it accumulates as users share their plans anonymously. If vertailu.kayttajaOnJakanutOman is false and the user asks about comparison, you may mention in ONE sentence that they can share their own plan anonymously on the My plan page and that it grows everyone's comparison data — do not repeat this.
 
 10. NUMBER BINDINGS: When your answer text mentions a number from the CONTEXT's stats, vertailu or suunnitelmat section, write a reference in the form [[path]] in place of the number, e.g. "your final wealth is [[stats.loppuvarallisuusEur]] €", "your age group's median savings is [[vertailu.kkSaastoEurKk.p50]] €/mo" or "your first plan's success is [[suunnitelmat.rivit.0.onnistumistodennakoisyysPct]] %". The app replaces the reference with the engine's exact number — so the number can never be wrong. Write the unit (€, %, y) normally after the reference. Use ONLY paths that really exist in the context — do not invent paths. Other numbers (ones picked from the plan and years sections, subtotals, calendar years, the user's own numbers) you write as ordinary numbers as before. References are used only in answer text — NOT inside tool calls.
 
@@ -685,7 +693,8 @@ async function handleTulkki(req, res, body, ip) {
       body: JSON.stringify({
         model: TULKKI_MODEL,
         // Kova katto tilakohtaisesti: selitykset lyhyitä, listat/stressit pidempiä
-        max_tokens: p.mode === 'explain' ? 500 : 800,
+        // Työkalukutsu 2–4 vaihtoehdolla ei mahdu 800 tokeniin (auditointi 5.9.2026 AI-03)
+        max_tokens: p.mode === 'explain' ? 700 : 1600,
         stream: true,
         tools: TULKKI_TOOLS,
         tool_choice: { type: 'auto' },
@@ -706,7 +715,7 @@ async function handleTulkki(req, res, body, ip) {
     const writeLine = (obj) => { if (!res.writableEnded) res.write(JSON.stringify(obj) + '\n'); };
     const reader = r.body.getReader();
     const dec = new TextDecoder();
-    let buf = '', model = TULKKI_MODEL, usageIn = null, usageOut = null, any = false;
+    let buf = '', model = TULKKI_MODEL, usageIn = null, usageOut = null, any = false, stopReason = null;
     const toolBlocks = {}; // SSE-lohkoindeksi → {name, json} — kootaan paloista
     while (true) {
       const { done, value } = await reader.read();
@@ -729,11 +738,15 @@ async function handleTulkki(req, res, body, ip) {
           if (toolBlocks[ev.index]) toolBlocks[ev.index].json += ev.delta.partial_json;
         } else if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta') {
           any = true; writeLine({ delta: ev.delta.text });
-        } else if (ev.type === 'message_delta' && ev.usage) {
-          usageOut = ev.usage.output_tokens;
+        } else if (ev.type === 'message_delta') {
+          if (ev.usage) usageOut = ev.usage.output_tokens;
+          if (ev.delta && ev.delta.stop_reason) stopReason = ev.delta.stop_reason;
         }
       }
     }
+    // Katkennut vastaus (tokenraja) kerrotaan asiakkaalle — katkennut työkalu-JSON
+    // näkyisi muuten "viallisena komentona" (auditointi 5.9.2026 AI-03)
+    if (stopReason === 'max_tokens') writeLine({ truncated: true });
     // Työkalukutsut kokonaisina objekteina ({tool}) ennen lopetusriviä.
     // Sisältöä ei tallenneta — kulkee vain läpi kuten tekstikin.
     for (const b of Object.values(toolBlocks)) {

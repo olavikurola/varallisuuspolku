@@ -155,6 +155,22 @@
     if (g.withdrawal) v.kuukausituloTarveEurKk = q3(g.withdrawal, rnd);
     if (g.penShare) v.tyoelakkeenOsuusTulostaPct = rnd(g.penShare.p50 * 100);
     if (g.successProb) v.onnistumistodennakoisyysPct = q3(g.successProb, (x) => rnd(x * 100));
+    // Suhde valmiiksi laskettuna (auditointi 5.9.2026 AI-01): malli ei saa päätellä
+    // "mediaanin tasolla" kahdesta irrallisesta luvusta — luokka tulee koodista
+    const rel = (oma, q, yks) => {
+      if (q == null || oma == null || !isFinite(oma)) return undefined;
+      const med = q.p50, ero = oma - med;
+      const luokka = Math.abs(ero) <= Math.max(1, Math.abs(med) * 0.1) ? 'mediaanin tasolla' : (ero < 0 ? 'alle mediaanin' : 'yli mediaanin');
+      const asema = oma < q.p25 ? 'alle alakvartiilin (P25)' : (oma > q.p75 ? 'yli yläkvartiilin (P75)' : 'kvartiilien P25–P75 välissä');
+      return { oma: rnd(oma), mediaani: rnd(med), ero: rnd(ero), luokka, asema, yksikko: yks };
+    };
+    const ret0 = state.events.find((e) => e.type === 'retirement');
+    v.omaSuhteessa = {
+      kkSaasto: rel(state.monthly, g.monthly, '€/kk'),
+      varallisuusNyt: rel(state.startCapital, g.startCapital, '€'),
+      osakepaino: rel(state.allocStocks, g.stocks, '%'),
+      elakeika: ret0 && g.retireAge ? rel(ret0.age, g.retireAge, 'v') : undefined,
+    };
     // Tapahtumien mediaani-iät KAIKISTA julkaistuista tyypeistä (ei vain omista):
     // "missä iässä muut ostavat asunnon" on vastattava, vaikka omassa
     // suunnitelmassa ei asuntoa ole
@@ -198,6 +214,7 @@
     const ret = state.events.find((e) => e.type === 'retirement');
     const stats = {
       verovuosi: TAX_YEAR,
+      montecarloPolkuja: s.mcPaths || null,
       inflaatiokorjattu: !!state.real,
       onnistumistodennakoisyysPct: s.successProb != null ? Math.round(s.successProb * 100) : null,
       varatLoppuvatIka: s.depletionAge != null ? Math.round(s.depletionAge * 10) / 10 : null,
@@ -336,7 +353,7 @@
   }
 
   // Tekstimuotoinen korvaus (ramppi ym. paikat ilman HTML-renderöintiä)
-  const plainBinds = (t, map) => String(t).replace(/\[\[([\w.]+)\]\]/g, (m, p) =>
+  const plainBinds = (t, map) => String(t).replace(/\[\[([\w.-]+)\]\]/g, (m, p) =>
     (map && typeof map[p] === 'number') ? fmtLuku(map[p]) : '?');
 
   // Yhteinen renderöijä: escape → **b** → sidontatokenit talteen (PUA-merkein,
@@ -345,7 +362,7 @@
     return text.split(/\n{2,}/).map((p) => {
       const marks = [];
       let s = mdLite(esc(p)).replace(/\n/g, '<br>');
-      s = s.replace(/\[\[([\w.]+)\]\]/g, (m, path) => {
+      s = s.replace(/\[\[([\w.-]+)\]\]/g, (m, path) => {
         if (marks.length >= 96) return m; // varmuuskatto
         marks.push(path);
         return String.fromCharCode(0xE000 + marks.length - 1);
@@ -674,6 +691,7 @@
         const dec = new TextDecoder();
         let sbuf = '', full = '', meta = null, streamErr = null, started = false, toolErr = false;
         const toolCalls = []; // {tool} = palvelimen jäsentämä työkalukutsu (ensisijainen kanava)
+        let truncated = false; // palvelin: vastaus katkesi tokenrajaan (auditointi 5.9.2026 AI-03)
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -690,6 +708,7 @@
               log.scrollTop = log.scrollHeight;
             } else if (obj.tool) toolCalls.push(obj.tool);
             else if (obj.toolError) toolErr = true;
+            else if (obj.truncated) truncated = true;
             else if (obj.done) meta = obj;
             else if (obj.error) streamErr = obj.error;
           }
@@ -762,7 +781,7 @@
             const note = document.createElement('div');
             note.className = 'tk-change';
             const rr = (cmp && cmp.raakaRivi) || parsed.raakaRivi || '';
-            note.innerHTML = `<div class="tk-ch-note">${t('Tulkin komentorivi oli viallinen — mitään ei muutettu. Sano sama hieman toisin, niin yritän uudelleen.')}</div>` +
+            note.innerHTML = `<div class="tk-ch-note">${truncated ? t('Vastaus katkesi pituusrajaan ennen kuin muutos valmistui — mitään ei muutettu. Kysy vähemmän vaihtoehtoja kerralla tai tiiviimmin.') : t('Tulkin komentorivi oli viallinen — mitään ei muutettu. Sano sama hieman toisin, niin yritän uudelleen.')}</div>` +
               (rr ? `<div class="tk-ch-row tk-ch-skip"><code>${esc(rr)}</code></div>` : '');
             log.appendChild(note);
           }

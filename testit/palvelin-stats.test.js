@@ -77,6 +77,25 @@ async function statsFrom(port, rows) {
     ok(s.timeline[0].n === 44, 'aikajana laskee kaikki jaetut', JSON.stringify(s.timeline));
   }
 
+  console.log('Julkaisuraja lopulliselle joukolle (auditointi 5.9.2026 D-01, liite B)');
+  {
+    const rows = Array.from({ length: 30 }, (_, i) => ({
+      v: 1, rid: String(i).padStart(16, '0'), date: '2026-09',
+      ageNow: 40, ageEnd: 90, startCapital: 50000 + i * 100, monthly: 500 + i, savingsGrowth: 0,
+      alloc: { stocks: 70, bonds: 20 }, real: false, tax: true, glide: false,
+      events: [
+        { type: 'retirement', age: 65, withdrawal: 2700, pension: i === 0 ? 1234 : 0, pensionAge: 65 },
+        ...(i === 0 ? Array.from({ length: 30 }, (_, j) => ({ type: 'home', age: 45, amount: -200000, financing: 'loan', ...(j === 0 ? { down: 40000, years: 20, rate: 3.5 } : {}) })) : []),
+      ],
+    }));
+    const s = await statsFrom(8799, rows);
+    ok(s.groups.all.n === 30, 'ryhmä julkaistaan (30 suunnitelmaa)', String(s.groups.all.n));
+    ok(!s.groups.all.pension, '1 positiivinen eläke 30:stä → eläkekvartiileja EI julkaista', JSON.stringify(s.groups.all.pension));
+    ok(!s.eventAges || !s.eventAges.home, 'yhden suunnitelman 30 asuntoa eivät täytä tapahtumaporttia', JSON.stringify(s.eventAges && s.eventAges.home));
+    ok(s.homeLoan == null, 'asuntolainatilastoa ei julkaista yhdestä suunnitelmasta', JSON.stringify(s.homeLoan));
+    ok(!!s.eventAges && !!s.eventAges.retirement && s.eventAges.retirement.n === 30, 'eläketapahtuman ikäjakauma julkaistaan (30 suunnitelmaa)');
+  }
+
   console.log('Sormenjälki vaatii täyden osuman');
   {
     // monthly 1000 mutta oma varallisuus → EI oletuspohja; myös esimerkkiprofiili tunnistetaan

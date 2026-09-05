@@ -156,7 +156,7 @@ const CTX = { plan: { ageNow: 30 }, stats: { onnistumistodennakoisyysPct: 99, ve
     const up = lastUpstream.body;
     ok(lastUpstream.url === '/v1/messages', 'oikea upstream-polku');
     ok(lastUpstream.headers['x-api-key'] === 'test-avain', 'API-avain vain palvelimelta');
-    ok(up.model === 'claude-haiku-4-5' && up.max_tokens === 500, 'malli ja max_tokens (explain 500) lukittu palvelimella');
+    ok(up.model === 'claude-haiku-4-5' && up.max_tokens === 700, 'malli ja max_tokens (explain 700) lukittu palvelimella');
     ok(up.system[0].cache_control && up.system[0].cache_control.type === 'ephemeral', 'järjestelmäkehote välimuistimerkitty');
     ok(/ÄLÄ laske itse/.test(up.system[0].text) && /sijoitusneuvontaa/.test(up.system[0].text), 'sävyvartijat kehotteessa');
     ok(/ehdota_muutos/.test(up.system[0].text) && /allocStocks/.test(up.system[0].text) && /esikatseluna/.test(up.system[0].text), 'muutostyökalun ohje ja whitelist kehotteessa');
@@ -207,7 +207,7 @@ const CTX = { plan: { ageNow: 30 }, stats: { onnistumistodennakoisyysPct: 99, ve
     const r = await post({ key: 'oma-avain', mode: 'haasta', context: CTX });
     ok(r.status === 200, 'haasta ei vaadi kysymystä');
     ok(/TEHTÄVÄ: Etsi tästä suunnitelmasta/.test(lastUpstream.body.messages[0].content), 'haasta-tehtävä palvelimen määräämä');
-    ok(lastUpstream.body.max_tokens === 800, 'haasta saa pidemmän katon (800)');
+    ok(lastUpstream.body.max_tokens === 1600, 'haasta saa pidemmän katon (1600)');
     ok(lastUpstream.body.messages[0].content.indexOf('stressiskenaario') > -1, 'ohjeistaa stressiskenaarioihin');
   }
 
@@ -219,7 +219,7 @@ const CTX = { plan: { ageNow: 30 }, stats: { onnistumistodennakoisyysPct: 99, ve
     ok(r.status === 200, 'ramppi-kuvaus kelpaa');
     const c = lastUpstream.body.messages[0].content;
     ok(/TEHTÄVÄ: Käyttäjä aloittaa/.test(c) && /KUVAUS: Olen 38/.test(c), 'ramppi-tehtävä ja kuvaus samassa viestissä');
-    ok(lastUpstream.body.max_tokens === 800, 'ramppi saa pidemmän katon (800)');
+    ok(lastUpstream.body.max_tokens === 1600, 'ramppi saa pidemmän katon (1600)');
     const sys = lastUpstream.body.system[0].text;
     ok(/"uusi"/.test(sys) && /"poista"/.test(sys) && /ageNow/.test(sys), 'luonti, poisto ja ageNow kehotteessa');
   }

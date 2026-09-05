@@ -47,8 +47,10 @@
   <main class="an-main">
     <p class="an-intro"><b>Lyhyesti: suunnitelmasi ei lähde laitteeltasi mihinkään ilman erillistä,
     tapauskohtaista lupaasi.</b> Varallisuuspolku ei käytä käyttäjätilejä, ei evästeitä eikä
-    mainos- tai seurantatekniikoita, eikä se kerää henkilötietoja. Tämä seloste koskee sekä
-    verkkopalvelua (varallisuuspolku.com) että mobiilisovellusta. Päivitetty 9.8.2026.</p>
+    mainos- tai seurantatekniikoita, eikä se kerää henkilötietoja. Kolme toimintoa lähettävät
+    tietoa vain omasta aloitteestasi — jakolinkki, Kysy AI ja anonyymi vertailudata — ja ne on
+    eritelty alla. Tämä seloste koskee sekä verkkopalvelua (varallisuuspolku.com) että
+    mobiilisovellusta. Päivitetty 5.9.2026.</p>
 
     <section class="an-card">
       <h2>Mitä tietoja käsitellään ja missä</h2>
@@ -73,13 +75,18 @@
           <tr><td><b>Kysy AI (Tulkki)</b></td><td>Kun esität kysymyksen, palvelimelle välittyy
           kysymyksesi, suunnitelman anonyymi muoto (ei nimiä eikä tunnisteita) ja laskennan
           tunnusluvut. Välityspalvelin on tilaton: se ei tallenna kysymyksiä eikä vastauksia, ja
-          sen lähdekoodi on avoin. Kielimallina toimii Anthropicin Claude.</td></tr>
+          sen lähdekoodi on avoin. Kielimallina toimii Anthropicin Claude. Kysymyksesi vapaa
+          teksti välittyy sellaisenaan — älä kirjoita siihen nimiä tai muita henkilötietoja.
+          Palvelin näkee IP-osoitteen vain pyyntömäärien rajoittamiseksi eikä tallenna sitä.</td></tr>
           <tr><td><b>Anonyymi vertailudata</b></td><td>Voit halutessasi jakaa suunnitelmasi
           anonyymisti yhteiseen vertailudataan. Näet ennen jakamista täsmälleen, mitä lähetetään:
           ei nimiä, ei otsikoita, ei IP-osoitetta; summat pyöristetään ja päiväys tallentuu
-          kuukausitasolla. Jaettuja suunnitelmia ei voi yhdistää toisiinsa eikä keneenkään, ja
-          jakaumat julkaistaan vasta vähintään 30 suunnitelman ryhmistä. Vastaanottava
-          palvelinkoodi on avointa lähdekoodia.</td></tr>
+          kuukausitasolla. Jaettua suunnitelmaa ei voi yhdistää sinuun. Jos päivität jakoasi,
+          uusi versio korvaa edellisen satunnaisella tunnisteella, joka ei sisällä laite- tai
+          henkilötietoa, ja vain uusin versio lasketaan tilastoihin. Jakaumat julkaistaan vasta
+          vähintään 30 suunnitelman ryhmistä, ja jokaisella tunnusluvulla on oma 30 suunnitelman
+          rajansa. Palvelin näkee IP-osoitteen vain pyyntömäärien rajoittamiseksi eikä tallenna
+          sitä jaon yhteyteen. Vastaanottava palvelinkoodi on avointa lähdekoodia.</td></tr>
         </tbody>
       </table>
     </section>
@@ -87,8 +94,10 @@
     <section class="an-card">
       <h2>Kävijämittaus (vain verkkopalvelu)</h2>
       <p>Verkkosivuston kävijämäärät mitataan <a href="https://plausible.io/privacy-focused-web-analytics"
-      rel="noopener">Plausible-analytiikalla</a>, joka on evästeetön eikä yksilöi kävijää — se
-      laskee sivulatauksia eikä näe suunnitelmasi sisältöä. <b>Mobiilisovelluksessa ei ole
+      rel="noopener">Plausible-analytiikalla</a>, joka on evästeetön eikä yksilöi kävijää. Se
+      laskee sivulatauksia ja muutamia nimettyjä käyttötapahtumia (esimerkiksi &quot;aloitus
+      valmis&quot;, &quot;vertailu&quot;, &quot;suunnitelma viety&quot;) ilman suunnitelman lukuja
+      tai sisältöä. <b>Mobiilisovelluksessa ei ole
       analytiikkaa lainkaan</b>: sovellus ei kerää mitään tietoja.</p>
     </section>
 
@@ -102,7 +111,8 @@
 
     <section class="an-card">
       <h2>Oikeutesi ja yhteydenotot</h2>
-      <p>Koska palvelu ei kerää eikä säilytä henkilötietoja, ylläpitäjällä ei ole hallussaan
+      <p>Koska palvelu ei kerää eikä säilytä henkilötietoja (anonyymissä vertailudatassa ei ole
+      tunnisteita, joilla rivin voisi yhdistää sinuun), ylläpitäjällä ei ole hallussaan
       tietoja, joita voisi pyytää nähtäväksi tai poistettavaksi — kaikki tietosi ovat omalla
       laitteellasi ja poistettavissa itse (selaimen sivustotietojen tyhjennys tai sovelluksen
       poisto). Kysymykset tietosuojasta: <a href="mailto:info@varallisuuspolku.com">info@varallisuuspolku.com</a>.</p>
