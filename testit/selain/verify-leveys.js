@@ -44,7 +44,9 @@ const SIVUT = [
         }
         return out;
       });
-      ok(r.sw <= r.cw, s, `scrollWidth ${r.sw} > ${r.cw}; ${r.syy}`);
+      // 2 px:n toleranssi: fonttimetriikka vaihtelee alustoittain (CI Linux vs. Windows),
+      // eikä alle 3 px:n ylitys näy käyttäjälle sivuvierityksenä
+      ok(r.sw <= r.cw + 2, s, `scrollWidth ${r.sw} > ${r.cw}; ${r.syy}`);
     }
     await page.close();
   }
