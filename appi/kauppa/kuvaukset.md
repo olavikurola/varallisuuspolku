@@ -360,15 +360,15 @@ korjattu. Älä palauta väitettä ilman että toteutus muuttuu.
 - TestFlight ensin → X-toivojat DM-kutsulla → julkinen release manuaalisesti
 
 
-## Versio 1.2 — What's New (luonnos 2.9.2026, kuluttajamuoto)
+## Versio 1.2 — What's New (luonnos 2.9.2026, täydennetty 5.9.2026, kuluttajamuoto)
 
 Kenttä: ASC → versiosivu 1.2 → "What's New in This Version" (max 4000 merkkiä),
 täytetään erikseen molemmille kielille. Neljä bullettia: vain käyttäjälle uudet toiminnot, hyöty edellä, ei
 teknisiä termejä (Olavin linjaus 2.9.2026: Tulkin tietosuojarivi ei ole
-tuotetoiminto, lukujen muutos -maininta tarpeeton — validointisivu kertoo). Sisältö = web-erät 1–7 (2.9.2026); laskurisivut ovat vain
-webissä eivätkä kuulu tähän.
+tuotetoiminto, lukujen muutos -maininta tarpeeton — validointisivu kertoo). Sisältö = web-erät 1–7 (2.9.2026) + erä 8:n laskennan tarkennus (4.9.2026: työeläke seuraa
+eläkeikää, päälinja mediaanipolulle); laskurisivut ovat vain webissä eivätkä kuulu tähän.
 
-### Suomeksi (fi) — 604 merkkiä
+### Suomeksi (fi) — 680 merkkiä
 
 ```
 Riittävätkö rahat? Vastaus on nyt ensimmäinen luku, jonka näet.
@@ -377,7 +377,8 @@ Riittävätkö rahat? Vastaus on nyt ensimmäinen luku, jonka näet.
   60-vuotiaana?", "Mitä jos jään vuodeksi työttömäksi?", "Entä jos saan
   perinnön?" — kumoa palauttaa.
 • Laskenta on entistä tarkempi: verot, varainsiirtovero ja työeläke
-  käteen jäävänä.
+  käteen jäävänä — ja työeläke seuraa nyt eläkeikääsi, jos lopetat
+  työt ennen työeläkeikää.
 • Uutta suunnitelmaan: tulokatko (työttömyys, perhevapaa, sapatti) ja
   lainan kiinteä korko. Pro-tilassa myös korkojen nousun stressitesti.
 • Jaettu linkki on puolet lyhyempi, ja sen avaaja saa selkeän
@@ -386,14 +387,16 @@ Riittävätkö rahat? Vastaus on nyt ensimmäinen luku, jonka näet.
 Kaikki laskenta pysyy omalla laitteellasi — ei tiliä, ei seurantaa.
 ```
 
-### English (en-US) — 567 merkkiä
+### English (en-US) — 661 merkkiä
 
 ```
 Will the money last? The answer is now the first number you see.
 
 • Try life with one tap: "Can I afford to retire at 60?", "What if I'm
   unemployed for a year?", "What if I inherit?" — undo restores.
-• More accurate calculation: taxes, transfer tax and take-home pension.
+• More accurate calculation: taxes, transfer tax and take-home pension —
+  and your pension now follows your retirement age if you stop working
+  before pension age.
 • New in your plan: an income gap (unemployment, parental leave,
   sabbatical) and a fixed-rate loan option. In Pro, a rising-rates
   stress test too.
