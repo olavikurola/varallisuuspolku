@@ -933,6 +933,8 @@ input[type="range"]::-moz-range-thumb {
 .table-scroll { overflow-x: auto; margin-top: 14px; scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent; }
 /* Vieritettävässä taulukossa solu ei rivity kesken luvun ("30 v" yhdellä rivillä) */
 .table-scroll .sum-table th, .table-scroll .sum-table td:first-child, .table-scroll .sum-table td.num { white-space: nowrap; }
+/* Laskuesimerkkitaulukot (validointi): pitkä laskukaava rivittyy kapealla, ei vuoda sivun leveyttä */
+.sum-table-wrap td.num { white-space: normal; text-align: left; overflow-wrap: anywhere; }
 .table-sheet .sum-table { min-width: 640px; }
 .table-sheet .sum-table td.num.dbt { color: var(--danger); }
 .table-sheet .sum-table td.num.net { color: var(--warn-text); }

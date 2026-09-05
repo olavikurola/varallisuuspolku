@@ -366,7 +366,7 @@ function sivuHtml(p) {
     .ls-main p { font-size: 15.5px; line-height: 1.7; color: var(--text-dim); }
     .ls-main p b { color: var(--text); }
     .ls-cta { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 8px; }
-    .ls-cta .btn { padding: 11px 16px; font-size: 14px; }
+    .ls-cta .btn { padding: 11px 16px; font-size: 14px; white-space: normal; text-align: left; max-width: 100%; box-sizing: border-box; }
     .ls-ukk h2 { font-size: 20px; margin: 26px 0 8px; }
     .ls-ukk h3 { font-size: 15.5px; margin: 14px 0 4px; }
     .ls-note { font-size: 12.5px; color: var(--text-faint); line-height: 1.6; margin-top: 22px; }
