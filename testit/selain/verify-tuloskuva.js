@@ -61,6 +61,7 @@ const ok = (c, n, d = '') => { if (c) console.log('  ✓ ' + n); else { failed++
   await page.evaluate(() => localStorage.clear());
   await page.goto(BASE, { waitUntil: 'networkidle' });
   await page.waitForSelector('#rampGo', { timeout: 5000 });
+  await page.waitForTimeout(700); // rampin fokusviive (showRamp 600 ms) ennen kirjoitusta
   await page.fill('#rampAge', '34');
   await page.fill('#rampWealth', '15000');
   await page.fill('#rampMonthly', '600');
@@ -96,6 +97,7 @@ const ok = (c, n, d = '') => { if (c) console.log('  ✓ ' + n); else { failed++
   await mp.evaluate(() => localStorage.clear());
   await mp.goto(BASE, { waitUntil: 'networkidle' });
   await mp.waitForSelector('#rampGo', { timeout: 5000 });
+  await mp.waitForTimeout(700);
   await mp.fill('#rampAge', '30');
   await mp.fill('#rampWealth', '5000');
   await mp.fill('#rampMonthly', '300');

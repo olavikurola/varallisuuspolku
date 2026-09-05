@@ -2105,7 +2105,9 @@ function showRamp() {
   $('ramp').hidden = false;
   document.addEventListener('keydown', rampEsc, true);
   if (!rampFromPlans) track('Ramppi näytetty');
-  setTimeout(() => { try { $('rampAge').focus(); } catch (e) {} }, 50);
+  // Fokus ikäkenttään vain, jos käyttäjä ei ole jo tarttunut johonkin kenttään —
+  // muuten nopea kirjoittaja saa säästösummansa ikäkenttään (testilöydös 5.9.2026)
+  setTimeout(() => { try { const a = document.activeElement; if (!a || a === document.body || !a.closest('#rampCard')) $('rampAge').focus(); } catch (e) {} }, 50);
 }
 
 function rampSubmit() {
