@@ -47,6 +47,8 @@ markkinapolkuja ja näyttää, miten todennäköisesti rahat riittävät.
 MITÄ SOVELLUS TEKEE
 • Piirtopöytä: suunnitelman muokkaus suoraan käyrästä — kokeile päätöstä
   ennen kuin teet sen
+• Kysymyskirjasto: "Onko varaa eläkkeelle 60-vuotiaana?", "Mitä jos jään
+  vuodeksi työttömäksi?" — valmiit mitä jos -kokeilut yhdellä napautuksella
 • Monte Carlo -simulaatio: onnistumistodennäköisyys tuhansista
   satunnaisista markkinapoluista, ei yhden käyrän harhaa
 • Suomalainen mallinnus: työeläke, pääomatulovero, hankintameno-olettama,
@@ -222,6 +224,8 @@ models them natively — in English.
 WHAT THE APP DOES
 • Drawing board: edit your plan directly on the curve — try a decision
   before you make it
+• Question library: "Can I afford to retire at 60?", "What if I'm
+  unemployed for a year?" — ready-made what-ifs with one tap
 • Monte Carlo simulation: a success probability from thousands of
   random market paths, not the false certainty of a single curve
 • Finnish modelling: earnings-related pension, capital income tax,
