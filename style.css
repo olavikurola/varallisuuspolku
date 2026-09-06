@@ -386,7 +386,7 @@ input[type="range"]::-moz-range-thumb {
 .chip:focus-visible, .event-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .chip:active { cursor: grabbing; }
 .chip .ic { font-size: 15px; flex: 0 0 auto; }
-.chip span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip span:last-child { overflow: hidden; white-space: normal; line-height: 1.15; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } /* nimi rivittyy kahdelle riville, ei katkea ellipsiin (D06) */
 
 .drag-ghost {
   position: fixed;
@@ -452,7 +452,7 @@ input[type="range"]::-moz-range-thumb {
 }
 .stat .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-dim); margin-bottom: 3px; overflow-wrap: break-word; }
 .stat .v { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
-.stat .s { font-size: 11px; color: var(--text-faint); margin-top: 2px; line-height: 1.45; }
+.stat .s { font-size: 12px; color: var(--text-dim); margin-top: 2px; line-height: 1.4; } /* tuloksen ehdot luettavina, ei alaviitteenä (D03) */
 .stat .v.ok { color: var(--ok); }
 .stat .v.bad { color: var(--danger); }
 .stat .v.accent { background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -905,6 +905,7 @@ body.fs .q-chips { display: none; }
   transition: opacity 0.25s, transform 0.25s;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast .toast-act { margin-left: 12px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--accent); background: transparent; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
 
 /* ---------- Pudotusvalikko (Esimerkit) ---------- */
 .menu {
@@ -1284,7 +1285,7 @@ a.btn { text-decoration: none; }
   .stat:first-child .v { font-size: 22px; }
   .stat .k { font-size: 9.5px; letter-spacing: 0.6px; }
   .stat .v { font-size: 16px; }
-  .stat .s { font-size: 10.5px; }
+  .stat .s { font-size: 11.5px; }
 }
 
 /* iOS zoomaa automaattisesti alle 16 px:n lomakekenttiin — estetään kosketuslaitteilla */

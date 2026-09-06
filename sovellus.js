@@ -5,13 +5,21 @@
 /* ===================== Toast ===================== */
 
 let toastEl = null, toastTimer = null;
-function toast(msg, ms) {
+function toast(msg, ms, action) {
   if (!toastEl) {
     toastEl = document.createElement('div');
     toastEl.className = 'toast';
     document.body.appendChild(toastEl);
   }
   toastEl.textContent = t(msg); // nielukäärintä: staattiset viestit kääntyvät, koostetut valuvat suomena (KIELIVERSIO.md)
+  // Valinnainen toiminto (esim. Kumoa): kosketuskäyttäjälle Ctrl+Z ei riitä
+  // (design-auditointi 6.9.2026 D09)
+  if (action && action.label) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'toast-act'; b.textContent = t(action.label);
+    b.addEventListener('click', () => { toastEl.classList.remove('show'); try { action.fn(); } catch (e) {} });
+    toastEl.appendChild(b);
+  }
   toastEl.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms || 2400);
@@ -170,7 +178,7 @@ function applyQuestion(k) {
   // Ennen-luvut yhden lauseen vastausta varten; haamukäyrä näyttää eron
   // graafilla (UX-auditointi 5.9.2026 W2)
   const before = sim ? { p: sim.successProb, wd: sim.solvedWithdrawal, wr: sim.wAtRet } : null;
-  if (!baseline) setBaseline(t('Ennen kysymystä'));
+  if (!baseline) setBaseline(t('Ennen: {0}', t(k.q).replace(/\?$/, '')));
   let ret = state.events.find((e) => e.type === 'retirement');
   if (!ret && (o.retAge != null || o.goal || o.withdrawal != null || o.conf != null)) {
     const def = EVENT_TYPES.retirement;
@@ -199,7 +207,7 @@ function applyQuestion(k) {
   closePopover();
   renderAll();
   track('Kysymys', { id: k.id });
-  toast(questionSentence(k, before), 6500);
+  toast(questionSentence(k, before), 8000, { label: 'Kumoa', fn: () => doUndo() });
 }
 
 // Yksi lause: mitä kysymys muutti — moottorin luvut, ei arviota
@@ -213,7 +221,7 @@ function questionSentence(k, before) {
   else if (s.requiredMonthly != null) parts.push(t('tarvittava säästö {0}/kk (nyt {1})', fmtEur(s.requiredMonthly), fmtEur(state.monthly)));
   else if (s.solvedWithdrawal != null) parts.push(t('kestävä tulo {0}/kk', fmtEur(s.solvedWithdrawal)) + (before && before.wd != null ? ` (${s.solvedWithdrawal - before.wd >= 0 ? '+' : '−'}${fmtEur(Math.abs(Math.round(s.solvedWithdrawal - before.wd)))})` : ''));
   if (p != null) parts.push(t('onnistumis-% {0}', p) + dTxt);
-  return t('{0}: {1} — haamukäyrä näyttää eron, Ctrl+Z palauttaa', t(k.q).replace(/\?$/, ''), parts.join(' · '));
+  return t('{0}: {1} — haamukäyrä näyttää eron', t(k.q).replace(/\?$/, ''), parts.join(' · '));
 }
 function openQuestionsMenu(anchor) {
   if (questionsMenuEl) { closeQuestionsMenu(); return; }

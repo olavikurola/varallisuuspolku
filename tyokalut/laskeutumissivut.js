@@ -440,13 +440,14 @@ ${faq}
 
   <main class="ls-main">
     <h1>${esc(p.h1)}</h1>
-${p.vastaus.map((k) => `    <p>${k}</p>`).join('\n')}
-${p.lisa || ''}
-${taulukkoHtml(TAULUKOT[p.slug] ? TAULUKOT[p.slug]() : null)}
+${p.vastaus.slice(0, 2).map((k) => `    <p>${k}</p>`).join('\n')}
     <div class="ls-cta">
 ${p.kokeile.map(([lbl, st]) => `      <a class="btn" href="${linkki(st).replace('./', '../')}">${esc(lbl)} →</a>`).join('\n')}
     </div>
     <p class="ls-note">Kokeile-linkit avaavat valmiin esimerkkisuunnitelman — vaihda luvut omiksesi. Suunnitelma pysyy laitteellasi; linkki ei tallenna mitään palvelimelle.</p>
+${p.vastaus.slice(2).map((k) => `    <p>${k}</p>`).join('\n')}
+${p.lisa || ''}
+${taulukkoHtml(TAULUKOT[p.slug] ? TAULUKOT[p.slug]() : null)}
 
     <section class="ls-ukk">
       <h2>Usein kysyttyä</h2>
