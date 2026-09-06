@@ -960,6 +960,8 @@ body.fs .q-chips { display: none; }
 /* Laskuesimerkkitaulukot (validointi): pitkä laskukaava rivittyy kapealla, ei vuoda sivun leveyttä */
 /* Tietosivujen taulukot: pitkä sana saa katketa ennen kuin taulukko ylittää kortin (Linux-fonttimetriikka 1 px) */
 .an-card .sum-table td { overflow-wrap: anywhere; }
+/* Avain–arvo-taulukot: otsakesarake ei saa kutistua kirjainpinoksi (design-auditointi 6.9.2026 D02) */
+.an-card .sum-table td:first-child { overflow-wrap: normal; min-width: 7rem; width: 24%; }
 .sum-table-wrap td.num { white-space: normal; text-align: left; overflow-wrap: anywhere; }
 .table-sheet .sum-table { min-width: 640px; }
 .table-sheet .sum-table td.num.dbt { color: var(--danger); }
@@ -2005,6 +2007,7 @@ body.fs .tk-handle, body.fs .tk-sheet { display: none; }
   transition: opacity 0.15s, background 0.15s;
 }
 .tk-why:hover, .tk-why:focus-visible { opacity: 1; background: rgba(139, 124, 246, 0.2); }
+.tk-why::before { content: ''; position: absolute; inset: -9px; border-radius: 50%; } /* osuma-alue 35 px, symboli ennallaan (D21) */
 .stat:has(.tk-why) .k { padding-right: 20px; } /* otsikko ei juokse painikkeen alle */
 
 @media (max-width: 560px) {
@@ -2704,3 +2707,14 @@ html.light .tk-mailto:hover { color: #4f3fd0; }
 .inapp-hint span { flex: 1 1 220px; }
 .inapp-hint .btn { padding: 6px 10px; font-size: 12.5px; }
 .inapp-hint .inapp-x { background: none; border: 0; color: inherit; cursor: pointer; font-size: 16px; padding: 4px; }
+
+/* Vaalea teema: Suunnitelmani- ja jakoarkin peite seuraa teemaa — tumma peite
+   vaalean tekstin kanssa oli lukukelvoton (design-auditointi 6.9.2026 D01) */
+html.light .summary { background: rgba(238, 241, 248, 0.92); }
+
+/* Tulkki telakoituna keskileveällä näytöllä: sankaritiili koko riville ja neljä
+   alle — 4+1-ruudukko jätti viidennen tiilen yksin (design-auditointi 6.9.2026 D05) */
+@media (min-width: 1100px) and (max-width: 1599px) {
+  body.tk-docked:not(.fs) .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  body.tk-docked:not(.fs) .stat:first-child { grid-column: 1 / -1; }
+}

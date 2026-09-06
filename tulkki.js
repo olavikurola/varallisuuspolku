@@ -337,7 +337,9 @@
         for (const k in v) walk(v[k], p ? p + '.' + k : k);
       }
     };
-    walk({ stats: ctx.stats, vertailu: ctx.vertailu, suunnitelmat: ctx.suunnitelmat }, '');
+    // plan mukana: malli viittaa myös lähtötietoihin ([[plan.monthly]]) — ilman
+    // sidontaa ne renderöityivät kysymysmerkeiksi (design-auditointi 6.9.2026 D13)
+    walk({ stats: ctx.stats, vertailu: ctx.vertailu, suunnitelmat: ctx.suunnitelmat, plan: ctx.plan }, '');
     // Salliva alias: malli pudottaa joskus etuliitteen (livenä nähty
     // [[verotYhteensaEur]] po. [[stats.verotYhteensaEur]]) — polun häntä
     // kelpaa, jos se on yksikäsitteinen. Ristiriita eri arvoilla → ei aliasta.

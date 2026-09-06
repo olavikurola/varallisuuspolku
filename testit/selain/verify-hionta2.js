@@ -73,7 +73,8 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
       const shown = cards.map((c) => c.querySelector('.v').innerText.trim());
       return { n: cards.length, rows: new Set(tops).size, shown };
     });
-    ok(grid.n === 5 && grid.rows === 1, 'kaikki 5 korttia yhdellä rivillä telakoituna', JSON.stringify(grid));
+    // 6.9.2026 (D05): telakoituna 1100–1599 px sankaritiili koko riville + 4 alle (2 riviä), ei 4+1
+    ok(grid.n === 5 && grid.rows === 2, 'telakoituna sankaritiili + 4 tiiltä (2 riviä)', JSON.stringify(grid));
     ok(/M€/.test(grid.shown.join('|')), 'tiiviit arvot käytössä kapeassa telakassa', JSON.stringify(grid.shown));
   }
 
