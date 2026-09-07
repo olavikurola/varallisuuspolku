@@ -8,7 +8,7 @@
 > selaimessa; ei rekisteröitymistä, ei evästeitä (kävijämäärät anonyymillä
 > Plausible-analytiikalla).
 
-Keskeiset faktat (päivitetty 2026-09-02):
+Keskeiset faktat (päivitetty 2026-09-07):
 
 - Laskenta: kuukausitason korkoa korolle, palkkakehitys, lainat annuiteetteina,
   Monte Carlo -simulaatio (oletus 5 000 polkua) ja onnistumistodennäköisyys.
