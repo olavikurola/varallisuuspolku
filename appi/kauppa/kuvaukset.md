@@ -428,3 +428,49 @@ muutosloki 29.8. ja 2.9.2026 kertoo yksityiskohdat.
   TestFlight- ja web-palautetta
 - Play: ensimmäinen Android-versio samalla sisällöllä vasta kun iOS 1.2 on
   todettu kunnossa (versionName 1.0 → 1.2)
+
+## Versio 1.3 — What's New (luonnos 12.9.2026, kuluttajamuoto)
+
+Sisältö = webin UX-paketti 5.9.2026 ja design-auditoinnin korjaukset 6.9.2026 (ramppi, kysymyschipit,
+mobiilin tiilet, piirtopöytä heti, Kumoa, kierros 6 askelta) + laskennan tarkennukset 4.–5.9.
+(mediaanipäälinja, myyntivero reaalitilassa, yhteinen vuosikertymä). Neljä bullettia, vain käyttäjälle
+uudet toiminnot, ei teknisiä termejä (Olavin linjaus 2.9.2026).
+
+### Suomeksi (fi)
+
+```
+Ensimmäinen luku on nyt rehellisempi — ja siitä pääsee heti kokeilemaan.
+
+• Tuloskortti kertoo kuukausitulosi myös nykyrahassa, ja työeläkkeen voi
+  lisätä suoraan siihen.
+• "Kokeile: vedä eläkeikää" avaa piirtopöydän eläkeikä valmiiksi valittuna.
+• Kysymykset graafin alla: "Onko varaa eläkkeelle 60-vuotiaana?" — yksi
+  napautus näyttää eron haamukäyrällä, Kumoa palauttaa.
+• Puhelimessa tärkein luku koko leveydellä ja Vedä käyrää -nappi graafin
+  päällä.
+
+Kaikki laskenta pysyy omalla laitteellasi — ei tiliä, ei seurantaa.
+```
+
+### English (en-US)
+
+```
+The first number is now more honest — and you can try things right away.
+
+• The result card shows your monthly income in today's money too, and you
+  can add your pension right there.
+• "Try: drag the retirement age" opens the drawing board with the
+  retirement age already selected.
+• Questions under the chart: "Can I afford to retire at 60?" — one tap
+  shows the difference as a ghost curve, Undo restores.
+• On the phone the key figure spans the full width, with a Drag the curve
+  button on the chart.
+
+All calculations stay on your device — no account, no tracking.
+```
+
+### ASC-muistilista 1.3:lle
+- Versio 1.3 ASC:ssä, build = TestFlight-ajon numero (workflow_dispatch 12.9.2026).
+- What's New fi + en yllä. Kuvakaappaukset: 1-koti uusiksi (mobiilin tiilet ja Vedä käyrää -nappi) — aja `node tyokalut/kauppa-kuvat.js`.
+- Kuvaus ennallaan (kysymyskirjasto lisättiin 1.2:een).
+
