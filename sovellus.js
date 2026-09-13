@@ -305,10 +305,15 @@ function buildShareImage() {
   c.width = W; c.height = H;
   const x = c.getContext('2d');
   const F = '"Inter", system-ui, sans-serif';
+  // Tuloskuva 2.0 (UX-auditointi W3): kuva seuraa teemaa ja kantaa oletuksensa
+  const light = document.documentElement.classList.contains('light');
+  const P = light
+    ? { bg0: '#f4f6fb', bg1: '#e7ebf5', text: '#1c2742', dim: '#4f5d80', faint: '#6b7894', axis: 'rgba(28, 39, 66, 0.14)', ghost: 'rgba(28, 39, 66, 0.45)', ret: '#6a5ae0', retTxt: '#5b4dd6' }
+    : { bg0: '#0e1424', bg1: '#0a0e1a', text: '#e8edf8', dim: '#9aa7c4', faint: '#66738f', axis: 'rgba(255, 255, 255, 0.10)', ghost: 'rgba(255, 255, 255, 0.45)', ret: 'rgba(139, 124, 246, 0.75)', retTxt: '#b9aefa' };
 
   const bg = x.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#0e1424');
-  bg.addColorStop(1, '#0a0e1a');
+  bg.addColorStop(0, P.bg0);
+  bg.addColorStop(1, P.bg1);
   x.fillStyle = bg;
   x.fillRect(0, 0, W, H);
 
@@ -342,25 +347,40 @@ function buildShareImage() {
   x.lineWidth = 5;
   x.lineJoin = 'round';
   x.stroke();
+  // Vertailukohta katkoviivana — kuva kertoo myös "mihin verrattuna" (W3)
+  const gs = (typeof ghostSim !== 'undefined' && ghostSim && ghostSim.exp && ghostSim.exp.length === n + 1) ? ghostSim : null;
+  if (gs) {
+    x.setLineDash([9, 8]);
+    x.strokeStyle = P.ghost;
+    x.lineWidth = 3;
+    x.beginPath();
+    for (let m = 0; m <= n; m++) x[m ? 'lineTo' : 'moveTo'](px(m), py(gs.exp[m]));
+    x.stroke();
+    x.setLineDash([]);
+    x.fillStyle = P.faint;
+    x.font = `500 17px ${F}`;
+    x.textAlign = 'left';
+    x.fillText('– – ' + t('Vertailukohta: {0}', t((typeof baseline !== 'undefined' && baseline && baseline.cmpName) || 'oma vertailukohta')), L + 2, T + 22);
+  }
 
   // Eläkeikäviiva — sama violetti virstanpylväskieli kuin graafissa
   if (sim.retireAge != null) {
     const rx = px((sim.retireAge - sim.a0) * 12);
     x.setLineDash([7, 7]);
-    x.strokeStyle = 'rgba(139, 124, 246, 0.75)';
+    x.strokeStyle = P.ret;
     x.lineWidth = 2.5;
     x.beginPath(); x.moveTo(rx, T - 26); x.lineTo(rx, B); x.stroke();
     x.setLineDash([]);
-    x.fillStyle = '#b9aefa';
+    x.fillStyle = P.retTxt;
     x.font = `600 20px ${F}`;
     x.textAlign = rx > W / 2 ? 'right' : 'left';
     x.fillText(t('Eläkkeelle {0} v', Math.round(sim.retireAge)), rx + (rx > W / 2 ? -10 : 10), T - 6);
   }
-  x.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+  x.strokeStyle = P.axis;
   x.lineWidth = 1;
   x.beginPath(); x.moveTo(L, B); x.lineTo(R, B); x.stroke();
   // Ikämerkinnät piirtoalueen sisään — alalaidassa ne ahtautuisivat footeriin
-  x.fillStyle = '#66738f';
+  x.fillStyle = P.faint;
   x.font = `500 18px ${F}`;
   x.textAlign = 'left';
   x.fillText(t('{0} v', state.ageNow), L + 2, B - 10);
@@ -382,7 +402,7 @@ function buildShareImage() {
   x.bezierCurveTo(62, 73, 67, 59, 80, 51);
   x.stroke();
   x.beginPath(); x.arc(80, 51, 4.3, 0, 7); x.fillStyle = '#fff'; x.fill();
-  x.fillStyle = '#e8edf8';
+  x.fillStyle = P.text;
   x.font = `600 30px ${F}`;
   x.textAlign = 'left';
   x.fillText('Varallisuuspolku', 108, 71);
@@ -434,7 +454,7 @@ function buildShareImage() {
     rows = [];
   }
   x.textAlign = 'left';
-  x.fillStyle = '#9aa7c4';
+  x.fillStyle = P.dim;
   x.font = `500 24px ${F}`;
   x.fillText(label, 70, 145);
   const pg = x.createLinearGradient(70, 150, 520, 220);
@@ -445,21 +465,31 @@ function buildShareImage() {
   x.fillText(big, 66, 222);
   let ry = 138;
   for (const [k, v] of rows) {
-    x.fillStyle = '#9aa7c4'; x.font = `500 22px ${F}`; x.fillText(k, 640, ry);
-    x.fillStyle = '#e8edf8'; x.font = `600 26px ${F}`; x.fillText(v, 950, ry);
+    x.fillStyle = P.dim; x.font = `500 22px ${F}`; x.fillText(k, 640, ry);
+    x.fillStyle = P.text; x.font = `600 26px ${F}`; x.fillText(v, 950, ry);
     ry += 40;
   }
-  if (state.real) {
-    x.fillStyle = '#66738f';
-    x.font = `500 18px ${F}`;
-    x.fillText(t('reaalieuroina (inflaatiokorjattu)'), 70, 176);
-  }
+  // Oletukset yhdellä rivillä: jaettu kuva kantaa ehtonsa mukanaan (W3) —
+  // rahaehto, tuotto-oletukset, verot, työeläke, polkumäärä
+  const pro = proOf(state);
+  const mu = pro ? pro.mu : { stocks: 7, bonds: 3 };
+  const oletukset = [
+    state.real ? t('nykyrahassa, inflaatio {0} %/v', fmtLuku(inflOf(state) * 100)) : t('nimellisarvoin'),
+    t('osakkeet {0} % / korot {1} %', fmtLuku(mu.stocks), fmtLuku(mu.bonds)),
+    state.tax ? t('verot mukana') : t('ilman veroja'),
+    ret && ret.pension > 0 ? t('työeläke {0}/kk', eur0(sim.pension != null ? sim.pension : ret.pension)) : t('ilman työeläkettä'),
+    t('{0} markkinapolkua', fmtLuku(sim.mcPaths || MC_LIVE)),
+  ].join(' · ');
+  x.fillStyle = P.faint;
+  x.font = `500 16px ${F}`;
+  x.textAlign = 'left';
+  x.fillText(t('Oletukset: {0}', oletukset), 70, H - 46);
 
   x.fillStyle = '#2dd4bf';
   x.font = `600 22px ${F}`;
   x.textAlign = 'left';
   x.fillText(t('Piirrä oma polkusi — varallisuuspolku.com'), 70, H - 18);
-  x.fillStyle = '#66738f';
+  x.fillStyle = P.faint;
   x.font = `500 16px ${F}`;
   x.textAlign = 'right';
   x.fillText(t('Havainnollistus, ei sijoitusneuvontaa'), W - 70, H - 18);
