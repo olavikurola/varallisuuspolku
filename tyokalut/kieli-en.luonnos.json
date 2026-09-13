@@ -732,6 +732,8 @@
   "Sekvenssiriski: sama suunnitelma, jos markkina käyttäytyy huonosti eläkkeelle jäädessäsi.": "Sequence risk: the same plan if the market behaves badly just as you retire.",
   "Selitystä varten välitetään suunnitelmasi luvut nimettöminä ja kysymyksesi sellaisenaan. Nimiä, tunnisteita eikä muita kirjoittamiasi tekstejä ei lähetetä, eikä palvelin tallenna mitään. Napauta nähdäksesi täsmälleen lähtevät tiedot.": "To produce the explanation, your plan's figures are sent anonymously along with your question. No names, identifiers or other text you have written is sent, and the server stores nothing. Tap to see exactly what would be sent.",
   "Selitä": "Explain",
+  "Selitä tämä muutos: {0}": "Explain this change: {0}",
+  "Selitä: {0}": "Explain: {0}",
   "Selvä — ei kysytä uudestaan. Valinnan voi muuttaa Tietoa-sivulta.": "Got it — we won't ask again. You can change this on the Info page.",
   "Seuraava ({0}/{1})": "Next ({0}/{1})",
   "Siemen": "Seed",

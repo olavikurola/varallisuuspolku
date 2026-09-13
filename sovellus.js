@@ -207,7 +207,13 @@ function applyQuestion(k) {
   closePopover();
   renderAll();
   track('Kysymys', { id: k.id });
-  toast(questionSentence(k, before), 8000, { label: 'Kumoa', fn: () => doUndo() });
+  const lause = questionSentence(k, before);
+  toast(lause, 8000, { label: 'Kumoa', fn: () => doUndo() });
+  // Tulkin ensimmäinen ehdotus sidotaan viimeisimpään muutokseen (design-auditointi D14)
+  try {
+    window.vpLastChange = { label: t(k.q).replace(/\?$/, ''), sentence: lause, at: Date.now() };
+    document.dispatchEvent(new CustomEvent('vp:change'));
+  } catch (e) {}
 }
 
 // Yksi lause: mitä kysymys muutti — moottorin luvut, ei arviota

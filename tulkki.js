@@ -523,6 +523,11 @@
     const el = $t('tkSugs');
     const hasRet = state.events.some((e) => e.type === 'retirement');
     let html = '';
+    // Viimeisin muutos (kysymyschippi) ensimmäiseksi ehdotukseksi — "Selitä tämä
+    // muutos" on todennäköisin seuraava kysymys (design-auditointi 6.9.2026 D14)
+    const lc = window.vpLastChange;
+    const lastChip = lc && lc.sentence && Date.now() - lc.at < 15 * 60e3
+      ? `<button type="button" class="tk-sug tk-last" data-q="${esc(t('Selitä tämä muutos: {0}', lc.sentence))}">💡 ${esc(t('Selitä: {0}', lc.label))}</button>` : '';
     if (!chat.length) {
       const sugs = [];
       // Sama asia näkyy Huomioissa Selitä-nappina — ei duplikaattia chippinä
@@ -536,7 +541,7 @@
       sugs.push(t('Mistä verot kertyvät?'));
       // Appissa tyhjä aloitusnäkymä täyttyy ehdotuskorteilla (3 + haasta) —
       // webissä kapea chippirivi kuten ennen
-      html = sugs.slice(0, APPI ? 3 : (tkNarrow() ? 1 : 2)).map((q) => `<button type="button" class="tk-sug">${esc(q)}</button>`).join('') +
+      html = lastChip + sugs.slice(0, APPI ? 3 : (tkNarrow() ? 1 : 2)).map((q) => `<button type="button" class="tk-sug">${esc(q)}</button>`).join('') +
         `<button type="button" class="tk-sug tk-haasta">${t('🔍 Haasta suunnitelmani')}</button>`;
       if (APPI) html = `<div class="tk-alku-otsikko">${t('Kokeile näitä')}</div>` + html;
     } else {
@@ -548,7 +553,7 @@
       const ownG = vStats && vStats.groups[tkGroupOf(state.ageNow)];
       const jakoChip = vStats && ownG && !ownG.monthly && !hasSharedPlan() && typeof openDonateModal === 'function'
         ? `<button type="button" class="tk-sug tk-jaa">${t('🤝 Jaa vertailudataan — ikäryhmäsi {0}/{1}', ownG.n, vStats.kAnon)}</button>` : '';
-      html = (hasRet ? `<button type="button" class="tk-sug tk-market">${t('📉 Markkinatesti')}</button>` : '') +
+      html = lastChip + (hasRet ? `<button type="button" class="tk-sug tk-market">${t('📉 Markkinatesti')}</button>` : '') +
         `<button type="button" class="tk-sug tk-haasta">${t('🔍 Haasta suunnitelmani')}</button>` +
         (hasPlans ? `<button type="button" class="tk-sug tk-plans">${t('🗂 Vertaa suunnitelmiani')}</button>` : '') +
         jakoChip +
@@ -558,7 +563,8 @@
     el.classList.toggle('tk-sugs-alku', APPI && !chat.length);
     el.querySelectorAll('.tk-sug').forEach((b) => {
       b.addEventListener('click', () => {
-        if (b.classList.contains('tk-adv')) ask('', 'advisor');
+        if (b.classList.contains('tk-last')) { tkTrack('Tulkki selitä muutos'); ask(b.dataset.q, 'explain'); }
+        else if (b.classList.contains('tk-adv')) ask('', 'advisor');
         else if (b.classList.contains('tk-jaa')) { tkTrack('Tulkki jakokehote'); openDonateModal(); }
         else if (b.classList.contains('tk-plans')) ask(t('Vertaa suunnitelmiani keskenään'), 'explain');
         else if (b.classList.contains('tk-haasta')) ask('', 'haasta');
@@ -572,6 +578,9 @@
       });
     });
   }
+
+  // Sovellus ilmoittaa kysymyschipin käytöstä → ehdotukset uusiksi
+  document.addEventListener('vp:change', () => { try { renderSugs(); } catch (e) {} });
 
   /* ---------- Kysely ---------- */
 
