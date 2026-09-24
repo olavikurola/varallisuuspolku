@@ -147,6 +147,12 @@ function buildDonationPayload(st, s) {
       if (e.pensionFixed === true) ev.pensionFixed = true;
       if (e.goal) ev.goal = e.goal;
       if (e.conf != null) ev.conf = e.conf;
+      // Kestävä tulo -tavoitteessa kentässä on vain aloituspohjan paikkamerkki;
+      // vertailuun kuuluu moottorin ratkaisema taso (data-arvio 24.9.2026)
+      if (e.goal === 'withdrawal' && s && s.solvedWithdrawal != null) {
+        ev.withdrawal = round2sig(s.solvedWithdrawal);
+        ev.wdSolved = true;
+      }
       events.push(ev);
     } else {
       const ev = { type: e.type, age: Math.round(e.age) };

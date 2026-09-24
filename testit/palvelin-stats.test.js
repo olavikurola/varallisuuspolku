@@ -149,5 +149,32 @@ async function statsFrom(port, rows) {
     ok(s.groups.all.n === 32, 'all ei tuplaa kaistalaskentaa');
   }
 
+  console.log('Kestävä tulo: paikkamerkki 2400 pois kuukausitulon jakaumasta, ratkaistu taso mukaan');
+  {
+    const wdEv = (i, over) => [Object.assign({ type: 'retirement', age: 60, withdrawal: 2400, pension: 1000, pensionAge: 65, goal: 'withdrawal' }, over)];
+    // 30 manuaalista (2600…2890) + 20 vanhaa paikkamerkkiriviä → jakauma vain manuaalisista
+    const old = [...Array(30)].map((_, i) => edited(i)).concat([...Array(20)].map((_, i) => edited(i + 30, { events: wdEv(i) })));
+    const s1 = await statsFrom(8801, old);
+    ok(s1.groups.all.withdrawal && s1.groups.all.withdrawal.p25 > 2400, 'paikkamerkkirivit eivät vedä jakaumaa 2400:aan', JSON.stringify(s1.groups.all.withdrawal));
+    ok(s1.groups.all.goals.withdrawal > 0.35, 'tavoiteosuus lasketaan silti kaikista');
+    // 15 manuaalista + 15 vanhaa → 15 aitoa < k-anon → ei jakaumaa
+    const few = [...Array(15)].map((_, i) => edited(i)).concat([...Array(15)].map((_, i) => edited(i + 15, { events: wdEv(i) })));
+    const s2 = await statsFrom(8802, few);
+    ok(!s2.groups.all.withdrawal && !s2.groups.all.penShare, 'alle 30 aitoa tasoa → ei kuukausitulo- eikä kateosuusjakaumaa');
+    // 30 ratkaistua tasoa (4000…) lipulla → mukaan jakaumaan
+    const solved = [...Array(30)].map((_, i) => edited(i, { events: wdEv(i, { withdrawal: 4000 + i * 10, wdSolved: true }) }));
+    const s3 = await statsFrom(8803, solved);
+    ok(s3.groups.all.withdrawal && s3.groups.all.withdrawal.p50 >= 4000, 'wdSolved-rivit mukana jakaumassa', JSON.stringify(s3.groups.all.withdrawal));
+  }
+
+  console.log('Pohjatunnistus: ratkaistu tulo ei tee oletuspohjasta muokattua');
+  {
+    // Miljoona loppuelämäksi -pohja: tulo ratkaistaan, joten withdrawal ≠ 2700
+    const tpl = () => row({ ageNow: 45, startCapital: 1000000, monthly: 0,
+      events: [{ type: 'retirement', age: 45, withdrawal: 3300, pension: 1800, pensionAge: 68, goal: 'withdrawal', conf: 0.85, wdSolved: true }] });
+    const s = await statsFrom(8804, [...Array(5)].map(tpl).concat([...Array(30)].map((_, i) => edited(i))));
+    ok(s.editedN === 30, 'ratkaistun tulon pohjarivit tunnistetaan pohjiksi', String(s.editedN));
+  }
+
   process.exit(failed ? 1 : 0);
 })();

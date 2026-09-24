@@ -104,6 +104,8 @@ function sanitize(p) {
       if (e.goal !== undefined) ev.goal = e.goal;
       if (!opt(e.conf, (v) => num(v, 0.5, 0.99))) return null;
       if (e.conf !== undefined) ev.conf = e.conf;
+      if (!opt(e.wdSolved, (v) => v === true)) return null;
+      if (e.wdSolved === true) ev.wdSolved = true;
     } else {
       if (!opt(e.amount, (v) => num(v, -1e9, 1e9))) return null;
       if (e.amount !== undefined) ev.amount = e.amount;
@@ -210,7 +212,7 @@ function isTemplate(r) {
   if (!ret) return false;
   return TEMPLATE_FPS.some(([sc, mo, ra, wd, pe]) =>
     r.startCapital === sc && r.monthly === mo && ret.age === ra &&
-    ret.withdrawal === wd && ret.pension === pe);
+    (ret.wdSolved === true || ret.withdrawal === wd) && ret.pension === pe);
 }
 const groupOf = (age) => (AGE_GROUPS.find(([, lo, hi]) => age >= lo && age <= hi) || [null])[0];
 /* Leveät ikäkaistat: 5-vuotisryhmät ylittävät k-anon-rajan hitaasti (30.8.2026
@@ -297,13 +299,16 @@ function computeStats() {
       g.stocks = quartiles(list.map((r) => r.alloc.stocks));
       if (ret.length >= K_ANON) {
         g.retireAge = quartiles(ret.map((e) => e.age));
-        g.withdrawal = quartiles(ret.map((e) => e.withdrawal));
+        // Kuukausitulon jakaumaan vain aidot tasot: kestävä tulo -tavoitteen
+        // vanhoissa riveissä (ennen wdSolved-lippua) on aloituspohjan paikkamerkki
+        const wdReal = ret.filter((e) => e.goal !== 'withdrawal' || e.wdSolved === true);
+        if (wdReal.length >= K_ANON) g.withdrawal = quartiles(wdReal.map((e) => e.withdrawal));
         // Raja tarkistetaan LOPULLISELLE joukolle (auditointi 5.9.2026 D-01):
         // 30 eläketapahtumaa, joista 1 positiivinen, ei saa julkaista kvartiileja
         const pens = ret.map((e) => e.pension).filter((p) => p > 0);
         if (pens.length >= K_ANON) g.pension = quartiles(pens);
         // Työeläkkeen kateosuus kuukausitulosta (0..1)
-        const cover = ret.filter((e) => e.withdrawal >= 100)
+        const cover = wdReal.filter((e) => e.withdrawal >= 100)
           .map((e) => Math.min(1, e.pension / e.withdrawal));
         if (cover.length >= K_ANON) g.penShare = quartiles(cover.map((v) => Math.round(v * 100) / 100));
         g.goals = {};

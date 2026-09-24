@@ -123,6 +123,16 @@ const { chromium } = require('playwright');
   const payload = await page.evaluate(() => buildDonationPayload(state, sim));
   const pGoals = payload.events.filter((e) => e.type === 'goal');
   ok(pGoals.length === 2 && pGoals.every((g) => Number.isInteger(g.age) && g.amount != null), 'payload sisältää pisteet', JSON.stringify(pGoals));
+  // Kestävä tulo -tavoite: paketissa ratkaistu taso + lippu, ei kentän paikkamerkkiä
+  const wdPay = await page.evaluate(() => {
+    const st = JSON.parse(JSON.stringify(state));
+    const ret = st.events.find((e) => e.type === 'retirement');
+    ret.goal = 'withdrawal'; delete ret.conf; ret.withdrawal = 2400;
+    const s = simulate(st);
+    return { ev: buildDonationPayload(st, s).events.find((e) => e.type === 'retirement'), solved: s.solvedWithdrawal };
+  });
+  ok(wdPay.ev.wdSolved === true && wdPay.solved > 0 && Math.abs(wdPay.ev.withdrawal - wdPay.solved) / wdPay.solved < 0.05,
+    'kestävä tulo: payload kantaa ratkaistun tason (wdSolved)', JSON.stringify(wdPay));
 
   // 8) Varmuustasomoodi: Ratkaise MC:llä workerissa, progress + tulos
   await page.evaluate(() => {
