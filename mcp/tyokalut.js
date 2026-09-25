@@ -73,9 +73,22 @@ function rivi(sim, st, m) {
 
 function huomiot(sim, st) {
   const h = [];
+  const infl = r1(L.inflOf(st) * 100);
   h.push(st.real
-    ? `Luvut ovat reaalieuroja (inflaatiokorjattu ${st.inflation} %/v — nykyrahan ostovoimaa).`
-    : 'Luvut ovat nimellisiä euroja (ei inflaatiokorjausta).');
+    ? `Luvut ovat reaalieuroja (inflaatiokorjattu ${infl} %/v — nykyrahan ostovoimaa).`
+    : `Varallisuusluvut ovat nimellisiä (tulevaisuuden) euroja, inflaatio ${infl} %/v. Syötetyt summat (säästö, tapahtumat, tulotarve, työeläke) ja kestävä kuukausitulo ovat tämän päivän rahaa; onnistumis-% on sama kuin reaalitilassa.`);
+  // Työeläke alkaa aikaisintaan alimmassa vanhuuseläkeiässä (tarkastusmuistio K2)
+  if (sim.pensionAgeRaised) {
+    h.push(`Työeläkkeen alkamisikä nostettiin alimpaan vanhuuseläkeikään ${r1(sim.pensionAgeMin)} v (syntymävuosi arviolta ${L.PENSION_REF_YEAR - Math.round(st.ageNow)}; 1965 jälkeen syntyneillä ikä on työeläkevakuuttajien arvio). Täyttä vanhuuseläkettä ei saa aiemmin; osittaista varhennettua vanhuuseläkettä ei mallinneta.`);
+  }
+  // Osakesäästötilin talletuskatto 100 000 € (nimellinen) — laskenta ei ohjaa
+  // ylitystä arvo-osuustilille (tarkastusmuistio M2)
+  if (L.acctOf(st) === 'ost' && sim.invested) {
+    const m = sim.invested.findIndex((v) => v >= 100000);
+    if (m >= 0) {
+      h.push(`Osakesäästötilin talletuskatto 100 000 € ylittyy noin ${Math.round(sim.a0 + m / 12)} v iässä. Laskenta käsittelee koko salkun osakesäästötilinä — katon ylittävä osa olisi todellisuudessa arvo-osuustilillä (osingot verollisia), joten tulos on siltä osin optimistinen.`);
+    }
+  }
   if (sim.goalUnreachable) h.push('Tavoite ei ole saavutettavissa näillä lähtötiedoilla.');
   if (sim.dryZones && sim.dryZones.length) {
     const jaksot = sim.dryZones.map((z) => `${r1(z.from)}–${r1(z.to)} v`).join(', ');
@@ -385,7 +398,7 @@ const TYOKALUT = [
           ...henkilot.flatMap((h, i) => huomiot(simit[i], h.st)
             .filter((t) => !t.startsWith('Luvut ovat'))
             .map((t) => `${h.nimi}: ${t}`)),
-          henkilot[0].st.real ? 'Luvut ovat reaalieuroja (inflaatiokorjattu).' : 'Luvut ovat nimellisiä euroja.',
+          henkilot[0].st.real ? 'Luvut ovat reaalieuroja (inflaatiokorjattu).' : 'Varallisuusluvut ovat nimellisiä euroja; syötetyt summat ja kestävä tulo tämän päivän rahaa.',
         ],
       };
       const rivit = [
@@ -474,7 +487,7 @@ const TYOKALUT = [
             allocStocks: 'osakepaino % (oletus 70)',
             allocBonds: 'korkopaino % (oletus 20; loppu käteistä)',
             glide: 'true = osakepaino laskee automaattisesti iän myötä (glidepath)',
-            real: 'true = tulokset reaalieuroina (inflaatiokorjattu)',
+            real: 'true (oletus) = varallisuus tämän päivän rahassa; false = varallisuus nimellisinä euroina. Syötetyt summat ovat aina tämän päivän rahaa, joten onnistumis-% ja kestävä tulo eivät riipu tästä',
             inflation: 'inflaatio-oletus %/v (oletus 2)',
             tax: 'true = myyntivoittovero nostoissa (30/34 %; suositus true)',
             savingsGrowth: 'säästön vuosikasvu %/v eli palkkakehitys (oletus 0)',

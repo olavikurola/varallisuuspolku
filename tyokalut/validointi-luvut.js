@@ -10,9 +10,11 @@ const fmt = (v) => v.toLocaleString('fi-FI', { maximumFractionDigits: 2 });
 const row = (name, hand, engine) =>
   console.log(`${name}\n  käsin:    ${fmt(hand)}\n  moottori: ${fmt(engine)}\n  ero:      ${Math.abs(hand - engine).toExponential(2)}\n`);
 
+// Identiteetit 1–4 ja 6–8: nimellistila inflaatiolla 0 = puhdas korkoa korolle
+// (24.9.2026 alkaen nimellistila on näyttövaihtoehto: summat indeksoidaan inflaatiolla)
 // 1) Kertasijoitus 50 000 €, 100 % osakkeet (7 %/v), 10 v, ei veroa
 const acc = { ageNow: 30, ageEnd: 40, startCapital: 50000, monthly: 0, savingsGrowth: 0,
-  allocStocks: 100, allocBonds: 0, glide: false, real: false, tax: false, events: [] };
+  allocStocks: 100, allocBonds: 0, glide: false, real: false, inflation: 0, tax: false, events: [] };
 row('1) Kertasijoitus S·k^120 (mediaanidrift)', 50000 * Math.pow(k, 120), L.simulate(acc).exp[120]);
 
 // 2) Kuukausisäästö 500 €/kk, 7 %/v, 10 v — annuiteetin päätearvo
@@ -27,13 +29,13 @@ row('3) Kasvava säästövirta (suora summa)', ref, L.simulate(grw).exp[120]);
 
 // 4) Nostovaihe: 1 000 000 €, nosto 2 000 €/kk, 7 %/v, 10 v, ei veroa
 const wd = { ageNow: 60, ageEnd: 70, startCapital: 1000000, monthly: 0, savingsGrowth: 0,
-  allocStocks: 100, allocBonds: 0, glide: false, real: false, tax: false,
+  allocStocks: 100, allocBonds: 0, glide: false, real: false, inflation: 0, tax: false,
   events: [{ id: 1, type: 'retirement', age: 60, withdrawal: 2000, pension: 0 }] };
 row('4) Nostovaihe S·k^120 − W·(k^120−1)/(k−1)',
   1000000 * Math.pow(k, 120) - 2000 * (Math.pow(k, 120) - 1) / (k - 1), L.simulate(wd).exp[120]);
 
 // 5) Inflaatiokorjaus (Fisher): 50 000 €, 7 % nimellinen, 2 % inflaatio, 10 v
-const rl = { ...acc, real: true };
+const rl = { ...acc, real: true, inflation: 2 };
 row('5) Fisher S·((1,07/1,02)^(1/12)·d)^120', 50000 * Math.pow(Math.pow(1.07 / 1.02, 1 / 12) * drag, 120), L.simulate(rl).exp[120]);
 
 // 6) Omaisuuserä: 220 000 € asunto, +2 %/v, arvo 10 v kohdalla
@@ -48,7 +50,7 @@ row('7) Annuiteettierä P·r/(1−(1+r)^−n)', pmtHand, L.loanPayment(187000, 3
 // 8) Omaisuuden myynti + hankintameno-olettama: asunto ostettu 30 v (220 000 €,
 //    +2 %/v), myydään 40 v, vero päällä, EI verovapaa
 const sale = { ageNow: 30, ageEnd: 50, startCapital: 0, monthly: 0, savingsGrowth: 0,
-  allocStocks: 100, allocBonds: 0, glide: false, real: false, tax: true,
+  allocStocks: 100, allocBonds: 0, glide: false, real: false, inflation: 0, tax: true,
   events: [{ id: 1, type: 'home', age: 30, amount: -220000, financing: 'cash', isAsset: true, appr: 2.0, sellAge: 40 }] };
 const info = L.prepareSim(sale).saleInfos[0];
 const saleValue = 220000 * Math.pow(Math.pow(1.02, 1 / 12), 120);

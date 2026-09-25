@@ -107,7 +107,9 @@ function sanitoiSuunnitelma(data) {
     allocStocks: numOk(data.allocStocks) ? clamp(Math.round(data.allocStocks), 0, 100) : 70,
     allocBonds: numOk(data.allocBonds) ? clamp(Math.round(data.allocBonds), 0, 100) : 20,
     glide: !!data.glide,
-    real: !!data.real,
+    // Puuttuva real = tämän päivän raha (oletus 24.9.2026 alkaen); jakolinkit
+    // kantavat kentän aina, joten vanhat linkit säilyttävät tilansa
+    real: data.real === undefined ? true : !!data.real,
     tax: !!data.tax,
     inflation: numOk(data.inflation) ? clamp(data.inflation, 0, 15) : 2,
     savingsGrowth: numOk(data.savingsGrowth) ? clamp(data.savingsGrowth, 0, 15) : 0,

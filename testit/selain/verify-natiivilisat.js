@@ -471,7 +471,9 @@ server.listen(8134, async () => {
   ok(await pg.evaluate(() => (window.__prefs['vp-widget'] || '').includes('Toteuma:')), 'widget-alarivi kertoo toteuman tilan');
   ok(await pg.evaluate(() => {
     const w = JSON.parse(window.__prefs['vp-widget']);
-    return w.otsikko === 'Onnistumis-%' && Array.isArray(w.kayra) && w.kayra.length === 25 && Math.max(...w.kayra) === 100;
+    // 25 näytepistettä: huippu osuu näytteeseen vain jos huippukuukausi sattuu kohdalle → 95–100
+    const mx = Array.isArray(w.kayra) ? Math.max(...w.kayra) : 0;
+    return w.otsikko === 'Onnistumis-%' && w.kayra.length === 25 && mx >= 95 && mx <= 100;
   }), 'widget-JSON: lyhyt otsikko ja normalisoitu polkukäyrä');
   ok(await pg.evaluate(() => !!window.__widgetData && window.__widgetData.includes('Toteuma:')), 'iOS-silta saa saman JSONin argumenttina');
   await pg.click('.vpt-rivi .x');

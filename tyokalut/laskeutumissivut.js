@@ -33,6 +33,9 @@ function rakenna(ops, muutos) {
   const st = JSON.parse(JSON.stringify(PERUS));
   if (muutos) Object.assign(st, muutos);
   const ret = st.events.find((e) => e.type === 'retirement');
+  // Työeläke alkaa aikaisintaan alimmassa vanhuuseläkeiässä (tarkastusmuistio
+  // K2): esimerkin henkilön ikä ratkaisee, pyöristys ylös täysiin vuosiin
+  ret.pensionAge = TYOELAKEIKA(st.ageNow);
   if (ops.retAge != null) ret.age = ops.retAge;
   if (ops.withdrawal != null) ret.withdrawal = ops.withdrawal;
   if (ops.pension != null) ret.pension = ops.pension;
@@ -178,7 +181,7 @@ const SIVUT = [
     h1: 'Milloin voin jäädä eläkkeelle?',
     kuvaus: 'Kaksi vastausta: lakisääteinen vanhuuseläkeikä syntymävuoden mukaan ja se, milloin omat sijoituksesi riittävät aikaisempaan eläkkeeseen. Laskuri hakee aikaisimman eläkeiän halutulla varmuudella.',
     vastaus: [
-      'Kysymyksellä on kaksi vastausta. Ensimmäinen on <b>lakisääteinen</b>: alin vanhuuseläkeikä määräytyy syntymävuoden mukaan — 1962–1964 syntyneillä 65 vuotta, sitä nuoremmilla elinajanodotteeseen sidottu ja arviolta 65–68 vuotta. Toinen on <b>taloudellinen</b>: milloin omat sijoituksesi riittävät kattamaan tulotarpeen siihen asti, kun työeläke alkaa, ja sen jälkeen työeläkkeen päälle.',
+      'Kysymyksellä on kaksi vastausta. Ensimmäinen on <b>lakisääteinen</b>: alin vanhuuseläkeikä määräytyy syntymävuoden mukaan — 1962–1964 syntyneillä 65 vuotta, sitä nuoremmilla elinajanodotteeseen sidottu ja arviolta 65–69 vuotta (2005 syntyneillä 68 v 9 kk). Toinen on <b>taloudellinen</b>: milloin omat sijoituksesi riittävät kattamaan tulotarpeen siihen asti, kun työeläke alkaa, ja sen jälkeen työeläkkeen päälle.',
       'Työeläkelaitosten laskurit vastaavat ensimmäiseen kysymykseen. Varallisuuspolku vastaa toiseen: syötät ikäsi, sijoituksesi, säästösi kuukaudessa ja tulotarpeesi, ja ratkaisija hakee <b>aikaisimman eläkeiän</b>, jolla varat riittävät suunnitelman loppuun — joko tyypillisellä markkinakehityksellä tai valitsemallasi varmuustasolla (75/85/95 % simuloiduista poluista).',
       'Kaksi asiaa, jotka moni laskuri ohittaa: ennen työeläkkeen alkamista koko kuukausitulo nostetaan sijoituksista ja nostosta menee myyntivoittovero voiton osuudesta; ja jos lopetat työt ennen työeläkeikääsi, työeläkkeen karttuma päättyy, joten eläke jää työeläkeotteen arviota pienemmäksi. Laskuri huomioi molemmat.',
       'Laskuri ei kerro, milloin sinun pitäisi jäädä eläkkeelle. Se näyttää, mitä kukin eläkeikä maksaa säästönä tai kuukausitulona — päätös on sinun.',
@@ -194,17 +197,10 @@ const SIVUT = [
           <tr><td data-label="Syntymävuosi">1960</td><td class="num" data-label="Alin vanhuuseläkeikä">64&nbsp;v 6&nbsp;kk</td><td class="num" data-label="Tila">laki</td></tr>
           <tr><td data-label="Syntymävuosi">1961</td><td class="num" data-label="Alin vanhuuseläkeikä">64&nbsp;v 9&nbsp;kk</td><td class="num" data-label="Tila">laki</td></tr>
           <tr><td data-label="Syntymävuosi">1962–1964</td><td class="num" data-label="Alin vanhuuseläkeikä">65&nbsp;v</td><td class="num" data-label="Tila">laki</td></tr>
-          <tr><td data-label="Syntymävuosi">1965</td><td class="num" data-label="Alin vanhuuseläkeikä">65&nbsp;v 2&nbsp;kk</td><td class="num" data-label="Tila">arvio</td></tr>
-          <tr><td data-label="Syntymävuosi">1970</td><td class="num" data-label="Alin vanhuuseläkeikä">65&nbsp;v 8–10&nbsp;kk</td><td class="num" data-label="Tila">arvio</td></tr>
-          <tr><td data-label="Syntymävuosi">1975</td><td class="num" data-label="Alin vanhuuseläkeikä">66&nbsp;v 4&nbsp;kk</td><td class="num" data-label="Tila">arvio</td></tr>
-          <tr><td data-label="Syntymävuosi">1980</td><td class="num" data-label="Alin vanhuuseläkeikä">66&nbsp;v 10&nbsp;kk</td><td class="num" data-label="Tila">arvio</td></tr>
-          <tr><td data-label="Syntymävuosi">1985</td><td class="num" data-label="Alin vanhuuseläkeikä">67&nbsp;v 4&nbsp;kk</td><td class="num" data-label="Tila">arvio</td></tr>
-          <tr><td data-label="Syntymävuosi">1990</td><td class="num" data-label="Alin vanhuuseläkeikä">67&nbsp;v 9&nbsp;kk</td><td class="num" data-label="Tila">arvio</td></tr>
-          <tr><td data-label="Syntymävuosi">1995</td><td class="num" data-label="Alin vanhuuseläkeikä">68&nbsp;v 2&nbsp;kk</td><td class="num" data-label="Tila">arvio</td></tr>
-          <tr><td data-label="Syntymävuosi">2000</td><td class="num" data-label="Alin vanhuuseläkeikä">68&nbsp;v 7&nbsp;kk</td><td class="num" data-label="Tila">arvio</td></tr>
-        </tbody>
+${[1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000].map((y) => `          <tr><td data-label="Syntymävuosi">${y}</td><td class="num" data-label="Alin vanhuuseläkeikä">${alinIka(y)}</td><td class="num" data-label="Tila">arvio</td></tr>
+`).join('')}        </tbody>
       </table></div>
-      <p class="ls-note">Lähteet: <a href="https://www.tyoelake.fi/elakkeet-eri-elamantilanteissa/vanhuuselake-elakeika-maaraytyy-syntymavuoden-mukaan/" rel="noopener">Työeläke.fi</a> (säädetyt ikärajat), <a href="https://www.tela.fi/ajankohtaista/qa-tietopaketit/elakeika/" rel="noopener">Tela</a> ja Eläketurvakeskuksen ennusteet (arviot; 1970 syntyneille lähteet antavat 65 v 8 kk – 65 v 10 kk ennustevuodesta riippuen). Tarkista oma ikärajasi työeläkeotteelta. Työeläke karttuu 1,5 % vuosiansioista, ja alimman eläkeiän jälkeen lykätty eläke saa 0,4 % korotuksen kuukaudessa.</p>
+      <p class="ls-note">Lähteet: <a href="https://www.tyoelake.fi/elakkeet-eri-elamantilanteissa/vanhuuselake-elakeika-maaraytyy-syntymavuoden-mukaan/" rel="noopener">Työeläke.fi</a> (säädetyt ikärajat), <a href="https://www.tela.fi/ajankohtaista/qa-tietopaketit/elakeika/" rel="noopener">Tela</a> ja Eläketurvakeskuksen ennusteet (arviot: Telan esittämä vuoden 2025 ennuste vuosille 1975, 1985, 1995 ja 2005, välivuodet tasaisesti interpoloitu — samat luvut, joilla laskuri rajaa työeläkkeen alkamisiän; ennusteet muuttuvat vuosittain muutamalla kuukaudella). Tarkista oma ikärajasi työeläkeotteelta. Työeläke karttuu 1,5 % vuosiansioista, ja alimman eläkeiän jälkeen lykätty eläke saa 0,4 % korotuksen kuukaudessa.</p>
     </section>`,
     ukk: [
       ['Voinko jäädä eläkkeelle ennen lakisääteistä ikää?', 'Vanhuuseläkettä ei saa ennen alinta eläkeikää (osittaista varhennettua vanhuuseläkettä lukuun ottamatta), mutta työt voi lopettaa aiemmin, jos omat sijoitukset kattavat tulotarpeen työeläkkeen alkamiseen asti. Laskuri hakee, milloin se on mahdollista.'],
@@ -242,6 +238,14 @@ const SIVUT = [
 ];
 
 /* ---------- moottorin laskemat taulukot sivuittain ---------- */
+// Esimerkkien työeläkeikä täysinä vuosina (35 v → 68 v; 32 v → 68 v; 40 v → 68 v)
+function TYOELAKEIKA(ageNow) { return Math.ceil(L.pensionAgeMin(ageNow) - 1e-9); }
+// Alin vanhuuseläkeikä syntymävuodelle samasta taulukosta kuin laskenta (laskenta.js)
+function alinIka(by) {
+  const a = L.pensionAgeMin(L.PENSION_REF_YEAR - by);
+  const y = Math.floor(a + 1e-9), kk = Math.round((a - y) * 12);
+  return y + '&nbsp;v' + (kk ? ' ' + kk + '&nbsp;kk' : '');
+}
 const TAULUKOT = {
   elakelaskuri() {
     const rivit = [60, 63, 65, 68].map((a) => {
@@ -251,7 +255,7 @@ const TAULUKOT = {
     });
     return {
       otsikko: 'Esimerkki: mitä eläkeikä maksaa',
-      selite: '35-vuotias, sijoituksia 40&nbsp;000&nbsp;€, säästö 500&nbsp;€/kk (+1,5&nbsp;%/v), osakepaino 80&nbsp;%, työeläkearvio 1&nbsp;500&nbsp;€/kk käteen 65-vuotiaana, tulotarve 2&nbsp;400&nbsp;€/kk, luvut nykyrahassa. Työeläke pienenee, jos työ päättyy ennen 65:tä (karttuma päättyy).',
+      selite: '35-vuotias, sijoituksia 40&nbsp;000&nbsp;€, säästö 500&nbsp;€/kk (+1,5&nbsp;%/v), osakepaino 80&nbsp;%, työeläkearvio 1&nbsp;500&nbsp;€/kk käteen ' + TYOELAKEIKA(35) + '-vuotiaana (alin vanhuuseläkeikä syntymävuoden mukaan, täysiin vuosiin pyöristettynä), tulotarve 2&nbsp;400&nbsp;€/kk, luvut nykyrahassa. Työeläke pienenee, jos työ päättyy ennen työeläkeikää (karttuma päättyy), ja sitä ennen koko tulo nostetaan sijoituksista.',
       sarakkeet: ['Eläkeikä', 'Työeläke eläkeiässä', 'Sijoitukset eläkeiässä', 'Kestävä kuukausitulo (sis. työeläkkeen)', 'Onnistumis-% (2&nbsp;400&nbsp;€/kk)'],
       rivit,
       huom: 'Kestävä kuukausitulo = sijoitusten kantama tulo työeläkkeen päälle laskettuna niin, että varat riittävät 90-vuotiaaksi tyypillisellä (mediaani) markkinakehityksellä. Onnistumis-% = osuus simuloiduista markkinapoluista, joilla 2&nbsp;400&nbsp;€/kk riittää. Laskettu Varallisuuspolun moottorilla ' + PVM + ', Monte Carlo ' + MC_PATHS.toLocaleString('fi-FI').replace(/\u00a0/g, '&nbsp;') + ' polkua.',
@@ -264,7 +268,7 @@ const TAULUKOT = {
     });
     return {
       otsikko: 'Esimerkki: aikaisin eläkeikä säästön ja varmuustason mukaan',
-      selite: '32-vuotias, sijoituksia 60&nbsp;000&nbsp;€, osakepaino 95&nbsp;%, tulotarve 2&nbsp;200&nbsp;€/kk nykyrahassa, työeläkearvio 1&nbsp;500&nbsp;€/kk 65-vuotiaana (pienenee, kun työ päättyy aiemmin), suunnitelma 90-vuotiaaksi.',
+      selite: '32-vuotias, sijoituksia 60&nbsp;000&nbsp;€, osakepaino 95&nbsp;%, tulotarve 2&nbsp;200&nbsp;€/kk nykyrahassa, työeläkearvio 1&nbsp;500&nbsp;€/kk ' + TYOELAKEIKA(32) + '-vuotiaana eli alimmassa vanhuuseläkeiässä (pienenee, kun työ päättyy aiemmin), suunnitelma 90-vuotiaaksi.',
       sarakkeet: ['Säästö', 'Aikaisin eläkeikä 75&nbsp;%', '85&nbsp;%', '95&nbsp;%'],
       rivit,
       huom: 'Varmuustaso = osuus simuloiduista markkinapoluista, joilla varat riittävät 90-vuotiaaksi. Vertailun vuoksi 4&nbsp;%:n sääntö antaisi saman kysymyksen vastaukseksi salkun koon 660&nbsp;000&nbsp;€ — se ei tunne veroja, työeläkettä eikä nostoajan pituutta. Laskettu ' + PVM + ', Monte Carlo ' + MC_PATHS.toLocaleString('fi-FI').replace(/\u00a0/g, '&nbsp;') + ' polkua.',
@@ -280,10 +284,10 @@ const TAULUKOT = {
     });
     return {
       otsikko: 'Esimerkki: tarvittava kuukausisäästö',
-      selite: '35-vuotias, sijoituksia 40&nbsp;000&nbsp;€, osakepaino 80&nbsp;%, säästö kasvaa 1,5&nbsp;%/v, työeläkearvio 1&nbsp;500&nbsp;€/kk käteen 65-vuotiaana, luvut nykyrahassa, varat mitoitettu 90-vuotiaaksi.',
+      selite: '35-vuotias, sijoituksia 40&nbsp;000&nbsp;€, osakepaino 80&nbsp;%, säästö kasvaa 1,5&nbsp;%/v, työeläkearvio 1&nbsp;500&nbsp;€/kk käteen ' + TYOELAKEIKA(35) + '-vuotiaana (alin vanhuuseläkeikä), luvut nykyrahassa, varat mitoitettu 90-vuotiaaksi.',
       sarakkeet: ['Tulotarve eläkkeellä', 'Eläkkeelle 65 (mediaanipolku)', 'Eläkkeelle 65 (85&nbsp;% varmuus)', 'Eläkkeelle 60 (mediaanipolku)'],
       rivit,
-      huom: 'Säästö tarkoittaa tämän päivän summaa, joka kasvaa palkkakehityksen mukana 1,5&nbsp;%/v. 60-vuotiaana eläköityvän työeläke on pienempi (karttuma päättyy) ja välivuodet 60–65 katetaan kokonaan sijoituksista. Laskettu ' + PVM + ', Monte Carlo ' + MC_PATHS.toLocaleString('fi-FI').replace(/\u00a0/g, '&nbsp;') + ' polkua.',
+      huom: 'Säästö tarkoittaa tämän päivän summaa, joka kasvaa palkkakehityksen mukana 1,5&nbsp;%/v. Työeläke alkaa ' + TYOELAKEIKA(35) + '-vuotiaana, joten 65-vuotiaana eläköityvä kattaa välivuodet sijoituksista; 60-vuotiaana eläköityvän työeläke on lisäksi pienempi (karttuma päättyy) ja välivuodet 60–' + TYOELAKEIKA(35) + ' katetaan kokonaan sijoituksista. Laskettu ' + PVM + ', Monte Carlo ' + MC_PATHS.toLocaleString('fi-FI').replace(/\u00a0/g, '&nbsp;') + ' polkua.',
     };
   },
   'osakesaastotili-vai-arvo-osuustili'() {
@@ -294,7 +298,7 @@ const TAULUKOT = {
     }
     return {
       otsikko: 'Esimerkki: samat osakkeet kahdella tilillä',
-      selite: '35-vuotias, sijoituksia 40&nbsp;000&nbsp;€ ja säästö 150&nbsp;€/kk (talletukset yhteensä 94&nbsp;000&nbsp;€ eli osakesäästötilin 100&nbsp;000&nbsp;€:n katon alle), osakepaino 80&nbsp;%, eläkkeelle 65, työeläke 1&nbsp;500&nbsp;€/kk, luvut nykyrahassa. Osinkotuotto on osa 7&nbsp;%:n kokonaistuotto-odotusta — arvo-osuustilillä siitä menee vero vuosittain, osakesäästötilillä vasta nostossa. Osakesäästötilille voi ostaa vain pörssiosakkeita, ei rahastoja tai ETF:iä.',
+      selite: '35-vuotias, sijoituksia 40&nbsp;000&nbsp;€ ja säästö 150&nbsp;€/kk (talletukset yhteensä 94&nbsp;000&nbsp;€ eli osakesäästötilin 100&nbsp;000&nbsp;€:n katon alle), osakepaino 80&nbsp;%, eläkkeelle 65, työeläke 1&nbsp;500&nbsp;€/kk ' + TYOELAKEIKA(35) + '-vuotiaasta, luvut nykyrahassa. Osinkotuotto on osa 7&nbsp;%:n kokonaistuotto-odotusta — arvo-osuustilillä siitä menee vero vuosittain, osakesäästötilillä vasta nostossa. Osakesäästötilille voi ostaa vain pörssiosakkeita, ei rahastoja tai ETF:iä.',
       sarakkeet: ['Tili', 'Sijoitukset 65-vuotiaana', 'Kestävä kuukausitulo', 'Verot nostoista ja myynneistä'],
       rivit,
       huom: 'Ero syntyy osinkojen verotuksen ajoituksesta. Sarakkeen verot ovat eläkeajan nostojen veroja: arvo-osuustilin vuosittainen osinkovero on vähennetty tuotosta eikä näy tässä summassa. Osakesäästötilin suurempi verosumma johtuu suuremmista nostoista — vero maksetaan myöhemmin ja isommasta salkusta. Jos talletukset ylittäisivät 100&nbsp;000&nbsp;€, loput pitäisi sijoittaa toiselle tilille — laskuri ei mallinna tilin täyttymistä. Osakesäästötilin 100&nbsp;000&nbsp;€:n talletuskatto ei täyty tässä esimerkissä. Laskettu ' + PVM + ', Monte Carlo ' + MC_PATHS.toLocaleString('fi-FI').replace(/\u00a0/g, '&nbsp;') + ' polkua.',
@@ -309,10 +313,10 @@ const TAULUKOT = {
     });
     return {
       otsikko: 'Esimerkki: milloin on varaa?',
-      selite: '40-vuotias, sijoituksia 100&nbsp;000&nbsp;€, osakepaino 80&nbsp;%, tulotarve 2&nbsp;500&nbsp;€/kk nykyrahassa, työeläkearvio 1&nbsp;800&nbsp;€/kk käteen 65-vuotiaana, suunnitelma 90-vuotiaaksi.',
+      selite: '40-vuotias, sijoituksia 100&nbsp;000&nbsp;€, osakepaino 80&nbsp;%, tulotarve 2&nbsp;500&nbsp;€/kk nykyrahassa, työeläkearvio 1&nbsp;800&nbsp;€/kk käteen ' + TYOELAKEIKA(40) + '-vuotiaana (alin vanhuuseläkeikä), suunnitelma 90-vuotiaaksi.',
       sarakkeet: ['Säästö', 'Aikaisin eläkeikä (mediaanipolku)', 'Aikaisin eläkeikä (85&nbsp;% varmuus)', 'Työeläke tuossa iässä'],
       rivit,
-      huom: 'Työeläke pienenee, kun ansiot päättyvät ennen 65:tä — laskuri vähentää karttuman suhteessa menetettyihin työvuosiin. Ennen 65:tä koko tulo nostetaan sijoituksista ja nostosta menee myyntivoittovero. Laskettu ' + PVM + ', Monte Carlo ' + MC_PATHS.toLocaleString('fi-FI').replace(/\u00a0/g, '&nbsp;') + ' polkua.',
+      huom: 'Työeläke pienenee, kun ansiot päättyvät ennen työeläkeikää — laskuri vähentää karttuman suhteessa menetettyihin työvuosiin. Täyttä työeläkettä ei saa ennen alinta vanhuuseläkeikää, joten sitä ennen koko tulo nostetaan sijoituksista ja nostosta menee myyntivoittovero. Laskettu ' + PVM + ', Monte Carlo ' + MC_PATHS.toLocaleString('fi-FI').replace(/\u00a0/g, '&nbsp;') + ' polkua.',
     };
   },
   'asuntolaina-vai-sijoittaminen'() {

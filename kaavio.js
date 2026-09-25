@@ -724,7 +724,7 @@ function addEvent(type, age) {
         ? clamp(Math.round(state.expenses / 100) * 100, 100, 1e6)
         : def.withdrawal;
       ev.pension = def.pension != null ? def.pension : 0;
-      ev.pensionAge = def.pensionAge != null ? def.pensionAge : 65;
+      ev.pensionAge = pensionAgeDefault(state.ageNow); // ≥ alin vanhuuseläkeikä (K2)
     } else if (def.metric) {
       // Tavoite: ei menneisyyteen; oletussumma = käyrän lähin pyöreä summa
       ev.age = clamp(Math.round(age), state.ageNow + 1, state.ageEnd);
@@ -803,7 +803,9 @@ function openPopover(id) {
       saving: 'Ikä ja kuukausitulo lukittu — lasketaan kuukausisäästö, jolla varat riittävät suunnitelman loppuun.',
     };
     const penVal = ev.pension != null ? ev.pension : 0;
-    const penAgeVal = ev.pensionAge != null ? Math.round(ev.pensionAge) : 65;
+    // Alin vanhuuseläkeikä syntymävuoden mukaan (K2): kenttä ei tarjoa aiempaa
+    const penMin = pensionAgeMin(state.ageNow);
+    const penAgeVal = Math.round(Math.max(ev.pensionAge != null ? ev.pensionAge : 65, penMin));
     fields =
       `<p class="note">${t('Kuukausisäästäminen päättyy ja eläkeaika alkaa tästä iästä.')}</p>` +
       `<div class="field"><span class="field-label">${t('Tavoite')}</span><div class="seg seg-goal" id="pv-goals">${goalBtns}</div></div>` +
@@ -824,7 +826,7 @@ function openPopover(id) {
       `<label class="field"><span class="field-label">${t('Työeläke käteen')} <small>${t('netto — ETK:n ote näyttää bruton, vähennä n. 20–25 %')}</small></span>` +
       `<span class="input"><input id="pv-pen" type="number" min="0" step="100" value="${penVal}" title="${t('Arvio käteen jäävästä työeläkkeestä kuukaudessa työeläkeiässä, jos työ jatkuu siihen asti (ETK:n arvio tehdään samoin). Työeläke on ansiotuloa: ETK:n bruttoarviosta jää verojen jälkeen tyypillisesti 75–80 %. Jos jäät eläkkeelle aiemmin, laskenta pienentää eläkettä päättyvän karttuman verran.')}" /><em>${VP_YKS_EKK}</em></span></label>` +
       `<label class="field"><span class="field-label">${t('Eläke alkaa')}</span>` +
-      `<span class="input"><input id="pv-penage" type="number" min="${state.ageNow}" max="${state.ageEnd}" step="1" value="${penAgeVal}" /><em>${VP_YKS_V}</em></span></label>` +
+      `<span class="input"><input id="pv-penage" type="number" min="${Math.max(state.ageNow, Math.floor(penMin))}" max="${state.ageEnd}" step="1" value="${penAgeVal}" /><em>${VP_YKS_V}</em></span></label>` +
       `</div>` +
       `<p class="note pen-note" id="pv-pen-note"></p>` +
       `<label class="toggle"><input id="pv-penfixed" type="checkbox" ${ev.pensionFixed ? 'checked' : ''} /><span class="switch"></span>` +
@@ -1147,7 +1149,8 @@ function openPopover(id) {
     });
     penAge.addEventListener('change', (e) => {
       const v = parseFloat(e.target.value);
-      if (!isNaN(v)) ev.pensionAge = clamp(v, state.ageNow, state.ageEnd);
+      // Lakisääteinen alaraja (K2): aiempi ikä nostetaan alimpaan vanhuuseläkeikään
+      if (!isNaN(v)) ev.pensionAge = clamp(Math.max(v, pensionAgeMin(state.ageNow)), state.ageNow, state.ageEnd);
       e.target.value = Math.round(ev.pensionAge);
       updatePenNote();
       renderAllKeepPopover();
@@ -1166,7 +1169,10 @@ function openPopover(id) {
     // Eläkeiän mukainen työeläke: karttuma päättyy, jos eläkkeelle jäädään
     // ennen työeläkeikää (sama sääntö kuin moottorissa, laskenta.js pensionAt)
     const retA = sim && sim.retireAge != null ? sim.retireAge : ev.age;
-    const pa = ev.pensionAge != null ? ev.pensionAge : 65;
+    // Sama alaraja kuin moottorissa (prepareSim): aiempi syöte nostetaan rajalle
+    const paMin = pensionAgeMin(state.ageNow);
+    const paIn = ev.pensionAge != null ? ev.pensionAge : 65;
+    const pa = Math.max(paIn, paMin);
     const pEff = pensionAt({ pension0: p, pensionAge: pa, pensionFixed: !!ev.pensionFixed }, retA);
     const draw = Math.max(0, wdEff - pEff);
     const paStr = Math.round(pa);
@@ -1174,7 +1180,8 @@ function openPopover(id) {
       ? t('Eläkkeelle {0} v → karttuma päättyy: työeläke arviolta <b>{1}/kk</b> alk. {2} v (arviosi työeläkeiässä {3}/kk). ', Math.round(retA), fmtEur(pEff), paStr, fmtEur(p))
       : t('Työeläke kattaa <b>{0}/kk</b> (alk. {1} v). ', fmtEur(p), paStr);
     note.innerHTML = head +
-      (draw > 0 ? t('Sijoituksista noin <b>{0}/kk</b>{1}.', fmtEur(draw), state.tax ? t(' + vero') : '') : t('Sijoituksia ei tarvitse nostaa.'));
+      (draw > 0 ? t('Sijoituksista noin <b>{0}/kk</b>{1}.', fmtEur(draw), state.tax ? t(' + vero') : '') : t('Sijoituksia ei tarvitse nostaa.')) +
+      (paIn < paMin - 1e-9 ? ' ' + t('Työeläke voi alkaa aikaisintaan alimmassa vanhuuseläkeiässäsi, arviolta {0} (syntymävuoden mukaan).', fmtAge(paMin)) : '');
   };
   updatePenNote();
   const penFixed = $('pv-penfixed');

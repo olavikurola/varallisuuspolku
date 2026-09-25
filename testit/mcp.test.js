@@ -283,6 +283,26 @@ const kutsu = (name, args) => rpc('tools/call', { name, arguments: args });
     ok(viallinen, 'viallinen pakattu payload → selkeä virhe');
   }
 
+  console.log('Tarkastusmuistio 23.9.2026: K1 oletus, K2 alaraja, M2 OST-katto');
+  {
+    const T = require('../mcp/tyokalut.js').TYOKALUT;
+    const sim = T.find((t) => t.name === 'simuloi_suunnitelma').run;
+    const base = { ageNow: 35, ageEnd: 92, startCapital: 30000, monthly: 500, allocStocks: 70, allocBonds: 20, tax: true,
+      events: [{ type: 'retirement', age: 58, withdrawal: 3300, pension: 1800, pensionAge: 50 }] };
+    ok(S.sanitoiSuunnitelma(base).real === true, 'puuttuva real → tämän päivän raha (K1)');
+    ok(S.sanitoiSuunnitelma({ ...base, real: false }).real === false, 'eksplisiittinen real:false säilyy (vanhat linkit)');
+    const r = await sim({ suunnitelma: base, polkuja: 200 });
+    ok(r.rakenne.huomiot.some((h) => /alimpaan vanhuuseläkeikään/.test(h)), 'alkamisikä 50 → huomio alarajasta (K2)');
+    const n = await sim({ suunnitelma: { ...base, real: false }, polkuja: 200 });
+    ok(n.rakenne.metriikat.onnistumisTodennakoisyysPct === r.rakenne.metriikat.onnistumisTodennakoisyysPct,
+      'nimellinen ja reaalinen: sama onnistumis-% (nimellinen = näyttövaihtoehto)');
+    ok(n.rakenne.huomiot.some((h) => /tämän päivän rahaa/.test(h)), 'nimellistilan huomio kertoo summien rahanarvon');
+    const ost = await sim({ suunnitelma: { ...base, acct: 'ost', monthly: 2000 }, polkuja: 200 });
+    ok(ost.rakenne.huomiot.some((h) => /talletuskatto 100 000 € ylittyy/.test(h)), 'OST: talletuskaton ylitys huomioissa (M2)');
+    const aot = await sim({ suunnitelma: { ...base, acct: 'aot', monthly: 2000 }, polkuja: 200 });
+    ok(!aot.rakenne.huomiot.some((h) => /talletuskatto/.test(h)), 'AOT: ei katto-huomiota');
+  }
+
   console.log(failed ? `\n${failed} TESTIÄ PUNAISENA` : '\nKaikki MCP-testit vihreitä.');
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.error('Testiajo kaatui:', e); child.kill(); process.exit(1); });

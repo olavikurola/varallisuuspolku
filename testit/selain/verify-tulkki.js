@@ -173,7 +173,7 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   ok(st.b === 'Ennen Tulkin kokeilua', 'vertailuhaamu = tilanne ennen kokeilua', String(st.b));
   await page.locator('.tk-revert').last().click();
   st = await page.evaluate(() => ({ m: state.monthly, a: state.events.find((e) => e.type === 'retirement').age, b: baseline }));
-  ok(st.m === 1000 && st.a === 65 && st.b === null, 'Palauta palauttaa tilan ja poistaa haamun', JSON.stringify(st));
+  ok(st.m === 1000 && st.a === 67 && st.b === null, 'Palauta palauttaa tilan ja poistaa haamun', JSON.stringify(st));
   await page.fill('#tkInput', 'kokeile uudestaan');
   await page.press('#tkInput', 'Enter');
   await page.waitForFunction(() => document.querySelectorAll('.tk-change').length >= 2);
@@ -249,7 +249,7 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   ok(await page.locator('.tk-actions').count() === 1, 'lokinäkymä avautuu');
   ok(await page.locator('.tk-act-row').count() === 1, 'yksi lokirivi');
   const chg = (await page.locator('.tk-act-chg').first().textContent()).replace(/[\s  ]/g, '');
-  ok(chg.includes('1000→1200') && chg.includes('65→62'), 'muutos näkyy rivillä (vanha → uusi)', chg);
+  ok(chg.includes('1000→1200') && chg.includes('67→62'), 'muutos näkyy rivillä (vanha → uusi)', chg);
   ok(await page.locator('.tk-act-export').count() === 1, 'vientinappi on olemassa');
   await page.locator('.tk-act-revert').first().click();
   ok(await page.evaluate(() => state.monthly) === 1000, 'Palauta tähän palautti tilan ennen muutosta');
@@ -397,7 +397,9 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   await page.waitForFunction(() => [...document.querySelectorAll('.tk-change')].some((c) => c.textContent.includes('lisätty suunnitelmaan oletuksin')));
   const luotuRet = await page.evaluate(() => state.events.find((e) => e.type === 'retirement'));
   ok(luotuRet && luotuRet.age === 58, 'eläketapahtuma luotiin ja ikä asettui (58 v)', JSON.stringify(luotuRet));
-  ok(luotuRet && luotuRet.withdrawal === 2400 && luotuRet.pension === 1500 && luotuRet.pensionAge === 65, 'oletusnosto ja työeläke tapahtumasta', JSON.stringify(luotuRet));
+  // Työeläkkeen oletusikä = alin vanhuuseläkeikä täysiin vuosiin (K2), vähintään 65
+  const penDef = await page.evaluate(() => Math.round(pensionAgeDefault(state.ageNow)));
+  ok(luotuRet && luotuRet.withdrawal === 2400 && luotuRet.pension === 1500 && luotuRet.pensionAge === penDef, 'oletusnosto ja työeläke tapahtumasta', JSON.stringify(luotuRet) + ' vs ' + penDef);
   const luontiKortti = await page.locator('.tk-change').last().textContent();
   ok(!luontiKortti.includes('ei voitu soveltaa'), 'ohituskorttia ei enää synny');
   await page.locator('.tk-revert').last().click();

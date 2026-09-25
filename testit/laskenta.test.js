@@ -196,6 +196,7 @@ console.log('Pro: strategiat, vaiheistus ja verot');
   stP.pro.wd.mode = 'pct';
   stP.pro.wd.pct = 4;
   stP.events.find((e) => e.type === 'retirement').goal = 'withdrawal';
+  stP.events.find((e) => e.type === 'retirement').withdrawal = 0; // ei tarvelattiaa → rakenteellisesti ei ehdy
   const pct = L.simulate(stP);
   ok(pct.depletionAge == null, 'prosenttistrategia ei ehdy');
   ok(pct.solvedWithdrawal == null, 'ratkaisija ohitetaan pct-strategiassa');
@@ -298,7 +299,7 @@ console.log('Korkoa korolle: analyyttiset identiteetit joka elinkaarivaiheessa')
   // (1) Kertyminen pelkällä alkupääomalla: w_n = S·1,07^(n/12)
   const acc = {
     ageNow: 30, ageEnd: 40, startCapital: 50000, monthly: 0, savingsGrowth: 0,
-    allocStocks: 100, allocBonds: 0, glide: false, real: false, tax: false, events: [],
+    allocStocks: 100, allocBonds: 0, glide: false, real: false, inflation: 0, tax: false, events: [],
   };
   const rAcc = L.simulate(acc);
   relClose(rAcc.exp[120], 50000 * Math.pow(k, 120), 1e-9, 'pääoma kompoundaa: S·k^n (mediaanidrift)');
@@ -313,7 +314,7 @@ console.log('Korkoa korolle: analyyttiset identiteetit joka elinkaarivaiheessa')
   // kompoundaamista — w_n = S·k^n − W·(k^n − 1)/(k − 1)
   const wd = {
     ageNow: 60, ageEnd: 70, startCapital: 1000000, monthly: 0, savingsGrowth: 0,
-    allocStocks: 100, allocBonds: 0, glide: false, real: false, tax: false,
+    allocStocks: 100, allocBonds: 0, glide: false, real: false, inflation: 0, tax: false,
     events: [{ id: 1, type: 'retirement', age: 60, withdrawal: 2000, pension: 0 }],
   };
   const rWd = L.simulate(wd);
@@ -330,23 +331,23 @@ console.log('Korkoa korolle: analyyttiset identiteetit joka elinkaarivaiheessa')
     `ero ${Math.round(rWd.exp[120] - rWdTax.exp[120])} vs verot ${Math.round(rWdTax.taxPaid)}`);
 
   // (4b) Inflaatiokorjaus tarkalla Fisher-kaavalla: w_n = S·(1,07/1,02)^(n/12)
-  const rl = { ...acc, real: true };
+  const rl = { ...acc, real: true, inflation: 2 };
   const rRl = L.simulate(rl);
   relClose(rRl.exp[120], 50000 * Math.pow(Math.pow(1.07 / 1.02, 1 / 12) * drag, 120), 1e-9,
     'reaalituotto Fisher-kaavalla (sama kuin omaisuuserissä)');
 
   // (4c) Käyttäjän oma inflaatio-oletus: asettamaton = 2 % (ennallaan);
   // eksplisiittinen 2 % bittiidenttinen; korkeampi pienentää reaalivarallisuutta;
-  // vaikuttaa vain kun real=true
+  // nimellistilassa inflaatio vaikuttaa vain esitysrahaan (ks. K1-osio)
   const inflBase = plan(); inflBase.real = true; // ei inflation-kenttää → oletus 2 %
   const inflExplicit = plan(); inflExplicit.real = true; inflExplicit.inflation = 2;
   const rBase = L.simulate(inflBase), rExpl = L.simulate(inflExplicit);
   ok(rExpl.exp.every((v, i) => v === rBase.exp[i]), 'oma inflaatio 2 % = oletus (bittiidenttinen)');
   const inflHi = plan(); inflHi.real = true; inflHi.inflation = 4;
   ok(L.simulate(inflHi).exp[120] < rBase.exp[120], 'korkeampi inflaatio pienentää reaalivarallisuutta');
-  const inflNoReal = plan(); inflNoReal.inflation = 5; // real=false → ei vaikutusta
-  const nomBase = L.simulate(plan()); // nimellinen (real=false)
-  ok(L.simulate(inflNoReal).exp.every((v, i) => v === nomBase.exp[i]), 'inflaatio ei vaikuta ilman inflaatiokorjausta');
+  const inflNoReal = plan(); inflNoReal.inflation = 5; // nimellistila: inflaatio = esitysrahan kerroin
+  const inflReal5 = plan(); inflReal5.real = true; inflReal5.inflation = 5;
+  ok(L.simulate(inflNoReal).successProb === L.simulate(inflReal5).successProb, 'nimellistilan onnistumis-% = reaalitilan samalla inflaatiolla');
 
   // (5) Omaisuuserä: arvo kompoundaa geometrisesti kuukausittain
   const ast = {
@@ -423,7 +424,7 @@ console.log('%-nostostrategia: onnistuminen mittaa tulotarpeen täyttymistä');
   // → onnistuminen oli rakenteellisesti aina 100 %. Nyt tulotarve on lattia.
   const fire = (pct, need, pension = 0) => ({
     ageNow: 40, ageEnd: 90, startCapital: 300000, monthly: 0, savingsGrowth: 0,
-    allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: false,
+    allocStocks: 70, allocBonds: 20, glide: false, real: false, inflation: 0, tax: false,
     proOn: true, pro: { wd: { mode: 'pct', pct } },
     events: [{ id: 1, type: 'retirement', age: 41, withdrawal: need, pension, pensionAge: 41 }],
   });
@@ -435,7 +436,9 @@ console.log('%-nostostrategia: onnistuminen mittaa tulotarpeen täyttymistä');
     `${swr.successProb} vs ${agro.successProb}`);
   const noFloor = L.simulate(fire(20, 0));
   ok(noFloor.successProb === 1 && noFloor.depletionAge == null, 'tarve 0 = ei lattiaa (entinen käytös)');
-  const penCover = L.simulate(fire(20, 1500, 2000));
+  // Työeläke voi alkaa vasta alimmassa vanhuuseläkeiässä (K2) → 70-vuotias, eläke heti
+  const penCover = L.simulate({ ...fire(20, 1500, 2000), ageNow: 70, ageEnd: 95,
+    events: [{ id: 1, type: 'retirement', age: 71, withdrawal: 1500, pension: 2000, pensionAge: 71 }] });
   ok(penCover.successProb === 1, 'työeläke tarpeen yli → nosto saa huveta (ei alitusta)');
 
   // Alitusvyöhykkeet graafiin: %-tilassa dryZones = jaksot joissa tulo < tarve
@@ -462,7 +465,7 @@ console.log('Porrastettu säästö (savePhases): kaistoittainen kuukausisumma');
 {
   const base = {
     ageNow: 30, ageEnd: 65, startCapital: 0, monthly: 500, savingsGrowth: 0,
-    allocStocks: 100, allocBonds: 0, glide: false, real: false, tax: false, events: [],
+    allocStocks: 100, allocBonds: 0, glide: false, real: false, inflation: 0, tax: false, events: [],
   };
   const m35 = Math.round((35 - 30) * 12), m50 = Math.round((50 - 30) * 12);
   // Ilman aikataulua: tasainen perussäästö 500 €/kk
@@ -494,7 +497,7 @@ console.log('Lainanhoito yli säästökyvyn (X-palaute 24.7.2026)');
   // → laina 1 v voitti käteisen ~1,8 M€:lla. Nyt erotus myydään salkusta.
   const mk = (fin) => {
     const st = { ageNow: 30, ageEnd: 90, startCapital: 20000, monthly: 1000, savingsGrowth: 1.5,
-      allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true,
+      allocStocks: 70, allocBonds: 20, glide: false, real: false, inflation: 0, tax: true,
       events: [{ id: 1, type: 'retirement', age: 65, withdrawal: 2400, pension: 1500, pensionAge: 65 },
         { id: 2, type: 'renovation', age: 40, amount: -130000, ...fin }] };
     return L.simulate(st).wEnd;
@@ -601,7 +604,8 @@ console.log('Hankintameno-olettama kk-nostoissa: verokirjanpito seuraa olettamaa
 
 console.log('Ero / iso muutos (divorce): kertakulu + toistuva kulunlisäys');
 {
-  const bare = () => { const s = plan(); s.events = s.events.filter((e) => e.type === 'retirement'); return s; };
+  // inflaatio 0: prepareSimin summat tarkistetaan euromääräisesti (indeksi ≡ 1)
+  const bare = () => { const s = plan(); s.inflation = 0; s.events = s.events.filter((e) => e.type === 'retirement'); return s; };
   const base = L.simulate(bare());
   // Käteinen: kertakulu kuukauden könttänä, toistuva kulu vähentää säästöä
   const st = bare();
@@ -674,8 +678,13 @@ console.log('Reaalitila vs. nimellistila');
   const nom2 = L.prepareSim(plan(false, 40)).payments;
   const rea2 = L.prepareSim(plan(true, 40)).payments;
   const m0 = (40 - 30) * 12;
-  ok(close(rea2[m0 + 1], nom2[m0 + 1] * Math.pow(1 + i, -1 / 12), 1e-6 * nom2[m0 + 1]),
+  const pmt = L.loanPayment(300000, 3.5, 25);
+  ok(close(rea2[m0 + 1], pmt * Math.pow(1 + i, -1 / 12), 1e-6 * pmt),
     'myöhempi laina deflatoituu OSTOHETKESTÄ, ei suunnitelman alusta');
+  // Nimellistila = näyttövaihtoehto (K1): ostohinta on tämän päivän rahaa, joten
+  // nimellinen erä = reaalierä × (1+i)^(m/12) joka kuukausi (vakio ostohetkestä)
+  ok([m0 + 1, m0 + 60, m0 + 200].every((m) => close(nom2[m], rea2[m] * Math.pow(1 + i, m / 12), 1e-6 * nom2[m])) &&
+    close(nom2[m0 + 1], nom2[m0 + 200], 1e-6 * nom2[m0 + 1]), 'nimellistilan myöhempi laina: ostohetken hinta, erä vakio');
   ok(rea2[m0 + 1] > rea[m0 + 1] * 1.2, 'ostohetkiankkurointi: myöhempi laina ei perusteettoman halpa');
   const dN = L.prepareSim(plan(false, 30)).debt, dR = L.prepareSim(plan(true, 30)).debt;
   ok(close(dR[120], dN[120] * Math.pow(1 + i, -120 / 12), 1e-6 * dN[120]), 'velkasaldo deflatoituu');
@@ -703,7 +712,7 @@ console.log('Reaalitilan vero nimellisvoitosta');
 console.log('Allokaation invariantti');
 {
   const bare = () => ({ ageNow: 30, ageEnd: 90, startCapital: 0, monthly: 0,
-    allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true, events: [] });
+    allocStocks: 70, allocBonds: 20, glide: false, real: false, inflation: 0, tax: true, events: [] });
   const w0 = L.weightsAt(40, 65, bare());
   ok(close(w0.reduce((a, b) => a + b, 0), 1, 1e-12), 'normaali allokaatio summautuu ykköseen');
   ok(close(w0[0], 0.7, 1e-12) && close(w0[1], 0.2, 1e-12), 'normaali allokaatio ennallaan (ei skaalausta)');
@@ -727,7 +736,7 @@ console.log('Allokaation invariantti');
 console.log('Osinkovero ja Pro-verokanta');
 {
   const bare = (extra) => Object.assign({ ageNow: 30, ageEnd: 70, startCapital: 50000, monthly: 500, savingsGrowth: 0,
-    allocStocks: 100, allocBonds: 0, glide: false, real: false, tax: true, acct: 'aot', divYield: 3,
+    allocStocks: 100, allocBonds: 0, glide: false, real: false, inflation: 0, tax: true, acct: 'aot', divYield: 3,
     events: [{ id: 1, type: 'retirement', age: 65, withdrawal: 1000, pension: 0, pensionAge: 65 }] }, extra || {});
   const proTax = (low) => Object.assign(L.defaultPro(), { tax: { low, high: 34, bracket: 30000, acq: false } });
   const perus = L.simulate(bare());
@@ -742,7 +751,7 @@ console.log('Osinkovero ja Pro-verokanta');
   const p30 = L.simulate(bare({ proOn: true, pro: proTax(30) }));
   ok(p15.wEnd > p30.wEnd, 'Pro tax.low 15 % antaa suuremman lopun kuin 30 % (osinkovero seuraa kantaa)');
   // Pro oletuskannalla (30) tulos = perustila bitilleen
-  const proOletus = L.simulate(bare({ proOn: true, pro: L.defaultPro() }));
+  const proOletus = L.simulate(bare({ proOn: true, pro: Object.assign(L.defaultPro(), { infl: 0 }) }));
   ok(proOletus.wEnd === perus.wEnd, 'Pro oletuskannalla osinkovero bitilleen sama kuin perustilassa');
 }
 
@@ -754,7 +763,7 @@ console.log('Kertaerien ja lainanhoidon myyntivoittovero');
 {
   // Salkussa iso realisoitumaton voitto: aloituspääoma 200 k€, säästö 0 → 10 v tuottoa, sitten 60 k€ remontti
   const plan = (tax, extra) => Object.assign({ ageNow: 30, ageEnd: 60, startCapital: 200000, monthly: 0, savingsGrowth: 0,
-    allocStocks: 100, allocBonds: 0, glide: false, real: false, tax,
+    allocStocks: 100, allocBonds: 0, glide: false, real: false, inflation: 0, tax,
     events: [{ id: 1, type: 'renovation', age: 40, amount: -60000, financing: 'cash' },
       { id: 2, type: 'retirement', age: 59, withdrawal: 1, pension: 0, pensionAge: 65 }] }, extra || {});
   const veroton = L.simulate(plan(false));
@@ -767,7 +776,7 @@ console.log('Kertaerien ja lainanhoidon myyntivoittovero');
   ok(c.lump.get((40 - 30) * 12) === -60000, 'kertaerä on nettotarve (60 000 € käteen)');
   // Lainanhoito yli säästökyvyn: sama sääntö
   const lainaPlan = (tax) => ({ ageNow: 30, ageEnd: 60, startCapital: 300000, monthly: 100, savingsGrowth: 0,
-    allocStocks: 100, allocBonds: 0, glide: false, real: false, tax,
+    allocStocks: 100, allocBonds: 0, glide: false, real: false, inflation: 0, tax,
     events: [{ id: 1, type: 'home', age: 35, amount: -300000, financing: 'loan', down: 0, rate: 4, years: 10, isAsset: true, appr: 0 },
       { id: 2, type: 'retirement', age: 59, withdrawal: 1, pension: 0, pensionAge: 65 }] });
   const lv = L.simulate(lainaPlan(true)), l0 = L.simulate(lainaPlan(false));
@@ -778,7 +787,7 @@ console.log('Omistuksen ostohinta (buyPrice) myyntiverossa');
 {
   const yNow = new Date().getFullYear();
   const own = (extra) => ({ ageNow: 45, ageEnd: 90, startCapital: 10000, monthly: 0, savingsGrowth: 0,
-    allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true,
+    allocStocks: 70, allocBonds: 20, glide: false, real: false, inflation: 0, tax: true,
     events: [Object.assign({ id: 1, type: 'ownCottage', age: 45, amount: -250000, owned: true, isAsset: true, appr: 0,
       sellAge: 50, sellTaxFree: false, boughtYear: yNow - 15, ownYears: 15 }, extra || {}),
       { id: 2, type: 'retirement', age: 65, withdrawal: 1000, pension: 0, pensionAge: 65 }] });
@@ -796,7 +805,7 @@ console.log('Omistuksen ostohinta (buyPrice) myyntiverossa');
 console.log('Varainsiirtovero asunnon ja mökin ostossa');
 {
   const base = (ev) => ({ ageNow: 30, ageEnd: 90, startCapital: 100000, monthly: 500, savingsGrowth: 0,
-    allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true,
+    allocStocks: 70, allocBonds: 20, glide: false, real: false, inflation: 0, tax: true,
     events: [ev, { id: 9, type: 'retirement', age: 65, withdrawal: 2000, pension: 1500, pensionAge: 65 }] });
   const m0 = 5 * 12;
   const asuntoKateinen = L.prepareSim(base({ id: 1, type: 'home', age: 35, amount: -200000, financing: 'cash', isAsset: true, appr: 2 }));
@@ -818,7 +827,7 @@ console.log('Varainsiirtovero asunnon ja mökin ostossa');
 console.log('Tulokatko (income_gap) tapahtumatyyppinä');
 {
   const plan = (ev) => ({ ageNow: 30, ageEnd: 90, startCapital: 20000, monthly: 1000, savingsGrowth: 0,
-    allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true,
+    allocStocks: 70, allocBonds: 20, glide: false, real: false, inflation: 0, tax: true,
     events: (ev ? [ev] : []).concat([{ id: 9, type: 'retirement', age: 65, withdrawal: 2000, pension: 1500, pensionAge: 65 }]) });
   const perus = L.simulate(plan(null));
   const katko = L.simulate(plan({ id: 1, type: 'income_gap', age: 40, amount: 0, recMonthly: -1000, recYears: 1 }));
@@ -833,7 +842,7 @@ console.log('Tulokatko (income_gap) tapahtumatyyppinä');
 console.log('Korkoshokki');
 {
   const plan = (rateFixed) => ({ ageNow: 30, ageEnd: 90, startCapital: 30000, monthly: 2200, savingsGrowth: 0,
-    allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true,
+    allocStocks: 70, allocBonds: 20, glide: false, real: false, inflation: 0, tax: true,
     proOn: true, pro: Object.assign(L.defaultPro(), { mc: Object.assign(L.defaultPro().mc, { stress: ['rates', 'bear'] }) }),
     events: [{ id: 1, type: 'home', age: 32, amount: -300000, financing: 'loan', down: 30000, rate: 3.0, years: 25, isAsset: true, appr: 2, rateFixed: !!rateFixed },
       { id: 2, type: 'retirement', age: 65, withdrawal: 2200, pension: 1500, pensionAge: 65 }] });
@@ -853,19 +862,20 @@ console.log('Korkoshokki');
 
 console.log('Työeläke reagoi eläkeikään (4.9.2026)');
 {
-  const early = plan(); early.events[2].age = 55; early.startCapital = 400000; // työeläke 1500 @ 65, eläkkeelle 55
+  // Työeläkeikä 69 (≥ 30-vuotiaan alin eläkeikä 68 v 1 kk, K2) — karttuma-approksimaatio
+  const pa = (st, age, penAge) => { st.events[2].age = age; st.events[2].pensionAge = penAge; return st; };
+  const early = pa(plan(), 55, 69); early.startCapital = 400000; // työeläke 1500 @ 69, eläkkeelle 55
   const sE = L.simulate(early);
-  const expect = 1500 * (55 - 23) / (65 - 23);
-  ok(Math.abs(sE.pension - expect) < 1e-9, 'eläkkeelle 55 v, työeläkeikä 65 → karttuma 32/42 → ' + Math.round(expect) + ' €/kk', String(sE.pension));
-  const fixed = plan(); fixed.events[2].age = 55; fixed.startCapital = 400000; fixed.events[2].pensionFixed = true;
+  const expect = 1500 * (55 - 23) / (69 - 23);
+  ok(Math.abs(sE.pension - expect) < 1e-9, 'eläkkeelle 55 v, työeläkeikä 69 → karttuma 32/46 → ' + Math.round(expect) + ' €/kk', String(sE.pension));
+  const fixed = pa(plan(), 55, 69); fixed.startCapital = 400000; fixed.events[2].pensionFixed = true;
   ok(L.simulate(fixed).pension === 1500, 'pensionFixed pitää arvion ennallaan');
-  ok(L.simulate(plan()).pension === 1500, 'eläkeikä = työeläkeikä → ennallaan');
-  const late = plan(); late.events[2].age = 68;
-  ok(L.simulate(late).pension === 1500, 'eläkeikä > työeläkeikä → ennallaan (ei lykkäyskorotusta)');
+  ok(L.simulate(pa(plan(), 69, 69)).pension === 1500, 'eläkeikä = työeläkeikä → ennallaan');
+  ok(L.simulate(pa(plan(), 70, 69)).pension === 1500, 'eläkeikä > työeläkeikä → ennallaan (ei lykkäyskorotusta)');
   ok(sE.wEnd < L.simulate(fixed).wEnd, 'pienempi työeläke → pienempi loppuvarallisuus');
   const ctx = L.prepareSim(early);
   ok(L.pensionAt(ctx, 23) === 0 && L.pensionAt(ctx, 20) === 0, 'ennen työuran alkua ei karttumaa');
-  ok(L.pensionAt(ctx, 65) === 1500 && L.pensionAt(ctx, 70) === 1500, 'täysi työura → täysi arvio');
+  ok(L.pensionAt(ctx, 69) === 1500 && L.pensionAt(ctx, 70) === 1500, 'täysi työura → täysi arvio');
   // Ratkaisija: aikaisin eläkeikä kokeilee ikiä → työeläke seuraa kokeiltavaa ikää
   const g = plan(); g.monthly = 3000; g.events[2].goal = 'age'; g.events[2].age = 50;
   const gF = JSON.parse(JSON.stringify(g)); gF.events[2].pensionFixed = true;
@@ -875,7 +885,7 @@ console.log('Työeläke reagoi eläkeikään (4.9.2026)');
 
 console.log('Mediaanipäälinja (4.9.2026): päälinja ≈ MC-P50, MC ennallaan');
 {
-  const st = plan();
+  const st = plan(); st.inflation = 0; // alkuperäinen kalibrointi: vakaa suunnitelma (reunatapauksessa P50 epävakaa)
   const ctx = L.prepareSim(st);
   const { muM, sigA, muMc } = L.buildMu(ctx, st, 65);
   ok(muM.mc === muMc && muMc.every((v, m) => m === 0 || v > muM[m]), 'buildMu: mediaanidrift < aritmeettinen joka kuukausi');
@@ -909,8 +919,10 @@ console.log('Myyntivoittovero: nimellinen voitto ja yhteinen vuosikertymä (audi
   const bn = L.simulate(cp(buy)), br = L.simulate({ ...cp(buy), real: true });
   // Reaalitilassa ostosumma on tämän päivän rahaa → nimellinen hankintameno on 5 v päästä 1,02^5-kertainen,
   // ja koko kauppa skaalautuu samalla kertoimella: verotettava voitto = nimellistilan voitto × 1,02^5
-  ok(Math.abs(br.saleInfos[0].taxableNom - bn.saleInfos[0].taxableNom * Math.pow(1.02, 5)) < 1e-6, 'tuleva osto: hankintameno ostohetken nimellisrahassa (voitto skaalautuu ostohetken hintatasolla)', `${br.saleInfos[0].taxableNom} vs ${bn.saleInfos[0].taxableNom}`);
-  ok(br.saleInfos[0].tax > 0 && br.saleInfos[0].tax < bn.saleInfos[0].tax * Math.pow(1.02, 5), 'tuleva osto reaalitilassa: vero > 0 ja deflatoitu');
+  // Nimellistila on näyttövaihtoehto (K1): ostosumma on tämän päivän rahaa kummassakin
+  // tilassa → nimellinen verotettava voitto on sama, ja reaalivero on nimellisvero myyntihetkeen deflatoituna
+  ok(Math.abs(br.saleInfos[0].taxableNom - bn.saleInfos[0].taxableNom) < 1e-6, 'tuleva osto: hankintameno ostohetken nimellisrahassa kummassakin tilassa', `${br.saleInfos[0].taxableNom} vs ${bn.saleInfos[0].taxableNom}`);
+  ok(br.saleInfos[0].tax > 0 && Math.abs(br.saleInfos[0].tax * Math.pow(1.02, 15) - bn.saleInfos[0].tax) < 1e-6, 'tuleva osto reaalitilassa: vero > 0 ja deflatoitu');
   // F-03: kaksi 30 000 €:n voittoa samana vuonna → 30 000 € 30 %:lla, loput 34 %:lla
   const e = { ...owned.events[0], appr: 0, buyPrice: 70000 };
   const two = L.simulate({ ...cp(owned), events: [e, { ...e, id: 2 }] });
@@ -926,6 +938,85 @@ console.log('Myyntivoittovero: nimellinen voitto ja yhteinen vuosikertymä (audi
   // Verottomana merkitty ja vero pois → ei myyntiveroa
   const free = L.simulate({ ...cp(owned), events: [{ ...owned.events[0], sellTaxFree: true }] });
   ok(free.saleInfos[0].tax === 0 && free.taxPaid === 0, 'verovapaa myynti: 0 €');
+}
+
+/* ===== Tarkastusmuistio 23.9.2026 K1: nimellistila on näyttövaihtoehto =====
+   Kaikki syötetyt summat ovat tämän päivän rahaa kummassakin tilassa. Aiemmin
+   nimellistilassa tulotarve ja työeläke pysyivät vakioeuroina nimellisten
+   tuottojen rinnalla (muistion suunnitelma: 87 % vs reaalinen 46 %). */
+console.log('K1: nimellinen polku = reaalipolku × inflaatioindeksi');
+{
+  const mk = (real, extra) => Object.assign({ ageNow: 35, ageEnd: 92, startCapital: 30000, monthly: 800, savingsGrowth: 1.5,
+    allocStocks: 70, allocBonds: 20, glide: true, real, tax: true, inflation: 2.5,
+    savePhases: [{ to: 45, amount: 600 }, { to: 70, amount: 1200 }],
+    events: [
+      { id: 1, type: 'home', age: 40, amount: -250000, financing: 'loan', down: 40000, rate: 3.5, years: 25, isAsset: true, appr: 2, sellAge: 70 },
+      { id: 2, type: 'car', age: 45, amount: -30000, isAsset: true, appr: -10 },
+      { id: 3, type: 'child', age: 38, amount: -5000, recMonthly: 300, recYears: 18 },
+      { id: 4, type: 'inheritance', age: 55, amount: 80000 },
+      { id: 6, type: 'ownHome', owned: true, age: 35, amount: -150000, isAsset: true, loanLeft: 90000, rate: 4, years: 15, appr: 1.5 },
+      { id: 5, type: 'retirement', age: 62, withdrawal: 2800, pension: 1600, pensionAge: 68, goal: 'withdrawal' },
+    ] }, extra || {});
+  const cases = [
+    ['perustila', {}],
+    ['guardrails', { proOn: true, pro: Object.assign(L.defaultPro(), { infl: 2.5, wd: { mode: 'guard', pct: 4, band: 20, adj: 10 } }) }],
+    ['%-nosto', { proOn: true, pro: Object.assign(L.defaultPro(), { infl: 2.5, wd: { mode: 'pct', pct: 4, band: 20, adj: 10 } }) }],
+  ];
+  for (const [nimi, ex] of cases) {
+    const n = L.simulate(mk(false, ex), { paths: 400, sustainable: true });
+    const r = L.simulate(mk(true, ex), { paths: 400, sustainable: true });
+    const idx = L.prepareSim(mk(false, ex)).idxW;
+    let maxRel = 0;
+    for (let m = 0; m <= n.months; m++) {
+      const b = r.exp[m] * idx[m];
+      if (Math.abs(b) > 1) maxRel = Math.max(maxRel, Math.abs(n.exp[m] - b) / Math.abs(b));
+    }
+    ok(maxRel < 1e-9, `${nimi}: odotuspolku nimellisenä = reaali × (1+i)^(m/12)`, maxRel.toExponential(2));
+    ok(Math.abs(n.successProb - r.successProb) <= 0.01, `${nimi}: onnistumis-% sama kummassakin tilassa`, `${n.successProb} vs ${r.successProb}`);
+  }
+  const n0 = L.simulate(mk(false), { paths: 200, sustainable: true }), r0 = L.simulate(mk(true), { paths: 200, sustainable: true });
+  ok(n0.solvedWithdrawal === r0.solvedWithdrawal && n0.solvedWithdrawal > 0, 'kestävä kuukausitulo tämän päivän rahassa kummassakin tilassa', `${n0.solvedWithdrawal} vs ${r0.solvedWithdrawal}`);
+  // Muistion toistoskenaario: ennen korjausta nimellinen 86,6 % vs reaalinen 45,9 %
+  const memo = (real) => ({ ageNow: 35, ageEnd: 92, startCapital: 30000, monthly: 500, allocStocks: 70, allocBonds: 20,
+    tax: true, savingsGrowth: 1.5, real, events: [{ type: 'retirement', age: 65, withdrawal: 3300, pension: 1800, pensionAge: 65 }] });
+  const mN = L.simulate(memo(false), { paths: 1000 }), mR = L.simulate(memo(true), { paths: 1000 });
+  ok(Math.abs(mN.successProb - mR.successProb) <= 0.01, 'muistion suunnitelma: nimellinen ei enää näytä optimistisempaa', `${mN.successProb} vs ${mR.successProb}`);
+  // Inflaatio 0 → nimellistila bitilleen entinen (puhdas korkoa korolle)
+  const z = L.prepareSim({ ...memo(false), inflation: 0 });
+  ok(z.idxW.every((v) => v === 1), 'inflaatio 0 → indeksi ≡ 1 (entinen nimellispolku)');
+  ok(L.prepareSim(memo(true)).idxW.every((v) => v === 1), 'reaalitilassa indeksi ≡ 1');
+}
+
+/* ===== K2: työeläke alkaa aikaisintaan alimmassa vanhuuseläkeiässä ===== */
+console.log('K2: työeläkkeen alkamisiän lakisääteinen alaraja');
+{
+  const Y = L.PENSION_REF_YEAR;
+  const at = (by) => L.pensionAgeMin(Y - by);
+  ok(at(1950) === 63 && at(1956) === 63.5 && at(1961) === 64.75, 'vahvistetut iät 1950–1961 (63 → 64 v 9 kk)');
+  ok(at(1962) === 65 && at(1964) === 65, '1962–1964: 65 v');
+  ok(Math.abs(at(1975) - (66 + 2 / 12)) < 1e-12 && Math.abs(at(1985) - (67 + 1 / 12)) < 1e-12 && at(1995) === 68 && Math.abs(at(2005) - 68.75) < 1e-12,
+    'TELA-arviot 1975/1985/1995/2005');
+  ok(at(1970) > 65 && at(1970) < at(1975) && at(2020) === at(2005), 'interpolointi välivuosille, 2005 jälkeen viimeinen arvio');
+  let mono = true;
+  // 1955–1961 lain siirtymä nosti 3 kk/ikäluokka; elinajanodotekytkentä (1965–) enintään 2 kk
+  for (let by = 1950; by < 2010; by++) if (at(by + 1) < at(by) || (by >= 1964 && (at(by + 1) - at(by)) * 12 > 2 + 1e-9)) mono = false;
+  ok(mono, 'nousee monotonisesti, 1965– enintään 2 kk/ikäluokka (lain periaate)');
+
+  const st = (penAge, extra) => Object.assign({ ageNow: 35, ageEnd: 92, startCapital: 30000, monthly: 500, allocStocks: 70, allocBonds: 20,
+    tax: true, savingsGrowth: 1.5, real: true,
+    events: [{ type: 'retirement', age: 58, withdrawal: 3300, pension: 1800, pensionAge: penAge }] }, extra || {});
+  const min35 = L.pensionAgeMin(35);
+  const s50 = L.simulate(st(50)), s58 = L.simulate(st(58)), sMin = L.simulate(st(min35));
+  ok(s50.pensionAge === min35 && s50.pensionAgeRaised === true, 'alkamisikä 50 nostetaan alimpaan eläkeikään ja lippu kertoo sen');
+  ok(s58.successProb === sMin.successProb && s58.pensionAge === sMin.pensionAge, 'mahdoton 58 v ei enää paranna tulosta (sama kuin alaraja)');
+  ok(sMin.pensionAgeRaised === false && L.simulate(st(70)).pensionAge === 70, 'alarajalla tai sen yli ennallaan');
+  ok(L.simulate(st(50, { events: [{ type: 'retirement', age: 58, withdrawal: 3300, pension: 1800, pensionAge: 50, pensionFixed: true }] })).pensionAge === min35,
+    'pensionFixed ei ohita lakisääteistä alarajaa');
+  // Puuttuva pensionAge (vanha linkki) = eläkeikä → sekin rajataan
+  const legacy = L.simulate(st(undefined, { events: [{ type: 'retirement', age: 55, withdrawal: 3300, pension: 1800 }] }));
+  ok(legacy.pensionAge === min35, 'vanha linkki ilman pensionAge-kenttää: alaraja pätee');
+  // Karttuma lasketaan rajatulla iällä: 58 v eläkkeelle → (58−23)/(alaraja−23)
+  ok(Math.abs(s58.pension - 1800 * (58 - 23) / (min35 - 23)) < 1e-9, 'karttuma-approksimaatio käyttää rajattua ikää');
 }
 
 console.log(failed ? `\n${failed} TESTIÄ EPÄONNISTUI` : '\nKaikki testit läpi.');

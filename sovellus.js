@@ -81,10 +81,10 @@ const EXAMPLES = [
     name: 'Aloittaja (25 v)', desc: 'Ensiasunto edessä, säästäminen alussa',
     data: {
       ageNow: 25, ageEnd: 90, startCapital: 3000, monthly: 1100, savingsGrowth: 2.5,
-      allocStocks: 90, allocBonds: 5, glide: false, real: false, tax: true,
+      allocStocks: 90, allocBonds: 5, glide: false, real: true, tax: true,
       events: [
         { type: 'home', age: 33, amount: -180000, financing: 'loan', down: 27000, rate: 3.5, years: 25, isAsset: true, appr: 2 },
-        { type: 'retirement', age: 68, withdrawal: 2300, pension: 1500, pensionAge: 68 },
+        { type: 'retirement', age: 69, withdrawal: 2300, pension: 1500, pensionAge: 69 },
       ],
     },
   },
@@ -92,13 +92,13 @@ const EXAMPLES = [
     name: 'Perhe ja asunto (35 v)', desc: 'Lapsia, isompi asunto, arjen erät',
     data: {
       ageNow: 35, ageEnd: 90, startCapital: 40000, monthly: 2300, savingsGrowth: 1.5,
-      allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true,
+      allocStocks: 70, allocBonds: 20, glide: false, real: true, tax: true,
       events: [
         { type: 'home', age: 36, amount: -280000, financing: 'loan', down: 42000, rate: 3.5, years: 25, isAsset: true, appr: 2 },
         { type: 'child', age: 36, amount: -3000, financing: 'cash', recMonthly: -350, recYears: 18 },
         { type: 'child', age: 38, amount: -3000, financing: 'cash', recMonthly: -350, recYears: 18 },
         { type: 'car', age: 40, amount: -30000, financing: 'loan', down: 6000, rate: 4.5, years: 6, isAsset: true, appr: -10 },
-        { type: 'retirement', age: 66, withdrawal: 3000, pension: 1900, pensionAge: 66 },
+        { type: 'retirement', age: 68, withdrawal: 3000, pension: 1900, pensionAge: 68 },
       ],
     },
   },
@@ -106,10 +106,10 @@ const EXAMPLES = [
     name: 'Kiri eläkkeelle (45 v)', desc: 'Paljonko pitää säästää, jotta eläke riittää?',
     data: {
       ageNow: 45, ageEnd: 92, startCapital: 90000, monthly: 1200, savingsGrowth: 1,
-      allocStocks: 60, allocBonds: 30, glide: true, real: false, tax: true,
+      allocStocks: 60, allocBonds: 30, glide: true, real: true, tax: true,
       events: [
         { type: 'renovation', age: 50, amount: -40000, financing: 'loan', down: 4000, rate: 4.5, years: 10 },
-        { type: 'retirement', age: 61, withdrawal: 3200, pension: 1900, pensionAge: 65, goal: 'saving', conf: 0.85 },
+        { type: 'retirement', age: 64, withdrawal: 3000, pension: 1900, pensionAge: 67, goal: 'saving', conf: 0.85 },
       ],
     },
   },
@@ -119,10 +119,10 @@ const EXAMPLES = [
     name: 'Asunnonomistaja (40 v)', desc: 'Asunto ja laina jo hankittu — riittääkö loppupolku?',
     data: {
       ageNow: 40, ageEnd: 90, startCapital: 20000, monthly: 1200, savingsGrowth: 1.5,
-      allocStocks: 75, allocBonds: 15, glide: false, real: false, tax: true,
+      allocStocks: 75, allocBonds: 15, glide: false, real: true, tax: true,
       events: [
         { type: 'ownHome', age: 40, amount: -280000, loanLeft: 140000, rate: 3.5, years: 17, isAsset: true, appr: 2, boughtYear: 2021 },
-        { type: 'retirement', age: 65, withdrawal: 3100, pension: 1800, pensionAge: 65 },
+        { type: 'retirement', age: 68, withdrawal: 3100, pension: 1800, pensionAge: 68 },
       ],
     },
   },
@@ -132,7 +132,7 @@ const EXAMPLES = [
       ageNow: 32, ageEnd: 95, startCapital: 60000, monthly: 2600, savingsGrowth: 2,
       allocStocks: 95, allocBonds: 5, glide: false, real: true, tax: true,
       events: [
-        { type: 'retirement', age: 50, withdrawal: 2200, pension: 1300, pensionAge: 65, goal: 'age', conf: 0.85 },
+        { type: 'retirement', age: 50, withdrawal: 2200, pension: 1300, pensionAge: 68, goal: 'age', conf: 0.85 },
       ],
     },
   },
@@ -182,7 +182,7 @@ function applyQuestion(k) {
   let ret = state.events.find((e) => e.type === 'retirement');
   if (!ret && (o.retAge != null || o.goal || o.withdrawal != null || o.conf != null)) {
     const def = EVENT_TYPES.retirement;
-    ret = { id: idSeq++, type: 'retirement', age: Math.max(65, state.ageNow + 1), withdrawal: def.withdrawal, pension: def.pension, pensionAge: def.pensionAge };
+    ret = { id: idSeq++, type: 'retirement', age: Math.max(65, state.ageNow + 1), withdrawal: def.withdrawal, pension: def.pension, pensionAge: pensionAgeDefault(state.ageNow) };
     state.events.push(ret);
   }
   if (ret) {
@@ -480,7 +480,7 @@ function buildShareImage() {
   const pro = proOf(state);
   const mu = pro ? pro.mu : { stocks: 7, bonds: 3 };
   const oletukset = [
-    state.real ? t('nykyrahassa, inflaatio {0} %/v', fmtLuku(inflOf(state) * 100)) : t('nimellisarvoin'),
+    state.real ? t('nykyrahassa, inflaatio {0} %/v', fmtLuku(inflOf(state) * 100)) : t('varallisuus nimellisarvoin, inflaatio {0} %/v', fmtLuku(inflOf(state) * 100)),
     t('osakkeet {0} % / korot {1} %', fmtLuku(mu.stocks), fmtLuku(mu.bonds)),
     state.tax ? t('verot mukana') : t('ilman veroja'),
     ret && ret.pension > 0 ? t('työeläke {0}/kk', eur0(sim.pension != null ? sim.pension : ret.pension)) : t('ilman työeläkettä'),
@@ -924,7 +924,8 @@ function syncInputs() {
   $('glide').checked = state.glide;
   $('real').checked = state.real;
   $('inflation').value = state.inflation;
-  $('inflationField').hidden = !state.real;
+  // Inflaatio näkyy molemmissa tiloissa: nimellistilassa se on esitysrahan kerroin (K1)
+  $('inflationField').hidden = false;
   $('tax').checked = state.tax;
   $('savIncome').value = state.income != null ? state.income : '';
   $('savExpenses').value = state.expenses != null ? state.expenses : '';
@@ -1278,7 +1279,7 @@ function renderSummary() {
     if (e.type === 'retirement') {
       sum = `−${t('{0}/kk', fmtEur(s.goal === 'withdrawal' && s.solvedWithdrawal != null ? s.solvedWithdrawal : e.withdrawal))}`;
       fin = { manual: t('kuukausitulon tarve'), withdrawal: t('kestävä tulo — varat loppuun'), age: t('aikaisin mahdollinen ikä'), saving: t('säästötavoite') }[retGoal(e)];
-      if (e.pension > 0) note = t('työeläke {0}/kk alk. {1} v', fmtEur(e.pension), Math.round(e.pensionAge != null ? e.pensionAge : 65));
+      if (e.pension > 0) note = t('työeläke {0}/kk alk. {1} v', fmtEur(e.pension), Math.round(Math.max(e.pensionAge != null ? e.pensionAge : 65, pensionAgeMin(state.ageNow))));
     } else if (e.type === 'goal') {
       sum = fmtEur(e.amount);
       fin = t('tavoitepiste');
@@ -1319,7 +1320,7 @@ function renderSummary() {
   $('sumSheet').innerHTML =
     `<div class="sum-head">` +
     `<div><h1>${t('Varallisuussuunnitelma')}</h1><div class="sum-sub">${t('Tavoitteeni ja suunnitelmani elämäni taloudelle')}</div></div>` +
-    `<div class="sum-meta">${fmtPvm(new Date())}<br>${t('Ikä {0} v', state.ageNow)} · ${t('suunnitelma {0} v ikään asti', Math.round(s.a1))}<br>${state.real ? t('inflaatiokorjattu, nykyrahassa') : t('nimellisarvoin')}</div>` +
+    `<div class="sum-meta">${fmtPvm(new Date())}<br>${t('Ikä {0} v', state.ageNow)} · ${t('suunnitelma {0} v ikään asti', Math.round(s.a1))}<br>${state.real ? t('inflaatiokorjattu, nykyrahassa') : t('varallisuus nimellisarvoin, kuukausisummat nykyrahassa')}</div>` +
     `</div>` +
     `<div class="sum-tiles">${tiles.map((c) =>
       `<div class="sum-tile"><div class="k">${t(c.k)}</div><div class="v ${c.cls || ''}">${t(c.v)}</div>${c.s ? `<div class="s">${t(c.s)}</div>` : ''}</div>`).join('')}</div>` +
@@ -1334,7 +1335,7 @@ function renderSummary() {
       `<ul class="sum-points">${summaryTalks(s).map(li).join('')}</ul>`, false) +
     (familyOn() ? familySummaryHtml() : '') +
     (state.proOn ? proSummaryHtml(s) : '') +
-    `<p class="sum-assump">${t('Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa')}${state.savingsGrowth > 0 ? t('; säästön kasvu {0} %/v', fmtLuku(state.savingsGrowth)) : ''}${state.real ? t('; inflaatio {0} %/v, luvut nykyrahassa', fmtLuku(state.inflation)) : ''}${state.glide ? t('; ikäsidonnainen allokaatio') : ''}${s.pension > 0 ? t('; lakisääteinen työeläke huomioitu eläketulona') : ''}${state.tax ? t('; myyntivoittovero 30/34 % nostojen voitto-osuudesta') : ''}${state.acct === 'ost' ? t('; osakesäästötili (osingot ja myynnit tilillä verotta, nostosta vero voitto-osuudesta)') : state.acct === 'ins' ? t('; vakuutuskuori (tuotot kuoressa verotta, nostosta vero voitto-osuudesta{0})', state.wrapFee > 0 ? t(', kuoren kulu {0} %/v', fmtLuku(state.wrapFee)) : '') : ''}${state.feePct > 0 ? t('; sijoituskulut {0} %/v', fmtLuku(state.feePct)) : ''}${state.acct === 'aot' && state.tax && state.divYield > 0 ? t('; suorien osakkeiden osinkotuotto {0} %/v verotettuna vuosittain', fmtLuku(state.divYield)) : ''}${(s.saleInfos || []).some((x) => x.tax > 0.5) ? t('; omaisuuden myynnissä hankintameno-olettama') : ''}. ` +
+    `<p class="sum-assump">${t('Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa')}${state.savingsGrowth > 0 ? t('; säästön kasvu {0} %/v', fmtLuku(state.savingsGrowth)) : ''}${state.real ? t('; inflaatio {0} %/v, luvut nykyrahassa', fmtLuku(inflOf(state) * 100)) : t('; inflaatio {0} %/v, varallisuus nimellisarvoin ja kuukausisummat nykyrahassa', fmtLuku(inflOf(state) * 100))}${state.glide ? t('; ikäsidonnainen allokaatio') : ''}${s.pension > 0 ? t('; lakisääteinen työeläke huomioitu eläketulona') : ''}${state.tax ? t('; myyntivoittovero 30/34 % nostojen voitto-osuudesta') : ''}${state.acct === 'ost' ? t('; osakesäästötili (osingot ja myynnit tilillä verotta, nostosta vero voitto-osuudesta)') : state.acct === 'ins' ? t('; vakuutuskuori (tuotot kuoressa verotta, nostosta vero voitto-osuudesta{0})', state.wrapFee > 0 ? t(', kuoren kulu {0} %/v', fmtLuku(state.wrapFee)) : '') : ''}${state.feePct > 0 ? t('; sijoituskulut {0} %/v', fmtLuku(state.feePct)) : ''}${state.acct === 'aot' && state.tax && state.divYield > 0 ? t('; suorien osakkeiden osinkotuotto {0} %/v verotettuna vuosittain', fmtLuku(state.divYield)) : ''}${(s.saleInfos || []).some((x) => x.tax > 0.5) ? t('; omaisuuden myynnissä hankintameno-olettama') : ''}. ` +
     `${t('Lainat annuiteettilainoina. Onnistumistodennäköisyys perustuu {0} satunnaiseen markkinapolkuun', fmtLuku(s.mcPaths || MC_LIVE))}${s.conf ? t('; tavoitteet mitoitettu {0} % onnistumisvarmuudelle', Math.round(s.conf * 100)) : ''}${t('. Laadittu Varallisuuspolku-työkalulla.')}</p>` +
     `<p class="sum-disclaimer">${t('Tämä yhteenveto kuvaa laatijansa omia tavoitteita, valintoja ja oletuksia. Se ei ole sijoitusneuvontaa eikä sijoitussuositus — sen voi antaa esimerkiksi varainhoitajalle keskustelun pohjaksi.')}</p>`;
 }
@@ -2350,19 +2351,17 @@ function rampResult(retA) {
   const pen = ret && ret.pension > 0 ? Math.round(ret.pension) : 0;
   const wd = s && s.solvedWithdrawal != null ? Math.round(s.solvedWithdrawal) : null;
   const wr = s && s.wAtRet != null ? Math.round(s.wAtRet) : null;
-  // Rahan arvo: nimellistilassa ensimmäinen luku on 30 vuoden päästä olevaa
-  // rahaa — kerrotaan ostovoima nykyrahassa, ettei ensivaikutelma liioittele
-  // (UX-auditointi 5.9.2026 U1). Reaalitilassa luvut ovat jo nykyrahaa.
-  const years = Math.max(0, retA - state.ageNow);
-  const defl = state.real ? 1 : Math.pow(1 + inflOf(state), -years);
-  const wdReal = wd != null ? Math.round(wd * defl) : null;
+  // Kestävä kuukausitulo on tämän päivän rahaa kummassakin tilassa (K1:
+  // nimellistila on näyttövaihtoehto) — erillistä ostovoimamuunnosta ei tarvita.
+  // Työeläke alkaa aikaisintaan alimmassa vanhuuseläkeiässä (K2).
+  const penA = s && s.pensionAge != null ? Math.round(s.pensionAge) : retA;
   const wdS = pen > 0
-    ? t('sis. työeläke {0}/kk · {1} v alkaen · tyypillisellä kehityksellä', fmtEur(pen), retA)
+    ? t('sis. työeläke {0}/kk · {1} v alkaen · tyypillisellä kehityksellä', fmtEur(pen), penA)
     : t('sijoituksistasi {0} v alkaen · tyypillisellä kehityksellä', retA);
   $('rampCard').innerHTML =
     `<h1 class="ramp-title">${t('Polkusi on piirretty')}</h1>` +
     `<div class="ramp-res">` +
-    `<div class="ramp-stat"><div class="k">${pen > 0 ? t('Kestävä kuukausitulo eläkkeellä') : t('Kestävä kuukausitulo sijoituksistasi')}</div><div class="v">${wd != null ? fmtEur(wd) + '/kk' : '–'}</div><div class="s">${wdS}${wdReal != null && !state.real && years > 0 ? ' · ' + t('nykyrahassa noin {0}/kk', fmtEur(wdReal)) : ''}</div></div>` +
+    `<div class="ramp-stat"><div class="k">${pen > 0 ? t('Kestävä kuukausitulo eläkkeellä') : t('Kestävä kuukausitulo sijoituksistasi')}</div><div class="v">${wd != null ? fmtEur(wd) + '/kk' : '–'}</div><div class="s">${wdS} · ${t('nykyrahassa')}</div></div>` +
     `<div class="ramp-stat"><div class="k">${t('Sijoituksesi {0} vuoden iässä', retA)}</div><div class="v">${wr != null ? fmtEur(wr) : '–'}</div><div class="s">${t('tyypillisellä (mediaani) kehityksellä')}${state.real ? ' · ' + t('nykyrahassa') : ' · ' + t('nimellisarvoin')}</div></div>` +
     `</div>` +
     // Työeläke on vaikuttavin puuttuva tieto: kenttä suoraan korttiin, ei
@@ -2382,7 +2381,7 @@ function rampResult(retA) {
     const v = clamp(parseFloat(penEl.value) || 0, 0, 1e6);
     const r = state.events.find((e) => e.type === 'retirement');
     if (!r) return;
-    r.pension = v; r.pensionAge = retA;
+    r.pension = v; r.pensionAge = Math.max(retA, pensionAgeMin(state.ageNow));
     syncInputs(); renderAll();
     track('Ramppi työeläke', { annettu: v > 0 ? 'on' : 'ei' });
     rampResult(retA);

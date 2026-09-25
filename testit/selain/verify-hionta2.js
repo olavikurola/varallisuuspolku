@@ -75,7 +75,8 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
     });
     // 6.9.2026 (D05): telakoituna 1100–1599 px sankaritiili koko riville + 4 alle (2 riviä), ei 4+1
     ok(grid.n === 5 && grid.rows === 2, 'telakoituna sankaritiili + 4 tiiltä (2 riviä)', JSON.stringify(grid));
-    ok(/M€/.test(grid.shown.join('|')), 'tiiviit arvot käytössä kapeassa telakassa', JSON.stringify(grid.shown));
+    // Tiivis muoto (t€/M€): oletussuunnitelma on tämän päivän rahassa (K1) → satoja t€
+    ok(/\d\s?[tM]€/.test(grid.shown.join('|')), 'tiiviit arvot käytössä kapeassa telakassa', JSON.stringify(grid.shown));
   }
 
   console.log('Vertailu: kompakti taulukko mahtuu, kestävä tulo lasketaan');
@@ -92,7 +93,7 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
     const kest = t.rows.find((r) => /Kestävä/.test(r));
     ok(kest && /€\/kk/.test(kest) && !/–/.test(kest), 'Kestävä tulo -rivillä lasketut arvot', kest);
     const loppu = t.rows.find((r) => /Loppuvar/.test(r));
-    ok(loppu && /M€/.test(loppu), 'Loppuvarallisuus kompaktina (M€)', loppu);
+    ok(loppu && /\d\s?[tM]€/.test(loppu), 'Loppuvarallisuus kompaktina (t€/M€)', loppu);
     const verot = t.rows.find((r) => /Verot/.test(r));
     ok(verot && /t€/.test(verot), 'Verot kompaktina (t€)', verot);
   }

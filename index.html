@@ -74,7 +74,7 @@
       { "@type": "Question", "name": "Voiko koko perheen taloutta suunnitella?",
         "acceptedAnswer": { "@type": "Answer", "text": "Kyllä — jopa neljä henkilöä: puoliso ja lapset omina käyrinään, perheen yhteinen onnistumistodennäköisyys samassa markkinahistoriassa, rahasiirrot, jaetut hankinnat ja leskiturvatarkastelu." } },
       { "@type": "Question", "name": "Onko palvelussa tekoälyä?",
-        "acceptedAnswer": { "@type": "Answer", "text": "On: Tulkki-apuri (✦ Kysy AI) selittää laskurin tulokset selkokielellä, vertailee vaihtoehtoja, kokeilee muutoksia ja suhteuttaa suunnitelman ikäryhmän anonyymiin vertailudataan. Työnjako on tiukka — laskentamoottori laskee ja AI vain selittää, joten luvut tulevat aina laskennasta, eivät kielimallilta. Kysyessä välitetään vain kysymys ja suunnitelman anonyymi muoto; palvelin ei tallenna mitään. Ilmaiseksi 5 kysymystä päivässä." } },
+        "acceptedAnswer": { "@type": "Answer", "text": "On: Tulkki-apuri (✦ Kysy AI) selittää laskurin tulokset selkokielellä, vertailee vaihtoehtoja, kokeilee muutoksia ja suhteuttaa suunnitelman muiden käyttäjien anonyymisti jakamiin suunnitelmiin — omaan ikäryhmään, kun siitä on kertynyt vähintään 30 suunnitelmaa, muuten leveämpään ikäkaistaan, ja kertoo aina kumpaan. Työnjako on tiukka — laskentamoottori laskee ja AI vain selittää, joten luvut tulevat aina laskennasta, eivät kielimallilta. Kysyessä välitetään vain kysymys ja suunnitelman anonyymi muoto; palvelin ei tallenna mitään. Ilmaiseksi 5 kysymystä päivässä." } },
       { "@type": "Question", "name": "Voiko oman tekoälyavustajan kytkeä Varallisuuspolkuun?",
         "acceptedAnswer": { "@type": "Answer", "text": "Kyllä: laskentamoottorin saa tekoälyagentin (esimerkiksi Clauden) työkaluksi paikallisena MCP-palvelimena — asennus komennolla npx -y varallisuuspolku-mcp (npm-paketti varallisuuspolku-mcp). Agentti voi simuloida suunnitelman jakolinkistä, ratkaista eläkeiän tai säästötarpeen ja vertailla vaihtoehtoja samalla moottorilla kuin tämä sivu. Laskenta tapahtuu silloinkin omalla koneellasi eikä suunnitelma lähde verkkoon — ja työkalut laskevat, eivät anna sijoitusneuvontaa. Lisätietoa Agentit-sivulla." } },
       { "@type": "Question", "name": "Sopiiko FIRE- ja varhaiseläkesuunnitteluun?",
@@ -207,7 +207,7 @@
           <span class="switch"></span>
           <span>Inflaatiokorjattu <small>luvut tämän päivän rahassa</small></span>
         </label>
-        <label class="field" id="inflationField" hidden style="margin-top:10px">
+        <label class="field" id="inflationField" style="margin-top:10px">
           <span class="field-label">Inflaatio-oletus <small>oma arviosi</small></span>
           <span class="input"><input id="inflation" type="number" min="0" max="15" step="0.1" value="2" /><em>%/v</em></span>
         </label>
@@ -309,8 +309,7 @@
           <details>
             <summary>Onko palvelussa tekoälyä?</summary>
             <p>On: Tulkki-apuri (✦ Kysy AI) selittää laskurin tulokset selkokielellä, vertailee
-            vaihtoehtoja, kokeilee muutoksia ja suhteuttaa suunnitelman ikäryhmän anonyymiin
-            vertailudataan. Työnjako on tiukka — laskentamoottori laskee ja AI vain selittää,
+            vaihtoehtoja, kokeilee muutoksia ja suhteuttaa suunnitelman muiden käyttäjien anonyymisti jakamiin suunnitelmiin — omaan ikäryhmään, kun siitä on kertynyt vähintään 30 suunnitelmaa, muuten leveämpään ikäkaistaan, ja kertoo aina kumpaan. Työnjako on tiukka — laskentamoottori laskee ja AI vain selittää,
             joten luvut tulevat aina laskennasta, eivät kielimallilta. Kysyessä välitetään vain
             kysymys ja suunnitelman anonyymi muoto; palvelin ei tallenna mitään. Ilmaiseksi
             5&nbsp;kysymystä päivässä.</p>
@@ -543,7 +542,9 @@
 
       <h2>Tulkki — kysy AI:lta</h2>
       <p>Oikean reunan <b>✦ Kysy AI</b> -kielekkeestä aukeaa Tulkki, joka selittää suunnitelmasi
-      luvut selkokielellä ja suhteuttaa ne ikäryhmäsi anonyymiin vertailudataan. Se osaa myös
+      luvut selkokielellä ja suhteuttaa ne muiden käyttäjien anonyymisti jakamiin suunnitelmiin
+      (omaan ikäryhmääsi, kun siitä on kertynyt riittävästi dataa — muuten se kertoo, mihin
+      joukkoon vertaa, ja kuinka pieni ja valikoitunut otos on). Se osaa myös
       <b>kokeilla</b> muutoksia (&rdquo;kokeile eläkeikää 62&rdquo;) ja <b>vertailla</b> vaihtoehtoja
       rinnakkain — vaikutukset näytetään ensin euroeroina, eikä suunnitelmaasi kosketa ennen kuin
       itse otat muutoksen käyttöön. Pikatoiminnot laativat kysymyslistan varainhoitajatapaamiseen

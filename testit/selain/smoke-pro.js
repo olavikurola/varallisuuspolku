@@ -77,7 +77,10 @@ const { chromium } = require('playwright');
   await page.evaluate(() => { document.querySelector('[data-pact="wd-mode"][data-mode="pct"]').click(); });
   await page.waitForTimeout(500);
   ok(await page.evaluate(() => document.getElementById('proWd').textContent.includes('mittareita, eivät ratkaisuja')), '%-strategian huomautus ratkaisijoista');
-  ok(await page.evaluate(() => sim.depletionAge == null), '%-strategia ei ehdy');
+  // Salkku ei matemaattisesti ehdy (nosto on osuus jäljellä olevasta). depletionAge
+  // mittaa %-tilassa tulolattian alitusta, jonka reaalinen oletussuunnitelma voi
+  // alittaa ennen työeläkkeen alkua (K2: alin eläkeikä) — siksi salkku tarkistetaan suoraan
+  ok(await page.evaluate(() => sim.exp.every((v) => v > 0) && sim.dryKind === 'floor'), '%-strategia ei ehdy');
   await page.evaluate(() => { document.querySelector('[data-pact="wd-mode"][data-mode="guard"]').click(); });
   await page.waitForTimeout(400);
   ok(await page.evaluate(() => isFinite(sim.wEnd)), 'guardrails laskee');

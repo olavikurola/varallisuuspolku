@@ -112,7 +112,9 @@ function kirjoita(sivu, html, d, lang) {
   // Dataset-skeema: dateModified päivittyy datan mukana (GEO: tuoreus)
   const pvm = String(d.updated || new Date().toISOString()).slice(0, 10);
   if (/"dateModified": "[^"]*"/.test(s)) s = s.replace(/"dateModified": "[^"]*"/, `"dateModified": "${pvm}"`);
-  else s = s.replace('"isAccessibleForFree": true,\n    "inLanguage"', `"isAccessibleForFree": true,\n    "dateModified": "${pvm}",\n    "inLanguage"`);
+  // \r?\n: Windows-työkopio (core.autocrlf) on CRLF — aiemmin ankkuri ei osunut
+  // ja dateModified jäi hiljaa lisäämättä (testi punainen paikallisesti)
+  else s = s.replace(/"isAccessibleForFree": true,(\r?\n)(\s*)"inLanguage"/, (m, nl, ind) => `"isAccessibleForFree": true,${nl}${ind}"dateModified": "${pvm}",${nl}${ind}"inLanguage"`);
   fs.writeFileSync(sivu, s);
   return (s.match(/<tr>/g) || []).length;
 }

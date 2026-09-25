@@ -63,7 +63,7 @@ const feeOr0 = (v) => (typeof v === 'number' && isFinite(v) ? clamp(v, 0, 10) : 
 const MC_SEED = (i) => 1337 + i * 7919;
 // Moottoriversio: päivitä kun tulosten taloudellinen merkitys muuttuu (validointisivun muutosloki).
 // Kulkee vertailudatan mukana, jotta eri versioiden johdetut tulokset erottuvat (auditointi 5.9.2026 D-03).
-const ENGINE_VERSION = '2026-09-05';
+const ENGINE_VERSION = '2026-09-24';
 const MC_LIVE = 300;   // synkroninen laskenta päälangassa
 const MC_FULL = 5000;  // worker-tarkennus irrotuksen jälkeen
 
@@ -78,6 +78,38 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 // pensionFixed ohittaa säädön (arvio laskettu valmiiksi omaan eläkeikään).
 // Muutos 4.9.2026 — aiemmin työeläke oli vakio eläkeiästä riippumatta.
 const CAREER_START = 23;
+
+// Alin vanhuuseläkeikä syntymävuoden mukaan (työeläkelait 2017). Täysi
+// vanhuuseläke ei voi alkaa aiemmin: 1962 ja myöhemmin syntyneillä ei ole
+// varhennettua vanhuuseläkettä, vain OSITTAINEN varhennettu (25/50 %,
+// −0,4 %/kk), jota ei mallinneta. 1965– ikä on sidottu elinajanodotteeseen
+// ja vahvistetaan vasta 62-vuotiaana, joten nuoremmille käytetään
+// työeläkevakuuttajien arvioita (TELA 9/2026: 1975 66 v 2 kk, 1985 67 v 1 kk,
+// 1995 68 v 0 kk, 2005 68 v 9 kk) ja lineaarista interpolointia
+// kuukauden tarkkuudella; 2005 jälkeen viimeinen arvio. Lähteet:
+// tyoelake.fi (1956–1964), suomi.fi, tela.fi. Muutos 24.9.2026 — aiemmin
+// alkamisikä rajattiin vain välille 0–120 (tarkastusmuistio K2).
+// Syntymävuosi = PENSION_REF_YEAR − ikä nyt: kiinteä vuosi pitää laskennan
+// deterministisenä (sama linkki → sama tulos); päivitetään vuosihuollossa.
+const PENSION_REF_YEAR = 2026;
+const PENSION_AGE_TABLE = [ // [syntymävuosi, alin eläkeikä kuukausina]
+  [1954, 756], [1955, 759], [1956, 762], [1957, 765], [1958, 768], [1959, 771],
+  [1960, 774], [1961, 777], [1962, 780], [1964, 780], [1975, 794], [1985, 805],
+  [1995, 816], [2005, 825],
+];
+function pensionAgeMin(ageNow) {
+  const by = PENSION_REF_YEAR - Math.round(ageNow);
+  const T = PENSION_AGE_TABLE;
+  if (!(by > T[0][0])) return T[0][1] / 12;
+  for (let i = 1; i < T.length; i++) {
+    if (by <= T[i][0]) {
+      const [y0, m0] = T[i - 1], [y1, m1] = T[i];
+      return Math.round(m0 + ((m1 - m0) * (by - y0)) / (y1 - y0)) / 12;
+    }
+  }
+  return T[T.length - 1][1] / 12;
+}
+
 function pensionAt(ctx, retAge) {
   const p = ctx.pension0;
   if (!(p > 0) || ctx.pensionFixed || retAge == null || retAge >= ctx.pensionAge) return p;
@@ -381,6 +413,18 @@ function prepareSim(st, opts = {}) {
   // Reaali → nimellinen kuukaudessa m. Verolaskenta tehdään aina nimellisessä
   // rahassa ja tulos muunnetaan takaisin esitysrahaan (ks. capitalTax).
   const nomAt = (m) => (realI ? Math.pow(1 + realI, m / 12) : 1);
+  // Nimellistila on NÄYTTÖVAIHTOEHTO (24.9.2026, tarkastusmuistio K1):
+  // kaikki käyttäjän syöttämät summat — säästö, tapahtumat, ostohinnat,
+  // toistuvat erät, tulotarve ja työeläke — ovat tämän päivän rahaa, ja
+  // nimellistilassa ne muunnetaan kuukauden m nimellisrahaan kertoimella
+  // idxW[m]. Näin nimellinen polku = reaalipolku × (1+i)^(m/12) ja
+  // onnistumis-% / kestävä tulo / ratkaisut ovat samat kummassakin tilassa
+  // (cFIREsim, Portfolio Visualizer). Aiemmin tulotarve pysyi vakioeuroina
+  // nimellisten tuottojen rinnalla — ostovoima puolittui 35 vuodessa ja
+  // onnistumis-% näytti esim. 87 % reaalitilan 46 %:n sijaan. Lainat ovat
+  // nimellisiä sopimuksia kummassakin tilassa. Reaalitilassa idxW ≡ 1.
+  const idxW = new Float64Array(months + 1);
+  for (let m = 0; m <= months; m++) idxW[m] = realI ? 1 : Math.pow(1 + inflO, m / 12);
   const taxLow = pro ? pro.tax.low / 100 : TAX_LOW;
   const taxHigh = pro ? pro.tax.high / 100 : TAX_HIGH;
   const taxBracket = pro ? pro.tax.bracket : TAX_BRACKET;
@@ -406,8 +450,16 @@ function prepareSim(st, opts = {}) {
   // Lakisääteinen työeläke: kuukausitulo, joka pienentää sijoituksista
   // tarvittavaa nostoa. Voi alkaa eri iässä kuin eläkkeelle jäänti.
   const pension0 = retire && retire.pension > 0 ? Math.max(0, retire.pension) : 0;
-  const pensionAge = pension0 > 0 && retire.pensionAge != null
-    ? clamp(retire.pensionAge, a0, a1)
+  // Työeläke alkaa aikaisintaan alimmassa vanhuuseläkeiässä (pensionAgeMin) —
+  // syötetty aiempi ikä nostetaan rajalle kaikissa kanavissa (UI, linkki,
+  // Tulkki, MCP), ja pensionAgeRaised kertoo siitä käyttöliittymälle
+  const pensionAgeMin0 = pensionAgeMin(a0);
+  const pensionAgeIn = pension0 > 0
+    ? (retire.pensionAge != null ? retire.pensionAge : (retireAge0 != null ? retireAge0 : a1))
+    : null;
+  const pensionAgeRaised = pensionAgeIn != null && pensionAgeIn < pensionAgeMin0 - 1e-9;
+  const pensionAge = pensionAgeIn != null
+    ? clamp(Math.max(pensionAgeIn, pensionAgeMin0), a0, a1)
     : (retireAge0 != null ? retireAge0 : a1);
   const pensionFixed = !!(retire && retire.pensionFixed);
   // Eläkeiän mukainen työeläke suunnitelman omalla eläkeiällä (pensionAt);
@@ -499,13 +551,14 @@ function prepareSim(st, opts = {}) {
       const left = Math.max(0, e.loanLeft || 0);
       if (left > 0) amort(e, 0, left, Math.max(0, e.rate || 0), Math.max(1, e.years || 10));
     } else if (e.amount < 0 && e.financing === 'loan') {
-      const price = -e.amount;
-      const down = clamp(e.down || 0, 0, price);
+      // Hinta ja käsiraha ostohetken rahassa (nimellistilassa idxW, reaalissa 1)
+      const price = -e.amount * idxW[m0];
+      const down = clamp((e.down || 0) * idxW[m0], 0, price);
       // Varainsiirtovero maksetaan käsirahan tapaan omista varoista ostohetkellä
-      lump.set(m0, (lump.get(m0) || 0) - down - transferTaxOf(e));
+      lump.set(m0, (lump.get(m0) || 0) - down - transferTaxOf(e) * idxW[m0]);
       amort(e, m0, price - down, Math.max(0, e.rate || 0), Math.max(1, e.years || 10));
     } else {
-      lump.set(m0, (lump.get(m0) || 0) + e.amount - transferTaxOf(e));
+      lump.set(m0, (lump.get(m0) || 0) + (e.amount - transferTaxOf(e)) * idxW[m0]);
     }
 
     // Toistuva kuukausivaikutus (esim. lapsen kulut, vuokratulo)
@@ -514,7 +567,7 @@ function prepareSim(st, opts = {}) {
       for (let k = 1; k <= nRec; k++) {
         const m = m0 + k;
         if (m > months) break;
-        payments[m] -= e.recMonthly;
+        payments[m] -= e.recMonthly * idxW[m];
       }
     }
   }
@@ -541,7 +594,7 @@ function prepareSim(st, opts = {}) {
     const apprM = Math.pow(Math.max(0.01, yearly), 1 / 12);
     const mSell = sellMonthOf(e);
     const mEnd = mSell != null ? Math.min(mSell - 1, months) : months;
-    let v = -e.amount;
+    let v = -e.amount * idxW[m0]; // ostohetken rahassa (nimellistilassa indeksoitu)
     for (let m = m0; m <= mEnd; m++) {
       assets[m] += v;
       cat[m] += v;
@@ -568,7 +621,7 @@ function prepareSim(st, opts = {}) {
         // Hankintameno: ostettu kohde = summa ostohetken nimellisrahassa;
         // omistus = valinnainen buyPrice (historiallinen nimellinen), ilman
         // sitä olettamaosuus (auditointi 8/2026: aiemmin AINA olettama)
-        const hankintaNom = e.owned ? (e.buyPrice > 0 ? e.buyPrice : null) : -e.amount * nomAt(m0);
+        const hankintaNom = e.owned ? (e.buyPrice > 0 ? e.buyPrice : null) : -e.amount * nomAt(m0) * idxW[m0];
         taxableNom = hankintaNom != null ? Math.min(Math.max(0, saleValueNom - hankintaNom), cap) : cap;
         // Esitysarvio yksittäiselle myynnille (vuosikertymä 0); todellinen vero
         // peritään runPathissa yhteisestä vuosikertymästä nostojen kanssa
@@ -582,7 +635,7 @@ function prepareSim(st, opts = {}) {
   }
   const hasNet = hasAssets || debt.some((d) => d > 0.5);
 
-  return { a0, a1, months, retire, pension, pension0, pensionAge, pensionFixed, taxOn, growth, saveAbs, lump, payments, debt, assets, assetCats, saleInfos, saleGains, hasNet, realI, transferTax,
+  return { a0, a1, months, retire, pension, pension0, pensionAge, pensionAgeMin: pensionAgeMin0, pensionAgeRaised, pensionFixed, idxW, taxOn, growth, saveAbs, lump, payments, debt, assets, assetCats, saleInfos, saleGains, hasNet, realI, transferTax,
     pro, taxLow, taxHigh, taxBracket, taxAcq, wdMode, wdPctM, wdBand, wdAdj, phaseMul };
 }
 
@@ -649,7 +702,7 @@ function buildMu(ctx, st, retAge) {
 
 function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave = st.monthly, shockFn = null, collect = false, stopAt = null, record = null } = {}) {
   const { a0, months, lump, payments, growth, saveAbs, pensionAge, taxOn, saleGains,
-    taxLow, taxHigh, taxBracket, taxAcq, wdMode, wdPctM, wdBand, wdAdj, phaseMul, realI } = ctx;
+    taxLow, taxHigh, taxBracket, taxAcq, wdMode, wdPctM, wdBand, wdAdj, phaseMul, realI, idxW } = ctx;
   // Työeläke kokeiltavan eläkeiän mukaan (ratkaisijat vaihtavat retAgea)
   const pension = pensionAt(ctx, retAge);
   // Tuotto: deterministinen polku kulkee mediaanidriftillä (muM), Monte Carlo
@@ -728,14 +781,16 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
       // (X-palaute @ArjenArvonnousu 24.7.2026: remontti 130 k€/1 v vs 2 v).
       // Porrastettu aikataulu (saveAbs) korvaa tasaisen perussäästön kun asetettu.
       const base = saveAbs ? saveAbs[m] : monthlySave;
-      const net = base * growth[m] - payments[m];
+      const net = base * growth[m] * idxW[m] - payments[m];
       if (net >= 0) { w += net; basis += net; basisNom += net * curNom; }
       else { const r = taxedSell(-net); if (fl) fl.tax[m] += r.tax; }
       if (fl) fl.contrib[m] = net;
     } else {
       // Eläkkeellä: kuukausitulo strategian mukaan + lainanhoito, josta
       // työeläke kattaa osan; kulutuksen vaiheistus skaalaa tulotarpeen
-      const pen = age >= pensionAge ? pension : 0;
+      // idxW: nimellistilassa tämän päivän rahan tarve ja eläke inflaatiolla (≡ 1 reaalitilassa)
+      const ix = idxW[m];
+      const pen = age >= pensionAge ? pension * ix : 0;
       let income;
       if (wdMode === 'pct') {
         income = Math.max(0, w) * wdPctM; // prosentti salkusta — tulo joustaa
@@ -746,20 +801,21 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
         // tapahtuman kuukausitulon tarpeen — ensimmäinen alitus ratkaisee
         // (SWR-testien tapa; monotoninen, joten CRN-vertailut säilyvät).
         // Tulotarve 0 = ei lattiaa (entinen käytös).
-        if (withdrawal > 0 && income + pen < withdrawal * (phaseMul ? phaseMul[m] : 1) && depletion == null) {
+        if (withdrawal > 0 && income + pen < withdrawal * ix * (phaseMul ? phaseMul[m] : 1) && depletion == null) {
           depletion = age;
         }
       } else if (wdMode === 'guard') {
         // Guardrails: perustasoa leikataan/korotetaan kun nostoprosentti
         // karkaa aloitusputkesta (tarkistus kerran vuodessa)
-        if (gw == null) { gw = withdrawal; gr0 = w > 0 ? (gw * 12) / w : 0; }
+        // gw on tämän päivän rahaa; nostoprosentti verrataan nimellissalkkuun ix:llä
+        if (gw == null) { gw = withdrawal; gr0 = w > 0 ? (gw * ix * 12) / w : 0; }
         else if (m % 12 === 0 && w > 0 && gr0 > 0) {
-          const r = (gw * 12) / w;
+          const r = (gw * ix * 12) / w;
           if (r > gr0 * (1 + wdBand)) gw *= 1 - wdAdj;
           else if (r < gr0 * (1 - wdBand)) gw *= 1 + wdAdj;
         }
-        income = gw;
-      } else income = withdrawal;
+        income = gw * ix;
+      } else income = withdrawal * ix;
       const need = income * (phaseMul ? phaseMul[m] : 1) + payments[m] - pen;
       if (fl) fl.pen[m] = pen;
       if (need <= 0) {
@@ -1046,6 +1102,7 @@ function simulate(st, opts = {}) {
     a0, a1, months, retireAge,
     payments: ctx.payments, debt: ctx.debt,
     pension: ctx.pension, pensionAge: ctx.pensionAge,
+    pensionAgeMin: ctx.pensionAgeMin, pensionAgeRaised: ctx.pensionAgeRaised,
     assets: ctx.assets, assetCats: ctx.assetCats,
     saleInfos: ctx.saleInfos, hasNet: ctx.hasNet,
   };
@@ -1169,8 +1226,9 @@ function simulate(st, opts = {}) {
       ? (m) => {
           const age = a0 + m / 12;
           if (age <= retireAge) return false;
-          const pen = age >= ctx.pensionAge ? pensionAt(ctx, retireAge) : 0;
-          return exp[m] * ctx.wdPctM + pen < withdrawal * (ctx.phaseMul ? ctx.phaseMul[m] : 1);
+          const ix = ctx.idxW[m];
+          const pen = age >= ctx.pensionAge ? pensionAt(ctx, retireAge) * ix : 0;
+          return exp[m] * ctx.wdPctM + pen < withdrawal * ix * (ctx.phaseMul ? ctx.phaseMul[m] : 1);
         }
       : (m) => exp[m] < 0.5;
     let zs = null;
@@ -1260,7 +1318,7 @@ function simulate(st, opts = {}) {
     const age = a0 + m / 12;
     if (retireAge == null || age <= retireAge) {
       const base = ctx.saveAbs ? ctx.saveAbs[m] : st.monthly;
-      cum += base * ctx.growth[m] - ctx.payments[m];
+      cum += base * ctx.growth[m] * ctx.idxW[m] - ctx.payments[m];
       paySum += ctx.payments[m];
     }
     invested.push(cum);
@@ -1330,7 +1388,8 @@ function tornado(st) {
     rows.push(bump((c) => { const r = c.events.find((e) => e.type === 'retirement'); r.withdrawal *= 1.1; }, 'Kuukausitulo +10 %'));
     rows.push(bump((c) => { const r = c.events.find((e) => e.type === 'retirement'); r.withdrawal *= 0.9; }, 'Kuukausitulo −10 %'));
   }
-  if (st.real || (st.proOn && st.pro)) {
+  // Inflaatio vaikuttaa myös nimellistilassa (tulotarpeen ja työeläkkeen indeksointi)
+  if (st.real || (st.proOn && st.pro) || retire) {
     rows.push(bump((c) => { proInflBump(c, 1); }, 'Inflaatio +1 %-yks'));
   }
   return rows.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
@@ -1356,8 +1415,10 @@ function proMuBump(c, d) {
 }
 
 function proInflBump(c, d) {
+  // Pohja = voimassa oleva inflaatio (perustilan oma state.inflation mukaan lukien)
+  const base = inflOf(c) * 100;
   if (!c.proOn || !c.pro) { c.proOn = true; c.pro = defaultPro(); }
-  c.pro.infl = (c.pro.infl != null ? c.pro.infl : 2) + d;
+  c.pro.infl = base + d;
 }
 
 /* ===================== Kotitalous (Perhevirta v1) ===================== */
@@ -1432,6 +1493,6 @@ if (typeof module !== 'undefined' && module.exports) {
     corrMatrixOf, ensurePSD, STRESS_DEFS, PRO_BASE_ASSETS,
     sustainableByAge, tornado, baseWEnd,
     mcHousehold, householdExp,
-    pensionAt, CAREER_START, ENGINE_VERSION,
+    pensionAt, pensionAgeMin, PENSION_REF_YEAR, CAREER_START, ENGINE_VERSION,
   };
 }

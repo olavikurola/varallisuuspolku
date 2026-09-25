@@ -176,5 +176,41 @@ async function statsFrom(port, rows) {
     ok(s.editedN === 30, 'ratkaistun tulon pohjarivit tunnistetaan pohjiksi', String(s.editedN));
   }
 
+  console.log('K3: korvattu rivi poistetaan tiedostosta (ei append-only-historiaa)');
+  {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vp-k3-'));
+    const file = path.join(dir, 'lahjoitukset.jsonl');
+    const a = edited(1, { rid: 'aaaaaaaaaaaaaaaa' });
+    const b = edited(2, { rid: 'bbbbbbbbbbbbbbbb', replaces: 'aaaaaaaaaaaaaaaa' });
+    const c = edited(3, { rid: 'cccccccccccccccc' });
+    fs.writeFileSync(file, [a, b, c].map((r) => JSON.stringify(r)).join('\n') + '\n');
+    const port = 8805;
+    const proc = spawn(process.execPath, [SERVER], { env: { ...process.env, PORT: String(port), DATA_DIR: dir }, stdio: 'ignore' });
+    const lue = () => fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+    try {
+      for (let i = 0; i < 50; i++) {
+        try { await fetch(`http://127.0.0.1:${port}/health`); break; } catch (e) { await new Promise((r) => setTimeout(r, 100)); }
+      }
+      const r0 = lue();
+      ok(r0.length === 2 && !r0.some((r) => r.rid === 'aaaaaaaaaaaaaaaa'), 'käynnistys poistaa aiemmin korvatun rivin', r0.map((r) => r.rid).join(','));
+      ok(!r0.some((r) => 'replaces' in r), 'replaces-viitteet siivotaan (ei versioketjua)');
+      // Päivitetty jako korvaa rivin c
+      const payload = { v: 1, ageNow: 40, ageEnd: 90, startCapital: 50000, monthly: 700, savingsGrowth: 1,
+        alloc: { stocks: 80, bonds: 10 }, glide: false, real: true, tax: true,
+        events: [{ type: 'retirement', age: 62, withdrawal: 2800, pension: 1500, pensionAge: 67 }], replaces: 'cccccccccccccccc' };
+      const res = await fetch(`http://127.0.0.1:${port}/donate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const j = await res.json();
+      const r1 = lue();
+      ok(res.status === 200 && /^[0-9a-f]{16}$/.test(j.rid), 'päivitys tallentuu ja palauttaa uuden rid:n', String(res.status));
+      ok(r1.length === 2 && !r1.some((r) => r.rid === 'cccccccccccccccc'), 'korvattu rivi poistui tiedostosta', r1.map((r) => r.rid).join(','));
+      ok(r1.some((r) => r.rid === j.rid && !('replaces' in r)), 'uusi rivi ilman replaces-viitettä');
+      // Uusi jako ilman replacesia: pelkkä lisäys
+      const res2 = await fetch(`http://127.0.0.1:${port}/donate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, replaces: undefined }) });
+      ok(res2.status === 200 && lue().length === 3, 'uusi jako lisää rivin');
+      const st = await (await fetch(`http://127.0.0.1:${port}/stats.json`)).json();
+      ok(st.total === 3, 'tilastojen total vastaa tiedostoa', String(st.total));
+    } finally { proc.kill(); }
+  }
+
   process.exit(failed ? 1 : 0);
 })();

@@ -33,7 +33,7 @@ const { chromium } = require('playwright');
   await page.waitForTimeout(400);
   const g1 = await page.evaluate(() => state.events.find((e) => e.type === 'goal'));
   ok(!!g1, 'napautus lisää tavoitepisteen');
-  ok(g1 && g1.age === 65, 'oletusikä = eläkeikä', String(g1 && g1.age));
+  ok(g1 && g1.age === 67, 'oletusikä = eläkeikä (oletussuunnitelma 67 v)', String(g1 && g1.age));
   ok(g1 && g1.amount % 5000 === 0 && g1.amount > 0, 'oletussumma pyöreä (5 000 € askel)', String(g1 && g1.amount));
   ok(await page.evaluate(() => !document.getElementById('popover').hidden), 'muokkausdialogi aukesi');
   await page.keyboard.press('Escape');

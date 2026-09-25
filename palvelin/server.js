@@ -199,6 +199,7 @@ const AGE_GROUPS = [
    ne bitilleen. Lähde: apu.js state + sovellus.js EXAMPLES — pidä synkassa. */
 const TEMPLATE_FPS = [
   [20000, 1000, 65, 2400, 1500],   // aloitustila
+  [20000, 1000, 67, 2400, 1500],   // aloitustila 24.9.2026 alkaen (eläkeikä 67)
   [3000, 1100, 68, 2300, 1500],    // Aloittaja (25 v)
   [40000, 2300, 66, 3000, 1900],   // Perhe ja asunto (35 v)
   [90000, 1200, 61, 3200, 1900],   // Kiri eläkkeelle (45 v)
@@ -206,6 +207,12 @@ const TEMPLATE_FPS = [
   [60000, 2600, 50, 2200, 1300],   // FIRE-haaveilija (32 v)
   [1000000, 0, 45, 8000, 1800],    // Exit-miljonääri (45 v)
   [1000000, 0, 45, 2700, 1800],    // Miljoona loppuelämäksi (45 v)
+  // 24.9.2026: esimerkkien eläkeiät lakisääteisen alarajan mukaisiksi
+  // (tarkastusmuistio K2) — vanhat sormenjäljet yllä pysyvät jo jaetuille riveille
+  [3000, 1100, 69, 2300, 1500],    // Aloittaja (25 v)
+  [40000, 2300, 68, 3000, 1900],   // Perhe ja asunto (35 v)
+  [90000, 1200, 64, 3000, 1900],   // Kiri eläkkeelle (45 v)
+  [20000, 1200, 68, 3100, 1800],   // Asunnonomistaja (40 v)
 ];
 function isTemplate(r) {
   const ret = (r.events || []).find((e) => e.type === 'retirement');
@@ -250,6 +257,51 @@ const RETIRE_EDGES = [40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68
 const EVENT_AGE_EDGES = [18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 54, 57, 60, 63, 66, 69, 72, 75, 81];
 
 let statsCache = { at: 0, json: null };
+
+/* ---------- Tallennus: korvattu rivi poistetaan (tarkastusmuistio K3) ----------
+   Päivitetty jako poistaa saman selaimen edellisen rivin tiedostosta — aiemmin
+   tiedosto oli append-only ja korvatut versiot säilyivät (tilastot ohittivat
+   ne, mutta raakadata kantoi historian). Uuteen riviin ei jää replaces-viitettä,
+   joten versioketjua ei synny. Kirjoitus on atominen (tmp + rename) ja
+   synkroninen: Node käsittelee pyynnöt yksi kerrallaan, joten kaksi jakoa ei
+   voi lomittua. Tiedosto on pieni (satoja rivejä). Varmuuskopioissa
+   (vertailudata-vienti.yml, 90 pv) poistettu rivi säilyy enintään 90 päivää. */
+function readRows() {
+  const rows = [];
+  let text = '';
+  try { text = fs.readFileSync(FILE, 'utf8'); } catch (e) { return rows; }
+  for (const line of text.split('\n')) {
+    if (!line.trim()) continue;
+    try { rows.push(JSON.parse(line)); } catch (e) { /* rikkinäinen rivi ohitetaan */ }
+  }
+  return rows;
+}
+function writeRows(rows) {
+  const tmp = FILE + '.tmp';
+  fs.writeFileSync(tmp, rows.map((r) => JSON.stringify(r)).join('\n') + (rows.length ? '\n' : ''));
+  fs.renameSync(tmp, FILE);
+}
+function storeRow(row) {
+  const target = row.replaces;
+  delete row.replaces;
+  if (!target) { fs.appendFileSync(FILE, JSON.stringify(row) + '\n'); return; }
+  const rows = readRows().filter((r) => r.rid !== target);
+  rows.push(row);
+  writeRows(rows);
+}
+// Käynnistyksessä: aiemmin kertyneet korvatut rivit pois ja replaces-viitteet
+// siivotaan (ketju A→B→C jättää vain C:n, kuten tilastoissa)
+function compactFile() {
+  if (!fs.existsSync(FILE)) return 0;
+  const rows = readRows();
+  const replaced = new Set(rows.map((r) => r.replaces).filter(Boolean));
+  const keep = rows.filter((r) => !(r.rid && replaced.has(r.rid)));
+  const hadRefs = rows.some((r) => r.replaces);
+  if (keep.length === rows.length && !hadRefs) return 0;
+  for (const r of keep) delete r.replaces;
+  writeRows(keep);
+  return rows.length - keep.length;
+}
 
 function computeStats() {
   if (Date.now() - statsCache.at < STATS_TTL && statsCache.json) return statsCache.json;
@@ -832,11 +884,10 @@ const server = http.createServer((req, res) => {
       // rid: satunnainen rivitunniste, jolla saman selaimen myöhempi päivitys
       // voi korvata tämän rivin tilastoissa (ei sidosta henkilöön tai IP:hen)
       clean.rid = crypto.randomBytes(8).toString('hex');
-      fs.appendFile(FILE, JSON.stringify(clean) + '\n', (err) => {
-        if (err) return send(res, 500, { error: 'store_failed' });
-        statsCache.at = 0; // seuraava stats-haku laskee uusiksi
-        send(res, 200, { ok: true, rid: clean.rid });
-      });
+      // Päivitys poistaa korvatun rivin tiedostosta (K3, storeRow)
+      try { storeRow(clean); } catch (err) { return send(res, 500, { error: 'store_failed' }); }
+      statsCache.at = 0; // seuraava stats-haku laskee uusiksi
+      send(res, 200, { ok: true, rid: clean.rid });
     });
     return;
   }
@@ -862,4 +913,8 @@ const server = http.createServer((req, res) => {
   send(res, 404, { error: 'not_found' });
 });
 
+try {
+  const n = compactFile();
+  if (n) console.log(`vertailudata: ${n} korvattua riviä poistettu`);
+} catch (e) { console.log('vertailudata: tiivistys epäonnistui', e && e.name); }
 server.listen(PORT, () => console.log(`varallisuuspolku-data kuuntelee portissa ${PORT}, data: ${FILE}`));

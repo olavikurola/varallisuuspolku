@@ -225,6 +225,10 @@
       elakeika: ret ? ret.age : null,
       tyoelakeEurKk: s.pension != null ? Math.round(s.pension) : (ret && ret.pension > 0 ? Math.round(ret.pension) : 0),
       tyoelakeArvioEurKk: ret && ret.pension > 0 ? Math.round(ret.pension) : 0,
+      // K2: työeläke alkaa aikaisintaan alimmassa vanhuuseläkeiässä (syntymävuoden mukaan)
+      tyoelakeAlkaaIka: ret && ret.pension > 0 && s.pensionAge != null ? Math.round(s.pensionAge * 10) / 10 : null,
+      alinVanhuuselakeikaV: Math.round(pensionAgeMin(state.ageNow) * 10) / 10,
+      tyoelakeikaNostettuAlarajaan: !!s.pensionAgeRaised,
       kuukausituloTarveEurKk: ret ? Math.round(ret.withdrawal || 0) : null,
     };
     // Vuosivirrat harvennettuna (~max 20 riviä): eläkevuosi ja viimeinen aina mukaan
@@ -1100,16 +1104,26 @@
           // "kokeile eläkeikää 60" toimii myös tyhjästä (Olavin havainto 7.8.).
           // Esikatselu + Palauta suojaavat kokeilua kuten muitakin muutoksia.
           const def = EVENT_TYPES.retirement;
+          const penDef = Math.round(pensionAgeDefault(mod.ageNow));
           ret = {
             type: 'retirement',
             age: Math.min(mod.ageEnd - 1, Math.max(mod.ageNow + 1, def.pensionAge)),
-            withdrawal: def.withdrawal, pension: def.pension, pensionAge: def.pensionAge,
+            withdrawal: def.withdrawal, pension: def.pension, pensionAge: penDef,
           };
           mod.events = mod.events || [];
           mod.events.push(ret);
-          rows.push({ nimi: t('Eläkkeelle jäänti'), desc: t('lisätty suunnitelmaan oletuksin (nosto {0} €/kk, työeläke {1} €/kk {2} v alkaen)', def.withdrawal, def.pension, def.pensionAge) });
+          rows.push({ nimi: t('Eläkkeelle jäänti'), desc: t('lisätty suunnitelmaan oletuksin (nosto {0} €/kk, työeläke {1} €/kk {2} v alkaen)', def.withdrawal, def.pension, penDef) });
         }
         if (c.kentta === 'retAge') arvo = Math.min(mod.ageEnd - 1, Math.max(mod.ageNow + 1, Math.round(arvo)));
+        // Työeläke ei voi alkaa ennen alinta vanhuuseläkeikää (K2) — esikatselu
+        // näyttää rajatun arvon, jottei Tulkki kokeile mahdotonta ikää
+        if (c.kentta === 'pensionAge') {
+          const penMin = Math.ceil(pensionAgeMin(mod.ageNow) - 1e-9);
+          if (arvo < penMin) {
+            rows.push({ nimi: f.nimi, desc: t('nostettu alimpaan vanhuuseläkeikään {0} v — täyttä työeläkettä ei saa aiemmin', penMin) });
+            arvo = penMin;
+          }
+        }
         const vanha = ret[f.ret];
         ret[f.ret] = arvo;
         rows.push({ nimi: f.nimi, vanha, uusi: arvo, yks: f.yks });
@@ -1635,7 +1649,7 @@
       // eikä mihinkään kosketa ennen kuin poiminta onnistuu
       const base = {
         ageNow: 30, ageEnd: 90, startCapital: 0, monthly: 0, savingsGrowth: 0,
-        allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true,
+        allocStocks: 70, allocBonds: 20, glide: false, real: true, tax: true,
         events: [{ type: 'retirement', age: 65, withdrawal: 2400, pension: 0, pensionAge: 65, goal: 'withdrawal' }],
       };
       let raw = null, nlTool = null;

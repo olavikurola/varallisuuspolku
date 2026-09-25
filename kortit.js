@@ -95,7 +95,7 @@ function renderStats() {
     cards.unshift({ k: 'Kestävä kuukausitulo', v: t('{0}/kk', fmtEur(s.solvedWithdrawal)), cls: 'accent',
       // Riskiehto ja rahan arvo samaan tiileen (auditointi 5.9.2026 F-01): ilman
       // varmuustasoa tulo on mediaanipolun ratkaisu ja onnistumis-% ~50
-      s: [s.pension > 0 ? t('sis. työeläke {0}/kk', fmtEur(s.pension)) : null, confTxt || (p != null ? t('mediaanipolku, varat käytetään {0} v mennessä — onnistumis-% {1}', Math.round(s.a1), p) : null), state.real ? t('nykyrahassa') : t('nimellisarvoin')].filter(Boolean).join(' · '),
+      s: [s.pension > 0 ? t('sis. työeläke {0}/kk', fmtEur(s.pension)) : null, confTxt || (p != null ? t('mediaanipolku, varat käytetään {0} v mennessä — onnistumis-% {1}', Math.round(s.a1), p) : null), t('nykyrahassa')].filter(Boolean).join(' · '),
       d: dRow(s.solvedWithdrawal, g && (g.solvedWithdrawal != null ? g.solvedWithdrawal : g.sustainableWd), (x) => `${fmtLuku(Math.round(x))} ${VP_YKS_EKK}`, 20) });
   } else if (s.depletionAge != null) {
     // %-nostossa "ehtyminen" tarkoittaa tulotarpeen alittumista (salkku ei ehdy)
@@ -692,8 +692,7 @@ function bindInputs() {
   });
   $('glide').addEventListener('change', (e) => { state.glide = e.target.checked; renderAll(); });
   $('real').addEventListener('change', (e) => {
-    state.real = e.target.checked;
-    $('inflationField').hidden = !state.real; // kenttä näkyy vain korjauksen ollessa päällä
+    state.real = e.target.checked; // näyttövaihtoehto: syötetyt summat aina tämän päivän rahaa (K1)
     renderAll();
   });
   $('tax').addEventListener('change', (e) => { state.tax = e.target.checked; renderAll(); });

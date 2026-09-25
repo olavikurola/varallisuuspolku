@@ -1,32 +1,32 @@
 {
-  "paivitetty": "2026-09-05",
+  "paivitetty": "2026-09-24",
   "huom": "Päivitä vain tietoisesti (--paivita) ja kirjaa muutos validointisivulle.",
   "odotteet": {
     "v1-perus": {
-      "successProb": 0.9867,
-      "wEnd": 1030643,
-      "wAtRet": 515837,
-      "taxPaid": 79415,
+      "successProb": 0.7167,
+      "wEnd": 684691,
+      "wAtRet": 870017,
+      "taxPaid": 237532,
       "sustainableWd": null,
       "solvedRetireAge": null,
       "depletionAge": null
     },
     "v1-omistus-reaali": {
-      "successProb": 0.17,
+      "successProb": 0.0633,
       "wEnd": 0,
       "wAtRet": 268610,
-      "taxPaid": 65546,
+      "taxPaid": 60056,
       "sustainableWd": null,
       "solvedRetireAge": null,
-      "depletionAge": 81.7
+      "depletionAge": 76.8
     },
     "v1-pro-porrastus-ost": {
       "successProb": 0.85,
-      "wEnd": 215512,
-      "wAtRet": 385369,
-      "taxPaid": 123320,
+      "wEnd": 938280,
+      "wAtRet": 676782,
+      "taxPaid": 187544,
       "sustainableWd": null,
-      "solvedRetireAge": 41.25,
+      "solvedRetireAge": 46.33,
       "depletionAge": null
     }
   }

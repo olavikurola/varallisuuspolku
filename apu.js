@@ -42,6 +42,10 @@ const EVENT_TYPES = {
   retirement:  { icon: '🌴', label: 'Eläkkeelle jäänti',   withdrawal: 2400, pension: 1500, pensionAge: 65, unique: true },
 };
 
+// Työeläkkeen oletusalkamisikä uudelle eläketapahtumalle: 65 tai alin
+// vanhuuseläkeikä, jos se on myöhempi (laskenta.js pensionAgeMin; muistio K2)
+function pensionAgeDefault(ageNow) { return Math.max(65, pensionAgeMin(ageNow)); }
+
 /* Kysymyskirjasto: yhden napautuksen lavastukset NYKYISEEN suunnitelmaan
    (ei korvaa sitä kuten Esimerkit). Moottori osaa kaiken jo — tämä on
    sisäänkäynti (strategia: parannussuunta #2; imaisu-ohjelma A4: mitattu
@@ -90,8 +94,10 @@ const state = {
   allocStocks: 70,
   allocBonds: 20,
   glide: false,
-  real: false,
-  inflation: 2,       // inflaatio-oletus %/v (käytössä kun real=true; 2 % = ennallaan)
+  // Tämän päivän rahassa oletuksena (tarkastusmuistio 23.9.2026 K1); vanhat
+  // linkit ja tallenteet kantavat oman real-kenttänsä (puuttuva = nimellinen)
+  real: true,
+  inflation: 2,       // inflaatio-oletus %/v (reaalitila ja nimellistilan esitysrahan kerroin)
   tax: true,          // myyntivoittovero nostoissa (oletuksena päällä uusille)
   acct: 'aot',        // sijoitustili: aot | ost (osakesäästötili) | ins (vakuutuskuori)
   feePct: 0,          // sijoituskulut %/v (rahastojen TER, kaupankäynti)
@@ -104,7 +110,9 @@ const state = {
   events: [
     { id: idSeq++, type: 'home', age: 35, amount: -220000, financing: 'loan', down: 33000, rate: 3.5, years: 25, isAsset: true, appr: 2.0 },
     { id: idSeq++, type: 'car',  age: 45, amount: -25000,  financing: 'loan', down: 5000,  rate: 4.5, years: 6,  isAsset: true, appr: -10.0 },
-    { id: idSeq++, type: 'retirement', age: 65, withdrawal: 2400, pension: 1500, pensionAge: 65 },
+    // Eläkeikä 67 (24.9.2026): 30-vuotiaan alin vanhuuseläkeikä on 68 v 1 kk (K2),
+    // ja tämän päivän rahassa (K1) 65 v jäi 72 %:iin — pohja pysyy uskottavana
+    { id: idSeq++, type: 'retirement', age: 67, withdrawal: 2400, pension: 1500, pensionAge: pensionAgeDefault(30) },
   ],
 };
 
