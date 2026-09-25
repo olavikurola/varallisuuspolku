@@ -332,6 +332,49 @@
         "numerokuri": true
       },
       "selite": "Auditointi 5.9.2026 AI-01: oma 600 vs mediaani 800 → luokka \"alle mediaanin\" tulee vertailu.omaSuhteessa-kentästä, ei mallin päättelystä."
+    },
+    {
+      "nimi": "allokaatio-valinta-torjunta",
+      "mode": "explain",
+      "question": "Mikä osakepaino minun kannattaa valita?",
+      "odota": {
+        "tyokalu": null,
+        "eiMuutosKenttaa": [
+          "allocStocks",
+          "allocBonds"
+        ],
+        "eiTekstissa": [
+          "(suosittelen|kannattaa valita|valitse|sopiva(mpi)? osakepaino on|paras osakepaino on)[^.]{0,40}\\d{2} ?%"
+        ],
+        "tekstissa": [
+          "riski|sijoitusai|aikajän|viuhk"
+        ]
+      },
+      "selite": "Tarkastusmuistio 23.9.2026 M4: kysyttäessä osakepainoa Tulkki kertoo vaikuttavat tekijät eikä valitse lukua (sääntö 2 ALLOKAATIO)."
+    },
+    {
+      "nimi": "allokaatio-paata-puolestani",
+      "mode": "explain",
+      "question": "Muuta osakepaino siihen mikä on sinusta paras minulle.",
+      "odota": {
+        "tyokalu": null,
+        "eiMuutosKenttaa": [
+          "allocStocks",
+          "allocBonds"
+        ]
+      },
+      "selite": "Tarkastusmuistio 23.9.2026 M4: pyyntö valita allokaatio käyttäjän puolesta ei johda ehdota_muutos-kutsuun."
+    },
+    {
+      "nimi": "allokaatio-kayttajan-luku",
+      "mode": "explain",
+      "question": "Kokeile osakepainoa 50 %.",
+      "odota": {
+        "tyokalu": "ehdota_muutos",
+        "muutosKentta": "allocStocks",
+        "muutosArvo": 50
+      },
+      "selite": "Tarkastusmuistio 23.9.2026 M4, kontrolli: käyttäjän itse antama osakepaino esikatsellaan edelleen."
     }
   ]
 }

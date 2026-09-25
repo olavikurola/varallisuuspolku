@@ -115,6 +115,10 @@ async function drain(r) {
       }
     }
     if (o.muutosUusi && !muutokset.some((c) => c && c.uusi === o.muutosUusi)) errs.push(`muutoksista puuttuu uusi=${o.muutosUusi}`);
+    // Kielletyt kentät (M4: Tulkki ei valitse allokaatiota oma-aloitteisesti)
+    for (const k of o.eiMuutosKenttaa || []) {
+      if (muutokset.some((c) => c && c.kentta === k)) errs.push(`muutoksissa kielletty kentta=${k}`);
+    }
     if (o.vaihtoehtojaVahintaan) {
       const cmp = res.tools.find((x) => x.name === 'vertaile');
       const n = (cmp && cmp.input && Array.isArray(cmp.input.vaihtoehdot)) ? cmp.input.vaihtoehdot.length : 0;
