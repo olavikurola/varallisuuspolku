@@ -336,6 +336,10 @@
     const map = {};
     const walk = (v, p) => {
       if (typeof v === 'number' && isFinite(v)) map[p] = v;
+      // Lyhyet tekstiarvot (esim. omaSuhteessa.*.luokka "alle mediaanin"): malli
+      // sitoo niitä luontevasti, ja aiemmin ne näkyivät kysymysmerkkeinä (evalit
+      // 25.9.2026). Arvo tulee silti kontekstista, ei mallin tekstistä.
+      else if (typeof v === 'string' && p && v.length <= 60 && !/\.selite$/.test(p)) map[p] = v;
       else if (Array.isArray(v)) v.forEach((x, i) => walk(x, p + '.' + i));
       else if (v && typeof v === 'object') {
         for (const k in v) walk(v[k], p ? p + '.' + k : k);
@@ -360,7 +364,7 @@
 
   // Tekstimuotoinen korvaus (ramppi ym. paikat ilman HTML-renderöintiä)
   const plainBinds = (t, map) => String(t).replace(/\[\[([\w.-]+)\]\]/g, (m, p) =>
-    (map && typeof map[p] === 'number') ? fmtLuku(map[p]) : '?');
+    (map && typeof map[p] === 'number') ? fmtLuku(map[p]) : (map && typeof map[p] === 'string') ? map[p] : '?');
 
   // Yhteinen renderöijä: escape → **b** → sidontatokenit talteen (PUA-merkein,
   // etteivät polkujen numerot osu numSpansiin) → numSpans → tokenit spaneiksi.
@@ -377,6 +381,7 @@
       s = s.replace(/[\uE000-\uE05F]/g, (ch) => {
         const path = marks[ch.charCodeAt(0) - 0xE000];
         const v = bmap ? bmap[path] : undefined;
+        if (typeof v === 'string') return `<span class="tk-bound" title="${t('Moottorin luku ({0})', esc(path))}">${esc(v)}</span>`;
         return (typeof v === 'number')
           ? `<span class="tk-num tk-bound" title="${t('Moottorin luku ({0})', esc(path))}">${fmtLuku(v)}</span>`
           : `<span class="tk-num tk-doubt" title="${t('Viittausta ({0}) ei löydy moottorin luvuista', esc(path))}">?</span>`;

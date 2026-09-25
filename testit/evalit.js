@@ -34,17 +34,33 @@ const filter = process.argv[2] || null;
 /* Kontekstin luvut numerokuria varten (sama idea kuin tulkki.js:n collectNums) */
 function collectNums(v, out) {
   if (typeof v === 'number' && isFinite(v)) out.push(v);
+  // Tekstien luvut (esim. vertailu.ryhma "ikäryhmä 35-39") ovat kontekstista
+  else if (typeof v === 'string') (v.match(/\d+(?:[.,]\d+)?/g) || []).forEach((x) => out.push(parseFloat(x.replace(',', '.'))));
   else if (Array.isArray(v)) v.forEach((x) => collectNums(x, out));
   else if (v && typeof v === 'object') Object.values(v).forEach((x) => collectNums(x, out));
 }
 
 // Litistetty polkukartta sidontaviittausten tarkistukseen
+// Sama sääntö kuin tulkki.js bindMap: numerot, lyhyet tekstit, taulukkoindeksit
+// ja yksikäsitteinen etuliitteetön alias (stats./vertailu.) — muuten tarkistin
+// hylkäsi viittauksia, jotka käyttöliittymä renderöi oikein (evalit 25.9.2026)
 function bindPaths(v, p, out) {
   if (typeof v === 'number' && isFinite(v)) out.add(p);
-  else if (v && typeof v === 'object' && !Array.isArray(v)) {
+  else if (typeof v === 'string' && p && v.length <= 60 && !/\.selite$/.test(p)) out.add(p);
+  else if (Array.isArray(v)) v.forEach((x, i) => bindPaths(x, p + '.' + i, out));
+  else if (v && typeof v === 'object') {
     for (const k in v) bindPaths(v[k], p ? p + '.' + k : k, out);
   }
   return out;
+}
+function withAliases(paths) {
+  const count = {};
+  for (const p of paths) {
+    const short = p.replace(/^(?:stats|vertailu)\./, '');
+    if (short !== p && !paths.has(short)) count[short] = (count[short] || 0) + 1;
+  }
+  for (const k in count) if (count[k] === 1) paths.add(k);
+  return paths;
 }
 
 async function drain(r) {
@@ -78,7 +94,8 @@ async function drain(r) {
 
   const ctxNums = [];
   collectNums(GOLDEN.konteksti, ctxNums);
-  const paths = bindPaths({ stats: GOLDEN.konteksti.stats, vertailu: GOLDEN.konteksti.vertailu }, '', new Set());
+  const K = GOLDEN.konteksti;
+  const paths = withAliases(bindPaths({ stats: K.stats, vertailu: K.vertailu, suunnitelmat: K.suunnitelmat, plan: K.plan }, '', new Set()));
 
   let failed = 0, totIn = 0, totOut = 0, ran = 0;
   for (const t of GOLDEN.tapaukset) {

@@ -267,7 +267,7 @@
       "odota": {
         "tyokalu": null,
         "tekstissa": [
-          "800|\\[\\[vertailu\\.kkSaastoEurKk\\.p50\\]\\]",
+          "800|\\[\\[vertailu\\.(kkSaastoEurKk\\.p50|omaSuhteessa\\.kkSaasto\\.mediaani)\\]\\]",
           "suunnitelm"
         ],
         "numerokuri": true
@@ -280,7 +280,7 @@
       "odota": {
         "tyokalu": null,
         "tekstissa": [
-          "96[  ]?000|\\[\\[stats\\.verotYhteensaEur\\]\\]"
+          "96[   ]?000|\\[\\[(stats\\.)?verotYhteensaEur\\]\\]"
         ],
         "numerokuri": true
       }
