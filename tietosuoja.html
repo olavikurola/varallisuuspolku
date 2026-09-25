@@ -47,10 +47,11 @@
   <main class="an-main">
     <p class="an-intro"><b>Lyhyesti: suunnitelmasi ei lähde laitteeltasi mihinkään ilman erillistä,
     tapauskohtaista lupaasi.</b> Varallisuuspolku ei käytä käyttäjätilejä, ei evästeitä eikä
-    mainos- tai seurantatekniikoita, eikä se kerää henkilötietoja. Kolme toimintoa lähettävät
+    mainos- tai seurantatekniikoita. Kolme toimintoa lähettävät
     tietoa vain omasta aloitteestasi — jakolinkki, Kysy AI ja anonyymi vertailudata — ja ne on
     eritelty alla. Tämä seloste koskee sekä verkkopalvelua (varallisuuspolku.com) että
-    mobiilisovellusta. Päivitetty 5.9.2026.</p>
+    mobiilisovellusta. Henkilötietoja käsitellään vain näissä toiminnoissa ja palvelimen
+    teknisissä lokeissa, jotka kuvataan alla. Päivitetty 25.9.2026.</p>
 
     <section class="an-card">
       <h2>Mitä tietoja käsitellään ja missä</h2>
@@ -75,20 +76,31 @@
           <tr><td><b>Kysy AI (Tulkki)</b></td><td>Kun esität kysymyksen, palvelimelle välittyy
           kysymyksesi, suunnitelman anonyymi muoto (ei nimiä eikä tunnisteita) ja laskennan
           tunnusluvut. Välityspalvelin on tilaton: se ei tallenna kysymyksiä eikä vastauksia, ja
-          sen lähdekoodi on avoin. Kielimallina toimii Anthropicin Claude. Kysymyksesi vapaa
-          teksti välittyy sellaisenaan — älä kirjoita siihen nimiä tai muita henkilötietoja.
-          Palvelin näkee IP-osoitteen vain pyyntömäärien rajoittamiseksi eikä tallenna sitä.</td></tr>
+          sen lähdekoodi on avoin. Kielimallina toimii Anthropicin Claude: palvelin välittää
+          kysymyksen Anthropicin rajapintaan, ja Anthropic säilyttää rajapintakutsujen sisällön
+          enintään 30 päivää väärinkäytösten torjumiseksi. Kysymyksesi vapaa teksti välittyy
+          sellaisenaan — älä kirjoita siihen nimiä tai muita henkilötietoja.</td></tr>
           <tr><td><b>Anonyymi vertailudata</b></td><td>Voit halutessasi jakaa suunnitelmasi
           anonyymisti yhteiseen vertailudataan. Näet ennen jakamista täsmälleen, mitä lähetetään:
-          ei nimiä, ei otsikoita, ei IP-osoitetta; summat pyöristetään ja päiväys tallentuu
-          kuukausitasolla. Jaettua suunnitelmaa ei voi yhdistää sinuun. Jos päivität jakoasi,
-          uusi versio korvaa edellisen satunnaisella tunnisteella, joka ei sisällä laite- tai
-          henkilötietoa, ja vain uusin versio lasketaan tilastoihin. Jakaumat julkaistaan vasta
-          vähintään 30 suunnitelman ryhmistä, ja jokaisella tunnusluvulla on oma 30 suunnitelman
-          rajansa. Palvelin näkee IP-osoitteen vain pyyntömäärien rajoittamiseksi eikä tallenna
-          sitä jaon yhteyteen. Vastaanottava palvelinkoodi on avointa lähdekoodia.</td></tr>
+          ei nimiä, ei otsikoita, ei IP-osoitetta; summat pyöristetään kahteen merkitsevään
+          numeroon ja päiväys tallentuu kuukausitasolla. Rivissä ei ole mitään, millä ylläpitäjä
+          voisi yhdistää sen sinuun. Rivi sisältää kuitenkin ikäsi ja tapahtumiesi iät, joten
+          suunnitelmasi yksityiskohdat jo tunteva voisi periaatteessa tunnistaa sen raakadatasta
+          — siksi raakadataa ei julkaista. Julkaistaan vain jakaumia vähintään 30 suunnitelman
+          ryhmistä, ja jokaisella tunnusluvulla on oma 30 suunnitelman rajansa. Jos päivität
+          jakoasi, uusi versio korvaa edellisen ja edellinen poistetaan. Korvaamiseen tarvittava
+          satunnainen tunniste on vain selaimessasi eikä sisällä laite- tai henkilötietoa.
+          Vertailudatasta otetaan päivittäin salattu varmuuskopio (AES-256) GitHubin
+          Actions-palveluun, jossa kukin kopio säilyy 90 päivää — poistettu tai korvattu rivi
+          voi siis säilyä varmuuskopiossa enintään 90 päivää. Vastaanottava palvelinkoodi on
+          avointa lähdekoodia.</td></tr>
         </tbody>
       </table>
+      <p><b>Palvelimen tekniset lokit.</b> Tulkin ja vertailudatan palvelin toimii
+      Railway-alustalla. Palvelimen oma koodi pitää IP-osoitteen vain muistissa pyyntömäärien
+      rajoittamiseksi eikä tallenna sitä. Alusta kirjaa kuitenkin jokaisesta pyynnöstä teknisen
+      lokirivin (ajankohta, osoitepolku, IP-osoite ja selaimen tunniste), jota säilytetään
+      7 päivää. Lokiin ei tallennu kysymyksiä eikä suunnitelman sisältöä.</p>
     </section>
 
     <section class="an-card">
@@ -110,12 +122,21 @@
     </section>
 
     <section class="an-card">
-      <h2>Oikeutesi ja yhteydenotot</h2>
-      <p>Koska palvelu ei kerää eikä säilytä henkilötietoja (anonyymissä vertailudatassa ei ole
-      tunnisteita, joilla rivin voisi yhdistää sinuun), ylläpitäjällä ei ole hallussaan
-      tietoja, joita voisi pyytää nähtäväksi tai poistettavaksi — kaikki tietosi ovat omalla
-      laitteellasi ja poistettavissa itse (selaimen sivustotietojen tyhjennys tai sovelluksen
-      poisto). Kysymykset tietosuojasta: <a href="mailto:info@varallisuuspolku.com">info@varallisuuspolku.com</a>.</p>
+      <h2>Rekisterinpitäjä, oikeutesi ja yhteydenotot</h2>
+      <p>Rekisterinpitäjä: Olavi Kurola, <a href="mailto:info@varallisuuspolku.com">info@varallisuuspolku.com</a>.</p>
+      <p>Suunnitelmasi ovat omalla laitteellasi ja poistettavissa itse (selaimen sivustotietojen
+      tyhjennys tai sovelluksen poisto). Palvelimella henkilötietoja käsitellään vain edellä
+      kuvatuissa kohdissa: Tulkin kysymykset välityksen ajan (Anthropicilla enintään 30 päivää),
+      IP-osoitteet alustan teknisissä lokeissa 7 päivää ja jaetut vertailurivit. Vertailudata ja
+      Tulkki perustuvat suostumukseesi, koska käynnistät ne itse; tekniset lokit ja
+      pyyntömäärien rajoitus perustuvat oikeutettuun etuun eli palvelun turvallisuuteen.
+      Palveluntarjoajat (Railway, Anthropic, GitHub) toimivat Yhdysvalloissa.</p>
+      <p>Vertailurivit ovat pseudonyymejä: niissä ei ole tunnistetta, jolla ylläpitäjä voisi
+      löytää juuri sinun rivisi, joten rivin näyttäminen tai poistaminen pyynnöstä ei ole
+      mahdollista. Voit korvata oman rivisi jakamalla päivitetyn suunnitelman samasta
+      selaimesta. Sinulla on oikeus tehdä valitus tietosuojavaltuutetun toimistolle
+      (<a href="https://tietosuoja.fi" rel="noopener">tietosuoja.fi</a>). Kysymykset
+      tietosuojasta: <a href="mailto:info@varallisuuspolku.com">info@varallisuuspolku.com</a>.</p>
       <p>Palvelun lähdekoodi on avointa: <a href="https://github.com/olavikurola/varallisuuspolku"
       rel="noopener">GitHub</a>. Laskentaoletukset ja palvelun kuvaus: <a href="./">etusivun</a>
       Tietoa palvelusta -osio.</p>
