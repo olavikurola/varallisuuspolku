@@ -95,7 +95,20 @@ async function drain(r) {
   const ctxNums = [];
   collectNums(GOLDEN.konteksti, ctxNums);
   const K = GOLDEN.konteksti;
-  const paths = withAliases(bindPaths({ stats: K.stats, vertailu: K.vertailu, suunnitelmat: K.suunnitelmat, plan: K.plan }, '', new Set()));
+  const bindRoot = { stats: K.stats, vertailu: K.vertailu, suunnitelmat: K.suunnitelmat, plan: K.plan };
+  const paths = withAliases(bindPaths(bindRoot, '', new Set()));
+  // Sama sieto kuin tulkki.js bget: tuplattu ensimmäinen osa pudotetaan
+  const undouble = (p) => p.replace(/^(\w+)\.\1\./, '$1.');
+  // Sidonnan arvo kontekstista (etuliitteetön alias → stats./vertailu.)
+  const lookup = (p) => {
+    for (const x of [p, undouble(p)]) {
+      for (const pre of ['', 'stats.', 'vertailu.']) {
+        const v = (pre + x).split('.').reduce((acc, k) => (acc == null ? undefined : acc[k]), bindRoot);
+        if (typeof v === 'number' || typeof v === 'string') return v;
+      }
+    }
+    return null;
+  };
 
   let failed = 0, totIn = 0, totOut = 0, ran = 0;
   for (const t of GOLDEN.tapaukset) {
@@ -142,17 +155,26 @@ async function drain(r) {
       if (n < o.vaihtoehtojaVahintaan) errs.push(`vaihtoehtoja ${n} < ${o.vaihtoehtojaVahintaan}`);
     }
 
-    // Tekstisäännöt
+    // Tekstisäännöt: käyttäjä näkee sidonnat ratkaistuina ([[…luokka]] →
+    // "alle mediaanin"), joten vaadittu teksti kelpaa raakana tai ratkaistuna;
+    // kielletty teksti hylkää kummassa tahansa muodossa
+    const resolved = res.answer.replace(/\[\[([\w.]+)\]\]/g, (m, p) => {
+      const v = lookup(p);
+      return v == null ? m : String(v);
+    });
     for (const re of o.tekstissa || []) {
-      if (!new RegExp(re, 'i').test(res.answer)) errs.push(`tekstistä puuttuu /${re}/`);
+      const rx = new RegExp(re, 'i');
+      if (!rx.test(res.answer) && !rx.test(resolved)) errs.push(`tekstistä puuttuu /${re}/`);
     }
     for (const re of o.eiTekstissa || []) {
-      if (new RegExp(re, 'i').test(res.answer)) errs.push(`tekstissä kielletty /${re}/`);
+      const rx = new RegExp(re, 'i');
+      if (rx.test(res.answer) || rx.test(resolved)) errs.push(`tekstissä kielletty /${re}/`);
     }
 
     // Sidontaviittaukset: jokaisen [[polku]]-viittauksen pitää osua kontekstiin
+    // (tuplattu etuliite [[vertailu.vertailu.x]] siedetään kuten UI:ssa)
     for (const m of res.answer.matchAll(/\[\[([\w.]+)\]\]/g)) {
-      if (!paths.has(m[1])) errs.push(`keksitty sidontapolku [[${m[1]}]]`);
+      if (!paths.has(m[1]) && !paths.has(undouble(m[1]))) errs.push(`keksitty sidontapolku [[${m[1]}]]`);
     }
 
     // Numerokuri: tekstin luvut (≥10, ei sidontoja) löydyttävä kontekstista

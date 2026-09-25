@@ -362,9 +362,15 @@
     return map;
   }
 
+  // Haku sidontakartasta: malli toistaa joskus etuliitteen ([[vertailu.vertailu.x]],
+  // evalit 25.9.2026) — tuplattu ensimmäinen osa pudotetaan ennen hylkäystä
+  const bget = (map, p) => (!map ? undefined : (p in map ? map[p] : map[p.replace(/^(\w+)\.\1\./, '$1.')]));
+
   // Tekstimuotoinen korvaus (ramppi ym. paikat ilman HTML-renderöintiä)
-  const plainBinds = (t, map) => String(t).replace(/\[\[([\w.-]+)\]\]/g, (m, p) =>
-    (map && typeof map[p] === 'number') ? fmtLuku(map[p]) : (map && typeof map[p] === 'string') ? map[p] : '?');
+  const plainBinds = (t, map) => String(t).replace(/\[\[([\w.-]+)\]\]/g, (m, p) => {
+    const v = bget(map, p);
+    return typeof v === 'number' ? fmtLuku(v) : typeof v === 'string' ? v : '?';
+  });
 
   // Yhteinen renderöijä: escape → **b** → sidontatokenit talteen (PUA-merkein,
   // etteivät polkujen numerot osu numSpansiin) → numSpans → tokenit spaneiksi.
@@ -380,7 +386,7 @@
       s = numSpans(s, nums);
       s = s.replace(/[\uE000-\uE05F]/g, (ch) => {
         const path = marks[ch.charCodeAt(0) - 0xE000];
-        const v = bmap ? bmap[path] : undefined;
+        const v = bget(bmap, path);
         if (typeof v === 'string') return `<span class="tk-bound" title="${t('Moottorin luku ({0})', esc(path))}">${esc(v)}</span>`;
         return (typeof v === 'number')
           ? `<span class="tk-num tk-bound" title="${t('Moottorin luku ({0})', esc(path))}">${fmtLuku(v)}</span>`
