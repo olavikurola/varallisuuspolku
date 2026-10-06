@@ -289,6 +289,54 @@ function storeRow(row) {
   rows.push(row);
   writeRows(rows);
 }
+/* ---------- Johdetut tunnusluvut: palvelin laskee nykyisellä moottorilla ----------
+   Asiakkaan lähettämät derived-luvut syntyivät kunkin jaon hetken moottorilla,
+   ja moottori muuttuu (24.9.2026: nimellistila näyttövaihtoehdoksi, työeläkkeen
+   alaraja) — sekoitettu mediaani ei vastannut kumpaakaan. Rivissä on
+   suunnitelman syötteet, joten palvelin ajaa saman laskenta.js:n (kopio
+   palvelin/laskenta.js, testi vartioi tavuidenttisyyden) jokaiselle riville.
+   Kaikki rivit lasketaan tämän päivän rahassa (real) — varallisuus on
+   vertailukelpoinen riippumatta jakajan kytkimestä. Rajoitukset: summat
+   pyöristetty kahteen merkitsevään numeroon, Pro-asetukset, porrastettu säästö
+   ja osinkotuotto eivät kulje rivissä (perustilan oletukset).
+   Laskenta tehdään erillisessä säikeessä (varmuustasotavoitteen rivi vie
+   1–2 s), joten palvelin vastaa pyyntöihin myös käynnistyksen
+   uudelleenlaskennan aikana; välimuisti on rid → luvut tällä moottoriversiolla. */
+// Laskenta johdetut-worker.js-säikeessä; pääsäie pitää välimuistin ja jonon.
+// ENGINE = { version, paths } kun säie on valmis; null = moottori ei käytettävissä.
+let ENGINE = null;
+let deriveWorker = null;
+const derivedCache = new Map(); // rowKey → { wAtRet, wEnd, successProb, retireAge, taxPaid } | null
+const derivePending = new Set();
+const rowKey = (r) => r.rid || JSON.stringify(r);
+function startDeriveWorker() {
+  try {
+    const { Worker } = require('worker_threads');
+    deriveWorker = new Worker(path.join(__dirname, 'johdetut-worker.js'));
+    deriveWorker.on('message', (m) => {
+      if (m.ready) { ENGINE = { version: m.engine, paths: m.paths }; statsCache.at = 0; return; }
+      derivedCache.set(m.key, m.d);
+      derivePending.delete(m.key);
+      if (!derivePending.size) statsCache.at = 0; // erä valmis → seuraava stats-haku käyttää uusia lukuja
+    });
+    deriveWorker.on('error', (e) => { console.log('johdetut: säie kaatui', e && e.name); ENGINE = null; deriveWorker = null; derivePending.clear(); });
+  } catch (e) { console.log('johdetut: säiettä ei voitu käynnistää', e && e.name); deriveWorker = null; }
+}
+function scheduleDerive(rows) {
+  if (!deriveWorker) return;
+  for (const r of rows) {
+    const k = rowKey(r);
+    if (derivedCache.has(k) || derivePending.has(k)) continue;
+    derivePending.add(k);
+    deriveWorker.postMessage({ key: k, row: r });
+  }
+}
+// Rivin johdetut luvut tilastoihin: vain palvelimen laskemat. Ilman moottoria
+// niitä ei julkaista — asiakkaan eri versioiden luvut sekoittuisivat taas.
+function derivedOf(r) {
+  return ENGINE ? derivedCache.get(rowKey(r)) || null : null;
+}
+
 // Käynnistyksessä: aiemmin kertyneet korvatut rivit pois ja replaces-viitteet
 // siivotaan (ketju A→B→C jättää vain C:n, kuten tilastoissa)
 function compactFile() {
@@ -314,9 +362,10 @@ function computeStats() {
   } catch (e) { /* ei vielä dataa */ }
 
   // Supersede: korvatut rivit pois tilastoista (ketju A→B→C jättää vain C:n).
-  // Rivit säilyvät tiedostossa append-only-lokina.
+  // storeRow/compactFile poistavat ne jo tiedostosta (K3); suodatus jää varmistukseksi.
   const replaced = new Set(rows.map((r) => r.replaces).filter(Boolean));
   rows = rows.filter((r) => !(r.rid && replaced.has(r.rid)));
+  scheduleDerive(rows); // uudet rivit taustalaskentaan (välimuistissa olevat ohitetaan)
 
   // Jakaumien pohja: muokkaamattomat oletuspohjat pois heti kun muokattuja on
   // k-anon-rajan verran — muuten kaikki rivit (lippu basis kertoo sivulle
@@ -374,10 +423,11 @@ function computeStats() {
         g.hist = g.hist || {};
         g.hist.retireAge = hist(ret.map((e) => e.age), RETIRE_EDGES);
       }
-      const withW = list.filter((r) => r.derived && r.derived.wAtRet != null);
-      if (withW.length >= K_ANON) g.wAtRet = quartiles(withW.map((r) => r.derived.wAtRet));
-      const withP = list.filter((r) => r.derived && r.derived.successProb != null);
-      if (withP.length >= K_ANON) g.successProb = quartiles(withP.map((r) => r.derived.successProb));
+      // Johdetut luvut palvelimen moottorista (derivedOf), ei jakohetken asiakasluvuista
+      const withW = list.filter((r) => derivedOf(r) && derivedOf(r).wAtRet != null);
+      if (withW.length >= K_ANON) g.wAtRet = quartiles(withW.map((r) => derivedOf(r).wAtRet));
+      const withP = list.filter((r) => derivedOf(r) && derivedOf(r).successProb != null);
+      if (withP.length >= K_ANON) g.successProb = quartiles(withP.map((r) => derivedOf(r).successProb));
       g.shares = {
         glide: share(list, (r) => r.glide),
         real: share(list, (r) => r.real),
@@ -451,6 +501,8 @@ function computeStats() {
   const json = JSON.stringify({
     updated: new Date().toISOString(), v: 3, kAnon: K_ANON, total: rows.length,
     editedN: editedRows.length, basis,
+    // Johdettujen lukujen alkuperä: palvelimen moottoriversio ja laskettujen rivien määrä
+    derived: ENGINE ? { engine: ENGINE.version, ready: rows.filter((r) => derivedOf(r)).length, paths: ENGINE.paths, money: 'real' } : null,
     groups, eventAges, homeLoan, owned, timeline,
   });
   statsCache = { at: Date.now(), json };
@@ -917,4 +969,7 @@ try {
   const n = compactFile();
   if (n) console.log(`vertailudata: ${n} korvattua riviä poistettu`);
 } catch (e) { console.log('vertailudata: tiivistys epäonnistui', e && e.name); }
+startDeriveWorker();
+scheduleDerive(readRows()); // johdetut luvut nykyisellä moottorilla taustasäikeessä
+
 server.listen(PORT, () => console.log(`varallisuuspolku-data kuuntelee portissa ${PORT}, data: ${FILE}`));

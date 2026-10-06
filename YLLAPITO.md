@@ -30,6 +30,10 @@ taustadokumentit: [PRO.md](PRO.md), [PERHE.md](PERHE.md),
 3. Jos muutit laskenta.js:ää tai muita sovellusskriptejä: **bumppaa SW-cache**
    ([sw.js](sw.js) `CACHE`-vakio) — offline-asennuksen skriptipari pysyy eheänä.
    Uusi sivuston tiedosto lisätään myös sw.js:n CORE-listaan.
+   Jos muutit laskenta.js:ää: kopioi se myös palvelimelle (`cp laskenta.js palvelin/`) —
+   palvelin laskee vertailudatan johdetut tunnusluvut (onnistumis-%, varallisuus
+   eläkkeellä) uudelleen nykyisellä moottorilla, ja `palvelin-stats.test.js` vaatii
+   tavuidenttisyyden. Push deployaa Railwayn, joka laskee kaikki rivit taustasäikeessä.
 4. Isot julkaisut: päivitä [llms.txt](llms.txt) (GEO-faktatiedosto) ja
    tarvittaessa Tietoa-UKK (JSON-LD-FAQ:n pitää peilata näkyvää sisältöä 1:1).
    Aja `node tyokalut/tuoreus.js` — se päivittää sitemap-lastmodit (git-pvm),

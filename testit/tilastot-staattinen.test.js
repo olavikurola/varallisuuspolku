@@ -21,11 +21,12 @@ fs.copyFileSync(path.join(ROOT, 'analytiikka-en.html'), en);
 for (const f of [fi, en]) {
   let s = fs.readFileSync(f, 'utf8');
   s = s.replace(/[ \t]*<!-- VP-STAATTISET-TILASTOT alku -->[\s\S]*?<!-- VP-STAATTISET-TILASTOT loppu -->\n?/, '');
-  s = s.replace(/\n\s*"dateModified": "[^"]*",/, '');
+  s = s.replace(/\r?\n\s*"dateModified": "[^"]*",/, ''); // \r?: Windows-työkopio on CRLF
   fs.writeFileSync(f, s);
 }
 const data = {
   updated: '2026-09-01T20:50:25.111Z', v: 3, kAnon: 30, total: 82, editedN: 73, basis: 'edited',
+  derived: { engine: '2026-09-24', ready: 82, paths: 1000, money: 'real' },
   groups: {
     all: { n: 73, monthly: { p25: 400, p50: 800, p75: 1500 }, startCapital: { p25: 10000, p50: 42000, p75: 150000 },
       stocks: { p25: 70, p50: 95, p75: 100 }, retireAge: { p25: 55, p50: 60, p75: 65 }, withdrawal: { p25: 2000, p50: 2500, p75: 3500 },
@@ -52,6 +53,7 @@ console.log('Ensimmäinen ajo sijoittaa lohkon');
   ok(s.includes('"dateModified": "2026-09-01"'), 'fi: Dataset dateModified datan päivästä');
   ok(e.includes('Key figures in numbers') && e.includes('€800/mo') && e.includes('Monthly savings'), 'en: oma englanninkielinen lohko');
   ok(!e.includes('Kuukausisäästö</th>'), 'en: ei suomea taulukossa');
+  ok(s.includes('nykyisellä laskentamoottorilla (versio 2026-09-24') && e.includes("current calculation engine (version 2026-09-24"), 'johdettujen lukujen alkuperä kerrottu (fi + en)');
   // Staattinen teksti on aidosti HTML:ssä ilman scriptejä
   const ilmanJs = s.replace(/<script[\s\S]*?<\/script>/g, '');
   ok((ilmanJs.match(/\d[\d  ]* €/g) || []).length >= 5, 'fi: vähintään 5 eurolukua ilman JavaScriptiä');

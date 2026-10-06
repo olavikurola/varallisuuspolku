@@ -82,6 +82,12 @@ function lohko(d, lang) {
   const ryhmaTxt = fi
     ? `Suunnitelmia ikäryhmittäin: ${gTxt}.${avoinna.length ? ` Ikäryhmäjakaumat avoinna: ${avoinna.join(', ')}.` : ' Yksikään ikäryhmä ei vielä ylitä julkaisukynnystä — jakaumat koskevat koko joukkoa.'}`
     : `Plans by age group: ${gTxt}.${avoinna.length ? ` Age-group distributions open: ${avoinna.join(', ')}.` : ' No age group has reached the publication threshold yet — distributions cover the whole population.'}`;
+  // Johdetut luvut (onnistumis-%) palvelimen moottorista, ei jakohetken asiakasluvuista
+  const johdetut = d.derived && a.successProb
+    ? (fi
+      ? `Onnistumistodennäköisyys lasketaan jaetuista syötteistä uudelleen palvelun nykyisellä laskentamoottorilla (versio ${esc(d.derived.engine)}, tämän päivän rahassa, ${d.derived.paths} markkinapolkua) — ei jakohetken luvuista, joten moottorin korjaukset päivittyvät kaikkiin suunnitelmiin.`
+      : `The success probability is recomputed from the shared inputs with the service's current calculation engine (version ${esc(d.derived.engine)}, in today's money, ${d.derived.paths} market paths) — not taken from the time of sharing, so engine corrections apply to every plan.`)
+    : '';
   const lahde = fi
     ? `Lähde: Varallisuuspolun avoin vertailudata (<a href="https://varallisuuspolku-data.up.railway.app/stats.json">stats.json</a>, CC BY 4.0). Päivittyy automaattisesti.`
     : `Source: Varallisuuspolku open comparison data (<a href="https://varallisuuspolku-data.up.railway.app/stats.json">stats.json</a>, CC BY 4.0). Updated automatically.`;
@@ -93,7 +99,8 @@ function lohko(d, lang) {
 ${rivit.map((x) => '          ' + x).join('\n')}
         </tbody></table>
         <p class="an-note">${ryhmaTxt}</p>
-        <p class="an-note">${lahde}</p>
+${johdetut ? `        <p class="an-note">${johdetut}</p>
+` : ''}        <p class="an-note">${lahde}</p>
       </section>
       ${LOPPU}`;
 }

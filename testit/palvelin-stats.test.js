@@ -212,5 +212,59 @@ async function statsFrom(port, rows) {
     } finally { proc.kill(); }
   }
 
+  console.log('Johdetut luvut palvelimen moottorista (ei jakohetken asiakasluvuista)');
+  {
+    const juuri = fs.readFileSync(path.join(__dirname, '..', 'laskenta.js'));
+    const kopio = fs.readFileSync(path.join(__dirname, '..', 'palvelin', 'laskenta.js'));
+    ok(juuri.equals(kopio), 'palvelin/laskenta.js on tavuidenttinen juuren kanssa (cp laskenta.js palvelin/)');
+    const L = require('../laskenta.js');
+    // 30 muokattua riviä, joiden asiakasluvut ovat tahallaan vääriä (0,99 / 9 999 999)
+    const rows = [...Array(30)].map((_, i) => edited(i, { rid: 'd' + String(i).padStart(15, '0'),
+      derived: { successProb: 0.99, wAtRet: 9999999, wEnd: 1, mcPaths: 300 } }));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vp-derived-'));
+    fs.writeFileSync(path.join(dir, 'lahjoitukset.jsonl'), rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+    const port = 8806;
+    const proc = spawn(process.execPath, [SERVER], { env: { ...process.env, PORT: String(port), DATA_DIR: dir }, stdio: 'ignore' });
+    try {
+      let s = null;
+      for (let i = 0; i < 300; i++) { // ≤ 30 s: 30 riviä taustasäikeessä
+        try {
+          s = await (await fetch(`http://127.0.0.1:${port}/stats.json`)).json();
+          if (s.derived && s.derived.ready === 30) break;
+        } catch (e) { /* palvelin käynnistyy */ }
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      ok(s && s.derived && s.derived.ready === 30, 'kaikki rivit laskettu taustasäikeessä', JSON.stringify(s && s.derived));
+      ok(s && s.derived && s.derived.engine === L.ENGINE_VERSION && s.derived.money === 'real', 'stats kertoo moottoriversion ja rahanarvon');
+      const sp = s && s.groups.all.successProb, wr = s && s.groups.all.wAtRet;
+      ok(sp && sp.p50 !== 0.99 && sp.p75 <= 1, 'onnistumis-% palvelimen laskemana, ei asiakkaan luvusta', JSON.stringify(sp));
+      ok(wr && wr.p50 < 9999999, 'varallisuus eläkkeellä palvelimen laskemana', JSON.stringify(wr));
+    } finally { proc.kill(); }
+
+    // Tarkka vastaavuus: 30 samansisältöistä riviä (eri rid) → mediaani on täsmälleen
+    // sama luku, jonka moottori antaa suoraan (1 000 polkua, tämän päivän raha)
+    const r0 = edited(7, { derived: { successProb: 0.99 } });
+    const same = [...Array(30)].map((_, i) => Object.assign({}, r0, { rid: 's' + String(i).padStart(15, '0') }));
+    const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), 'vp-derived2-'));
+    fs.writeFileSync(path.join(dir2, 'lahjoitukset.jsonl'), same.map((r) => JSON.stringify(r)).join('\n') + '\n');
+    const proc2 = spawn(process.execPath, [SERVER], { env: { ...process.env, PORT: String(port + 1), DATA_DIR: dir2 }, stdio: 'ignore' });
+    try {
+      let s2 = null;
+      for (let i = 0; i < 300; i++) {
+        try {
+          s2 = await (await fetch(`http://127.0.0.1:${port + 1}/stats.json`)).json();
+          if (s2.derived && s2.derived.ready === 30) break;
+        } catch (e) { /* käynnistyy */ }
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      const st = { ageNow: r0.ageNow, ageEnd: r0.ageEnd, startCapital: r0.startCapital, monthly: r0.monthly, savingsGrowth: r0.savingsGrowth,
+        allocStocks: r0.alloc.stocks, allocBonds: r0.alloc.bonds, glide: r0.glide, real: true, inflation: 2, tax: r0.tax,
+        events: r0.events.map((e, i) => Object.assign({ id: i + 1 }, e)) };
+      const suora = Math.round(L.simulate(st, { paths: 1000 }).successProb * 100) / 100;
+      const p2 = s2 && s2.groups.all.successProb;
+      ok(p2 && p2.p50 === suora, 'palvelimen luku = moottori suoraan samoilla syötteillä', `${suora} vs ${JSON.stringify(p2)}`);
+    } finally { proc2.kill(); }
+  }
+
   process.exit(failed ? 1 : 0);
 })();
