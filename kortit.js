@@ -12,13 +12,19 @@ function renderStats() {
   // lasketaan samalla polkumäärällä molemmin puolin (muuten vertailu on vino).
   const g = baseline ? ghostSim : null;
   const ghostP = g ? (ghostMc && s.mcPaths === ghostMc.paths ? ghostMc.successProb : g.successProb) : null;
+  // goodUp null = neutraali: suunta ei kerro onko muutos hyvä (värittömänä)
   const dRow = (cur, base, fmt, eps, goodUp = true) => {
     if (!g || cur == null || base == null) return '';
     const d = cur - base;
     if (Math.abs(d) < eps) return ''; // sama arvo = ei kohinaa (fs asettaa haamun aina)
     const up = d > 0;
-    return `<div class="d ${up === goodUp ? 'up' : 'down'}">${up ? '▲ +' : '▼ −'}${fmt(Math.abs(d))} ${t('vertailuun')}</div>`;
+    const cls = goodUp === null ? 'flat' : up === goodUp ? 'up' : 'down';
+    return `<div class="d ${cls}">${up ? '▲ +' : '▼ −'}${fmt(Math.abs(d))} ${t('vertailuun')}</div>`;
   };
+  // Puuttuva työeläke näkyviin: ilman sitä sijoitustulo luettiin koko
+  // eläkkeeksi (arvio 31.10.2026)
+  const retEv = state.events.find((e) => e.type === 'retirement');
+  const penMissing = retEv && !(s.pension > 0) ? t('ilman työeläkettä') : null;
 
   cards.push({
     k: 'Varallisuus eläkkeellä',
@@ -68,7 +74,6 @@ function renderStats() {
   });
   const confTxt = s.conf ? t('{0} % varmuudella', Math.round(s.conf * 100)) : null;
   const p = s.successProb != null ? Math.round(s.successProb * 100) : null;
-  const pTxt = p != null ? t('onnistumis-% {0}', p) : null;
   if (s.goal === 'age') {
     cards.push(s.solvedRetireAge != null
       ? { k: 'Aikaisin eläkeikä', v: fmtAge(s.solvedRetireAge), cls: 'accent', s: t('kuukausitulolla {0}/kk', fmtEur(s.withdrawal)) + (confTxt ? ` · ${confTxt}` : '') }
@@ -94,8 +99,13 @@ function renderStats() {
     // ensimmäinen tiili (tiilimäärä pysyy viidessä)
     cards.unshift({ k: 'Kestävä kuukausitulo', v: t('{0}/kk', fmtEur(s.solvedWithdrawal)), cls: 'accent',
       // Riskiehto ja rahan arvo samaan tiileen (auditointi 5.9.2026 F-01): ilman
-      // varmuustasoa tulo on mediaanipolun ratkaisu ja onnistumis-% ~50
-      s: [s.pension > 0 ? t('sis. työeläke {0}/kk', fmtEur(s.pension)) : null, confTxt || (p != null ? t('mediaanipolku, varat käytetään {0} v mennessä — onnistumis-% {1}', Math.round(s.a1), p) : null), t('nykyrahassa')].filter(Boolean).join(' · '),
+      // varmuustasoa tulo on mediaanipolun ratkaisu ja onnistumis-% ~50, joka ei
+      // reagoi mihinkään — rinnalle 85 %:n varmuudella kestävä tulo (worker).
+      // Ilman workeria jäädään vanhaan selitteeseen.
+      s: [s.pension > 0 ? t('sis. työeläke {0}/kk', fmtEur(s.pension)) : penMissing,
+        confTxt || (confAltTxt() ? t('tyypillisellä kehityksellä') + ' · ' + confAltTxt()
+          : p != null ? t('mediaanipolku, varat käytetään {0} v mennessä — onnistumis-% {1}', Math.round(s.a1), p) : null),
+        t('nykyrahassa')].filter(Boolean).join(' · '),
       d: dRow(s.solvedWithdrawal, g && (g.solvedWithdrawal != null ? g.solvedWithdrawal : g.sustainableWd), (x) => `${fmtLuku(Math.round(x))} ${VP_YKS_EKK}`, 20) });
   } else if (s.depletionAge != null) {
     // %-nostossa "ehtyminen" tarkoittaa tulotarpeen alittumista (salkku ei ehdy)
@@ -107,12 +117,12 @@ function renderStats() {
       cls: p != null ? pCls : 'bad',
       s: pctMode
         ? [t('tulo alittaa tarpeen ~{0} v', Math.round(s.depletionAge)), t('nosto + työeläke ei kata kuukausitulon tarvetta')].join(' · ')
-        : [t('odotetulla polulla varat ehtyvät ~{0} v', Math.round(s.depletionAge)), p != null ? pOsuus : t('kokeile lisätä säästöä')].join(' · '),
+        : [t('odotetulla polulla varat ehtyvät ~{0} v', Math.round(s.depletionAge)), p != null ? pOsuus : t('kokeile lisätä säästöä'), penMissing].filter(Boolean).join(' · '),
       d: pDelta,
     });
   } else {
     cards.unshift({ k: 'Riittävätkö rahat?', v: p != null ? `${p} %` : t('Riittävät ✓'), cls: p != null ? pCls : 'ok',
-      s: [t('varat riittävät {0} v ikään asti', Math.round(s.a1)), p != null ? pOsuus : null].filter(Boolean).join(' · '), d: pDelta });
+      s: [t('varat riittävät {0} v ikään asti', Math.round(s.a1)), p != null ? pOsuus : null, penMissing].filter(Boolean).join(' · '), d: pDelta });
   }
   // "Sijoitukset N v iässä" pienenä lukuna näytti ensikertalaisesta virheeltä
   // (432 509 € → 404 €): kerrotaan miksi, kun varat on mitoitettu käytettäviksi
@@ -122,9 +132,10 @@ function renderStats() {
   }
 
   if (s.taxPaid > 0.5) {
-    // sama nimi kuin Tulkin vertailurivillä; lyhyet sanat rivittyvät siististi
+    // sama nimi kuin Tulkin vertailurivillä; lyhyet sanat rivittyvät siististi.
+    // Ero väritön: pienempi vero johtuu usein pienemmästä varallisuudesta (D10)
     cards.push({ k: 'Verot yhteensä', v: fmtEur(s.taxPaid), va: fmtCompact(s.taxPaid), cls: '', s: 'nostoista ja myynneistä · osinkovero vähennetty tuotosta',
-      d: dRow(s.taxPaid, g && g.taxPaid, fmtCompact, 500, false) });
+      d: dRow(s.taxPaid, g && g.taxPaid, fmtCompact, 500, null) });
   }
 
   // va = tiivis rinnakkaisarvo (esim. 7,1 M€): CSS näyttää sen täyden sijaan
@@ -216,9 +227,9 @@ function updateCompareBtn() {
   // tekstiä ei saa ylikirjoittaa (rikkoisi rivin rakenteen).
   const mi = $('mi-compare');
   if (!mi || mi.classList.contains('vp-kytkinrivi')) return;
-  mi.querySelector('div').textContent = baseline ? 'Vertailu päällä ✓' : 'Vertaile';
+  mi.querySelector('div').textContent = t(baseline ? 'Vertailu päällä ✓' : 'Vertaile');
   const d = mi.querySelector('.mdesc');
-  if (d) d.textContent = baseline ? 'Poista vertailukohta' : 'Tallenna nykyinen suunnitelma haamukäyräksi';
+  if (d) d.textContent = t(baseline ? 'Poista vertailukohta' : 'Tallenna nykyinen suunnitelma haamukäyräksi');
 }
 
 // Erillinen vertailupalkki poistettu: erot asuvat tunnuslukukorttien
@@ -594,6 +605,7 @@ function renderEventList() {
       }
     });
     row.addEventListener('keydown', (e) => {
+      if (e.target !== row) return; // ✕-napin Enter kuuluu napille (poisto), ei rivin avaukselle
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPopover(ev.id); }
     });
     box.appendChild(row);
@@ -696,16 +708,18 @@ function bindInputs() {
     renderAll();
   });
   $('tax').addEventListener('change', (e) => { state.tax = e.target.checked; renderAll(); });
-  num('inflation', 'inflation', 0, 15);
   // Yksi inflaatiototuus: Pro-tilassa peruskenttä kirjoittaa myös pro.infl:iin.
   // Muuten Pro-oletus ohittaisi kentän hiljaa — "inflaatiolla ei ole vaikutusta"
-  // (X-palaute @ArjenArvonnousu 24.7.2026).
+  // (X-palaute @ArjenArvonnousu 24.7.2026). Rekisteröidään ENNEN num()-kuuntelijaa:
+  // se renderöi, ja pro.infl:n pitää olla silloin jo uusi (muuten graafi oli
+  // näppäilyn jäljessä). Sama yläraja 15 kuin kentässä ja moottorissa (proOf).
   $('inflation').addEventListener('input', (e) => {
     if (!state.pro) return;
     const v = parseFloat(e.target.value);
     if (isNaN(v) || v < 0 || v > 15) return;
-    state.pro.infl = clamp(v, 0, 10);
+    state.pro.infl = v;
     if (state.proOn) renderProCards(); // Pro-kortin kenttä seuraa heti
   });
+  num('inflation', 'inflation', 0, 15);
 }
 

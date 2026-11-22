@@ -40,7 +40,10 @@ const T_TERN_RE = /(?<![\w$.])(?:window\.)?t\(\s*[\w$.]+\s*\?\s*'((?:[^'\\]|\\.)
 // 2) Labeltaulut, joiden arvot toimivat avaimina (käännös lukupaikassa) —
 //    lohko poimitaan nimellä ja arvot sen sisältä. Lista: KIELIVERSIO.md.
 const TAULUT = {
-  'apu.js': [['EVENT_TYPES', /label: '((?:[^'\\]|\\.)+)'/g]],
+  // Yksi avain per tiedosto: toinen 'apu.js'-avain ylikirjoitti tämän (EVENT_TYPES jäi skannaamatta)
+  'apu.js': [['EVENT_TYPES', /label: '((?:[^'\\]|\\.)+)'/g],
+             // Kysymyskirjasto: q/desc kulkevat datana ja käännetään valikon t()-nielussa
+             ['KYSYMYKSET', /(?:q|desc): '((?:[^'\\]|\\.)+)'/g]],
   'laskenta.js': [['STRESS_DEFS', /name: '((?:[^'\\]|\\.)+)'/g],
                   ['PRO_BASE_ASSETS', /'((?:[^'\\]|\\.)+)'/g]],
   'tulkki.js': [['ERRORS', /: '((?:[^'\\]|\\.)+)'/g],
@@ -55,8 +58,6 @@ const TAULUT = {
                   ['PLAN_SRC_LABELS', /: '((?:[^'\\]|\\.)+)'/g],
                   ['EXAMPLES', /(?:name|desc): '((?:[^'\\]|\\.)+)'/g]],
   'kaavio.js': [['goalNotes', /: '((?:[^'\\]|\\.)+)'/g]],
-  // Kysymyskirjasto: q/desc kulkevat datana ja käännetään valikon t()-nielussa
-  'apu.js': [['KYSYMYKSET', /(?:q|desc): '((?:[^'\\]|\\.)+)'/g]],
   'analytiikka.js': [['LABELS', /: '((?:[^'\\]|\\.)+)'/g]],
 };
 
@@ -161,7 +162,7 @@ const riviNro = (teksti, idx) => teksti.slice(0, idx).split('\n').length;
 
 const skannatut = [...TIEDOSTOT, 'laskenta.js'];
 for (const f of skannatut) {
-  const teksti = fs.readFileSync(path.join(ROOT, f), 'utf8');
+  const teksti = fs.readFileSync(path.join(ROOT, f), 'utf8').replace(/\r\n/g, '\n'); // CRLF-työpuu
   let m;
   if (f !== 'laskenta.js') {
     while ((m = T_RE.exec(teksti))) lisaa(m[1], `${f}:${riviNro(teksti, m.index)}`);

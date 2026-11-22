@@ -89,7 +89,7 @@ function sanitoiSuunnitelma(data) {
     virhe('suunnitelman pitää olla JSON-objekti.');
   }
   if (data.persons || data.active !== undefined) {
-    virhe('Tämä näyttää perhesuunnitelmalta — perhetila ei ole vielä tuettu MCP:ssä.');
+    virhe('Tämä näyttää perhesuunnitelmalta — käytä simuloi_perhe-työkalua.');
   }
   for (const k of ['ageNow', 'ageEnd', 'startCapital', 'monthly']) {
     if (!numOk(data[k])) virhe(`kenttä "${k}" puuttuu tai ei ole luku — pakolliset kentät: ageNow, ageEnd, startCapital, monthly, events. Kutsu suunnitelman_skeema saadaksesi koko skeeman.`);

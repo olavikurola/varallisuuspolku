@@ -4,6 +4,10 @@
 'use strict';
 const { chromium } = require('playwright');
 const fs = require('fs');
+const path = require('path');
+// Kuvat ja raportti repon ulkopuolelle (ajettuna repojuuresta ~30 PNG:tä jäi juureen)
+const OUT = process.env.VP_OUT || path.join(require('os').tmpdir(), 'vp-audit');
+fs.mkdirSync(OUT, { recursive: true });
 
 const OVERFLOW_FN = `(() => {
   const docW = document.documentElement.clientWidth;
@@ -51,11 +55,12 @@ const OVERFLOW_FN = `(() => {
       const o = await page.evaluate(OVERFLOW_FN);
       o.errors = errors.splice(0);
       report[`${device}/${name}`] = o;
-      await page.screenshot({ path: `audit-${device}-${name}.png`, fullPage });
+      await page.screenshot({ path: path.join(OUT, `audit-${device}-${name}.png`), fullPage });
     };
 
     await page.goto('http://localhost:8123/', { waitUntil: 'networkidle' });
-    await page.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-tour-done', '1'); }); // kierros testataan erikseen
+    // vp-autotour-off hiljentää rampin ja kierroksen (vp-tour-done ei enää estä mitään)
+    await page.evaluate(() => { localStorage.clear(); localStorage.setItem('vp-autotour-off', '1'); });
     await page.reload({ waitUntil: 'networkidle' });
     await page.waitForTimeout(700);
 
@@ -146,7 +151,8 @@ const OVERFLOW_FN = `(() => {
   }
 
   await browser.close();
-  fs.writeFileSync('audit-report.json', JSON.stringify(report, null, 2));
+  fs.writeFileSync(path.join(OUT, 'audit-report.json'), JSON.stringify(report, null, 2));
+  console.log('Kuvat ja raportti: ' + OUT);
   // tiivistelmä: vain ongelmalliset tilat
   let issues = 0;
   for (const [k, v] of Object.entries(report)) {

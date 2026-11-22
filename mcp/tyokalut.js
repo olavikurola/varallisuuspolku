@@ -17,7 +17,8 @@ const { lueSuunnitelma, luePerhe, EVENT_TYPES, SuunnitelmaVirhe, EVENTS_MAX, PER
 const paikallinen = path.join(__dirname, 'laskenta.js');
 const L = require(fs.existsSync(paikallinen) ? paikallinen : path.join(__dirname, '..', 'laskenta.js'));
 
-const MOOTTORI = 'Varallisuuspolku-laskentamoottori, verovuoden 2026 parametrit (tarkistettu 24.7.2026)';
+// Versio moottorista itsestään — kovakoodattu päiväys jäi jälkeen (24.7. vs 2026-09-24)
+const MOOTTORI = `Varallisuuspolku-laskentamoottori ${L.ENGINE_VERSION}, verovuoden 2026 parametrit`;
 const VASTUUVAPAUS = 'Tämä on laskentatulos, ei sijoitusneuvontaa. Oletukset ja tunnetut yksinkertaistukset: https://varallisuuspolku.com/validointi.html';
 
 const POLUT_OLETUS = 300, POLUT_MAX = 5000;

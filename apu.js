@@ -45,6 +45,10 @@ const EVENT_TYPES = {
 // Työeläkkeen oletusalkamisikä uudelle eläketapahtumalle: 65 tai alin
 // vanhuuseläkeikä, jos se on myöhempi (laskenta.js pensionAgeMin; muistio K2)
 function pensionAgeDefault(ageNow) { return Math.max(65, pensionAgeMin(ageNow)); }
+// Uuden eläketapahtuman oletusikä: oma alin vanhuuseläkeikä kokonaisiksi vuosiksi
+// ylöspäin (ei välikuukausia ennen työeläkettä), vähintään ensi vuosi. Yksi kaava
+// rampille, kysymyskirjastolle ja puolison lisäykselle (aiemmin 65 / round / 65).
+function retireAgeDefault(ageNow) { return Math.max(Math.ceil(pensionAgeMin(ageNow) - 1e-9), ageNow + 1); }
 
 /* Kysymyskirjasto: yhden napautuksen lavastukset NYKYISEEN suunnitelmaan
    (ei korvaa sitä kuten Esimerkit). Moottori osaa kaiken jo — tämä on
@@ -253,6 +257,39 @@ function hashStr(s) {
 let mcWorker = null, mcSeq = 0, mcTimer = null;
 let ghostMc = null; // haamun tarkennus samalla polkumäärällä — deltat reiluja
 
+// Kestävän tulon varmuustasoluku (85 %) mediaaniratkaisun rinnalle. Bisektio
+// vie 0,5–0,8 s, joten se lasketaan workerissa; avain = suunnitelma, jolle
+// luku laskettiin, ettei vanha luku näy uudelle suunnitelmalle.
+const CONF_ALT = 0.85;
+let confAlt = null;    // { key, wd }
+let confAltKey = null; // nykyisen suunnitelman avain, null = ei sovellu
+// Yksi lasku kerrallaan: workerin tehtäviä ei voi perua, joten nopeissa
+// muutoksissa vanhentuneet laskut kasautuisivat jonoon tuoreiden edelle
+let confBusy = false, confQueued = null;
+
+function postConfAlt(key) {
+  if (confBusy) { confQueued = key; return; }
+  confBusy = true;
+  mcWorker.postMessage({ task: 'conf', st: JSON.parse(key), conf: CONF_ALT, key });
+}
+
+// Avain vain laskentaan vaikuttavista kentistä: tapahtuman uudelleennimeäminen
+// tai budjettiapurin kentät (income/expenses) eivät saa käynnistää uutta laskua
+function confKeyOf(snapshot) {
+  const o = { ...snapshot, events: snapshot.events.map((e) => { const c = { ...e }; delete c.name; return c; }) };
+  delete o.income; delete o.expenses;
+  return JSON.stringify(o);
+}
+
+// '85 % varmuudella 707 €/kk', laskun ajan '85 % varmuudella …', null kun ei sovellu
+function confAltTxt() {
+  if (!confAltKey) return null;
+  const pct = Math.round(CONF_ALT * 100);
+  if (!(confAlt && confAlt.key === confAltKey)) return t('{0} % varmuudella', pct) + ' …';
+  // wd null = lasku epäonnistui workerissa → ei rinnakkaislukua (ei pysyvää "…")
+  return confAlt.wd == null ? null : t('{0} % varmuudella {1}/kk', pct, fmtEur(confAlt.wd));
+}
+
 // Tavoitepisteet MC:lle: osuus poluista, joilla varallisuus ylittää pisteen
 function simGoals() {
   const gs = state.events.filter((e) => e.type === 'goal');
@@ -268,6 +305,15 @@ function initMcWorker() {
   mcWorker.addEventListener('message', (e) => {
     const d = e.data;
     if (d.task === 'solveGoals') { onSolveGoalsMsg(d); return; }
+    if (d.task === 'conf') {
+      confBusy = false;
+      if (d.key === confAltKey) { confAlt = { key: d.key, wd: d.ok && d.wd != null ? d.wd : null }; renderStats(); rampLive(); }
+      // Jonossa odottanut lasketaan vain, jos se on yhä nykyinen suunnitelma
+      const next = confQueued;
+      confQueued = null;
+      if (next && next === confAltKey && !(confAlt && confAlt.key === next)) postConfAlt(next);
+      return;
+    }
     if (d.task === 'mcJoint') {
       if (d.ok && d.seq === mcSeq) { jointMc = d; renderStats(); }
       return;
@@ -298,16 +344,21 @@ function initMcWorker() {
     lastFullSim = sim;
     renderChart(true);
     renderStats();
+    rampLive();
     updateHud();
     if (state.proOn) scheduleProAna();
   });
 }
 
 function requestMcRefresh() {
-  if (!mcWorker || !sim) return;
+  if (!mcWorker || !sim) { confAltKey = null; return; }
   clearTimeout(mcTimer);
   const snapshot = serialize();
   const wd = sim.withdrawal, ra = sim.retireAge;
+  // Avain asetetaan heti, jotta kortit näyttävät "…" eivätkä edellisen
+  // suunnitelman lukua; sama suunnitelma ei käynnistä uutta laskua
+  const confKey = sim.goal === 'withdrawal' && !sim.conf && sim.solvedWithdrawal != null ? confKeyOf(snapshot) : null;
+  confAltKey = confKey;
   mcTimer = setTimeout(() => {
     mcSeq++;
     const pCur = proOf(state);
@@ -331,6 +382,8 @@ function requestMcRefresh() {
         paths: pCur ? pCur.mc.paths : MC_FULL,
       });
     }
+    // Viimeisenä: hitain eikä saa viivästyttää onnistumis-%:a ja viuhkaa
+    if (confKey && !(confAlt && confAlt.key === confKey)) postConfAlt(confKey);
   }, 200);
 }
 

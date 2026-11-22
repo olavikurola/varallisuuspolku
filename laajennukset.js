@@ -164,6 +164,8 @@ function bindTour() {
   window.addEventListener('resize', () => { if (tourStep >= 0) tourShow(tourStep); });
   document.addEventListener('keydown', (e) => {
     if (tourStep < 0) return;
+    // Enter napissa (Ohita/Seuraava) = napin oma toiminto — preventDefault estäisi sen
+    if (e.key === 'Enter' && e.target.closest && e.target.closest('button, a, input, select, textarea')) return;
     if (e.key === 'Enter' || e.key === 'ArrowRight') {
       e.preventDefault();
       if (tourStep === TOUR_STEPS.length - 1) endTour();
@@ -194,7 +196,7 @@ function markProSeen() {
 // Inflaatio peritään Allokaatio-kortin kentästä (yksi totuus, ei hiljaista 2 %:a).
 function ensureProShape() {
   const d = defaultPro();
-  if (typeof state.inflation === 'number' && isFinite(state.inflation)) d.infl = clamp(state.inflation, 0, 10);
+  if (typeof state.inflation === 'number' && isFinite(state.inflation)) d.infl = clamp(state.inflation, 0, 15);
   if (!state.pro) { state.pro = d; return; }
   const fill = (t, s) => {
     for (const k in s) {
@@ -244,7 +246,7 @@ function setProPath(path, v) {
 }
 
 const proCustomSum = () => (state.pro && Array.isArray(state.pro.assets)
-  ? state.pro.assets.reduce((s, a) => s + (a.weight || 0), 0) : 0);
+  ? state.pro.assets.reduce((s, a) => s + ((a && a.weight) || 0), 0) : 0);
 
 // Korrelaatioiden oletukset: osake–korko 0,2 · osake–käteinen 0 ·
 // korko–käteinen 0,2 · omat luokat 0,25 muita vastaan
@@ -274,7 +276,8 @@ function updatePsdNote() {
 
 /* --- Korttien rakentaminen --- */
 
-const pin = (pp, val, min, max, step, extra = '') => `<input class="pin" type="number" value="${val}" min="${min}" max="${max}" step="${step}" data-pp="${pp}" ${extra} />`;
+// val voi tulla raakana jakolinkistä (state.pro) — aina escapeHtml attribuuttiin
+const pin = (pp, val, min, max, step, extra = '') => `<input class="pin" type="number" value="${escapeHtml(val)}" min="${min}" max="${max}" step="${step}" data-pp="${pp}" ${extra} />`;
 
 function buildProMkt() {
   const p = proOf(state) || defaultPro();
@@ -289,8 +292,9 @@ function buildProMkt() {
       + pin(`sigma.${k}`, p.sigma[k], 0, 60, 0.5)
       + `<span class="pw" title="${i === 2 ? t('jäännös') : t('Allokaatio-kortin liukurista')}">${baseW[i]}${i === 2 ? '·' : '↖'}</span><span></span></div>`;
   });
-  custom.forEach((a, i) => {
-    h += `<div class="pgrid"><input class="pin pname" type="text" maxlength="24" value="${escapeHtml(a.name)}" data-ppt="assets.${i}.name" />`
+  custom.forEach((a0, i) => {
+    const a = a0 && typeof a0 === 'object' ? a0 : {}; // viallinen rivi linkistä: tyhjät kentät
+    h += `<div class="pgrid"><input class="pin pname" type="text" maxlength="24" value="${escapeHtml(a.name != null ? a.name : '')}" data-ppt="assets.${i}.name" />`
       + pin(`assets.${i}.mu`, a.mu, -10, 25, 0.1)
       + pin(`assets.${i}.sigma`, a.sigma, 0, 60, 0.5)
       + pin(`assets.${i}.weight`, a.weight, 0, 100, 1)
@@ -298,7 +302,7 @@ function buildProMkt() {
   });
   if (custom.length < 3) h += `<button class="btn ghost btn-mini" data-pact="class-add">＋ ${t('Oma omaisuusluokka')}</button>`;
 
-  h += `<div class="prow"><label class="pinline">${t('Inflaatio-oletus')} ${pin('infl', p.infl, 0, 10, 0.1)} %/v</label>`
+  h += `<div class="prow"><label class="pinline">${t('Inflaatio-oletus')} ${pin('infl', p.infl, 0, 15, 0.1)} %/v</label>`
     + `<label class="pinline">${t('Jakauma')} <select class="pin psel" data-pact="dist">`
     + `<option value="normal"${p.mc.dist === 'normal' ? ' selected' : ''}>${t('Normaali')}</option>`
     + `<option value="t"${p.mc.dist === 't' ? ' selected' : ''}>${t('Paksuhäntäinen (t)')}</option></select></label>`
@@ -514,7 +518,7 @@ function bindPro() {
       // omien luokkien painot eivät saa ylittää sataa yhdessä liukurien kanssa
       if (/^assets\.\d+\.weight$/.test(t.dataset.pp)) {
         const i = +t.dataset.pp.split('.')[1];
-        const others = (state.pro.assets || []).reduce((s, a, k) => s + (k === i ? 0 : a.weight || 0), 0);
+        const others = (state.pro.assets || []).reduce((s, a, k) => s + (k === i ? 0 : (a && a.weight) || 0), 0);
         v = clamp(v, 0, Math.max(0, 100 - state.allocStocks - state.allocBonds - others));
         t.value = v;
       }
@@ -699,7 +703,6 @@ const famSimCache = new Map(); // henkilöiden simit (avain: idx, validointi: da
 const familyOn = () => !!(family && family.persons.length > 1);
 // Kahden hengen polut ja testit: "se toinen" = ensimmäinen ei-aktiivinen
 const otherIdx = () => family.persons.findIndex((_, i) => i !== family.active);
-const currentName = () => (family ? family.persons[family.active].name : t('Minä'));
 const activePid = () => (family ? family.persons[family.active].pid : null);
 const idxOfPid = (pid) => (family ? family.persons.findIndex((p) => p.pid === pid) : -1);
 const hasSpouse = () => !!(family && family.persons.some((p) => p.role === 'spouse'));
@@ -769,7 +772,7 @@ function addPerson(role) {
   d.startCapital = 0;
   d.income = null; d.expenses = null;
   if (role === 'spouse') {
-    d.events = [{ id: 1, type: 'retirement', age: 65, withdrawal: 2400, pension: 1500, pensionAge: 65 }];
+    d.events = [{ id: 1, type: 'retirement', age: retireAgeDefault(d.ageNow), withdrawal: 2400, pension: 1500, pensionAge: pensionAgeDefault(d.ageNow) }];
   } else {
     // Lapsi: oma pieni virta — ikä, lahjarahat ja pitkä horisontti
     d.ageNow = 10;

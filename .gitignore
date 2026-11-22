@@ -1,6 +1,10 @@
 # Claude Code — henkilökohtaiset paikallisasetukset (ei jaeta julkiseen repoon)
 .claude/settings.local.json
 
+# Palvelimen paikallinen data (oletus-DATA_DIR ja vienti-palauta.js:n kohde) —
+# raakarivit eivät ole julkista dataa
+palvelin/data/
+
 # Appi (Capacitor): riippuvuudet ja generoitu www (sync-web.mjs kokoaa)
 appi/node_modules/
 appi/www/

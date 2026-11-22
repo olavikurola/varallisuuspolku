@@ -1,4 +1,4 @@
-// Vihjeketju-smoke: veto → oma tapahtuma → Tulkki, yksi vihje per istunto,
+// Vihjeketju-smoke: veto → oma tapahtuma → talteenotto → Tulkki, yksi vihje per istunto,
 // kukin kerran ikinä, vaihe ohi jos asia jo tehty. Ajo: node testit/selain/serve.js
 // taustalle ja node testit/selain/verify-vihjeet.js
 'use strict';
@@ -69,9 +69,21 @@ const { chromium } = require('playwright');
   ok(await page.evaluate(() => state.events.some((e) => e.type === 'home')), 'asunto lisätty suunnitelmaan');
   ok(await page.evaluate(() => state.events.find((e) => e.type === 'home').age === state.ageNow + 5), 'oletusikä +5 v');
 
-  console.log('Istunto 5: Tulkki-vihje (oma tapahtuma on jo)');
+  console.log('Istunto 5: talteenotto (suunnitelmassa on nyt omaa sisältöä)');
   await reloadAndWait();
-  ok(await page.locator('.polku-hint').count() === 0, 'tapahtumavihje ohitetaan (tapahtuma on)');
+  ok(await page.locator('.ph-chip[data-vihje="varmuuskopio"]').count() === 1 && await page.locator('.ph-chip[data-vihje="linkki"]').count() === 1,
+    'talteenpalkki: varmuuskopio + siirtolinkki');
+  ok(await page.locator('.tk-nudge').count() === 0, 'Tulkki-vihje ei samassa istunnossa');
+  ok(await page.evaluate(() => localStorage.getItem('vp-vihje-talteen') === '1'), 'talteenvihje merkitty nähdyksi');
+  const dl = page.waitForEvent('download', { timeout: 5000 }).catch(() => null);
+  await page.locator('.ph-chip[data-vihje="varmuuskopio"]').click();
+  const file = await dl;
+  ok(file && /varmuuskopio.*\.json$/.test(file.suggestedFilename()), 'varmuuskopio latautuu', file ? file.suggestedFilename() : 'ei latausta');
+  ok(await page.locator('.polku-hint').count() === 0, 'palkki poistuu valinnasta');
+
+  console.log('Istunto 6: Tulkki-vihje (oma tapahtuma on jo)');
+  await reloadAndWait();
+  ok(await page.locator('.polku-hint').count() === 0, 'tapahtuma- ja talteenvihje ohitetaan');
   ok(await page.locator('.tk-nudge').count() === 1, 'Tulkki-vihje näkyy');
   ok(await page.evaluate(() => document.querySelector('.tk-handle').classList.contains('tk-pulse')), 'kieleke hehkuu');
   ok(await page.evaluate(() => localStorage.getItem('vp-vihje-tulkki') === '1'), 'Tulkki-vihje merkitty nähdyksi');
@@ -79,7 +91,7 @@ const { chromium } = require('playwright');
   await page.waitForTimeout(200);
   ok(await page.locator('.tk-nudge').count() === 0, 'kosketus sulkee Tulkki-vihjeen');
 
-  console.log('Istunto 6: ketju kulutettu — ei vihjeitä');
+  console.log('Istunto 7: ketju kulutettu — ei vihjeitä');
   await reloadAndWait();
   ok(await page.locator('.veto-hint, .polku-hint, .tk-nudge').count() === 0, 'ei vihjeitä');
 

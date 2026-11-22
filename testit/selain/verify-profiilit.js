@@ -175,7 +175,6 @@ const nb = require('./normi').norm;
   await page.waitForTimeout(300);
   ok((await plansLS()).length === nBefore - 1, 'rivi poistuu varmistuksesta');
   const actId = await activeLS();
-  const actRow = (await plansLS()).find((p) => p.id === actId);
   await page.locator(`.ph-row.active .ph-more`).click();
   await page.waitForTimeout(150);
   await page.locator('.ph-menu button[data-act="poista"]').click();

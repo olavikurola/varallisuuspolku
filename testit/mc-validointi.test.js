@@ -94,7 +94,8 @@ console.log('Korrelaatio: ρ=1 = painotettu summa, ρ=0 pienempi, PSD-korjaus');
   ok(close(riippumaton.sigma, odotus, 1e-9), 'ρ=0: σ = √Σ wᵢ²σᵢ² (' + riippumaton.sigma.toFixed(4) + ')');
   ok(riippumaton.sigma < yksi.sigma, 'hajautus pienentää σ:aa');
   const rikki = L.ensurePSD(L.corrMatrixOf(3, [0.9, -0.9, 0.9])); // ei positiividefiniitti
-  ok(rikki.fixed === true || rikki.korjattu === true || rikki.M, 'ei-PSD-matriisi korjataan kelvolliseksi');
+  // shrunk = korjaus tehtiin; korjattu matriisi läpäisee itse tarkistuksen ilman uutta kutistusta
+  ok(rikki.shrunk === true && L.ensurePSD(rikki.M).shrunk === false, 'ei-PSD-matriisi korjataan kelvolliseksi');
 }
 
 console.log('Glidepath: osakepaino laskee oikeassa iässä');

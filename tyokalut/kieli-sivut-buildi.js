@@ -66,7 +66,8 @@ function korvaaSanasto(html) {
 for (const sivu of SIVUT) {
   const base = sivu.replace(/\.html$/, '');
   const kohde = base + '-en.html';
-  let html = fs.readFileSync(path.join(ROOT, sivu), 'utf8');
+  // LF: CRLF-työpuussa \n-ankkurit (DOCTYPE, script-tagit, moniriviavaimet) eivät osuneet
+  let html = fs.readFileSync(path.join(ROOT, sivu), 'utf8').replace(/\r\n/g, '\n');
 
   // 1) sanastokorvaukset (ennen linkkien uudelleenkirjoitusta — avainten
   //    sisällä voi olla href="validointi.html" -muotoisia sisälinkkejä)

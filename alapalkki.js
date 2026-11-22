@@ -31,13 +31,14 @@
     /* z-index sivujen (summary 90, tk 160, menu 170) yläpuolella: sivut
        ulottuvat palkin taakse, palkki pysyy aina klikattavana päällimmäisenä */
     '.vp-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:200;display:flex;justify-content:space-around;align-items:stretch;',
-    /* suojakaistale palkin alle: kumijouston aikana fixed-palkki elää hetken
-       mukana ja alta paljastuisi sivua (havaittu laitteella) — kiinteä jatke
-       peittää raon millä tahansa joustolla */
-    '.vp-tabbar::after{content:"";position:absolute;top:100%;left:0;right:0;height:160px;background:var(--bg-2,#0e1424);}',
     ' padding:6px 8px calc(10px + env(safe-area-inset-bottom,0px));',
     ' background:color-mix(in srgb, var(--bg-2, #0e1424) 92%, transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);',
     ' border-top:1px solid var(--border, rgba(148,168,220,0.14));}',
+    /* suojakaistale palkin alle: kumijouston aikana fixed-palkki elää hetken
+       mukana ja alta paljastuisi sivua (havaittu laitteella) — kiinteä jatke
+       peittää raon millä tahansa joustolla. Oma sääntö: avoimen .vp-tabbar{
+       -lohkon sisällä se jäsentyi sisäkkäiseksi (& .vp-tabbar::after) eikä osunut */
+    '.vp-tabbar::after{content:"";position:absolute;top:100%;left:0;right:0;height:160px;background:var(--bg-2,#0e1424);}',
     '.vp-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0 2px;',
     ' background:none;border:0;font:inherit;font-size:10.5px;font-weight:600;letter-spacing:0.01em;',
     ' color:var(--text-dim, #93a1b8);cursor:pointer;text-decoration:none;-webkit-tap-highlight-color:transparent;}',

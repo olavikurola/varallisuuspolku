@@ -739,7 +739,9 @@
             else if (obj.error) streamErr = obj.error;
           }
         }
-        if (!full && !toolCalls.length && !toolErr) {
+        // Virhe kesken virran (palvelin: upstream/unreachable osittaisen tekstin
+        // jälkeen) = keskeneräinen vastaus — ei näytetä valmiina eikä talleteta
+        if (streamErr || (!full && !toolCalls.length && !toolErr)) {
           aEl.className = 'tk-a tk-err';
           aEl.textContent = t(ERRORS[streamErr] || 'Tulkki ei vastannut — kokeile uudelleen.');
         } else {
@@ -1671,7 +1673,7 @@
           body: JSON.stringify({
             key: tkKey, mode: 'ramppi', question: text,
             lang: VP_KIELI, // palvelin valitsee promptin kielen (fi oletus)
-            context: { plan: base, stats: { verovuosi: new Date().getFullYear() } },
+            context: { plan: base, stats: { verovuosi: TAX_YEAR } },
           }),
         });
         if (r.ok) {

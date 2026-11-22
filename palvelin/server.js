@@ -519,7 +519,8 @@ function computeStats() {
 
 const TULKKI_KEYS = (process.env.TULKKI_KEYS || '').split(',').map((s) => s.trim()).filter(Boolean);
 const TULKKI_MODEL = process.env.TULKKI_MODEL || 'claude-haiku-4-5';
-const TULKKI_DAILY_MAX = parseInt(process.env.TULKKI_DAILY_MAX || '300', 10);
+// Viallinen arvo (NaN) kytkisi globaalin katon pois (count > NaN === false)
+const TULKKI_DAILY_MAX = (() => { const n = parseInt(process.env.TULKKI_DAILY_MAX || '300', 10); return Number.isFinite(n) ? n : 300; })();
 const TULKKI_UPSTREAM = process.env.TULKKI_UPSTREAM || 'https://api.anthropic.com';
 // Julkinen taso: avaimeton kysely sallitaan pienellä IP-päiväkiintiöllä.
 // Oletuksena PÄÄLLÄ (lanseeraus) — TULKKI_PUBLIC=0 sulkee takaisin avainportiksi.
@@ -695,6 +696,10 @@ function stripNulls(v) {
 }
 
 const tulkkiHits = new Map(); // IP → {count, reset} — vain muistissa
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of tulkkiHits) if (v.reset < now) tulkkiHits.delete(k);
+}, 10 * 60 * 1000).unref();
 let tulkkiDay = '';
 let tulkkiDayCount = 0;
 
@@ -818,13 +823,14 @@ async function handleTulkki(req, res, body, ip) {
       let detail = '';
       try { detail = (await r.text()).slice(0, 300); } catch (e2) {}
       console.log(`tulkki: upstream ${r.status} ${detail}`);
-      return send(res, 502, { error: 'upstream', status: r.status, detail });
+      // Asiakkaalle vain virhekoodi: toimittajan viesti (laskutus, avain) jää lokiin
+      return send(res, 502, { error: 'upstream' });
     }
     res.writeHead(200, { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-cache' });
     const writeLine = (obj) => { if (!res.writableEnded) res.write(JSON.stringify(obj) + '\n'); };
     const reader = r.body.getReader();
     const dec = new TextDecoder();
-    let buf = '', model = TULKKI_MODEL, usageIn = null, usageOut = null, any = false, stopReason = null;
+    let buf = '', model = TULKKI_MODEL, usageIn = null, usageOut = null, any = false, stopReason = null, upErr = null;
     const toolBlocks = {}; // SSE-lohkoindeksi → {name, json} — kootaan paloista
     while (true) {
       const { done, value } = await reader.read();
@@ -850,8 +856,17 @@ async function handleTulkki(req, res, body, ip) {
         } else if (ev.type === 'message_delta') {
           if (ev.usage) usageOut = ev.usage.output_tokens;
           if (ev.delta && ev.delta.stop_reason) stopReason = ev.delta.stop_reason;
+        } else if (ev.type === 'error') {
+          // Virhe kesken virran (esim. overloaded_error HTTP 200:n jälkeen):
+          // katkennut vastaus ei saa näyttää valmiilta
+          upErr = (ev.error && ev.error.type) || 'upstream';
         }
       }
+    }
+    if (upErr) {
+      console.log('tulkki: upstream stream', upErr);
+      writeLine({ error: 'upstream' });
+      return res.end();
     }
     // Katkennut vastaus (tokenraja) kerrotaan asiakkaalle — katkennut työkalu-JSON
     // näkyisi muuten "viallisena komentona" (auditointi 5.9.2026 AI-03)
@@ -920,17 +935,19 @@ const server = http.createServer((req, res) => {
   if (req.method === 'POST' && url === '/donate') {
     const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
     if (rateLimited(ip)) return send(res, 429, { error: 'rate_limit' });
-    let body = '';
+    // Palat Bufferina ja purku vasta lopussa: palakohtainen purku rikkoi
+    // palarajalle osuvat monitavuiset merkit (ä → U+FFFD)
+    const chunks = [];
     let size = 0;
     req.on('data', (chunk) => {
       size += chunk.length;
       if (size > MAX_BODY) { send(res, 413, { error: 'too_large' }); req.destroy(); return; }
-      body += chunk;
+      chunks.push(chunk);
     });
     req.on('end', () => {
       if (res.writableEnded) return;
       let parsed = null;
-      try { parsed = JSON.parse(body); } catch (e) { /* alla */ }
+      try { parsed = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch (e) { /* alla */ }
       const clean = sanitize(parsed);
       if (!clean) return send(res, 400, { error: 'invalid' });
       // rid: satunnainen rivitunniste, jolla saman selaimen myöhempi päivitys
@@ -948,16 +965,16 @@ const server = http.createServer((req, res) => {
     if (!TULKKI_ON) return send(res, 503, { error: 'disabled' });
     const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
     if (tulkkiRateLimited(ip)) return send(res, 429, { error: 'rate_limit' });
-    let body = '';
+    const chunks = []; // Bufferina, purku lopussa (ks. /donate)
     let size = 0;
     req.on('data', (chunk) => {
       size += chunk.length;
       if (size > 32 * 1024) { send(res, 413, { error: 'too_large' }); req.destroy(); return; }
-      body += chunk;
+      chunks.push(chunk);
     });
     req.on('end', () => {
       if (res.writableEnded) return;
-      handleTulkki(req, res, body, ip);
+      handleTulkki(req, res, Buffer.concat(chunks).toString('utf8'), ip);
     });
     return;
   }

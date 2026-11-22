@@ -2,6 +2,10 @@
 // Osa entistä app.js:ää — tiedostot jakavat globaalin skoopin (classic scriptit);
 // latausjärjestys index.html:ssä on sitova. Jaettu 25.7.2026, ei sisältömuutoksia.
 
+/* Natiiviappi (Capacitor) — määritellään ennen käynnistyskoodia: tiedoston
+   lopussa const oli TDZ:ssä, kun #yhteenveto-syvälinkki avasi yhteenvedon */
+const vpNativeApp = typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
 /* ===================== Toast ===================== */
 
 let toastEl = null, toastTimer = null;
@@ -182,7 +186,7 @@ function applyQuestion(k) {
   let ret = state.events.find((e) => e.type === 'retirement');
   if (!ret && (o.retAge != null || o.goal || o.withdrawal != null || o.conf != null)) {
     const def = EVENT_TYPES.retirement;
-    ret = { id: idSeq++, type: 'retirement', age: Math.max(65, state.ageNow + 1), withdrawal: def.withdrawal, pension: def.pension, pensionAge: pensionAgeDefault(state.ageNow) };
+    ret = { id: idSeq++, type: 'retirement', age: retireAgeDefault(state.ageNow), withdrawal: def.withdrawal, pension: def.pension, pensionAge: pensionAgeDefault(state.ageNow) };
     state.events.push(ret);
   }
   if (ret) {
@@ -190,7 +194,6 @@ function applyQuestion(k) {
     if (o.withdrawal != null) ret.withdrawal = o.withdrawal;
     if (o.goal) ret.goal = o.goal === 'manual' ? undefined : o.goal;
     if (o.conf != null) ret.conf = o.conf; else if (o.goal === 'manual') delete ret.conf;
-    if (ret.pensionAge < ret.age && o.retAge == null) { /* ennallaan */ }
   }
   if (o.event) {
     const ev = o.event;
@@ -1084,8 +1087,7 @@ function bindActions() {
     const s = localStorage.getItem('vp-balance-collapsed');
     // Appi: tase kiinni ensiavauksessa — graafi ja tunnusluvut hallitsevat
     // ensinäkymää; napautus avaa ja valinta muistetaan (webissä auki kuten ennen)
-    balCollapsed = s != null ? s === '1'
-      : !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    balCollapsed = s != null ? s === '1' : !!vpNativeApp;
   } catch (e) {}
   if (balCollapsed) { balPanel.classList.add('collapsed'); balanceToggle.textContent = '▸'; }
   balanceToggle.addEventListener('click', () => {
@@ -1270,7 +1272,7 @@ function renderSummary() {
       s: retire ? (s.pension > 0 ? t('sis. työeläke {0}/kk', fmtEur(s.pension)) : (s.goal === 'withdrawal' ? t('kestävä tulo — varat loppuun') : t('sijoituksista'))) : '' },
     { k: 'Varallisuus eläkkeellä', v: s.wAtRet != null ? fmtEur(s.wAtRet) : '—', cls: 'accent' },
     // appissa lyhyt label — täysi sana rivittyi rumasti kapeassa tiilessä
-    { k: vpNativeApp ? 'Onnistumis-%' : 'Onnistumistodennäköisyys', v: p != null ? `${p} %` : '—', cls: p >= 80 ? 'ok' : p >= 55 ? '' : 'bad', s: t('{0} markkinapolkua', fmtLuku(s.mcPaths || MC_LIVE)) },
+    { k: vpNativeApp ? 'Onnistumis-%' : 'Onnistumistodennäköisyys', v: p != null ? `${p} %` : '—', cls: p == null ? '' : p >= 80 ? 'ok' : p >= 55 ? '' : 'bad', s: t('{0} markkinapolkua', fmtLuku(s.mcPaths || MC_LIVE)) },
   ];
 
   const evRows = [...state.events].sort((x, y) => x.age - y.age).map((e) => {
@@ -2178,7 +2180,11 @@ function rampSubmit() {
   if (!isFinite(age) || age < 16 || age > 80) { $('rampErr').hidden = false; $('rampAge').focus(); return; }
   const wealth = clamp(parseFloat($('rampWealth').value) || 0, 0, 1e9);
   const monthly = clamp(parseFloat($('rampMonthly').value) || 0, 0, 1e6);
-  const retA = Math.max(65, age + 1);
+  // Eläkeikä = oma alin vanhuuseläkeikä (K2), ei kiinteä 65: muuten nuoren
+  // ensimmäinen tulos maksaa sijoituksista välivuodet ennen työeläkettä ja
+  // näyttää neljänneksen todellista pienemmältä (34 v: 65 → 68 v, arvio 31.10.2026)
+  // ceil, ei round: alaspäin pyöristys jätti 1–5 kk välikuukaudet (esim. 50 v: 66,25 → 66)
+  const retA = retireAgeDefault(age);
   state.ageNow = age;
   state.ageEnd = Math.max(90, retA + 10);
   state.startCapital = wealth;
@@ -2205,12 +2211,13 @@ const VETO_HINT_KEY = 'vp-veto-vihje';
 function showVetoHint() {
   try {
     if (localStorage.getItem(VETO_HINT_KEY) === '1') return;
-    localStorage.setItem(VETO_HINT_KEY, '1');
   } catch (e) {}
-  track('Vihje näytetty', { vihje: 'veto' });
   const ret = state.events.find((e) => e.type === 'retirement');
   if (!ret) return;
   if (!document.querySelector(`#chart .marker[data-id="${ret.id}"]`)) return;
+  // Merkintä ja mittaus vasta kun vihje oikeasti näytetään — muuten se kului näkymättä
+  try { localStorage.setItem(VETO_HINT_KEY, '1'); } catch (e) {}
+  track('Vihje näytetty', { vihje: 'veto' });
   const tip = document.createElement('div');
   tip.className = 'veto-hint';
   tip.textContent = 'Tartu merkkiin ja vedä — luvut päivittyvät heti';
@@ -2236,7 +2243,12 @@ function showVetoHint() {
     requestAnimationFrame(place);
   };
   place();
+  // Kerran: sekä napautus että 8 s ajastin kutsuvat — kahdesti ajettuna ketju
+  // näytti kaksi seuraavaa vihjettä samassa istunnossa
+  let tmo = null;
   const off = () => {
+    if (!alive) return;
+    clearTimeout(tmo);
     alive = false;
     tip.remove();
     // Vihjeketju jatkuu jo ENSIMMÄISESSÄ istunnossa: veto-vihjeen jälkeen
@@ -2249,14 +2261,15 @@ function showVetoHint() {
     document.removeEventListener('pointerdown', off, true);
   };
   document.addEventListener('pointerdown', off, true);
-  setTimeout(off, 8000);
+  tmo = setTimeout(off, 8000);
 }
 
-// Vihjeketju analytiikan aktivointikuiluun: veto → oma tapahtuma → Tulkki.
+// Vihjeketju analytiikan aktivointikuiluun: veto → oma tapahtuma → talteenotto → Tulkki.
 // Korkeintaan yksi vihje istuntoa kohti ja jokainen kerran ikinä; vaihe
 // ohitetaan, jos käyttäjä on jo tehnyt asian itse. Ramppi- ja kierros-
 // istunnoissa ketju ei elä — niillä on oma ohjauksensa.
 const HINT_EVENT_KEY = 'vp-vihje-tapahtuma';
+const HINT_SAVE_KEY = 'vp-vihje-talteen';
 const HINT_TULKKI_KEY = 'vp-vihje-tulkki';
 
 // Vaihe 2: konkreettiset sirut yleiskehotteen sijaan — rampin "Omistan jo"
@@ -2292,7 +2305,39 @@ function showEventHint() {
   tmo = setTimeout(off, 15000);
 }
 
-// Vaihe 3: ✦-kieleke hehkahtaa kolmesti ja saa ohimenevän tekstin. Tulkin
+// Vaihe 3: talteenotto. Suunnitelma elää vain tämän selaimen muistissa —
+// tyhjennys, laitteen vaihto tai Safarin siivous vie sen hiljaa. Kun siinä on
+// omaa sisältöä, tarjotaan kerran varmuuskopio ja siirtolinkki (arvio 31.10.2026).
+function showSaveHint() {
+  const bar = document.createElement('div');
+  bar.className = 'polku-hint';
+  bar.innerHTML = `<span class="ph-lb">${t('Suunnitelmasi on vain tässä selaimessa:')}</span>`;
+  let tmo = 0;
+  const off = () => { clearTimeout(tmo); bar.remove(); document.removeEventListener('pointerdown', outside, true); };
+  const outside = (e) => { if (!bar.contains(e.target)) off(); };
+  const chip = (txt, valinta, fn) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ph-chip';
+    b.dataset.vihje = valinta;
+    b.textContent = txt;
+    b.addEventListener('click', () => { track('Vihje käytetty', { vihje: 'talteen', valinta }); fn(b); });
+    bar.appendChild(b);
+  };
+  chip('💾 ' + t('Lataa varmuuskopio'), 'varmuuskopio', () => { off(); exportAllPlans(); });
+  // Linkki kantaa koko suunnitelman: palkki jää hetkeksi näyttämään "Kopioitu ✓"
+  chip('🔗 ' + t('Kopioi siirtolinkki'), 'linkki', (b) => { copyShareUrl(b); clearTimeout(tmo); tmo = setTimeout(off, 1800); });
+  wrap.appendChild(bar);
+  document.addEventListener('pointerdown', outside, true);
+  tmo = setTimeout(off, 15000);
+}
+
+// Talteenoton kehote vasta, kun menetettävää on: työeläke tai oma tapahtuma
+function planHasSubstance() {
+  return state.events.some((ev) => ev.type !== 'retirement' || ev.pension > 0);
+}
+
+// Vaihe 4: ✦-kieleke hehkahtaa kolmesti ja saa ohimenevän tekstin. Tulkin
 // avaajat kysyvät keskimäärin 3+ kysymystä mutta vain harva löytää kielekkeen
 // — löydettävyysongelma, ei laatuongelma. Reduced-motion: ei hehkua, teksti
 // näkyy silti. Sijoitus lasketaan kielekkeestä, jonka asento vaihtelee
@@ -2339,13 +2384,37 @@ function nextHint() {
     showEventHint();
     return;
   }
+  // Appissa data on laitteen omassa tallennuksessa — kehote vain webissä
+  if (!vpNativeApp && !seen(HINT_SAVE_KEY) && planHasSubstance()) {
+    mark(HINT_SAVE_KEY);
+    track('Vihje näytetty', { vihje: 'talteen' });
+    showSaveHint();
+    return;
+  }
   if (!seen(HINT_TULKKI_KEY) && !seen('vp-tulkki-intro') && showTulkkiHint()) {
     mark(HINT_TULKKI_KEY);
     track('Vihje näytetty', { vihje: 'tulkki' });
   }
 }
 
-function rampResult(retA) {
+function rampPTxt() {
+  return sim && sim.successProb != null ? `${Math.round(sim.successProb * 100)} %` : '–';
+}
+
+// Workerin tarkennus (onnistumis-% 5 000 polulla, 85 %:n luku) korttiin ilman
+// uudelleenrakennusta — kentän kohdistin säilyy
+function rampLive() {
+  const p = $('rampP');
+  if (p) p.textContent = rampPTxt();
+  const c = $('rampConf');
+  if (c) c.textContent = confAltTxt() || '';
+}
+
+// Kortin lasketut osat (tulosruudut + kenttien otsikot) erillään lomakkeesta:
+// kentän muutos päivittää vain nämä (rampRefresh) — koko kortin uudelleenrakennus
+// vaihtoi napit kesken klikkauksen (klikkaus katosi) ja palautti fokuksen kenttään
+// (Tab jäi jumiin).
+function rampParts(retA) {
   const s = sim;
   const ret = state.events.find((e) => e.type === 'retirement');
   const pen = ret && ret.pension > 0 ? Math.round(ret.pension) : 0;
@@ -2358,16 +2427,44 @@ function rampResult(retA) {
   const wdS = pen > 0
     ? t('sis. työeläke {0}/kk · {1} v alkaen · tyypillisellä kehityksellä', fmtEur(pen), penA)
     : t('sijoituksistasi {0} v alkaen · tyypillisellä kehityksellä', retA);
+  // Tarve tekee kortista vastauksen otsikon kysymykseen: kestävä tulo yksin
+  // ei kerro, riittääkö se (arvio 31.10.2026). Tyhjä kenttä = kestävä tulo.
+  const need = ret && ret.goal === 'manual' && ret.withdrawal > 0 ? Math.round(ret.withdrawal) : 0;
+  const conf = confAltTxt();
+  const first = need
+    ? `<div class="ramp-stat"><div class="k">${t('Riittävätkö rahat?')}</div><div class="v" id="rampP">${rampPTxt()}</div>` +
+      `<div class="s">${[t('tarve {0}/kk', fmtEur(need)), pen > 0 ? t('sis. työeläke {0}/kk', fmtEur(pen)) : t('ilman työeläkettä'), t('osuus markkinapoluista, joilla varat riittävät')].join(' · ')}</div></div>`
+    : `<div class="ramp-stat"><div class="k">${pen > 0 ? t('Kestävä kuukausitulo eläkkeellä') : t('Kestävä kuukausitulo sijoituksistasi')}</div><div class="v">${wd != null ? t('{0}/kk', fmtEur(wd)) : '–'}</div><div class="s">${wdS} · ${t('nykyrahassa')}</div>` +
+      (conf ? `<div class="s" id="rampConf">${conf}</div>` : '') + `</div>`;
+  return {
+    pen, need,
+    res: first +
+    `<div class="ramp-stat"><div class="k">${t('Sijoituksesi {0} vuoden iässä', retA)}</div><div class="v">${wr != null ? fmtEur(wr) : '–'}</div><div class="s">${t('tyypillisellä (mediaani) kehityksellä')}${state.real ? ' · ' + t('nykyrahassa') : ' · ' + t('nimellisarvoin')}</div></div>`,
+    penL: pen > 0 ? t('Työeläkkeesi käteen') : need ? t('Työeläkkeesi käteen — lisää ETK-arvio') : t('Työeläkkeesi tulee tämän päälle — lisää ETK-arvio käteen'),
+    needL: need ? t('Kuukausitulon tarve eläkkeellä') : t('Tiedätkö tarpeesi? Kuukausitulo eläkkeellä yhteensä'),
+  };
+}
+
+function rampRefresh(retA) {
+  const p = rampParts(retA);
+  const res = $('rampRes');
+  if (!res) return;
+  res.innerHTML = p.res;
+  $('rampPenL').textContent = p.penL;
+  $('rampNeedL').textContent = p.needL;
+}
+
+function rampResult(retA) {
+  const { pen, need, res, penL, needL } = rampParts(retA);
   $('rampCard').innerHTML =
     `<h1 class="ramp-title">${t('Polkusi on piirretty')}</h1>` +
-    `<div class="ramp-res">` +
-    `<div class="ramp-stat"><div class="k">${pen > 0 ? t('Kestävä kuukausitulo eläkkeellä') : t('Kestävä kuukausitulo sijoituksistasi')}</div><div class="v">${wd != null ? fmtEur(wd) + '/kk' : '–'}</div><div class="s">${wdS} · ${t('nykyrahassa')}</div></div>` +
-    `<div class="ramp-stat"><div class="k">${t('Sijoituksesi {0} vuoden iässä', retA)}</div><div class="v">${wr != null ? fmtEur(wr) : '–'}</div><div class="s">${t('tyypillisellä (mediaani) kehityksellä')}${state.real ? ' · ' + t('nykyrahassa') : ' · ' + t('nimellisarvoin')}</div></div>` +
-    `</div>` +
+    `<div class="ramp-res" id="rampRes">${res}</div>` +
     // Työeläke on vaikuttavin puuttuva tieto: kenttä suoraan korttiin, ei
     // paletin viimeiseen nappiin (UX-auditointi U1/U7)
-    `<label class="ramp-pen"><span>${pen > 0 ? t('Työeläkkeesi käteen') : t('Työeläkkeesi tulee tämän päälle — lisää ETK-arvio käteen')}</span>` +
-    `<span class="input"><input id="rampPension" type="number" min="0" step="100" inputmode="numeric" placeholder="${t('esim. 1 500')}" value="${pen > 0 ? pen : ''}" /><em>€/kk</em></span></label>` +
+    `<label class="ramp-pen"><span id="rampPenL">${penL}</span>` +
+    `<span class="input"><input id="rampPension" type="number" min="0" step="100" inputmode="numeric" placeholder="${t('esim. 1 500')}" value="${pen > 0 ? pen : ''}" /><em>${VP_YKS_EKK}</em></span></label>` +
+    `<label class="ramp-pen"><span id="rampNeedL">${needL}</span>` +
+    `<span class="input"><input id="rampNeed" type="number" min="0" step="100" inputmode="numeric" placeholder="${t('esim. 2 500')}" value="${need || ''}" /><em>${VP_YKS_EKK}</em></span></label>` +
     `<div class="ramp-acts2">` +
     `<button class="btn primary-wide" id="rampDrag">✋ ${t('Kokeile: vedä eläkeikää')}</button>` +
     `<button class="btn ghost" id="rampOpen">${t('Avaa suunnitelmani')}</button>` +
@@ -2375,7 +2472,7 @@ function rampResult(retA) {
     `<button class="btn ghost" id="rampShare">📸 ${t('Jaa tuloskuva')}</button>` +
     `<button class="btn ghost" id="rampTour">${t('Esittelykierros')}</button>` +
     `</div>`;
-  // Työeläke: arvo tilaan ja kortti uusiksi — kohdistin pysyy kentässä
+  // Työeläke: arvo tilaan ja tulosruudut uusiksi — lomake ja napit säilyvät
   const penEl = $('rampPension');
   penEl.addEventListener('change', () => {
     const v = clamp(parseFloat(penEl.value) || 0, 0, 1e6);
@@ -2384,8 +2481,19 @@ function rampResult(retA) {
     r.pension = v; r.pensionAge = Math.max(retA, pensionAgeMin(state.ageNow));
     syncInputs(); renderAll();
     track('Ramppi työeläke', { annettu: v > 0 ? 'on' : 'ei' });
-    rampResult(retA);
-    try { $('rampPension').focus(); } catch (e) {}
+    rampRefresh(retA);
+  });
+  // Tarve: kiinteä kuukausitulo → onnistumis-% reagoi eläkeikään ja säästöön;
+  // tyhjennys palauttaa kestävän tulon ratkaisun
+  const needEl = $('rampNeed');
+  needEl.addEventListener('change', () => {
+    const v = clamp(parseFloat(needEl.value) || 0, 0, 1e6);
+    const r = state.events.find((e) => e.type === 'retirement');
+    if (!r) return;
+    if (v > 0) { r.goal = 'manual'; r.withdrawal = v; } else r.goal = 'withdrawal';
+    syncInputs(); renderAll();
+    track('Ramppi tarve', { annettu: v > 0 ? 'on' : 'ei' });
+    rampRefresh(retA);
   });
   // Ensimmäinen veto: tuotteen vahvin hetki heti tuloksen jälkeen —
   // piirtopöytä auki eläkeikäviiva valittuna (UX-auditointi W1)
@@ -2420,14 +2528,15 @@ function showSharedWelcome(hadOwn) {
   const ret = state.events.find((e) => e.type === 'retirement');
   const retA = ret ? Math.round(ret.age) : null;
   const wr = s && s.wAtRet != null ? Math.round(s.wAtRet) : null;
-  const wd = ret && ret.withdrawal > 0 ? Math.round(ret.withdrawal)
-    : (s && s.solvedWithdrawal != null ? Math.round(s.solvedWithdrawal) : null);
+  // Kestävän tulon tavoitteessa ret.withdrawal on paikkamerkki — ratkaistu tulo ensin
+  const wd = s && s.goal === 'withdrawal' && s.solvedWithdrawal != null ? Math.round(s.solvedWithdrawal)
+    : (ret && ret.withdrawal > 0 ? Math.round(ret.withdrawal) : null);
   const nEv = state.events.filter((e) => e.type !== 'retirement').length;
   const stats =
     (retA != null && wr != null
       ? `<div class="ramp-stat"><div class="k">${t('Sijoitukset {0} vuoden iässä', retA)}</div><div class="v">${fmtEur(wr)}</div><div class="s">${t('odotetulla kehityksellä')}</div></div>` : '') +
     (wd != null
-      ? `<div class="ramp-stat"><div class="k">${t('Kuukausitulo eläkkeellä')}</div><div class="v">${fmtEur(wd)}/kk</div><div class="s">${retA != null ? t('{0} v alkaen', retA) : ''}</div></div>` : '');
+      ? `<div class="ramp-stat"><div class="k">${t('Kuukausitulo eläkkeellä')}</div><div class="v">${t('{0}/kk', fmtEur(wd))}</div><div class="s">${retA != null ? t('{0} v alkaen', retA) : ''}</div></div>` : '');
   const kuvaus = t('Ikä {0} v · eläkkeelle {1} v · {2} elämäntapahtumaa', state.ageNow, retA != null ? retA : '–', nEv);
   const esim = sharedIsExample;
   $('rampCard').innerHTML =
@@ -2506,7 +2615,7 @@ function showInAppHint() {
     `<button type="button" class="btn ghost inapp-copy">${t('Kopioi linkki')}</button>` +
     `<button type="button" class="inapp-x" aria-label="${t('Sulje')}">✕</button>`;
   b.querySelector('.inapp-copy').addEventListener('click', async () => {
-    const url = location.hash.startsWith('#s=') || location.hash.startsWith('#f=') ? location.href : buildShareLink();
+    const url = makeShareUrl(); // loadState poistaa saapuvan hashin — linkki rakennetaan aina tilasta
     try { await navigator.clipboard.writeText(url); toast(t('Linkki kopioitu — liitä se selaimen osoiteriville')); }
     catch (e) { toast(t('Kopiointi ei onnistunut — kopioi osoite selaimen osoiteriviltä')); }
     track('Vihje käytetty', { vihje: 'inapp', valinta: 'kopioi' });
@@ -2554,11 +2663,9 @@ function bindRampForm() {
 bindRampForm();
 
 let autoTourOff = false;
-let tourSeen = false;
 let rampSeen = false;
 try {
   autoTourOff = localStorage.getItem('vp-autotour-off') === '1';
-  tourSeen = localStorage.getItem(TOUR_KEY) === '1';
   rampSeen = localStorage.getItem(RAMP_KEY) === '1';
 } catch (e) {}
 // In-app-selainvihje ei kilpaile rampin/kortin kanssa: se on erillinen palkki
@@ -2600,7 +2707,6 @@ new ResizeObserver(() => { if (sim) renderChart(true); }).observe(wrap);
 // Offline-tuki: service worker välimuistittaa sovelluksen (verkko ensin,
 // välimuisti varalla) — asennettuna PWA toimii ilman verkkoyhteyttä
 /* Natiiviappi (Capacitor) lataa tiedostot paikallisesti — SW olisi siellä pelkkä riski */
-const vpNativeApp = typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 if (!vpNativeApp && 'serviceWorker' in navigator && (location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname))) {
   navigator.serviceWorker.register('./sw.js').catch(() => { /* ei estä käyttöä */ });
 }

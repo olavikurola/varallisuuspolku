@@ -33,6 +33,13 @@ self.onmessage = (e) => {
         seq: d.seq, task: 'mcJoint', ok: true,
         successProb: r.successProb, p10: r.p10, p90: r.p90, months: r.months, paths: d.paths || MC_FULL,
       }, [r.p10.buffer, r.p90.buffer]);
+    } else if (d.task === 'conf') {
+      // Kestävä tulo varmuustasolla mediaaniratkaisun rinnalle: sama ratkaisija
+      // kuin varmuustasotilassa, joten luku on sama kuin tilaan vaihtamalla
+      const r = d.st.events.find((e) => e.type === 'retirement');
+      if (r) r.conf = d.conf;
+      const s = simulate(d.st);
+      self.postMessage({ seq: d.seq, task: 'conf', ok: true, key: d.key, wd: s.solvedWithdrawal });
     } else if (d.task === 'solveGoals') {
       // Varmuustasomoodin Ratkaise: karkea→tarkka-bisektio + edistyminen
       const res = solveGoalsMonthlyConf(d.st, d.points, d.conf, d.paths || MC_FULL,
@@ -40,6 +47,7 @@ self.onmessage = (e) => {
       self.postMessage({ seq: d.seq, task: 'solveGoals', ok: true, result: res });
     }
   } catch (err) {
-    self.postMessage({ seq: d.seq, task: d.task, ok: false, error: String(err && err.message || err) });
+    // key kaiutetaan: conf-laskun virhe kohdistuu oikeaan suunnitelmaan
+    self.postMessage({ seq: d.seq, task: d.task, key: d.key, ok: false, error: String(err && err.message || err) });
   }
 };

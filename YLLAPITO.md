@@ -12,7 +12,7 @@ taustadokumentit: [PRO.md](PRO.md), [PERHE.md](PERHE.md),
   osoite https://varallisuuspolku.com CNAME-tiedostolla).
 - **Skriptit ovat classic-skriptejä jotka jakavat globaalin skoopin** —
   latausjärjestys [index.html](index.html):ssä on sitova:
-  laskenta → apu → kaavio → piirtopoyta → kortit → laajennukset → sovellus → tulkki.
+  kieli → laskenta → pakkaus → apu → kaavio → piirtopoyta → kortit → laajennukset → sovellus → tulkki.
 - **laskenta.js** on DOM-vapaa moottori: sama tiedosto ajaa sivun, mc-workerin,
   Node-testit ja MCP-paketin. Kaikki luvut tulevat moottorista — AI ei laske.
 - **palvelin/** = riippuvuudeton Node-palvelin Railwayssa (vertailudata +
@@ -66,7 +66,7 @@ taustadokumentit: [PRO.md](PRO.md), [PERHE.md](PERHE.md),
 |---|---|---|
 | Sivusto | GitHub Pages | push = julkaisu; CNAME + https_enforced |
 | Domain | Namecheap | varallisuuspolku.com; apex 4×A + www-CNAME; info@-forward → iCloud |
-| Palvelin | Railway (Hobby) | root dir `palvelin`, volume `/data`, PORT=8080; envit: `ANTHROPIC_API_KEY` (spend limit ~50 €/kk!), `TULKKI_KEYS`, `TULKKI_PUBLIC`, `TULKKI_DAILY_MAX`, `TULKKI_MODEL`, `VIENTI_AVAIN` (varmuuskopiovienti) |
+| Palvelin | Railway (Hobby) | root dir `palvelin`, volume `/data` + `DATA_DIR=/data` (ilman muuttujaa data menee kontin levylle ja katoaa deployssa!), PORT=8080; envit: `ANTHROPIC_API_KEY` (spend limit ~50 €/kk!), `TULKKI_KEYS`, `TULKKI_PUBLIC`, `TULKKI_ANON_DAILY`, `TULKKI_DAILY_MAX`, `TULKKI_MODEL`, `VIENTI_AVAIN` (varmuuskopiovienti) |
 | Vertailudatan varmuuskopio | GitHub Actions (`vertailudata-vienti.yml`) | päivittäin 03:17 UTC: hakee `/vienti`, salaa (AES-256), palautustesti, artefakti 90 pv. Secretit: `VIENTI_AVAIN` (= Railwayn), `VIENTI_SALASANA` (myös salasanavarastoon!). Palautus: `tyokalut/vienti-palauta.js` |
 | MCP-paketti | npmjs (olkurola) | publish vaatii 2FA:n Olavin terminaalissa |
 | Analytiikka | Plausible | custom goalit + propertyt 'tyyppi'/'mode' lisätään käsin hallintaan |

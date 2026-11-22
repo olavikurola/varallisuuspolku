@@ -59,6 +59,9 @@ const { norm } = require('./normi');
 
   // --- Perhevirta ---
   ok((await page.locator('#familyChips .fam-add').count()) === 1, 'yksin-tilassa vain pieni ＋-chip');
+  // Sama polkumäärä kuin perheen yhteis-MC:ssä (worker, 5 000): "perhe ≤ henkilö 1"
+  // pätee vain samoilla poluilla — 300 polun pikaluku voi jäädä yhteisluvun alle
+  await page.waitForFunction(() => sim && sim.mcPaths === 5000 && !sim.successStale, null, { timeout: 15000 });
   const soloP = await page.evaluate(() => sim.successProb);
   await page.click('#familyChips .fam-add');
   await page.waitForTimeout(300);

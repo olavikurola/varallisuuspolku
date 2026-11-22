@@ -5,7 +5,7 @@
    välimuistista. Näin julkaisut päivittyvät heti kun verkko on käytössä,
    mutta sovellus toimii myös kokonaan ilman yhteyttä. */
 
-const CACHE = 'varallisuuspolku-v73'; // bump isoissa julkaisuissa: asennuserä pysyy eheänä parina
+const CACHE = 'varallisuuspolku-v74'; // bump isoissa julkaisuissa: asennuserä pysyy eheänä parina
 const CORE = [
   './',
   './index.html',
@@ -36,7 +36,7 @@ const CORE = [
   './icon-512.png',
 ];
 // Valinnaiset: puuttuminen ei estä asennusta (haetaan käytössä dynaamisesti)
-const EXTRA = ['./tulkki.js', './validointi.html', './validointi-en.html', './tietosuoja.html', './tietosuoja-en.html', './saavutettavuus.html', './agentit.html', './icon-512-maskable.png'];
+const EXTRA = ['./tulkki.js', './validointi.html', './validointi-en.html', './tietosuoja.html', './tietosuoja-en.html', './saavutettavuus.html', './saavutettavuus-en.html', './agentit.html', './agentit-en.html', './icon-512-maskable.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -71,7 +71,10 @@ self.addEventListener('fetch', (e) => {
       })
       .catch(() =>
         caches.match(req, { ignoreSearch: true }).then((hit) =>
-          hit || (req.mode === 'navigate' ? caches.match('./index.html') : Response.error())
+          // Offline-navigointi en-sivulta → englanninkielinen etusivu
+          hit || (req.mode === 'navigate'
+            ? caches.match(/-en\.html$/.test(new URL(req.url).pathname) ? './index-en.html' : './index.html')
+            : Response.error())
         )
       )
   );

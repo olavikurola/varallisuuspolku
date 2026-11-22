@@ -551,7 +551,7 @@ function renderDist() {
 
   let html = slices.map((s) =>
     `<div class="dist-row"><span class="dist-dot" style="background:${s.c}"></span>` +
-    `<span class="dl">${s.l}</span><span class="dp">${Math.round((s.v / total) * 100)} %</span>` +
+    `<span class="dl">${escapeHtml(s.l)}</span><span class="dp">${Math.round((s.v / total) * 100)} %</span>` +
     `<span class="dv">${fmtCompact(s.v)}</span></div>`
   ).join('');
   if (sim.debt[m] > 0.5) {
@@ -1028,6 +1028,9 @@ function openPopover(id) {
     // Monista tapahtuma vuotta myöhemmäksi (esim. toinen lapsi tai auto)
     const copy = JSON.parse(JSON.stringify(ev));
     copy.id = idSeq++;
+    // Jaettu hankinta / siirto: kopio on uusi pari — sama linkId kirjoittaisi
+    // alkuperäisen vastinkappaleen päälle (reconcileTransfers peilaa uuden)
+    if (copy.linkId) copy.linkId = newLinkId(copy.shared ? 'sh' : 'tr');
     copy.age = copy.owned ? state.ageNow : clamp(Math.round(ev.age) + 1, state.ageNow, state.ageEnd);
     if (copy.sellAge != null) copy.sellAge = clamp(copy.sellAge + 1, copy.age + 1, state.ageEnd);
     state.events.push(copy);
@@ -1429,7 +1432,7 @@ function renderAllKeepPopover() {
 document.addEventListener('pointerdown', (e) => {
   if (openPopoverId == null) return;
   if (popover.contains(e.target)) return;
-  if (e.target.closest && e.target.closest('.marker, .event-row')) return;
+  if (e.target.closest && e.target.closest('.marker, .goal-marker, .event-row')) return;
   closePopover();
 });
 document.addEventListener('keydown', (e) => {

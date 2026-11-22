@@ -220,7 +220,8 @@ const OHITA_LOHKOT = /<!-- VP-STAATTISET-TILASTOT alku -->[\s\S]*?<!-- VP-STAATT
 
 for (const sivu of SIVUT) {
   const ennen = avaimet.size;
-  skannaa(fs.readFileSync(path.join(ROOT, sivu), 'utf8').replace(OHITA_LOHKOT, ''), sivu);
+  // LF: CRLF-työpuussa avaimiin tarttui \r ja LF-käännökset pudotettiin
+  skannaa(fs.readFileSync(path.join(ROOT, sivu), 'utf8').replace(/\r\n/g, '\n').replace(OHITA_LOHKOT, ''), sivu);
   console.log(`${sivu}: ${avaimet.size - ennen} uutta avainta`);
 }
 

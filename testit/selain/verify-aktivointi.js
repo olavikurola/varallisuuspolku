@@ -45,7 +45,8 @@ statik.listen(8139, async () => {
     const tiles = await pg.evaluate(() => [...document.querySelectorAll('#stats .stat')].map((s) => ({ k: s.querySelector('.k').textContent.trim(), v: s.querySelector('.v').innerText.trim(), s: (s.querySelector('.s') || {}).textContent || '' })));
     ok(tiles.length === 5, 'viisi tiiltä', String(tiles.length));
     ok(/Kestävä kuukausitulo|Riittävätkö rahat/.test(tiles[0].k), 'ensimmäinen tiili on vastaus riittävyyteen', tiles[0].k);
-    ok(/varat käytetään|onnistumis-%|riittävät|osuus markkinapoluista/.test(tiles[0].s), 'sankaritiilen alarivi selittää', tiles[0].s);
+    ok(/varat käytetään|onnistumis-%|riittävät|osuus markkinapoluista|varmuudella/.test(tiles[0].s), 'sankaritiilen alarivi selittää', tiles[0].s);
+    ok(/ilman työeläkettä/.test(tiles[0].s), 'puuttuva työeläke näkyy sankaritiilessä', tiles[0].s);
     const endTile = tiles.find((x) => /v iässä$/.test(x.k) && !/eläkkeellä/.test(x.k));
     ok(endTile && /käytetään suunnitellusti/.test(endTile.s), '"Sijoitukset N v iässä" pieni luku selitetään', endTile ? endTile.s : '-');
     // Pro-rivi tapahtumakortin alla mobiilissa
@@ -60,6 +61,21 @@ statik.listen(8139, async () => {
     await pg.waitForTimeout(2300);
     const chips = await pg.evaluate(() => [...document.querySelectorAll('.polku-hint .ph-chip')].map((c) => c.dataset.vihje));
     ok(chips.includes('työeläke') && chips.includes('asunto'), 'sirupalkki (työeläke/asunto/lapsi) ilmestyy ensikäynnillä veto-vihjeen jälkeen', chips.join(','));
+    // Perustietojen vierekkäiset kentät samalla tasolla (ei 12 px porrastusta)
+    const rows = await pg.evaluate(() => [['ageNow', 'ageEnd'], ['startCapital', 'monthly']]
+      .map(([a, c]) => Math.abs(document.getElementById(a).getBoundingClientRect().top - document.getElementById(c).getBoundingClientRect().top)));
+    ok(rows.every((d) => d < 1), 'perustietojen rivit eivät porrastu', rows.join(','));
+    // Verojen vertailuero väritön: pienempi vero ei ole itsessään hyvä (D10)
+    const taxD = await pg.evaluate(() => {
+      setBaseline('Testi');
+      const r = state.events.find((e) => e.type === 'retirement');
+      r.age = 60; r.pensionAge = 60;
+      renderAll();
+      const tile = [...document.querySelectorAll('#stats .stat')].find((s) => /Verot yhteensä/.test(s.textContent));
+      const d = tile && tile.querySelector('.d');
+      return d ? d.className : null;
+    });
+    ok(taxD === 'd flat', 'verojen vertailuero ei ole vihreä/punainen', String(taxD));
     ok(errs.length === 0, 'ei konsolivirheitä', errs[0]);
     await ctx.close();
   }
@@ -88,7 +104,8 @@ statik.listen(8139, async () => {
     ok(r60.age === 60 && r60.goal === 'manual' && r60.n === after.n, 'eläkeikä 60 lavastettiin ilman uusia tapahtumia', JSON.stringify(r60));
     // Ctrl+Z palauttaa edellisen lavastuksen
     await pg.keyboard.press('Control+z'); await pg.waitForTimeout(400);
-    ok(await pg.evaluate((a) => state.events.find((e) => e.type === 'retirement').age === a, before.ret) === false || true, 'kumoaminen toimii (ei virhettä)');
+    const rUndo = await pg.evaluate(() => state.events.find((e) => e.type === 'retirement').age);
+    ok(rUndo === before.ret, 'Ctrl+Z palauttaa eläkeiän ennen lavastusta', `${rUndo} vs ${before.ret}`);
     await ctx.close();
   }
 

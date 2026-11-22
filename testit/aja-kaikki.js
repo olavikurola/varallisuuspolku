@@ -19,15 +19,23 @@ const SELAIN = path.join(__dirname, 'selain');
 const filter = process.argv[2] || '';
 const TIMEOUT_MS = 5 * 60 * 1000;
 
+// Kelpaa vain asennus, jonka Chromium on oikeasti olemassa — pelkkä
+// node_modules/playwright-kansio osui 4.9.2026 rikkinäiseen asennukseen
+// ja kaikki selaintestit kaatuivat 0 sekunnissa.
+const PW_PROBE = "const {chromium}=require('playwright');require('fs').accessSync(chromium.executablePath())";
+const pwWorks = (nodePath) => spawnSync(process.execPath, ['-e', PW_PROBE],
+  { env: nodePath == null ? process.env : { ...process.env, NODE_PATH: nodePath } }).status === 0;
+
 function findPlaywright() {
-  const probe = spawnSync(process.execPath, ['-e', "require('playwright')"], { env: process.env });
-  if (probe.status === 0) return process.env.NODE_PATH || '';
+  if (pwWorks(null)) return process.env.NODE_PATH || '';
   const base = path.join(process.env.LOCALAPPDATA || '', 'Temp', 'claude', 'c--Users-olavi-claude-ty-t-varallisuuspolku');
   if (fs.existsSync(base)) {
-    for (const s of fs.readdirSync(base)) {
-      const nm = path.join(base, s, 'scratchpad', 'node_modules');
-      if (fs.existsSync(path.join(nm, 'playwright'))) return nm;
-    }
+    // uusin ensin: tuorein asennus on todennäköisimmin ehjä
+    const ehdokkaat = fs.readdirSync(base)
+      .map((s) => path.join(base, s, 'scratchpad', 'node_modules'))
+      .filter((nm) => fs.existsSync(path.join(nm, 'playwright')))
+      .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+    for (const nm of ehdokkaat) if (pwWorks(nm)) return nm;
   }
   return null;
 }
@@ -41,17 +49,35 @@ function portFree(port) {
   });
 }
 
+// Aikakatkaisu tappaa koko prosessipuun: spawnSyncin SIGTERM on Windowsilla
+// TerminateProcess, jolloin Playwrightin oma siivous ei ehdi ajaa ja
+// Chromium-lapset jäivät orvoiksi kuormittamaan seuraavia testejä.
+function killTree(child) {
+  if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+  else { try { process.kill(-child.pid, 'SIGKILL'); } catch (e) { child.kill('SIGKILL'); } }
+}
+
 function run(name, file, env) {
-  const t0 = Date.now();
-  const r = spawnSync(process.execPath, [file], { cwd: ROOT, env, timeout: TIMEOUT_MS, encoding: 'utf8' });
-  const secs = ((Date.now() - t0) / 1000).toFixed(0);
-  const pass = r.status === 0;
-  console.log((pass ? '  ✓ ' : '  ✗ ') + name + ' (' + secs + ' s)');
-  if (!pass) {
-    const out = ((r.stdout || '') + '\n' + (r.stderr || '')).trim().split('\n');
-    console.log(out.slice(-25).map((l) => '      ' + l).join('\n'));
-  }
-  return { name, pass, secs };
+  return new Promise((resolve) => {
+    const t0 = Date.now();
+    const child = spawn(process.execPath, [file], { cwd: ROOT, env, detached: process.platform !== 'win32' });
+    let out = '';
+    child.stdout.on('data', (d) => { out += d; });
+    child.stderr.on('data', (d) => { out += d; });
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; killTree(child); }, TIMEOUT_MS);
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      const secs = ((Date.now() - t0) / 1000).toFixed(0);
+      const pass = code === 0 && !timedOut;
+      console.log((pass ? '  ✓ ' : '  ✗ ') + name + ' (' + secs + ' s)' + (timedOut ? ' — AIKAKATKAISU ' + TIMEOUT_MS / 1000 + ' s' : ''));
+      if (!pass) {
+        const lines = out.trim().split('\n');
+        console.log(lines.slice(-25).map((l) => '      ' + l).join('\n'));
+      }
+      resolve({ name, pass, secs });
+    });
+  });
 }
 
 (async () => {
@@ -62,7 +88,7 @@ function run(name, file, env) {
   console.log('— Yksikkötestit —');
   for (const f of ['laskenta.test.js', 'mc-validointi.test.js', 'skeema-golden.test.js', 'pakkaus.test.js', 'tulkki-proxy.test.js', 'mcp.test.js', 'palvelin-stats.test.js', 'tilastot-staattinen.test.js']) {
     if (filter && !f.includes(filter)) continue;
-    results.push(run(f, path.join(__dirname, f), env));
+    results.push(await run(f, path.join(__dirname, f), env));
   }
 
   // 2) Selaintestit
@@ -87,7 +113,7 @@ function run(name, file, env) {
     }
 
     console.log('\n— Selaintestit (' + scripts.length + ') —');
-    for (const f of scripts) results.push(run(f, path.join(SELAIN, f), env));
+    for (const f of scripts) results.push(await run(f, path.join(SELAIN, f), env));
     if (serveProc) serveProc.kill();
   }
 

@@ -60,7 +60,7 @@ const feeOr0 = (v) => (typeof v === 'number' && isFinite(v) ? clamp(v, 0, 10) : 
 // (CRN). Polku i saa aina saman shokkijonon parametreista riippumatta, joten
 // viuhka ja onnistumis-% eivät väpätä säätöjen välillä ja deltat ovat reiluja.
 // ÄLÄ sido siementä istuntoon tai suunnitelmaan — se rikkoisi tämän.
-const MC_SEED = (i) => 1337 + i * 7919;
+const MC_SEED = (i, seed = 1337) => seed + i * 7919;
 // Moottoriversio: päivitä kun tulosten taloudellinen merkitys muuttuu (validointisivun muutosloki).
 // Kulkee vertailudatan mukana, jotta eri versioiden johdetut tulokset erottuvat (auditointi 5.9.2026 D-03).
 const ENGINE_VERSION = '2026-09-24';
@@ -121,7 +121,9 @@ function pensionAt(ctx, retAge) {
 /* ===================== Pro-tila ===================== */
 // Pro avaa oletukset säädettäviksi. proOf(st) palauttaa normalisoidun
 // konfiguraation TAI null (perustila). Kaikilla oletusarvoilla laskenta
-// on bitilleen sama kuin perustilassa — determinismitestit vartioivat tätä.
+// on sama kuin perustilassa liukulukutarkkuudella: oletusallokaatiolla (70/20)
+// bitilleen, muilla painoilla voi jäädä ULP-tason ero (eri laskujärjestys) —
+// determinismitestit vartioivat oletusta.
 
 const PRO_BASE_ASSETS = [
   { key: 'stocks', name: 'Osakkeet', mu: 7,   sigma: 16 },
@@ -172,7 +174,9 @@ function proOf(st) {
     out.sigma[k] = numOr(p.sigma && p.sigma[k], d.sigma[k], 0, 60);
   }
   if (Array.isArray(p.assets)) {
-    out.assets = p.assets.slice(0, 3).map((a, i) => ({
+    // Viallinen rivi (null, luku) jakolinkistä → oletusarvot; indeksit pysyvät
+    // linjassa tallenteen kanssa (UI kirjoittaa assets.i-polkuihin)
+    out.assets = p.assets.slice(0, 3).map((a) => (a && typeof a === 'object' ? a : {})).map((a, i) => ({
       name: typeof a.name === 'string' ? a.name.slice(0, 24) : 'Oma luokka ' + (i + 1),
       mu: numOr(a.mu, 5, -10, 25),
       sigma: numOr(a.sigma, 10, 0, 60),
@@ -183,7 +187,7 @@ function proOf(st) {
   if (Array.isArray(p.corr) && p.corr.length === n * (n - 1) / 2) {
     out.corr = p.corr.map((v) => numOr(v, 0, -0.5, 1));
   }
-  out.infl = numOr(p.infl, d.infl, 0, 10);
+  out.infl = numOr(p.infl, d.infl, 0, 15); // sama yläraja kuin peruskentässä (oli 10 → kenttä ja moottori eri luvussa)
   out.ter = numOr(p.ter, 0, 0, 3);
   if (p.glide && typeof p.glide === 'object') {
     out.glide = {
@@ -282,8 +286,9 @@ function ensurePSD(M) {
 
 // Painovektori iässä age: glidepath siirtää osakepainoa korkoihin;
 // omat luokat pitävät painonsa, käteinen on jäännös
-function weightsAt(age, retAge, st) {
-  const p = proOf(st);
+// p: valmiiksi normalisoitu proOf(st) — buildMu välittää sen, ettei normalisointia
+// ajeta joka kuukaudelle uudelleen
+function weightsAt(age, retAge, st, p = proOf(st)) {
   let s = st.allocStocks / 100;
   let b = Math.min(st.allocBonds / 100, 1 - s);
   let f = 1;
@@ -667,7 +672,7 @@ function buildMu(ctx, st, retAge) {
     const classes = classesOf(st);
     const corrM = p.corr ? ensurePSD(corrMatrixOf(classes.length, p.corr)).M : null;
     for (let m = 1; m <= months; m++) {
-      const w = weightsAt(a0 + m / 12, retAge, st);
+      const w = weightsAt(a0 + m / 12, retAge, st, p);
       const { mu, sigma } = portfolioStatsPro(w, classes, corrM, p.ter);
       muMc[m] = Math.pow((1 + mu - fee - divTax * w[0]) / (1 + infl), 1 / 12) - 1;
       sigA[m] = sigma;
@@ -862,7 +867,7 @@ const SQRT12 = Math.sqrt(12);
 // polaarimenetelmä, skaalattu yksikkövarianssiin).
 function makeShock(st, sigA, i) {
   const p = proOf(st);
-  const rand = mulberry32(((p ? p.mc.seed : 1337) + i * 7919) >>> 0);
+  const rand = mulberry32(MC_SEED(i, p ? p.mc.seed : 1337) >>> 0);
   if (p && p.mc.dist === 't') {
     const df = p.mc.df;
     const scale = Math.sqrt((df - 2) / df); // var(t_df) = df/(df−2)
@@ -1351,6 +1356,8 @@ function mcBand(st, { paths, withdrawal, retireAge, goals }) {
 // bisektio jokaiselle iälle — "jos jäät eläkkeelle iässä X, kestävä tulo on Y"
 function sustainableByAge(st, step = 2) {
   const ctx = prepareSim(st);
+  // %-nostossa tulo ei riipu nostosummasta → bisektio karkasi kattoon (16 384 000)
+  if (ctx.wdMode === 'pct') return [];
   const pts = [];
   const lo = Math.ceil(ctx.a0 + 2);
   const hi = Math.floor(ctx.a1 - 2);
@@ -1411,7 +1418,7 @@ function proMuBump(c, d) {
   if (!c.proOn || !c.pro) { c.proOn = true; c.pro = defaultPro(); }
   if (!c.pro.mu) c.pro.mu = { stocks: 7, bonds: 3, cash: 1.5 };
   for (const k of ['stocks', 'bonds', 'cash']) c.pro.mu[k] = (c.pro.mu[k] != null ? c.pro.mu[k] : defaultPro().mu[k]) + d;
-  if (Array.isArray(c.pro.assets)) for (const a of c.pro.assets) a.mu = (a.mu || 0) + d;
+  if (Array.isArray(c.pro.assets)) for (const a of c.pro.assets) if (a && typeof a === 'object') a.mu = (a.mu || 0) + d;
 }
 
 function proInflBump(c, d) {

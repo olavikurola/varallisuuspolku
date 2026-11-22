@@ -177,7 +177,7 @@ statik.listen(8138, async () => {
     await pg.goto('http://localhost:8138/' + z);
     await pg.waitForTimeout(1800);
     const v = await pg.evaluate(() => ({ age: state.ageNow, ret: state.events.find((e) => e.type === 'retirement').age, kortti: !document.getElementById('ramp').hidden,
-      uusi: makeShareUrl(), tuonti: (() => { try { importPlanLink('https://varallisuuspolku.com/' + makeShareUrl().split('#')[1] ? '#' + makeShareUrl().split('#')[1] : ''); return plans.length; } catch (e) { return 'virhe ' + e.message; } })() }));
+      uusi: makeShareUrl(), tuonti: (() => { try { importPlanLink('https://varallisuuspolku.com/#' + makeShareUrl().split('#')[1]); return plans.length; } catch (e) { return 'virhe ' + e.message; } })() }));
     ok(v.age === 41 && v.ret === 63 && v.kortti, 'pakattu #s=~ latautuu kuten vanha base64-linkki');
     ok(/#s=~[A-Za-z0-9_-]+$/.test(v.uusi), 'makeShareUrl tuottaa pakatun linkin', v.uusi.slice(-40));
     ok(typeof v.tuonti === 'number' && v.tuonti >= 2, '"Tuo linkistä" ymmärtää pakatun linkin', String(v.tuonti));

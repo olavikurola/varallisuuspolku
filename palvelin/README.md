@@ -9,9 +9,15 @@ Vain [server.js](server.js):n `sanitize()`-funktion whitelistaamat kentät —
 tallenne rakennetaan alusta, joten mitään muuta (esim. tapahtumien omia nimiä)
 ei voi päätyä levylle. IP-osoitetta käytetään vain muistinvaraiseen
 rate-limitointiin; sitä ei koskaan kirjoiteta levylle. Lahjoituksissa ei ole
-tunnisteita, eikä niitä voi yhdistää toisiinsa tai keneenkään.
+henkilö- eikä laitetunnisteita, eikä niitä voi yhdistää keneenkään. Ainoa
+linkki on satunnainen rivitunniste (`rid`), jolla saman selaimen myöhempi
+päivitys (`replaces`) korvaa oman aiemman rivinsä.
 
 Jakaumat julkaistaan vasta, kun ikäryhmässä on vähintään 30 lahjoitusta.
+
+Sama palvelin välittää myös **Tulkin** (AI-selittäjä) kutsut Anthropicin
+rajapintaan (`POST /tulkki`); ympäristömuuttujat ja kustannuskatot:
+[../YLLAPITO.md](../YLLAPITO.md).
 
 ## Käynnistys paikallisesti
 
@@ -36,7 +42,8 @@ Palvelin kuuntelee Railwayn antamaa `PORT`-muuttujaa automaattisesti.
 Vertailudata on yksi JSONL-tiedosto volumella — ilman vientiä se katoaa
 yhdessä levyhäiriössä. Aseta Railwayhin `VIENTI_AVAIN` (pitkä satunnainen
 merkkijono): sen jälkeen `GET /vienti` otsikolla `x-vp-vienti: <avain>`
-palauttaa tiedoston sellaisenaan (ilman avainta pääte vastaa 404).
+palauttaa tiedoston sellaisenaan (jos `VIENTI_AVAIN` puuttuu palvelimelta,
+pääte vastaa 404; väärä tai puuttuva otsikko → 403).
 GitHub-workflow `vertailudata-vienti.yml` hakee, salaa ja säilyttää kopion
 päivittäin ja ajaa palautustestin; palautus `tyokalut/vienti-palauta.js`.
 Rivit ovat anonyymejä, mutta raakarivi ei ole julkinen aggregaatti — siksi

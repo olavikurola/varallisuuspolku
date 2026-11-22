@@ -2,6 +2,7 @@
 /* Aloitusrampin eheysverifiointi: ramppi vs. kierros vs. jakolinkki vs. paluu. */
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
+const { norm } = require('./normi');
 
 let failed = 0;
 const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { failed++; console.error('  ✗ ' + name + (d ? ' — ' + d : '')); } };
@@ -44,9 +45,46 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   }));
   ok(res.age === 34 && res.w === 15000 && res.m === 300, 'kolme lukua tilaan', JSON.stringify(res));
   ok(res.events.length === 1 && res.events[0] === 'retirement', 'vain eläketapahtuma — ei esimerkkielämää');
-  ok(res.goal === 'withdrawal' && res.pension === 0 && res.retA === 65, 'eläke 65 v, kestävä tulo ratkaistaan, työeläke 0');
+  // Eläkeikä = oma alin vanhuuseläkeikä (34 v → 67,75 → 68), ei kiinteä 65
+  const minA = await page.evaluate(() => Math.ceil(pensionAgeMin(34) - 1e-9));
+  ok(res.goal === 'withdrawal' && res.pension === 0 && res.retA === minA && minA === 68,
+    'eläke omassa alimmassa eläkeiässä (68 v), kestävä tulo ratkaistaan, työeläke 0', JSON.stringify(res));
   const statTxts = await page.locator('.ramp-stat .v').allTextContents();
   ok(statTxts.length === 2 && statTxts.every((t) => /\d/.test(t)), 'otsikkovastaus: kaksi lukua', JSON.stringify(statTxts));
+
+  console.log('85 %:n varmuudella kestävä tulo rinnalla (worker)');
+  await page.waitForFunction(() => /€/.test((document.getElementById('rampConf') || {}).textContent || ''), null, { timeout: 20000 }).catch(() => {});
+  const confTxt = norm(await page.locator('#rampConf').textContent());
+  const confWd = Number((confTxt.match(/varmuudella ([\d ]+) €/) || [])[1]?.replace(/ /g, ''));
+  const medWd = await page.evaluate(() => sim.solvedWithdrawal);
+  ok(/^85 % varmuudella [\d ]+ €\/kk$/.test(confTxt), '85 %:n rivi täyttyy ilman kortin uudelleenrakennusta', confTxt);
+  ok(confWd > 0 && confWd < medWd, '85 %:n tulo on mediaaniratkaisua pienempi', `${confWd} vs ${medWd}`);
+
+  console.log('Tarve: kortti vastaa "riittävätkö rahat" ja onnistumis-% reagoi eläkeikään');
+  await page.locator('#rampNeed').fill('700');
+  await page.locator('#rampNeed').blur();
+  await page.waitForFunction(() => document.querySelector('.ramp-stat .k').textContent.includes('Riittävätkö'));
+  const needSt = await page.evaluate(() => ({ goal: state.events[0].goal, wd: state.events[0].withdrawal }));
+  ok(needSt.goal === 'manual' && needSt.wd === 700, 'tarve kiinteäksi kuukausituloksi', JSON.stringify(needSt));
+  ok(await page.locator('#rampConf').count() === 0, 'kestävän tulon 85 %:n rivi poistuu tarpeen myötä');
+  await page.waitForFunction(() => sim.mcPaths >= 5000 && !sim.successStale, null, { timeout: 20000 });
+  await page.waitForTimeout(200);
+  const pShown = norm(await page.locator('#rampP').textContent());
+  const pSim = await page.evaluate(() => Math.round(sim.successProb * 100));
+  ok(pShown === `${pSim} %`, 'kortin onnistumis-% = workerin 5 000 polun tulos', `${pShown} vs ${pSim}`);
+  ok(norm(await page.locator('.ramp-stat .s').first().textContent()).includes('ilman työeläkettä'), 'puuttuva työeläke kerrotaan');
+  const pAt = await page.evaluate(() => {
+    const r = state.events[0], a0 = r.age;
+    const at = (a) => { r.age = a; r.pensionAge = Math.max(a, pensionAgeMin(state.ageNow)); return simulate(state).successProb; };
+    const out = { p60: at(60), p68: at(a0) };
+    r.age = a0; r.pensionAge = Math.max(a0, pensionAgeMin(state.ageNow));
+    return out;
+  });
+  ok(pAt.p60 < pAt.p68 - 0.1, 'eläkeiän aikaistus laskee onnistumis-%:a, kun tarve on annettu', JSON.stringify(pAt));
+  await page.locator('#rampNeed').fill('');
+  await page.locator('#rampNeed').blur();
+  await page.waitForFunction(() => document.querySelector('.ramp-stat .k').textContent.includes('Kestävä'));
+  ok(await page.evaluate(() => state.events[0].goal) === 'withdrawal', 'tyhjä tarve palauttaa kestävän tulon ratkaisun');
   // Neljä toimintonappia mahtui aiemmin vain rivittymällä — vahdi ettei rivi
   // vuoda kortin reunan yli (deskarilla kortti on kapeampi kuin nappien summa)
   const overflow = await page.evaluate(() => {
@@ -57,8 +95,24 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   });
   ok(overflow === 0, 'toimintonapit pysyvät kortin sisällä', overflow + ' nappia yli reunan');
 
+  // Kentän muutos ei saa rakentaa nappeja uudelleen: Tab pääsee eteenpäin, ja
+  // kirjoitus + suora klikkaus nappiin osuu (aiemmin klikkaus katosi ja fokus
+  // palautettiin kenttään — auditointi 11/2026)
+  await page.click('#rampPension');
+  await page.keyboard.type('1500');
+  await page.keyboard.press('Tab');
+  await page.waitForTimeout(200);
+  ok(await page.evaluate(() => document.activeElement && document.activeElement.id) !== 'rampPension', 'Tab siirtyy työeläkekentästä eteenpäin');
+  ok(await page.evaluate(() => state.events[0].pension) === 1500, 'työeläke kirjautui tilaan');
+
   console.log('Avaus työtilaan');
-  await page.click('#rampOpen');
+  // Kirjoitus tarvekenttään ja OIKEA hiiren klikkaus suoraan nappiin (mousedown → blur → change → click)
+  await page.click('#rampNeed');
+  await page.keyboard.type('2000');
+  const openBox = await page.locator('#rampOpen').boundingBox();
+  await page.mouse.click(openBox.x + openBox.width / 2, openBox.y + openBox.height / 2);
+  await page.waitForTimeout(300);
+  ok(await page.evaluate(() => state.events[0].goal === 'manual' && state.events[0].withdrawal) === 2000, 'tarve kirjautui ennen sulkua');
   ok(await page.locator('.ramp').isHidden(), 'ramppi sulkeutuu');
   ok(await page.locator('#tour').isHidden(), 'kierros ei tunge väliin');
   ok(await page.evaluate(() => localStorage.getItem('vp-ramp-done')) === '1', 'ramppi merkitty tehdyksi');

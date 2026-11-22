@@ -26,6 +26,9 @@ const GROUPS = [
 ];
 
 const $ = (id) => document.getElementById(id);
+// Työkalun etusivu kielen mukaan: './' vei en-sivulta suomenkieliseen (buildi
+// kirjoittaa vain staattiset linkit, ei JS:n luomia)
+const KOTI = VP_KIELI === 'en' ? 'index-en.html' : './';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const YOU = '#fbbf24';
 
@@ -699,12 +702,12 @@ function renderGate(me) {
   lock.innerHTML = me
     ? `<div class="an-lock-card"><div class="ic">🗺️</div><h2>${t('Melkein valmista')}</h2>
        <p>${t('Sinulla on jo oma suunnitelma. Tilastot aukeavat, kun jaat sen <b>anonyymisti</b> — näet ensin täsmälleen mitä jaetaan, eikä se velvoita mihinkään.')}</p>
-       <a class="btn" href="./#yhteenveto">${t('Avaa Suunnitelmani ja jaa →')}</a>
+       <a class="btn" href="${KOTI}#yhteenveto">${t('Avaa Suunnitelmani ja jaa →')}</a>
        <p class="small">${t('Ei tunnisteita · summat pyöristetään · jakaumat julkaistaan vasta ≥ 30 suunnitelman ryhmistä · aggregaatit ovat avointa dataa:')}
        <a href="${DATA_API}/stats.json" target="_blank" rel="noopener">stats.json</a></p></div>`
     : `<div class="an-lock-card"><div class="ic">📊</div><h2>${t('Tilastot — miten muut suunnittelevat vaurastumista')}</h2>
        <p>${t('Tämä näkymä kertoo, miten eri ikäiset suunnittelevat talouttaan ja etenevät vaurastumisen matkalla. Tilastot aukeavat, kun sinullakin on <b>oma suunnitelma</b>.')}</p>
-       <a class="btn" href="./">${t('Tee oma suunnitelma →')}</a>
+       <a class="btn" href="${KOTI}">${t('Tee oma suunnitelma →')}</a>
        <p class="small">${t('Vie pari minuuttia — suunnitelmasi pysyy {0}.', (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ? t('omalla laitteellasi') : t('omassa selaimessasi'))}</p></div>`;
   document.body.appendChild(lock);
   return true;
@@ -717,7 +720,8 @@ function renderGate(me) {
 
 function initZoom() {
   document.querySelectorAll('.an-card').forEach((card) => {
-    if (card.classList.contains('an-method')) return;
+    // renderStats ajetaan kahdesti (välimuisti + tuore data) — nappi vain kerran
+    if (card.classList.contains('an-method') || card.querySelector('.an-zoom')) return;
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'an-zoom';

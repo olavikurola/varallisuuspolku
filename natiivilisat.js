@@ -57,6 +57,9 @@
 
   function ajastaMuistutukset() {
     if (!LN || !paalla(MUISTUTUS_KEY)) return Promise.resolve();
+    // Tilastot/Agentit-sivuilla ei ole suunnitelmaa (state): uudelleenajastus
+    // peruisi tapahtumamuistutukset eikä voisi luoda niitä takaisin
+    if (typeof state === 'undefined') return Promise.resolve();
     return LN.checkPermissions().then(function (perm) {
       if (perm.display !== 'granted') return;
       return LN.getPending().then(function (res) {

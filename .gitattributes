@@ -1,0 +1,5 @@
+# Tekstitiedostot aina LF:nä työpuussa koneen core.autocrlf-asetuksesta riippumatta:
+# CRLF-työpuu rikkoi kieliputken (avaimiin tarttui \r) ja moottorikopioiden
+# tavuidenttisyystestit ovat rivinvaihdoille herkkiä.
+* text=auto eol=lf
+*.bat text eol=crlf

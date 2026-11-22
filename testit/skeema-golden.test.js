@@ -60,9 +60,14 @@ const tunnusluvut = (plan) => {
 const nyt = {};
 for (const k in FIXTURES) nyt[k] = tunnusluvut(FIXTURES[k]);
 
-if (paivita || !fs.existsSync(F)) {
+// Puuttuva golden on virhe, ei hiljainen läpimeno: tiedosto luodaan vain tietoisesti
+if (!paivita && !fs.existsSync(F)) {
+  console.error('Golden-odotteet puuttuvat: ' + F + ' — luo tietoisesti: node testit/skeema-golden.test.js --paivita');
+  process.exit(1);
+}
+if (paivita) {
   fs.writeFileSync(F, JSON.stringify({ paivitetty: new Date().toISOString().slice(0, 10), huom: 'Päivitä vain tietoisesti (--paivita) ja kirjaa muutos validointisivulle.', odotteet: nyt }, null, 2) + '\n');
-  console.log((paivita ? 'Odotteet päivitetty' : 'Odotteet luotu') + ': ' + F);
+  console.log('Odotteet päivitetty: ' + F);
   process.exit(0);
 }
 

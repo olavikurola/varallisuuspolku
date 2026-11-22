@@ -16,6 +16,9 @@ const { execSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
 const TARKISTA = process.argv.includes('--tarkista');
 const tanaan = new Date().toISOString().slice(0, 10);
+// CRLF-työpuu (core.autocrlf=true): \n-regexit eivät osuneet \r\n:ään ja ajo oli
+// hiljaa tehoton — luetaan LF:nä (git tallentaa LF:nä joka tapauksessa)
+const lue = (f) => fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
 let muutoksia = 0;
 
 const gitPvm = (file) => {
@@ -48,7 +51,7 @@ const kirjoita = (file, s, alku) => {
 // 1) sitemap.xml
 {
   const f = path.join(ROOT, 'sitemap.xml');
-  const alku = fs.readFileSync(f, 'utf8');
+  const alku = lue(f);
   const s = alku.replace(/<loc>https:\/\/varallisuuspolku\.com\/([^<]*)<\/loc>\n(\s*)<lastmod>[^<]*<\/lastmod>/g,
     (m, polku, ind) => {
       const file = polku || 'index.html';
@@ -64,7 +67,7 @@ const kirjoita = (file, s, alku) => {
 for (const name of ['index.html', 'index-en.html']) {
   const f = path.join(ROOT, name);
   if (!fs.existsSync(f)) continue;
-  const alku = fs.readFileSync(f, 'utf8');
+  const alku = lue(f);
   let pvm = gitPvm(name) || tanaan;
   try { if (execSync(`git status --porcelain -- "${name}"`, { cwd: ROOT, encoding: 'utf8' }).trim()) pvm = tanaan; } catch (e) {}
   let s;
@@ -76,7 +79,7 @@ for (const name of ['index.html', 'index-en.html']) {
 // 3) llms.txt päiväys
 {
   const f = path.join(ROOT, 'llms.txt');
-  const alku = fs.readFileSync(f, 'utf8');
+  const alku = lue(f);
   const s = alku.replace(/\(päivitetty \d{4}-\d{2}-\d{2}\)/, `(päivitetty ${tanaan})`);
   kirjoita(f, s, alku);
 }
