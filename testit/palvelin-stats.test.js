@@ -266,5 +266,67 @@ async function statsFrom(port, rows) {
     } finally { proc2.kill(); }
   }
 
+  console.log('Erotussääntö: sisäkkäiset joukot julki vain, jos erotuskin on k-anonyymi (auditointi 11/2026)');
+  {
+    // 30 × 25–29 + 10 × 50–54: "kaikki − 18–34" paljastaisi 10 hengen jäännöksen → kaista ei julki
+    const pieni = [...Array(30)].map((_, i) => edited(i, { ageNow: 25 + (i % 5) }))
+      .concat([...Array(10)].map((_, i) => edited(i + 30, { ageNow: 50 + (i % 5) })));
+    const s = await statsFrom(8807, pieni);
+    ok(!!s.groups.all.monthly && !!s.groups.all.hist, 'kaikki-joukko julkaistaan (40)');
+    ok(s.groups['18-34'].n === 30 && !s.groups['18-34'].monthly && !s.groups['18-34'].hist, 'kaista 18–34 (30) EI julki, kun jäännös on 10', JSON.stringify(Object.keys(s.groups['18-34'])));
+    ok(!s.groups['25-29'].monthly, 'julkaisemattoman kaistan alaryhmä ei julki');
+    // 30 + 30: jäännös 0 → molemmat kaistat ja täydet alaryhmät julki
+    const tasan = [...Array(30)].map((_, i) => edited(i, { ageNow: 25 + (i % 5) }))
+      .concat([...Array(30)].map((_, i) => edited(i + 30, { ageNow: 50 + (i % 5) })));
+    const s2 = await statsFrom(8808, tasan);
+    ok(!!s2.groups['18-34'].monthly && !!s2.groups['50-64'].monthly, 'kaistat julki, kun jäännös on 0');
+    ok(!!s2.groups['25-29'].monthly && !!s2.groups['50-54'].monthly, 'koko kaistan kattava alaryhmä julki');
+    // 35 + 35 + 5 × 65+: jäännös 5 jäisi kahden kaistan jälkeen → vain toinen kaista julki
+    const kolme = [...Array(35)].map((_, i) => edited(i, { ageNow: 25 + (i % 5) }))
+      .concat([...Array(35)].map((_, i) => edited(i + 35, { ageNow: 50 + (i % 5) })))
+      .concat([...Array(5)].map((_, i) => edited(i + 70, { ageNow: 66 + i })));
+    const s3 = await statsFrom(8809, kolme);
+    const julki = ['18-34', '50-64'].filter((g) => !!s3.groups[g].monthly);
+    ok(julki.length === 1, 'kahdesta kaistasta vain toinen julki, kun jäännös (5) jäisi alle rajan', julki.join(','));
+  }
+
+  console.log('Julkaisuerä: jakaumat päivittyvät vasta kun erä täyttyy; derived-kenttää ei tallenneta');
+  {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vp-era-'));
+    const port = 8810;
+    fs.writeFileSync(path.join(dir, 'lahjoitukset.jsonl'), [...Array(30)].map((_, i) => JSON.stringify(edited(i))).join('\n') + '\n');
+    const kaynnista = () => spawn(process.execPath, [SERVER], { env: { ...process.env, PORT: String(port), DATA_DIR: dir, JULKAISUERA: '3' }, stdio: 'ignore' });
+    const odota = async () => { for (let i = 0; i < 50; i++) { try { await fetch(`http://127.0.0.1:${port}/health`); return; } catch (e) { await new Promise((r) => setTimeout(r, 100)); } } };
+    const stats = async () => (await fetch(`http://127.0.0.1:${port}/stats.json`)).json();
+    const jaa = async (i) => {
+      const p = edited(100 + i, { monthly: 9000 + i, derived: { successProb: 0.5, wAtRet: 123456 } });
+      delete p.rid; delete p.date;
+      return (await fetch(`http://127.0.0.1:${port}/donate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) })).status;
+    };
+    let proc = kaynnista();
+    try {
+      await odota();
+      const s0 = await stats();
+      ok(s0.total === 30 && s0.groups.all.n === 30, 'lähtötilanne 30 riviä');
+      ok(await jaa(1) === 200, 'yksi uusi jako hyväksytään');
+      const s1 = await stats();
+      ok(s1.total === 31, 'kokonaismäärä elää heti (31)', String(s1.total));
+      ok(s1.groups.all.n === 30 && JSON.stringify(s1.groups) === JSON.stringify(s0.groups), 'jakaumat ennallaan: yksittäinen jako ei näy erotuksessa');
+      ok(s1.odottaa === 1, 'vastaus kertoo odottavien määrän', String(s1.odottaa));
+      // Erä säilyy uudelleenkäynnistyksen (deploy) yli
+      proc.kill();
+      await new Promise((r) => setTimeout(r, 300));
+      proc = kaynnista();
+      await odota();
+      const s1b = await stats();
+      ok(s1b.total === 31 && s1b.groups.all.n === 30, 'uudelleenkäynnistys ei julkaise keskeneräistä erää', `${s1b.total}/${s1b.groups.all.n}`);
+      await jaa(2); await jaa(3);
+      const s3 = await stats();
+      ok(s3.groups.all.n === 33 && s3.odottaa === undefined, 'kolmas jako täyttää erän → jakaumat päivittyvät (33)', `${s3.groups.all.n}`);
+      const levy = fs.readFileSync(path.join(dir, 'lahjoitukset.jsonl'), 'utf8');
+      ok(!levy.includes('"derived"') && !levy.includes('123456'), 'asiakkaan derived-lukuja ei tallenneta levylle');
+    } finally { proc.kill(); }
+  }
+
   process.exit(failed ? 1 : 0);
 })();

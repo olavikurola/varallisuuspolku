@@ -11,7 +11,7 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 
 const SERVER = path.join(__dirname, '..', 'palvelin', 'server.js');
-const MOCK_PORT = 8790, MAIN_PORT = 8791, OFF_PORT = 8792, PUB_PORT = 8793, PRIV_PORT = 8794;
+const MOCK_PORT = 8790, MAIN_PORT = 8791, OFF_PORT = 8792, PUB_PORT = 8793, PRIV_PORT = 8794, PUB2_PORT = 8789;
 const API = `http://127.0.0.1:${MAIN_PORT}`;
 
 let failed = 0;
@@ -27,6 +27,16 @@ const mock = http.createServer((req, res) => {
   req.on('data', (c) => body += c);
   req.on('end', () => {
     lastUpstream = { url: req.url, headers: req.headers, body: JSON.parse(body) };
+    // Virhepolut testattaviksi kysymyksen avainsanalla (auditointi 11/2026)
+    const viesti = JSON.stringify(lastUpstream.body.messages);
+    if (viesti.includes('VIRHE500')) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end('{"error":{"type":"api_error","message":"salainen sisäinen viesti"}}'); return; }
+    if (viesti.includes('KESKEN')) {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.write('data: ' + JSON.stringify({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Alku vastauksesta, ' } }) + '\n\n');
+      res.write('event: error\ndata: ' + JSON.stringify({ type: 'error', error: { type: 'overloaded_error', message: 'Overloaded' } }) + '\n\n');
+      res.end();
+      return;
+    }
     // Anthropic-tyylinen SSE-virta (palvelin jäsentää tämän NDJSON:ksi):
     // tekstiä + tool_use-lohko, jonka input saapuu input_json_delta-paloina
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
@@ -253,6 +263,33 @@ const CTX = { plan: { ageNow: 30 }, stats: { onnistumistodennakoisyysPct: 99, ve
     const sys = lastUpstream.body.system[0].text;
     ok(/LUKUSIDONNAT/.test(sys) && /\[\[polku\]\]/.test(sys), 'lukusidontojen ohje kehotteessa');
     ok(/RIKASTA/.test(sys) && /yksi vertailu per vastaus/.test(sys), 'spontaani vertailurikastus kehotteessa');
+  }
+
+  console.log('Virhepolut: kiintiön hyvitys, katkennut virta, rampin avainportti (auditointi 11/2026)');
+  {
+    const pub2 = spawnServer(PUB2_PORT, {
+      ANTHROPIC_API_KEY: 'test-avain', TULKKI_KEYS: 'oma-avain',
+      TULKKI_UPSTREAM: `http://127.0.0.1:${MOCK_PORT}`, TULKKI_ANON_DAILY: '1', TULKKI_DAILY_MAX: '50',
+    });
+    try {
+      await waitUp(PUB2_PORT);
+      const postTo = (payload) => fetch(`http://127.0.0.1:${PUB2_PORT}/tulkki`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const rmp = await postTo({ mode: 'ramppi', question: 'Olen 38.', context: CTX });
+      ok(rmp.status === 401, 'ramppi ilman avainta → 401 (avainkäyttäjien ominaisuus myös palvelimella)', String(rmp.status));
+      const e = await postTo({ question: 'VIRHE500', context: CTX });
+      const ej = await e.json().catch(() => ({}));
+      ok(e.status === 502 && ej.error === 'upstream', 'upstream 500 → 502 upstream', e.status + ' ' + JSON.stringify(ej));
+      ok(ej.detail === undefined && ej.status === undefined && !JSON.stringify(ej).includes('salainen'), 'toimittajan virheteksti ei vuoda asiakkaalle', JSON.stringify(ej));
+      const okk = await postTo({ question: 'toimiiko', context: CTX });
+      ok(okk.status === 200, 'epäonnistunut kutsu ei kuluttanut kiintiötä (1/pv yhä käytettävissä)', String(okk.status));
+      await drain(okk);
+      const yli = await postTo({ question: 'toinen', context: CTX });
+      ok(yli.status === 429, 'onnistunut kutsu kulutti kiintiön', String(yli.status));
+      const kesken = await drain(await postTo({ key: 'oma-avain', question: 'KESKEN', context: CTX }));
+      ok(kesken.answer.includes('Alku vastauksesta') && kesken.error === 'upstream' && kesken.model === null,
+        'virhe kesken virran → error ilman done-riviä (katkennut vastaus ei näytä valmiilta)', JSON.stringify(kesken));
+    } finally { pub2.kill(); }
   }
 
   console.log('Päiväkatkaisija');

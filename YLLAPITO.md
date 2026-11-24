@@ -68,14 +68,18 @@ taustadokumentit: [PRO.md](PRO.md), [PERHE.md](PERHE.md),
 |---|---|---|
 | Sivusto | GitHub Pages | push = julkaisu; CNAME + https_enforced |
 | Domain | Namecheap | varallisuuspolku.com; apex 4×A + www-CNAME; info@-forward → iCloud |
-| Palvelin | Railway (Hobby) | root dir `palvelin`, volume `/data` + `DATA_DIR=/data` (ilman muuttujaa data menee kontin levylle ja katoaa deployssa!), PORT=8080; envit: `ANTHROPIC_API_KEY` (spend limit ~50 €/kk!), `TULKKI_KEYS`, `TULKKI_PUBLIC`, `TULKKI_ANON_DAILY`, `TULKKI_DAILY_MAX`, `TULKKI_MODEL`, `VIENTI_AVAIN` (varmuuskopiovienti) |
+| Palvelin | Railway (Hobby) | root dir `palvelin`, volume `/data` + `DATA_DIR=/data` (ilman muuttujaa data menee kontin levylle ja katoaa deployssa!), PORT=8080; envit: `ANTHROPIC_API_KEY` (spend limit ~50 €/kk!), `TULKKI_KEYS`, `TULKKI_PUBLIC`, `TULKKI_ANON_DAILY`, `TULKKI_DAILY_MAX`, `JULKAISUERA` (vertailudatan julkaisuerä, oletus 3), `TULKKI_MODEL`, `VIENTI_AVAIN` (varmuuskopiovienti) |
 | Vertailudatan varmuuskopio | GitHub Actions (`vertailudata-vienti.yml`) | päivittäin 03:17 UTC: hakee `/vienti`, salaa (AES-256), palautustesti, artefakti 90 pv. Secretit: `VIENTI_AVAIN` (= Railwayn), `VIENTI_SALASANA` (myös salasanavarastoon!). Palautus: `tyokalut/vienti-palauta.js` |
 | MCP-paketti | npmjs (olkurola) | publish vaatii 2FA:n Olavin terminaalissa |
 | Analytiikka | Plausible | custom goalit + propertyt 'tyyppi'/'mode' lisätään käsin hallintaan |
 | Haku | GSC + Bing | sitemap lähetetty; jatkotoimet hakusanadatan pohjalta |
 
 Kustannuskatot: Tulkin julkinen taso on kolminkertaisesti rajattu (5/selain/pv,
-10/IP/pv, 300/pv globaali) — kova maksimi ~2 €/pv. Railway Hobby ~5 $/kk.
+10/IP/pv, 300/pv globaali) — tyypillisellä kysymyksellä alle ~2 €/pv, teoreettinen
+maksimi ~6 $/pv (300 × täysi konteksti ja 1 600 tokenin vastaus ≈ 0,02 $/kutsu);
+Anthropicin spend limit on viimeinen katto. IP-rajat nojaavat siihen, että Railwayn
+reuna korvaa X-Forwarded-For-otsakkeen (testattu 24.11.2026 — testaa uudelleen, jos
+isännöinti vaihtuu; ohje server.js:n /donate-käsittelijässä). Railway Hobby ~5 $/kk.
 
 ## Periaatteet joita ei rikota
 
@@ -85,7 +89,11 @@ Kustannuskatot: Tulkin julkinen taso on kolminkertaisesti rajattu (5/selain/pv,
 - **Ei uusia pilviriippuvuuksia eikä ulkoisia verkkopyyntöjä** sivustolle
   (fontit self-hostattu; nolla pyyntöä ilman käyttäjän erillistä lupaa).
 - **Vertailudata**: whitelist-serialisointi molemmissa päissä, k-anonymiteetti
-  30/ryhmä, ei tunnisteita, `ev.name` ei saa koskaan vuotaa.
+  30/ryhmä, ei tunnisteita, `ev.name` ei saa koskaan vuotaa. K-raja koskee myös
+  erotuksia: sisäkkäinen ikäryhmä julkaistaan vain, jos jäännösjoukkokin on ≥ 30
+  (erotussääntö), ja jakaumat päivittyvät erissä (`JULKAISUERA`, oletus 3 muuttunutta
+  riviä), jottei kahden haun erotus paljasta yksittäistä jakajaa. Uusi julkaistava
+  joukko tai kenttä: mieti aina, mitä sen ja muiden julkaistujen lukujen erotus kertoo.
 - **Ei palvelinlokia** käyttäjien sisällöistä (GDPR-minimointi on ominaisuus).
 - Taaksepäinyhteensopivuus: vanhat jakolinkit ja tallenteet eivät saa hajota —
   puuttuva kenttä = entinen käytös (testit vartioivat useita identiteettejä
