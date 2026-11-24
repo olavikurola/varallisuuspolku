@@ -1,6 +1,7 @@
 /* Natiivilisät (muistutukset, lukitus, widget-silta): Capacitor-stubilla
    natiivipolut, ilman stubia web-noop. Playwright NODE_PATHin kautta. */
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 const http = require('http');
 const fs = require('fs');
 const p = require('path');

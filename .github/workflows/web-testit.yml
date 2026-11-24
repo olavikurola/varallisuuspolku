@@ -16,6 +16,9 @@ concurrency:
   group: web-testit-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  PW_VERSION: '1.62.0'
+
 jobs:
   testit:
     runs-on: ubuntu-latest
@@ -29,12 +32,21 @@ jobs:
 
       # Repo on tarkoituksella riippuvuudeton: Playwright asennetaan vain
       # CI-ajoa varten työhakemiston ulkopuolelle, eikä package.json synny.
+      # Sama Playwright-versio kuin paikallisessa kehityksessä (PW_VERSION): CI testasi
+      # aiemmin 1.47.2:n vanhaa Chromiumia, jolloin layout-testit eivät olleet
+      # vertailukelpoisia. Selaimet välimuistissa version mukaan.
+      - name: Playwright-selainten välimuisti
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ env.PW_VERSION }}
+
       - name: Asenna Playwright (vain CI)
         run: |
           mkdir -p "$RUNNER_TEMP/pw"
           cd "$RUNNER_TEMP/pw"
           npm init -y >/dev/null
-          npm i --no-audit --no-fund playwright@1.47.2
+          npm i --no-audit --no-fund "playwright@$PW_VERSION"
           npx playwright install --with-deps chromium
 
       - name: Aja koko patteristo

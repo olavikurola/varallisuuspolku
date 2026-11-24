@@ -1,6 +1,7 @@
 // V1-smoke: piirtopöytä auki/kiinni, HUD, worker-tarkennus, regressiot
 'use strict';
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 
 (async () => {
   const browser = await chromium.launch();

@@ -78,13 +78,8 @@ eivät anna sijoitusneuvontaa. Lähdekoodi ja dokumentaatio: [mcp/](mcp/).
 
 ## Julkaisu
 
-Staattinen sivusto: julkaisuun riittää tiedostojen kopiointi mille tahansa web-palvelimelle
-(GitHub Pages, Netlify, Cloudflare Pages…). GitHub Pages -julkaisu:
-
-```bash
-gh auth login
-./julkaise.ps1   # luo repon, pushaa ja kytkee Pagesin
-```
+Staattinen sivusto ilman buildia: julkaisu on `git push` (GitHub Pages, osoite
+CNAME-tiedostosta). Julkaisurutiini tarkistuksineen: [YLLAPITO.md](YLLAPITO.md).
 
 ## Ylläpito ja testit
 

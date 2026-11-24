@@ -2,6 +2,7 @@
 /* Tuloskuvan verifiointi: kuva syntyy, oikea koko, valikkokohta ja ramppinappi
    toimivat, lataus laukeaa. Ajo: NODE_PATH=<playwright> node verify-tuloskuva.js */
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 const fs = require('fs');
 const path = require('path');
 

@@ -5,6 +5,7 @@
    Taustaa: ennen 21.8.2026 korot oli kovakattoinen osakepainoon, jolloin
    käteisen ollessa 0 korkoliukuri ei reagoinut vetoon lainkaan. Oma palvelin 8144. */
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 const http = require('http');
 const fs = require('fs');
 const path = require('path');

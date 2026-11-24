@@ -1,6 +1,7 @@
 'use strict';
 /* Porrastetun säästön käyttöliittymän verifiointi. */
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 const { spawn } = require('child_process');
 
 let failed = 0;

@@ -1,6 +1,7 @@
 'use strict';
 /* Aloitusrampin eheysverifiointi: ramppi vs. kierros vs. jakolinkki vs. paluu. */
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 const { spawn } = require('child_process');
 const { norm } = require('./normi');
 

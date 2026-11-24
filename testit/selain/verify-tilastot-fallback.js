@@ -3,6 +3,7 @@
    lanseerauksessa): histogrammi-fallbackit, uudet kortit, degeneraatiosiivous
    ja basis-maininta. Peili live-tilanteesta 28.7.2026. */
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 const { spawn } = require('child_process');
 
 let failed = 0;

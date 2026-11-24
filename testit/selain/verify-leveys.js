@@ -7,6 +7,7 @@
    pois: sen tiilirivit vierittävät omassa säiliössään.
    Käyttää aiemman istunnon playwright-asennusta (NODE_PATH). */
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 const { spawn } = require('child_process');
 
 let failed = 0;

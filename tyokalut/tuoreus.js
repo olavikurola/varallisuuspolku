@@ -5,7 +5,9 @@
    - sitemap.xml: jokaisen <url>:n <lastmod> = tiedoston viimeisin git-commit
      (aiemmin käsin päivitetty ja jäänyt heinäkuulle)
    - index.html: JSON-LD WebApplication saa/päivittää "dateModified"
-   - llms.txt: "päivitetty YYYY-MM-DD" -rivi = tämä päivä
+   - llms.txt: "päivitetty YYYY-MM-DD" -rivi = sisällön viimeisin muutos
+   Päiväykset = viimeisin ihmisen commit (botin automaattiset ohitetaan) tai
+   tänään, jos tiedosto on työpuussa muokattu.
    Idempotentti. Aja: node tyokalut/tuoreus.js   (tai --tarkista: ei kirjoita,
    exit 1 jos jokin olisi muuttunut — CI-vartija). */
 
@@ -21,9 +23,12 @@ const tanaan = new Date().toISOString().slice(0, 10);
 const lue = (f) => fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
 let muutoksia = 0;
 
+// Viimeisin IHMISEN tekemä muutos: viikkobotin "(automaattinen)"-commitit ohitetaan.
+// Muuten botin oma päiväyskirjoitus olisi seuraavalla viikolla "uusi muutos" ja
+// päiväys nousisi ikuisesti viikon viiveellä ilman sisältömuutosta.
 const gitPvm = (file) => {
   try {
-    const d = execSync(`git log -1 --format=%cs -- "${file}"`, { cwd: ROOT, encoding: 'utf8' }).trim();
+    const d = execSync(`git log -1 --format=%cs --invert-grep --grep="(automaattinen)" -- "${file}"`, { cwd: ROOT, encoding: 'utf8' }).trim();
     return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
   } catch (e) { return null; }
 };
@@ -56,9 +61,8 @@ const kirjoita = (file, s, alku) => {
     (m, polku, ind) => {
       const file = polku || 'index.html';
       // Työpuun muokkaamaton tiedosto → git-pvm; muokattu → tänään (julkaistaan tänään)
-      let pvm = gitPvm(file);
-      try { if (execSync(`git status --porcelain -- "${file}"`, { cwd: ROOT, encoding: 'utf8' }).trim()) pvm = tanaan; } catch (e) {}
-      return `<loc>https://varallisuuspolku.com/${polku}</loc>\n${ind}<lastmod>${pvm || tanaan}</lastmod>`;
+      const pvm = tiedostonPvm(file);
+      return `<loc>https://varallisuuspolku.com/${polku}</loc>\n${ind}<lastmod>${pvm}</lastmod>`;
     });
   kirjoita(f, s, alku);
 }
@@ -68,8 +72,7 @@ for (const name of ['index.html', 'index-en.html']) {
   const f = path.join(ROOT, name);
   if (!fs.existsSync(f)) continue;
   const alku = lue(f);
-  let pvm = gitPvm(name) || tanaan;
-  try { if (execSync(`git status --porcelain -- "${name}"`, { cwd: ROOT, encoding: 'utf8' }).trim()) pvm = tanaan; } catch (e) {}
+  const pvm = tiedostonPvm(name);
   let s;
   if (/"dateModified": "[^"]*"/.test(alku)) s = alku.replace(/"dateModified": "[^"]*"/, `"dateModified": "${pvm}"`);
   else s = alku.replace('"applicationCategory": "FinanceApplication",', `"applicationCategory": "FinanceApplication",\n    "dateModified": "${pvm}",`);
@@ -80,7 +83,8 @@ for (const name of ['index.html', 'index-en.html']) {
 {
   const f = path.join(ROOT, 'llms.txt');
   const alku = lue(f);
-  const s = alku.replace(/\(päivitetty \d{4}-\d{2}-\d{2}\)/, `(päivitetty ${tanaan})`);
+  // Sisällön päiväys, ei ajopäivä: muuten botti nostaisi päiväystä joka viikko
+  const s = alku.replace(/\(päivitetty \d{4}-\d{2}-\d{2}\)/, `(päivitetty ${tiedostonPvm('llms.txt')})`);
   kirjoita(f, s, alku);
 }
 

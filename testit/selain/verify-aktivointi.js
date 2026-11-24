@@ -6,6 +6,7 @@
    vihjeketju laukesi vain palaavalle käyttäjälle. */
 // Playwright NODE_PATHin kautta (ks. testit/README.md)
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 const http = require('http');
 const fs = require('fs');
 const p = require('path');

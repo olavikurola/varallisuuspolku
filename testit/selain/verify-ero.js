@@ -3,6 +3,7 @@
 // tallennus-roundtrip ja anonyymin jaon payload
 'use strict';
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 const { norm } = require('./normi');
 
 (async () => {

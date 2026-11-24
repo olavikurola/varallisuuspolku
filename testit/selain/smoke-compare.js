@@ -2,6 +2,7 @@
 // tooltipin vertailurivi, automaattihaamun kohinanesto
 'use strict';
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 const BASE = process.env.VP_BASE || 'http://localhost:8123/';
 
 (async () => {

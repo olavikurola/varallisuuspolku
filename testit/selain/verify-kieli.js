@@ -3,6 +3,7 @@
    Vartioi: VP_KIELI-resoluutio, sanaston lataus, html lang, chippien ja
    korttien kieli molempiin suuntiin, paluu ?lang=fi:llä. Oma palvelin 8143. */
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 const http = require('http');
 const fs = require('fs');
 const path = require('path');

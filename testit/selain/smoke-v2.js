@@ -1,6 +1,7 @@
 // V2-smoke: valintamalli, bisektioraahaus, chippi, näppäimistö, rajoitteet
 'use strict';
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 
 (async () => {
   const browser = await chromium.launch();

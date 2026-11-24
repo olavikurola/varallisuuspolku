@@ -2,6 +2,7 @@
 // Vaatii: node testit/selain/serve.js (portti 8123) + NODE_PATH playwrightiin.
 'use strict';
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 
 const BASE = process.env.VP_BASE || 'http://localhost:8123';
 const nb = require('./normi').norm;

@@ -1,6 +1,7 @@
 // Verifiointi: tilastosivun yläosa, sinä-selitteet, hover-pystyviiva, paluunavigointi, valikon järjestys
 'use strict';
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 
 const Q = (name, cond) => {
   if (!cond) { console.error('FAIL: ' + name); process.exitCode = 1; }

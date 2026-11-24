@@ -2,6 +2,7 @@
 // perhe-MC, #f=-linkki, poisto; apuri, säästöaste, eläkeoletus, Sivutulo
 'use strict';
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 const { norm } = require('./normi');
 
 (async () => {

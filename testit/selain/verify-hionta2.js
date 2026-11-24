@@ -1,6 +1,7 @@
 'use strict';
 /* Hionta 2: otsikon katkeamattomuus, ?-chippi, vertailun mahtuvuus, kestävä tulo. */
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 const { norm } = require('./normi');
 const { spawn } = require('child_process');
 

@@ -8,6 +8,7 @@
 //     ei paikkamerkkiä 2400.
 'use strict';
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 const http = require('http');
 const fs = require('fs');
 const p = require('path');
@@ -29,10 +30,9 @@ const statik = http.createServer((req, res) => {
 });
 const linkki = (plan) => '#s=' + Buffer.from(JSON.stringify(plan), 'utf8').toString('base64');
 
-// Ulkoiset pyynnöt (Plausible, Railway) eivät kuulu testiin
+// Ulkoiset pyynnöt estää eristys.js (asennettu yllä)
 const eristetty = async (b, opts = {}) => {
   const ctx = await b.newContext({ viewport: { width: 1280, height: 800 }, ...opts });
-  await ctx.route((u) => !/^(localhost|127\.0\.0\.1)$/.test(new URL(u).hostname), (r) => r.fulfill({ status: 204, body: '' }));
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));

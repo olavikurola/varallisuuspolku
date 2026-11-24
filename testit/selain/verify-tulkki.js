@@ -1,6 +1,7 @@
 'use strict';
 /* Tulkki-selainverifiointi: avainportti, lehti, pehmeä validointi, evalit, fs-väistö. */
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 const { spawn } = require('child_process');
 
 let failed = 0;
@@ -19,6 +20,11 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   await page.route('**/tulkki', (route) => {
     lastReq = JSON.parse(route.request().postData());
     const q = lastReq.question || '';
+    // Vastauksen "moottorin luku" otetaan pyynnön omasta kontekstista: kiinteä 99 %
+    // läpäisi numerokurin vain, koska tuotannon vertailudatassa sattui olemaan 99
+    // (testi teki oikean verkkopyynnön — ks. eristys.js)
+    const pctM = /"onnistumistodennakoisyysPct":(\d+)/.exec(JSON.stringify(lastReq.context || {}));
+    const pct = pctM ? pctM[1] : '50';
     const retTyhjasta = /eläkeikää 58/i.test(q); // eläkekenttä ilman eläketapahtumaa → luodaan oletuksin
     const cmd = /kokeile/i.test(q);
     const evChange = /arvonnousu/i.test(q);
@@ -75,7 +81,7 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
       ? 'Kokeillaan — katso esikatselu.\nMUUTOS: {"muutokset":[{"tapahtuma":"home","tapahtumaIka":35,"ominaisuus":"appr","arvo":0}],"selite":"Asunnon arvonnousu nollaan"}'
       : heitto
       ? "Here's what stands out: you're on track and you'll end with 99 % success."
-      : 'Onnistumistodennäköisyys on 99 %, koska **säästöaika on pitkä** ja nostotarve maltillinen.\n\nKeksitty vertailu: 123 456 € olisi tarvittu muuhun.';
+      : 'Onnistumistodennäköisyys on ' + pct + ' %, koska **säästöaika on pitkä** ja nostotarve maltillinen.\n\nKeksitty vertailu: 123 456 € olisi tarvittu muuhun.';
     }
     // NDJSON-virta: teksti kahdessa palassa + mahdollinen {tool} + lopetusrivi
     const half = Math.ceil(answer.length / 2);
@@ -126,7 +132,7 @@ const ok = (c, name, d = '') => { if (c) console.log('  ✓ ' + name); else { fa
   await page.waitForSelector('.tk-a:not(.tk-busy)');
   const okNums = await page.locator('.tk-a .tk-num:not(.tk-doubt)').count();
   const doubts = await page.locator('.tk-a .tk-doubt').count();
-  ok(okNums >= 1, 'moottorista löytyvä luku merkitty (99 %)', String(okNums));
+  ok(okNums >= 1, 'moottorista löytyvä luku merkitty (kontekstin onnistumis-%)', String(okNums));
   ok(doubts === 1, 'keksitty luku liputettu varoituksella', String(doubts));
   ok(await page.locator('.tk-a b').count() >= 1 && !(await page.locator('.tk-a').first().textContent()).includes('**'), 'lihavointi renderöityy, ei raakoja tähtiä');
   ok(await page.locator('.tk-sug:not(.tk-adv):not(.tk-haasta):not(.tk-market):not(.tk-plans):not(.tk-jaa)').count() === 0, 'kysymyschipit piiloutuvat keskustelun alettua (toimintochipit saavat jäädä)');

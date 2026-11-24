@@ -2,6 +2,7 @@
 // tiukin sitoo, jakolinkki-roundtrip, anonyymin jaon payload, conf-moodi
 'use strict';
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 
 (async () => {
   const browser = await chromium.launch();

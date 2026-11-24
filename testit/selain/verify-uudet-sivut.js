@@ -2,6 +2,7 @@
 /* Verifiointi: validointi.html, saavutettavuus.html, linkitys ja reduced-motion.
    Käyttää aiemman istunnon playwright-asennusta. */
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 const { spawn } = require('child_process');
 
 const { norm } = require('./normi');

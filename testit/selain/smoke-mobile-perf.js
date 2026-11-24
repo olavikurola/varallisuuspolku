@@ -2,6 +2,7 @@
 // raahauksen fps-mittaus (V2-kriteeri: 60 fps, ei MC:tä pointermovessa)
 'use strict';
 const { chromium } = require('playwright');
+require('./eristys').asenna(chromium); // ei pyyntöjä tuotantoon (Plausible, Railway)
 
 (async () => {
   const browser = await chromium.launch();

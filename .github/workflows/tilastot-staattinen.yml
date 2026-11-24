@@ -44,4 +44,6 @@ jobs:
           if git diff --quiet; then echo "ei muutoksia"; exit 0; fi
           git add analytiikka.html analytiikka-en.html sitemap.xml index.html index-en.html llms.txt
           git commit -m "Tilastot: staattiset avainluvut ja tuoreusmetadata (automaattinen)."
+          # Samaan aikaan tehty ihmisen push ei kaada ajoa: omat muutokset uusimman päälle
+          git pull --rebase
           git push
