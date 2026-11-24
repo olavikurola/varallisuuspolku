@@ -263,6 +263,7 @@ function drawStartDrag(e, kind, id) {
   hideCrosshair();
   document.addEventListener('pointermove', drawDragMove);
   document.addEventListener('pointerup', drawDragUp);
+  document.addEventListener('pointercancel', drawCancelDrag); // peruttu ele = Esc-peruutus
 }
 
 // Käsin säätö ohittaa tavoitetilan — tehollinen ratkaistu arvo lähtöpisteeksi
@@ -425,6 +426,7 @@ function dragEvent(d, age, py, noSnap) {
 function drawDragUp() {
   document.removeEventListener('pointermove', drawDragMove);
   document.removeEventListener('pointerup', drawDragUp);
+  document.removeEventListener('pointercancel', drawCancelDrag);
   const d = drawState.drag;
   drawState.drag = null;
   dragLight = false;
@@ -458,6 +460,7 @@ function dragAnnounce(d) {
 function drawCancelDrag() {
   document.removeEventListener('pointermove', drawDragMove);
   document.removeEventListener('pointerup', drawDragUp);
+  document.removeEventListener('pointercancel', drawCancelDrag);
   const d = drawState.drag;
   drawState.drag = null;
   dragLight = false;
@@ -695,7 +698,11 @@ function drawDelete() {
 function drawKeydown(e) {
   if (!fsOn) return;
   const t = e.target;
-  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+  // Fokus dialogissa, sirussa, HUDissa tai valikossa: näppäimet kuuluvat sen
+  // omille ohjaimille. Aiemmin Enter napissa (esim. Poista) avasi editorin eikä
+  // painanut nappia, ja Tab vaihtoi valintaa eikä siirtänyt fokusta.
+  if (t && t.closest && t.closest('#popover, #dchip, #hud, .fs-add-menu, .menu')) return;
   // Tab kiertää valittavat ikäjärjestyksessä — samalla focus pysyy piirtopöydällä
   if (e.key === 'Tab') { e.preventDefault(); drawDismissHint(); drawCycle(e.shiftKey ? -1 : 1); return; }
   if (!drawState.sel) return;
@@ -990,7 +997,7 @@ function closeFsAddMenu() {
 
 function addFromFs(type) {
   closeFsAddMenu();
-  const defAge = type === 'retirement' ? 65
+  const defAge = type === 'retirement' ? retireAgeDefault(state.ageNow)
     : type === 'goal' && sim && sim.retireAge != null ? Math.round(sim.retireAge)
     : state.ageNow + 5;
   const ev = addEvent(type, clamp(defAge, type === 'goal' ? state.ageNow + 1 : state.ageNow, state.ageEnd));

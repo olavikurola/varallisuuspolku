@@ -586,6 +586,7 @@
   "Olen kiinnostunut laajemmasta käytöstä": "I'm interested in more extensive use",
   "Olen tekoälyavustaja: selitän suunnitelmasi luvut selkokielellä ja autan kokeilemaan muutoksia — <b>en anna sijoitusneuvontaa</b>: moottori laskee, minä tulkkaan, ja voin erehtyä.": "I'm an AI assistant: I explain your plan's numbers in plain language and help you try out changes — <b>I don't give investment advice</b>: the engine calculates, I interpret, and I can be wrong.",
   "Olet sovelluksen sisäisessä selaimessa — suunnitelmasi ei välttämättä säily. Avaa varsinaisessa selaimessa.": "You are in an in-app browser — your plan may not be kept. Open this in your regular browser.",
+  "Oletukset (Pro): osakkeet {0} %, korot {1} %, käteinen {2} % vuodessa": "Assumptions (Pro): stocks {0} %, bonds {1} %, cash {2} % per year",
   "Oletukset, tietosuoja ja vinkit": "Assumptions, privacy and tips",
   "Oletukset: {0}": "Assumptions: {0}",
   "Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa": "Assumptions: stocks 7 %, bonds 3 %, cash 1.5 % per year",

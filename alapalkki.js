@@ -802,8 +802,10 @@
         var t0 = document.querySelector('.ph-new-toggle');
         if (t0) t0.click();
       }
-      // Toteuma asuu natiivilisat.js:ssä, joka latautuu tämän jälkeen — siksi viive
-      if (lippu(LIPUT.toteuma)) setTimeout(function () { if (window.vpAvaaToteuma) window.vpAvaaToteuma(); }, 0);
+      // Toteuma asuu natiivilisat.js:ssä, joka latautuu vasta tämän jälkeen (oma
+      // verkkohaku): jätetään merkki, jonka natiivilisat lukee latauduttuaan.
+      // Aiempi setTimeout(0) laukesi ennen latausta, eikä sivu auennut.
+      if (lippu(LIPUT.toteuma)) { if (window.vpAvaaToteuma) window.vpAvaaToteuma(); else window.vpToteumaOdottaa = true; }
       if (lippu(LIPUT.vertaile)) toimVertaile();
       if (lippu(LIPUT.kierros)) startTour();
       if (lippu(LIPUT.taulukko)) toimTaulukko();

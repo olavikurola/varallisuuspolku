@@ -55,6 +55,28 @@
   var TAPAHTUMA_ID = 100; // tapahtumat 100, 101, …
   var TAPAHTUMIA_MAX = 12; // iOS sallii 64 odottavaa — pidetään reilusti alle
 
+  /* Aikaviite tapahtumamuistutuksille. Suunnitelmassa ei ole päivämäärää:
+     "nykyikä" pysyy samana, kunnes käyttäjä muuttaa sitä. Muistutukset ajastetaan
+     uudelleen joka käynnistyksessä, joten ilman ankkuria "12 kk päässä" oleva
+     tapahtuma oli joka avauksella taas 12 kk päässä eikä lauennut koskaan
+     käyttäjälle, joka avaa appia. Ankkuri = kuukausi, jona tämä nykyikä nähtiin
+     ensimmäisen kerran; siitä kulunut aika vähennetään etäisyydestä. Iän
+     muuttaminen aloittaa uuden ankkurin (avain = ikä; perheenjäsenet erikseen). */
+  var ANKKURI_KEY = 'vp-muistutus-ankkuri';
+  function ankkuristaKulunut(ageNow, nyt) {
+    var kartta = {};
+    try { kartta = JSON.parse(localStorage.getItem(ANKKURI_KEY) || '{}') || {}; } catch (e) { kartta = {}; }
+    var avain = String(ageNow), kkNyt = nyt.getFullYear() * 12 + nyt.getMonth();
+    if (typeof kartta[avain] !== 'number' || kartta[avain] > kkNyt) {
+      kartta[avain] = kkNyt;
+      // enintään 8 ankkuria: vanhin pois (ikää kokeilleet arvot eivät kerry)
+      var avaimet = Object.keys(kartta).sort(function (a, b) { return kartta[a] - kartta[b]; });
+      while (avaimet.length > 8) delete kartta[avaimet.shift()];
+      try { localStorage.setItem(ANKKURI_KEY, JSON.stringify(kartta)); } catch (e) {}
+    }
+    return kkNyt - kartta[avain];
+  }
+
   function ajastaMuistutukset() {
     if (!LN || !paalla(MUISTUTUS_KEY)) return Promise.resolve();
     // Tilastot/Agentit-sivuilla ei ole suunnitelmaa (state): uudelleenajastus
@@ -74,9 +96,10 @@
         }];
         if (typeof state !== 'undefined' && state && state.events && typeof evLabel === 'function') {
           var nyt = new Date();
+          var kulunut = ankkuristaKulunut(state.ageNow, nyt);
           var tulevat = state.events
             .filter(function (e) { return !e.owned && e.age > state.ageNow; })
-            .map(function (e) { return { e: e, kk: Math.round((e.age - state.ageNow) * 12) }; })
+            .map(function (e) { return { e: e, kk: Math.round((e.age - state.ageNow) * 12) - kulunut }; })
             .filter(function (r) { return r.kk >= 1; })
             .sort(function (a, b) { return a.kk - b.kk; })
             .slice(0, TAPAHTUMIA_MAX);
@@ -380,6 +403,9 @@
     toteumaEl = el;
     renderToteuma();
   };
+  // Alapalkki pyysi Toteumaa ennen kuin tämä tiedosto oli latautunut (Lisää →
+  // Toteuma Tilastot-/Agentit-sivulta vie etusivulle lipun kanssa)
+  if (window.vpToteumaOdottaa) { window.vpToteumaOdottaa = false; window.vpAvaaToteuma(); }
 
   /* ===================== Widget-silta ===================== */
   // Tiivistelmä kotinäyttöwidgetille Preferences-tallennukseen (Androidilla

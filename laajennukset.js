@@ -1149,7 +1149,10 @@ function familySummaryHtml() {
   if (!familyOn()) return '';
   saveActiveIntoFamily();
   const sims = family.persons.map((p) => simulate(JSON.parse(JSON.stringify(p.data))));
-  const joint = mcHousehold(family.persons.map((p) => JSON.parse(JSON.stringify(p.data))), { paths: 300 });
+  // Sama luku kuin kojelaudan kortissa (workerin täysi polkumäärä), jos se on
+  // jo laskettu — muuten 300 polun pikaluku (dokumentti ja kortti näyttivät eri %:n)
+  const joint = jointMc && jointMc.successProb != null ? jointMc
+    : mcHousehold(family.persons.map((p) => JSON.parse(JSON.stringify(p.data))), { paths: 300 });
   const total = householdExp(sims);
   const yearNow = new Date().getFullYear();
 

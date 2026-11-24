@@ -105,6 +105,24 @@ server.listen(8134, async () => {
   ok(tapahtumat.length >= 1, 'suunnitelman tapahtumia ajastettu (' + tapahtumat.length + ' kpl)');
   ok(tapahtumat.every((n) => n.schedule && n.schedule.at && new Date(n.schedule.at) > new Date()), 'tapahtumamuistutukset tulevaisuudessa');
   ok(tapahtumat.every((n) => n.title && n.title.length > 0), 'tapahtumilla otsikko (evLabel)');
+  // Aikaviite (auditointi 11/2026): sama nykyikä nähty 6 kk sitten → muistutukset
+  // 6 kk lähempänä. Ilman ankkuria etäisyys laskettiin joka käynnistyksessä alusta,
+  // eikä tapahtumamuistutus lauennut koskaan appia avaavalle käyttäjälle.
+  {
+    const eka = (lista) => lista.map((n) => new Date(n.schedule.at).getTime()).sort((a, b) => a - b)[0];
+    const eka0 = eka(tapahtumat);
+    ok(await pg.evaluate(() => { const k = JSON.parse(localStorage.getItem('vp-muistutus-ankkuri') || '{}'); return typeof k[String(state.ageNow)] === 'number'; }), 'ankkuri talteen nykyiälle');
+    await pg.evaluate(() => {
+      const d = new Date(), k = {};
+      k[String(state.ageNow)] = d.getFullYear() * 12 + d.getMonth() - 6;
+      localStorage.setItem('vp-muistutus-ankkuri', JSON.stringify(k));
+    });
+    await pg.click('#mi-muistutukset'); await pg.waitForTimeout(400); // pois
+    await pg.click('#mi-muistutukset'); await pg.waitForTimeout(500); // päälle → ajastus uudelleen
+    const uudet = (await pg.evaluate(() => window.__lnSchedule)).pop().notifications.filter((n) => n.id >= 100);
+    const kkEro = (eka0 - eka(uudet)) / (30.44 * 24 * 3600e3);
+    ok(Math.abs(kkEro - 6) < 0.2, 'kulunut aika vähennetään: muistutus 6 kk lähempänä', kkEro.toFixed(2));
+  }
   // kytkinrivi näyttää tilan heti eikä sivu sulkeudu — pois-kytkentä samasta rivistä
   ok(await pg.evaluate(() => document.querySelector('#mi-muistutukset input').checked), 'kytkin näyttää tilan (päällä)');
   await pg.click('#mi-muistutukset');

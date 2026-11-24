@@ -1172,7 +1172,14 @@ function summaryPoints(s) {
   }
 
   const a = baseAlloc(state);
-  const { mu } = portfolioStats(a);
+  // Pro-tilassa tuotto-oletus omista luokkaoletuksista, kuten Allokaatio-kortissa
+  const pS = proOf(state);
+  let mu;
+  if (pS) {
+    const classes = classesOf(state);
+    const corrM = pS.corr ? ensurePSD(corrMatrixOf(classes.length, pS.corr)).M : null;
+    ({ mu } = portfolioStatsPro(weightsAt(state.ageNow, null, state), classes, corrM, pS.ter));
+  } else ({ mu } = portfolioStats(a));
   pts.push({ html: t('Riskiprofiilini: <b>{0} % osakkeita</b>, {1} % korkoja, {2} % käteistä — tuotto-oletus {3}/v', Math.round(a.s * 100), Math.round(a.b * 100), Math.round(a.c * 100), pctFmt(mu)) + (state.glide ? t('; riskiä vähennetään eläkettä lähestyttäessä') : '') + '.' });
 
   for (const e of [...state.events].sort((x, y) => x.age - y.age)) {
@@ -1337,7 +1344,9 @@ function renderSummary() {
       `<ul class="sum-points">${summaryTalks(s).map(li).join('')}</ul>`, false) +
     (familyOn() ? familySummaryHtml() : '') +
     (state.proOn ? proSummaryHtml(s) : '') +
-    `<p class="sum-assump">${t('Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa')}${state.savingsGrowth > 0 ? t('; säästön kasvu {0} %/v', fmtLuku(state.savingsGrowth)) : ''}${state.real ? t('; inflaatio {0} %/v, luvut nykyrahassa', fmtLuku(inflOf(state) * 100)) : t('; inflaatio {0} %/v, varallisuus nimellisarvoin ja kuukausisummat nykyrahassa', fmtLuku(inflOf(state) * 100))}${state.glide ? t('; ikäsidonnainen allokaatio') : ''}${s.pension > 0 ? t('; lakisääteinen työeläke huomioitu eläketulona') : ''}${state.tax ? t('; myyntivoittovero 30/34 % nostojen voitto-osuudesta') : ''}${state.acct === 'ost' ? t('; osakesäästötili (osingot ja myynnit tilillä verotta, nostosta vero voitto-osuudesta)') : state.acct === 'ins' ? t('; vakuutuskuori (tuotot kuoressa verotta, nostosta vero voitto-osuudesta{0})', state.wrapFee > 0 ? t(', kuoren kulu {0} %/v', fmtLuku(state.wrapFee)) : '') : ''}${state.feePct > 0 ? t('; sijoituskulut {0} %/v', fmtLuku(state.feePct)) : ''}${state.acct === 'aot' && state.tax && state.divYield > 0 ? t('; suorien osakkeiden osinkotuotto {0} %/v verotettuna vuosittain', fmtLuku(state.divYield)) : ''}${(s.saleInfos || []).some((x) => x.tax > 0.5) ? t('; omaisuuden myynnissä hankintameno-olettama') : ''}. ` +
+    `<p class="sum-assump">${(() => { const m = proOf(state) && proOf(state).mu; return m && (m.stocks !== 7 || m.bonds !== 3 || m.cash !== 1.5)
+      ? t('Oletukset (Pro): osakkeet {0} %, korot {1} %, käteinen {2} % vuodessa', fmtLuku(m.stocks), fmtLuku(m.bonds), fmtLuku(m.cash))
+      : t('Oletukset: osakkeet 7 %, korot 3 %, käteinen 1,5 % vuodessa'); })()}${state.savingsGrowth > 0 ? t('; säästön kasvu {0} %/v', fmtLuku(state.savingsGrowth)) : ''}${state.real ? t('; inflaatio {0} %/v, luvut nykyrahassa', fmtLuku(inflOf(state) * 100)) : t('; inflaatio {0} %/v, varallisuus nimellisarvoin ja kuukausisummat nykyrahassa', fmtLuku(inflOf(state) * 100))}${state.glide ? t('; ikäsidonnainen allokaatio') : ''}${s.pension > 0 ? t('; lakisääteinen työeläke huomioitu eläketulona') : ''}${state.tax ? t('; myyntivoittovero 30/34 % nostojen voitto-osuudesta') : ''}${state.acct === 'ost' ? t('; osakesäästötili (osingot ja myynnit tilillä verotta, nostosta vero voitto-osuudesta)') : state.acct === 'ins' ? t('; vakuutuskuori (tuotot kuoressa verotta, nostosta vero voitto-osuudesta{0})', state.wrapFee > 0 ? t(', kuoren kulu {0} %/v', fmtLuku(state.wrapFee)) : '') : ''}${state.feePct > 0 ? t('; sijoituskulut {0} %/v', fmtLuku(state.feePct)) : ''}${state.acct === 'aot' && state.tax && state.divYield > 0 ? t('; suorien osakkeiden osinkotuotto {0} %/v verotettuna vuosittain', fmtLuku(state.divYield)) : ''}${(s.saleInfos || []).some((x) => x.tax > 0.5) ? t('; omaisuuden myynnissä hankintameno-olettama') : ''}. ` +
     `${t('Lainat annuiteettilainoina. Onnistumistodennäköisyys perustuu {0} satunnaiseen markkinapolkuun', fmtLuku(s.mcPaths || MC_LIVE))}${s.conf ? t('; tavoitteet mitoitettu {0} % onnistumisvarmuudelle', Math.round(s.conf * 100)) : ''}${t('. Laadittu Varallisuuspolku-työkalulla.')}</p>` +
     `<p class="sum-disclaimer">${t('Tämä yhteenveto kuvaa laatijansa omia tavoitteita, valintoja ja oletuksia. Se ei ole sijoitusneuvontaa eikä sijoitussuositus — sen voi antaa esimerkiksi varainhoitajalle keskustelun pohjaksi.')}</p>`;
 }

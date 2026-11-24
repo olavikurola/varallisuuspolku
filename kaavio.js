@@ -93,7 +93,11 @@ function renderChart(reuse = false) {
     }
   }
   famTotalCache = famTotal;
-  const yMax = Math.max(10000, famTotal ? famTotal[months] * 1.02 : 0,
+  // Yhteiskäyrän huippu, ei loppuarvo: eläkkeellä käyrä laskee, ja vauraamman
+  // puolison kanssa huippu leikkautui piirtoalueen yläreunasta
+  let famMax = 0;
+  if (famTotal) for (let i = 0; i <= months; i++) if (famTotal[i] > famMax) famMax = famTotal[i];
+  const yMax = Math.max(10000, famMax * 1.02,
     Math.max(...sim.opt, ...sim.invested, ...(ghostSim ? ghostSim.exp : []))) * 1.08;
 
   scaleX = (age) => plot.l + ((age - a0) / (a1 - a0)) * plot.w;
@@ -490,6 +494,10 @@ let distMonth = null;
 
 function renderDist() {
   if (!sim) return;
+  // Kortti on oletuksena kiinni ja renderöidään avattaessa (bindPanelCards) —
+  // suljettuna SVG:tä ei rakenneta joka näppäilyllä
+  const distCard = document.querySelector('.card[data-card="dist"]');
+  if (distCard && distCard.classList.contains('collapsed')) return;
   const distSvg = $('distChart');
   const list = $('distList');
   const { a0, months, retireAge } = sim;
@@ -594,15 +602,28 @@ function startMarkerDrag(e, ev) {
       scheduleRender();
     }
   };
-  const onUp = () => {
+  const age0 = ev.age, sell0 = ev.sellAge, goal0 = ev.goal;
+  const irrota = () => {
     document.removeEventListener('pointermove', onMove);
     document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onCancel);
     draggingId = null;
+  };
+  const onUp = () => {
+    irrota();
     if (!moved) openPopover(ev.id);
     else renderAll();
   };
+  // Järjestelmä perui eleen (ilmoitus, kierto, järjestelmäele): lähtötila takaisin —
+  // ilman tätä veto jäi päälle ja seuraava napautus missä tahansa päätti sen
+  const onCancel = () => {
+    irrota();
+    ev.age = age0; ev.sellAge = sell0; ev.goal = goal0;
+    renderAll();
+  };
   document.addEventListener('pointermove', onMove);
   document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', onCancel);
 }
 
 /* ===================== Paletin raahaus ===================== */
@@ -635,7 +656,7 @@ function buildPalette() {
       if (existing) {
         openPopover(existing.id);
       } else {
-        const defAge = type === 'retirement' ? 65
+        const defAge = type === 'retirement' ? retireAgeDefault(state.ageNow)
           : type === 'goal' && sim && sim.retireAge != null ? Math.round(sim.retireAge)
           : state.ageNow + 5;
         addEvent(type, clamp(defAge, state.ageNow, state.ageEnd));
@@ -678,12 +699,16 @@ function startPaletteDrag(e, type) {
   onMove(e);
   dropHint.hidden = false;
 
-  const onUp = (e2) => {
+  const siivoa = () => {
     document.removeEventListener('pointermove', onMove);
     document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', siivoa);
     ghost.remove();
     dropHint.hidden = true;
     wrap.classList.remove('drop-target');
+  };
+  const onUp = (e2) => {
+    siivoa();
     if (overPlot(e2)) {
       const r = svg.getBoundingClientRect();
       const age = clamp(Math.round(invX(e2.clientX - r.left)), state.ageNow, state.ageEnd);
@@ -695,7 +720,7 @@ function startPaletteDrag(e, type) {
       if (existing) {
         openPopover(existing.id);
       } else {
-        const defAge = type === 'retirement' ? 65
+        const defAge = type === 'retirement' ? retireAgeDefault(state.ageNow)
           : type === 'goal' && sim && sim.retireAge != null ? Math.round(sim.retireAge)
           : state.ageNow + 5;
         addEvent(type, clamp(defAge, state.ageNow, state.ageEnd));
@@ -704,6 +729,7 @@ function startPaletteDrag(e, type) {
   };
   document.addEventListener('pointermove', onMove);
   document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', siivoa); // peruttu ele ei lisää tapahtumaa
 }
 
 function addEvent(type, age) {
@@ -1415,9 +1441,12 @@ function positionPopover() {
 }
 
 function closePopover() {
+  // Ei avointa dialogia → ei piirrettävää: Esc laski aiemmin koko simulaation
+  // (300 MC-polkua + worker) uusiksi joka painalluksella
+  const oliAuki = openPopoverId != null || !popover.hidden;
   openPopoverId = null;
   popover.hidden = true;
-  renderChart();
+  if (oliAuki) renderChart();
 }
 
 function renderAllKeepPopover() {
