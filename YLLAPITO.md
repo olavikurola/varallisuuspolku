@@ -35,7 +35,9 @@ taustadokumentit: [PRO.md](PRO.md), [PERHE.md](PERHE.md),
    eläkkeellä) uudelleen nykyisellä moottorilla, ja `palvelin-stats.test.js` vaatii
    tavuidenttisyyden. Push deployaa Railwayn, joka laskee kaikki rivit taustasäikeessä.
 4. Isot julkaisut: päivitä [llms.txt](llms.txt) (GEO-faktatiedosto) ja
-   tarvittaessa Tietoa-UKK (JSON-LD-FAQ:n pitää peilata näkyvää sisältöä 1:1).
+   tarvittaessa Tietoa-UKK. JSON-LD-FAQ generoidaan näkyvästä UKK:sta: muokkaa
+   näkyvää tekstiä ja aja `node tyokalut/ukk-synkka.js` (testi vartioi 1:1-vastaavuuden),
+   sitten kieliputki (kieli-html-avaimet → kieli-sivut-buildi).
    Aja `node tyokalut/tuoreus.js` — se päivittää sitemap-lastmodit (git-pvm),
    etusivun `dateModified`-skeeman ja llms.txt:n päiväyksen. Tilastojen
    staattiset avainluvut: `node tyokalut/tilastot-staattinen.js` (myös

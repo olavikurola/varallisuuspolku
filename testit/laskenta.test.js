@@ -1019,5 +1019,89 @@ console.log('K2: työeläkkeen alkamisiän lakisääteinen alaraja');
   ok(Math.abs(s58.pension - 1800 * (58 - 23) / (min35 - 23)) < 1e-9, 'karttuma-approksimaatio käyttää rajattua ikää');
 }
 
+console.log('Porrastettu säästö: säästöä ratkaisevat haut kokeilevat tasaista summaa (auditointi 11/2026)');
+{
+  const base = () => ({
+    ageNow: 35, ageEnd: 90, startCapital: 30000, monthly: 300, savingsGrowth: 0,
+    allocStocks: 70, allocBonds: 20, glide: false, real: true, tax: true,
+    events: [{ id: 1, type: 'retirement', age: 65, withdrawal: 3000, pension: 1500, pensionAge: 68, goal: 'saving' }],
+  });
+  const flat = L.simulate(base());
+  const stepped = L.simulate(Object.assign(base(), { savePhases: [{ to: 45, amount: 300 }, { to: 90, amount: 600 }] }));
+  ok(flat.requiredMonthly > 0 && !flat.goalUnreachable, 'tasainen: tarvittava säästö ratkeaa', String(flat.requiredMonthly));
+  ok(stepped.requiredMonthly === flat.requiredMonthly && !stepped.goalUnreachable,
+    'porrastettu: sama tasainen ratkaisu (aikataulu ei sido hakua)', `${stepped.requiredMonthly} vs ${flat.requiredMonthly}`);
+  // Päälinja kulkee yhä porrastuksella — vain haku on tasainen
+  const noGoal = (ph) => { const s = base(); delete s.events[0].goal; if (ph) s.savePhases = ph; return L.simulate(s); };
+  ok(noGoal([{ to: 45, amount: 300 }, { to: 90, amount: 600 }]).wAtRet > noGoal(null).wAtRet, 'päälinja noudattaa porrastusta');
+  // Tavoitepisteratkaisu ja tornado
+  const stP = Object.assign(base(), { savePhases: [{ to: 45, amount: 300 }, { to: 90, amount: 600 }] });
+  delete stP.events[0].goal;
+  const simP = L.simulate(stP);
+  const g = L.solveGoalsMonthly(stP, [{ age: 60, value: 600000 }], simP);
+  ok(g && g.monthly > 0, 'tavoitepiste ratkeaa porrastetulla suunnitelmalla', JSON.stringify(g));
+  const tor = L.tornado(stP, simP);
+  const up = tor.find((r) => r.label.startsWith('Kuukausisäästö +')), dn = tor.find((r) => r.label.startsWith('Kuukausisäästö −'));
+  ok(up.delta > 0 && dn.delta < 0, 'tornadon säästörivit reagoivat porrastukseen', `${up.delta} / ${dn.delta}`);
+}
+
+console.log('Tavoitetilojen ratkaistut päätösarvot: tornado ja perhe-MC (auditointi 11/2026)');
+{
+  const kestava = () => ({
+    ageNow: 40, ageEnd: 90, startCapital: 150000, monthly: 800, savingsGrowth: 0,
+    allocStocks: 70, allocBonds: 20, glide: false, real: true, tax: true,
+    // withdrawal 9000 on paikkamerkki: tavoite ratkaisee kestävän tulon
+    events: [{ id: 1, type: 'retirement', age: 65, withdrawal: 9000, pension: 1500, pensionAge: 68, goal: 'withdrawal' }],
+  });
+  const s = L.simulate(kestava());
+  ok(s.solvedWithdrawal > 0 && s.solvedWithdrawal < 9000, 'kestävä tulo ratkeaa paikkamerkin alle', String(s.solvedWithdrawal));
+  const tor = L.tornado(kestava(), s);
+  ok(tor.some((r) => r.delta > 500) && tor.some((r) => r.delta < -500), 'tornado näyttää sekä hyödyt että haitat (vaje ei leikkaudu nollaan)',
+    tor.map((r) => Math.round(r.delta)).join(','));
+  // Perhe-MC: yksi henkilö → sama luku kuin henkilön oma MC samalla polkumäärällä
+  const solo = L.mcBand(kestava(), { paths: 300, withdrawal: s.withdrawal, retireAge: s.retireAge });
+  const fam = L.mcHousehold([kestava()], { paths: 300 });
+  ok(fam.successProb === solo.successProb, 'perhe-MC käyttää ratkaistua nostoa (yhden hengen perhe = henkilön oma luku)',
+    `${fam.successProb} vs ${solo.successProb}`);
+  const raaka = L.mcHousehold([kestava()], { paths: 300, decisions: [null] });
+  ok(raaka.successProb < fam.successProb, 'paikkamerkillä laskettu luku olisi alempi (vanha käytös eksplisiittisesti)', String(raaka.successProb));
+  // Manuaalitila: päätösarvot kentistä, bitilleen entinen
+  const man = () => { const p = kestava(); delete p.events[0].goal; p.events[0].withdrawal = 2500; return p; };
+  ok(L.mcHousehold([man()], { paths: 300 }).successProb === L.mcHousehold([man()], { paths: 300, decisions: [null] }).successProb,
+    'manuaalitilassa ratkaisua ei ajeta (sama tulos)');
+}
+
+console.log('Reunatapaukset: myynti ennen nykyikää, kestävän tulon "ei toteudu", täyskorrelaatio (auditointi 11/2026)');
+{
+  const om = (age) => ({
+    ageNow: 50, ageEnd: 90, startCapital: 50000, monthly: 500, savingsGrowth: 0,
+    allocStocks: 70, allocBonds: 20, glide: false, real: true, tax: true,
+    events: [
+      { id: 1, type: 'ownHome', owned: true, age, amount: -250000, isAsset: true, loanLeft: 100000, rate: 4, years: 20, appr: 1.5, sellAge: 45 },
+      { id: 2, type: 'retirement', age: 65, withdrawal: 2000, pension: 1500, pensionAge: 67 },
+    ],
+  });
+  const vanha = L.prepareSim(om(40)), nyt = L.prepareSim(om(50));
+  ok(vanha.debt[1] > 0 && vanha.debt[1] === nyt.debt[1] && vanha.payments[1] === nyt.payments[1],
+    'omistus, myynti-ikä ennen nykyikää: laina ei katoa (tallennettu ikä ei vaikuta)', `${vanha.debt[1]} vs ${nyt.debt[1]}`);
+  ok(vanha.saleInfos.length === 0, 'menneisyyteen osuvaa myyntiä ei kirjata');
+
+  const tyhja = L.simulate({ ageNow: 30, ageEnd: 90, startCapital: 0, monthly: 0, savingsGrowth: 0, allocStocks: 70, allocBonds: 20, glide: false, real: true, tax: true,
+    events: [{ id: 1, type: 'retirement', age: 65, withdrawal: 2400, pension: 0, pensionAge: 68, goal: 'withdrawal' }] });
+  ok(tyhja.solvedWithdrawal === 0 && !tyhja.goalUnreachable, 'tyhjä suunnitelma: kestävä tulo 0 €/kk, ei "ei toteudu"');
+  const syo = L.simulate({ ageNow: 30, ageEnd: 90, startCapital: 1000, monthly: 0, savingsGrowth: 0, allocStocks: 70, allocBonds: 20, glide: false, real: true, tax: true,
+    events: [
+      { id: 1, type: 'home', age: 31, amount: -300000, financing: 'loan', down: 0, rate: 4, years: 25, isAsset: false },
+      { id: 2, type: 'retirement', age: 65, withdrawal: 2400, pension: 0, pensionAge: 68, goal: 'withdrawal' }] });
+  ok(syo.goalUnreachable === true && syo.solvedWithdrawal === 0, 'lainanhoito syö salkun: kestävä tulo "ei toteudu" myös ilman varmuustasoa');
+
+  const yksi = L.ensurePSD(L.corrMatrixOf(3, [1, 1, 1]));
+  ok(yksi.shrunk === false && yksi.M[0][1] === 1, 'täyskorrelaatio (ρ = 1) hyväksytään kutistamatta');
+  const pct = Object.assign(L.defaultPro(), { wd: { mode: 'pct', pct: 4, band: 20, adj: 10 } });
+  ok(L.sustainableByAge({ ageNow: 40, ageEnd: 90, startCapital: 100000, monthly: 500, savingsGrowth: 0, allocStocks: 70, allocBonds: 20, glide: false, real: true, tax: true,
+    proOn: true, pro: pct, events: [{ id: 1, type: 'retirement', age: 65, withdrawal: 2000, pension: 1500, pensionAge: 67 }] }).length === 0,
+    '%-nostossa kestävä tulo iän mukaan jätetään laskematta');
+}
+
 console.log(failed ? `\n${failed} TESTIÄ EPÄONNISTUI` : '\nKaikki testit läpi.');
 process.exit(failed ? 1 : 0);

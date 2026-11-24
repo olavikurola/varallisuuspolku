@@ -42,8 +42,10 @@ self.onmessage = (e) => {
       self.postMessage({ seq: d.seq, task: 'conf', ok: true, key: d.key, wd: s.solvedWithdrawal });
     } else if (d.task === 'solveGoals') {
       // Varmuustasomoodin Ratkaise: karkea→tarkka-bisektio + edistyminen
+      // Päätösarvot päälangan simistä (tavoitetiloissa tapahtuman kentät ovat paikkamerkkejä)
       const res = solveGoalsMonthlyConf(d.st, d.points, d.conf, d.paths || MC_FULL,
-        (p) => self.postMessage({ seq: d.seq, task: 'solveGoals', progress: p }));
+        (p) => self.postMessage({ seq: d.seq, task: 'solveGoals', progress: p }),
+        d.withdrawal != null || d.retireAge != null ? { withdrawal: d.withdrawal, retireAge: d.retireAge } : null);
       self.postMessage({ seq: d.seq, task: 'solveGoals', ok: true, result: res });
     }
   } catch (err) {

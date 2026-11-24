@@ -4,7 +4,7 @@
 
 /* ===================== Esittelykierros ===================== */
 // Spotlight-kierros ensikertalaiselle: tummennettu kerros, valokeila kohteen
-// ympärillä ja kortti, joka kuljettaa kahdeksalla klikkauksella palvelun läpi.
+// ympärillä ja kortti, joka kuljettaa askel kerrallaan palvelun läpi (TOUR_STEPS).
 // Käynnistyy kerran, kun ensivierailija poistuu piirtopöydältä kojelaudalle;
 // uusintakierros löytyy ☰-valikosta. Korvasi aiemman aloitusvinkkipalkin.
 
@@ -599,7 +599,7 @@ function renderProAna() {
   // Tornado (merkityksettömät ±0-rivit pois)
   const box = $('tornadoBox');
   if (box) {
-    const rows = tornado(state).filter((r) => Math.abs(r.delta) > 500);
+    const rows = tornado(state, sim).filter((r) => Math.abs(r.delta) > 500);
     const maxD = Math.max(1, ...rows.map((r) => Math.abs(r.delta)));
     box.innerHTML = rows.map((r) => {
       const pct = Math.round(Math.abs(r.delta) / maxD * 100);

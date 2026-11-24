@@ -595,7 +595,7 @@ function openMoreMenu(anchor) {
       if (baseline) { clearBaseline(); toast('Vertailu poistettu'); }
       else { setBaseline(); toast('Vertailukohta tallennettu — erot näkyvät, kun muutat suunnitelmaa'); }
     });
-  add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti kuudella klikkauksella',
+  add('mi-tour', 'Esittelykierros', 'Palvelun läpikäynti alle minuutissa',
     () => startTour());
 
   sect('Sivut');

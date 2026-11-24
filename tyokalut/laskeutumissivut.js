@@ -119,13 +119,13 @@ const SIVUT = [
     vastaus: [
       'Useimmat FIRE-laskurit kertovat, milloin salkkusi on 25 kertaa vuosikulusi — eli soveltavat 4 %:n sääntöä. Sääntö perustuu Yhdysvaltain markkinahistoriaan ja 30 vuoden nostoaikaan (nostot inflaatiokorjattuina), eikä se tunne suomalaista myyntivoittoveroa, työeläkettä eikä sitä, että 45-vuotiaana aloitettu nosto voi kestää 45 vuotta.',
       'Varallisuuspolun FIRE-laskuri ratkaisee kysymyksen toisin päin: <b>kuinka aikaisin voit lopettaa työt, kun haluat, että varat riittävät X %:n varmuudella</b>. Valitset kuukausitulon tarpeen ja varmuustason (75, 85 tai 95 % simuloiduista markkinapoluista), ja ratkaisija hakee aikaisimman eläkeiän. Työeläke alkaa omalla iällään — ennen sitä koko tulo nostetaan sijoituksista, ja siitä menee vero voiton osuudesta.',
-      'Sekvenssiriski — huono markkinavuosi juuri nostojen alkaessa — on FIRE-suunnitelman suurin yksittäinen riski. Laskurin Markkinatesti ajaa suunnitelman viiden deterministisen stressiskenaarion läpi (karhu heti eläkkeellä, menetetty vuosikymmen, stagflaatio, romahdus −50 %) ja näyttää, missä iässä varat loppuisivat kussakin.',
+      'Sekvenssiriski — huono markkinavuosi juuri nostojen alkaessa — on FIRE-suunnitelman suurin yksittäinen riski. Laskurin Markkinatesti ajaa suunnitelman kuuden deterministisen stressiskenaarion läpi (karhu heti eläkkeellä tai jo tänään, romahdus −50 %, stagflaatio, menetetty vuosikymmen, korkojen nousu +2 %-yksikköä) ja näyttää, missä iässä varat loppuisivat kussakin.',
       'Kaikki on ilmaista, ilman rekisteröitymistä, ja suunnitelma pysyy omalla laitteellasi. Laskuri ei anna sijoitusneuvontaa: se laskee, sinä päätät.',
     ],
     ukk: [
       ['Miksi ei 4 %:n sääntö?', 'Sääntö olettaa 30 vuoden nostoajan, Yhdysvaltain historiallisia tuottoja ja nollaveroa (nostot inflaatiokorjattuina). Suomessa nostoista maksetaan myyntivoittovero, ja varhainen eläke voi kestää 40–50 vuotta. Elinkaarisimulaatio omilla luvuillasi on rehellisempi.'],
       ['Mikä varmuustaso kannattaa valita?', 'Laskuri ei suosittele — se näyttää, mitä kukin taso maksaa. Esimerkiksi 85 % tarkoittaa, että 15 % simuloiduista poluista jää alle tavoitteen — niissäkin on yleensä aikaa reagoida. Taso on sinun valintasi.'],
-      ['Huomioiko laskuri työeläkkeen?', 'Kyllä. Työeläke alkaa valitsemastasi iästä ja pienentää sijoituksista nostettavaa summaa. Syötä se käteen jäävänä arviona.'],
+      ['Huomioiko laskuri työeläkkeen?', 'Kyllä. Työeläke alkaa valitsemastasi iästä — kuitenkin aikaisintaan alimmasta vanhuuseläkeiästäsi — ja pienentää sijoituksista nostettavaa summaa. Syötä se käteen jäävänä arviona.'],
     ],
     kokeile: [
       ['Aikaisin eläkeikä 85 % varmuudella', rakenna({ goal: 'age', conf: 0.85, withdrawal: 2200 }, { ageNow: 32, startCapital: 60000, monthly: 2000, allocStocks: 95, allocBonds: 5 })],
@@ -352,7 +352,7 @@ function sivuHtml(p) {
   <title>${esc(p.title)} | Varallisuuspolku</title>
   <meta name="description" content="${esc(p.kuvaus)}" />
   <meta name="theme-color" content="#0a0e1a" />
-  <script>/* Vaalea teema käyttöön ennen ensimmäistä maalausta — ei välähdystä */try{if(localStorage.getItem("vp-theme")==="light"){document.documentElement.classList.add("light");document.querySelector('meta[name="theme-color"]').content="#f4f6fb";}}catch(e){}</script>
+  <script>/* Vaalea teema käyttöön ennen ensimmäistä maalausta — ei välähdystä */try{if(localStorage.getItem("vp-theme")==="light"){document.documentElement.classList.add("light");document.querySelector('meta[name="theme-color"]').content="#eef1f8";}}catch(e){}</script>
   <meta property="og:locale" content="fi_FI" />
   <meta property="og:site_name" content="Varallisuuspolku" />
   <meta property="og:title" content="${esc(p.title)}" />

@@ -65,16 +65,18 @@ row('   Myyntivoittovero (30/34 %, olettama)', handTax, info.tax);
 const gross = 2000 / (1 - 0.5 * 0.30);
 console.log(`9) Brutto ${fmt(gross)}, vero ${fmt(gross - 2000)} (kaava gross = need/(1−gainRatio·rate))`);
 
-// 10) MC-determinismi
+// 10) MC-determinismi — sovelluksen OLETUSSUUNNITELMA (apu.js: state), sama
+//     5 000 polkua kuin sivun tarkennettu luku. Pidä synkassa apu.js:n kanssa:
+//     validointisivun "oletussuunnitelman onnistumistodennäköisyys" on tämä luku.
 const plan = () => ({ ageNow: 30, ageEnd: 90, startCapital: 20000, monthly: 1000, savingsGrowth: 1.5,
-  allocStocks: 70, allocBonds: 20, glide: false, real: false, tax: true,
+  allocStocks: 70, allocBonds: 20, glide: false, real: true, inflation: 2, tax: true,
   events: [
     { id: 1, type: 'home', age: 35, amount: -220000, financing: 'loan', down: 33000, rate: 3.5, years: 25, isAsset: true, appr: 2.0 },
     { id: 2, type: 'car', age: 45, amount: -25000, financing: 'loan', down: 5000, rate: 4.5, years: 6, isAsset: true, appr: -10.0 },
-    { id: 3, type: 'retirement', age: 65, withdrawal: 2400, pension: 1500, pensionAge: 65 },
+    { id: 3, type: 'retirement', age: 67, withdrawal: 2400, pension: 1500, pensionAge: Math.max(65, L.pensionAgeMin(30)) },
   ] });
-const s1 = L.simulate(plan()), s2 = L.simulate(plan());
-console.log(`10) MC: onnistumis-% ${(s1.successProb * 100).toFixed(1)} — kahdesti ajettuna identtinen: ${s1.successProb === s2.successProb}`);
+const s1 = L.simulate(plan(), { paths: L.MC_FULL }), s2 = L.simulate(plan(), { paths: L.MC_FULL });
+console.log(`10) MC (${L.MC_FULL} polkua, moottori ${L.ENGINE_VERSION}): oletussuunnitelman onnistumis-% ${(s1.successProb * 100).toFixed(1)} — kahdesti ajettuna identtinen: ${s1.successProb === s2.successProb}`);
 
 // 11) Osinkoverojarru: 3,5 % osinkotuotto AOT:lla
 console.log(`11) Osinkojarru 3,5 % × 85 % × 30 % = ${(3.5 * 0.85 * 0.30).toFixed(3)} %-yks/v osakepainolle`);

@@ -68,8 +68,8 @@ profiilit, omistukset, teema, tilastot, porrastettu säästö, validointisivut,
 tuloskuva…). Ne noudattavat samoja konventioita; osa käynnistää oman
 palvelimensa omaan porttiinsa (81xx/87xx, uudet mieluiten satunnaiseen
 porttiin `listen(0)` kuten verify-syote-turva) tai spawnaa serve.js:n itse,
-joten ne toimivat sekä yksin että aja-kaikki-ajurin alla. Yksikkötestien
-lista on kovakoodattu aja-kaikki.js:ään — uusi `*.test.js` lisätään sinne. Tulkki-testit mockaavat
+joten ne toimivat sekä yksin että aja-kaikki-ajurin alla. Myös yksikkötestit
+(`testit/*.test.js`) poimitaan automaattisesti. Tulkki-testit mockaavat
 verkon — oikeita API-kutsuja ei tehdä.
 
 Generaattorit ja kertaluonteiset työkalut ovat [../tyokalut/](../tyokalut/)-kansiossa

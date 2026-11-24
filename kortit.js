@@ -81,7 +81,9 @@ function renderStats() {
   }
   if (s.goal === 'saving') {
     cards.push(s.requiredMonthly != null
-      ? { k: 'Tarvittava säästö', v: t('{0}/kk', fmtEur(s.requiredMonthly)), cls: s.requiredMonthly > state.monthly ? 'accent' : 'ok', s: t('nyt {0}/kk', fmtEur(state.monthly)) + (confTxt ? ` · ${confTxt}` : '') }
+      ? { k: 'Tarvittava säästö', v: t('{0}/kk', fmtEur(s.requiredMonthly)), cls: s.requiredMonthly > state.monthly ? 'accent' : 'ok',
+        // Porrastetulla säästöllä luku on tasainen summa, joka korvaisi aikataulun
+        s: (Array.isArray(state.savePhases) && state.savePhases.length ? t('tasaisena säästönä porrastuksen sijaan') : t('nyt {0}/kk', fmtEur(state.monthly))) + (confTxt ? ` · ${confTxt}` : '') }
       : { k: 'Tarvittava säästö', v: 'Ei toteudu', cls: 'bad', s: 'tulotavoite on liian suuri tälle eläkeiälle' });
   }
   // Riittävyys ja onnistumis-% samassa kortissa — kertovat samaa asiaa.

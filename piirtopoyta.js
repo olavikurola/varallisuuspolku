@@ -932,7 +932,10 @@ function goalSolve() {
     if (info) chipShowAt(`<div class="dchip-row"><b>Ratkaistaan…</b> ${Math.round(conf * 100)} % varmuudella</div>`
       + '<div class="dchip-note">0 %</div>', info.x, info.y, false);
     announce('Ratkaistaan varmuustasolla — tämä kestää hetken');
-    mcWorker.postMessage({ task: 'solveGoals', seq: ++mcSeq, st: serialize(), points, conf, paths: MC_FULL });
+    // seq ei kasva: vastausta ei suodateta sillä, ja ++mcSeq hylkäsi käynnissä olevan MC-vastauksen
+    const fs0 = lastFullSim || sim;
+    mcWorker.postMessage({ task: 'solveGoals', seq: mcSeq, st: serialize(), points, conf, paths: MC_FULL,
+      withdrawal: fs0 ? fs0.withdrawal : null, retireAge: fs0 ? fs0.retireAge : null });
     return;
   }
   // Oletusmoodi: bisektio niin, että odotuspolku kulkee pisteen kautta
@@ -946,6 +949,9 @@ function applyGoalSolution(r, conf, goals) {
     return;
   }
   pushUndoNow();
+  // Ratkaisu on tasainen summa: porrastettu aikataulu ohittaisi sen, joten se korvataan
+  const hadPhases = typeof savePhaseActive === 'function' && savePhaseActive();
+  if (hadPhases) { state.savePhases = null; syncSavePhaseUI(); }
   // Pyöristys ylöspäin snap-askeleeseen — tavoite pysyy täytettynä
   state.monthly = clamp(Math.ceil(r.monthly / 10) * 10, 0, 1e6);
   $('monthly').value = state.monthly;
@@ -954,6 +960,7 @@ function applyGoalSolution(r, conf, goals) {
   const binding = goals && r.bindingIndex >= 0 ? goals[r.bindingIndex] : null;
   const msg = `Kuukausisäästö ${fmtNum(state.monthly)} €/kk` +
     (conf ? ` (${Math.round(conf * 100)} % varmuus)` : '') +
+    (hadPhases ? ' — porrastus korvattu tasaisella säästöllä' : '') +
     (binding && goals.length > 1 ? ` — tiukin: ${evLabel(binding)} ${fmtCompact(binding.amount)} · ${Math.round(binding.age)} v` : '');
   toast(msg);
   announce(msg);

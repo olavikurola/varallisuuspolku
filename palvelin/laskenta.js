@@ -63,7 +63,7 @@ const feeOr0 = (v) => (typeof v === 'number' && isFinite(v) ? clamp(v, 0, 10) : 
 const MC_SEED = (i, seed = 1337) => seed + i * 7919;
 // Moottoriversio: päivitä kun tulosten taloudellinen merkitys muuttuu (validointisivun muutosloki).
 // Kulkee vertailudatan mukana, jotta eri versioiden johdetut tulokset erottuvat (auditointi 5.9.2026 D-03).
-const ENGINE_VERSION = '2026-09-24';
+const ENGINE_VERSION = '2026-11-22';
 const MC_LIVE = 300;   // synkroninen laskenta päälangassa
 const MC_FULL = 5000;  // worker-tarkennus irrotuksen jälkeen
 
@@ -274,6 +274,10 @@ function ensurePSD(M) {
     }
     return true;
   };
+  // Täyskorrelaatio (kaikki ρ = 1) on kelvollinen (semidefiniitti, sama kuin
+  // perustila) — Cholesky-ehto hylkäsi sen ja kutisti 0,95:een, jolloin σ jäi
+  // perustilaa pienemmäksi. Matriisia käytetään vain varianssiin wᵀΣw.
+  if (M.every((row) => row.every((v) => v >= 1 - 1e-9))) return { M, shrunk: false };
   let lambda = 1, shrunk = false;
   let A = M;
   while (!isPSD(A) && lambda > 0.05) {
@@ -502,8 +506,16 @@ function prepareSim(st, opts = {}) {
   const payments = new Float64Array(months + 1);
   const debt = new Float64Array(months + 1);
   const salePayoff = new Map();
-  const sellMonthOf = (e) => e.isAsset && e.sellAge != null && e.sellAge > e.age
-    ? Math.round((e.sellAge - a0) * 12) : null;
+  // Myynti vain omistuksen alun JÄLKEEN. Omistus (owned) alkaa nykyhetkestä —
+  // tallennettu e.age voi olla vanhentunut (ikäkenttää muokattu): myynti-ikä
+  // ennen nykyikää antoi negatiivisen kuukauden, jolloin laina katosi ja
+  // myyntitulo jäi kirjaamatta. Ehjillä suunnitelmilla tulos on entinen.
+  const sellMonthOf = (e) => {
+    if (!e.isAsset || e.sellAge == null) return null;
+    const mOwn = e.owned ? 0 : Math.round((e.age - a0) * 12);
+    const mSell = Math.round((e.sellAge - a0) * 12);
+    return e.sellAge > (e.owned ? a0 : e.age) && mSell > Math.max(mOwn, 0) ? mSell : null;
+  };
   // Varainsiirtovero ostossa (verovuosi 2026): asunto-osake 1,5 %, kiinteistö
   // (mökki, omakotitalo) 3 %. Oletus tyypistä; transferTaxPct ohittaa (esim.
   // omakotitalo 3, ensiasunnon vapautus poistui 2024 → ei 0-oletusta).
@@ -705,7 +717,10 @@ function buildMu(ctx, st, retAge) {
 // stopAt=m palauttaa varallisuuden kuukauden m kohdalla (bisektiota varten),
 // record(m, w) kirjaa polun MC-matriisiin.
 
-function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave = st.monthly, shockFn = null, collect = false, stopAt = null, record = null } = {}) {
+// flatSave: monthlySave korvaa porrastetun aikataulun (savePhases) — säästöä
+// ratkaisevat haut kokeilevat tasaista summaa; ilman tätä kokeiltava summa
+// ohitettiin ja ratkaisijat palauttivat "ei toteudu" / 0.
+function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave = st.monthly, flatSave = false, shockFn = null, collect = false, stopAt = null, record = null } = {}) {
   const { a0, months, lump, payments, growth, saveAbs, pensionAge, taxOn, saleGains,
     taxLow, taxHigh, taxBracket, taxAcq, wdMode, wdPctM, wdBand, wdAdj, phaseMul, realI, idxW } = ctx;
   // Työeläke kokeiltavan eläkeiän mukaan (ratkaisijat vaihtavat retAgea)
@@ -785,7 +800,7 @@ function runPath(ctx, st, withdrawal, retAge, muM, { clamp0 = false, monthlySave
       // maksuajalla lähes ilmaisen ja laina voitti käteisoston miljoonilla
       // (X-palaute @ArjenArvonnousu 24.7.2026: remontti 130 k€/1 v vs 2 v).
       // Porrastettu aikataulu (saveAbs) korvaa tasaisen perussäästön kun asetettu.
-      const base = saveAbs ? saveAbs[m] : monthlySave;
+      const base = saveAbs && !flatSave ? saveAbs[m] : monthlySave;
       const net = base * growth[m] * idxW[m] - payments[m];
       if (net >= 0) { w += net; basis += net; basisNom += net * curNom; }
       else { const r = taxedSell(-net); if (fl) fl.tax[m] += r.tax; }
@@ -894,11 +909,11 @@ function makeShock(st, sigA, i) {
 // Osuus satunnaisista markkinapoluista, joissa varat eivät ehdy.
 // Onnistumis-% on monotoninen nostotason ja säästön suhteen (kiinteät
 // siemenet), joten bisektio toimii.
-function mcSuccess(ctx, st, wd, retAge, muM, sigA, monthlySave, paths) {
+function mcSuccess(ctx, st, wd, retAge, muM, sigA, monthlySave, paths, flatSave = false) {
   let ok = 0;
   for (let i = 0; i < paths; i++) {
     const shockFn = makeShock(st, sigA, i);
-    if (runPath(ctx, st, wd, retAge, muM, { clamp0: true, monthlySave, shockFn }).depletion == null) ok++;
+    if (runPath(ctx, st, wd, retAge, muM, { clamp0: true, monthlySave, flatSave, shockFn }).depletion == null) ok++;
   }
   return ok / paths;
 }
@@ -1003,7 +1018,7 @@ function makeDragSolver(st, sim) {
     monthFor,
     // varallisuus iässä age säästöllä monthly (nostotaso kiinteä)
     wealthAtMonthly: (monthly, age) =>
-      runPath(ctx, st, wd0, retAge, muM, { clamp0: true, monthlySave: monthly, stopAt: monthFor(age) }).stopW,
+      runPath(ctx, st, wd0, retAge, muM, { clamp0: true, monthlySave: monthly, flatSave: true, stopAt: monthFor(age) }).stopW,
     // varallisuus iässä age nostotasolla wd (säästö kiinteä)
     wealthAtWd: (wd, age) =>
       runPath(ctx, st, wd, retAge, muM, { clamp0: true, stopAt: monthFor(age) }).stopW,
@@ -1034,12 +1049,15 @@ function solveGoalsMonthly(st, points, sim) {
 // Varmuustasomoodi: pienin säästö, jolla vähintään conf-osuus MC-poluista
 // ylittää pisteen. Karkea haku pienellä polkumäärällä, tarkennus täydellä —
 // pysyy alle 3 s:n workerissa. onProgress(0..1) raportoi etenemisen.
-function solveGoalsMonthlyConf(st, points, conf, paths, onProgress) {
+// dec = { withdrawal, retireAge }: tavoitetilojen RATKAISTUT päätösarvot (sim).
+// Ilman niitä luettaisiin eläketapahtuman kentät, jotka ovat kestävän tulon
+// tavoitteessa pelkkä paikkamerkki (kuten solveGoalsMonthly saa sim:n).
+function solveGoalsMonthlyConf(st, points, conf, paths, onProgress, dec) {
   if (!points || !points.length) return null;
   const ctx = prepareSim(st);
   const retire = ctx.retire;
-  const retAge = retire ? retire.age : null;
-  const wd = retire ? retire.withdrawal : 0;
+  const retAge = dec && dec.retireAge != null ? dec.retireAge : (retire ? retire.age : null);
+  const wd = dec && dec.withdrawal != null ? dec.withdrawal : (retire ? retire.withdrawal : 0);
   const { muM, sigA } = buildMu(ctx, st, retAge);
   const coarse = Math.min(500, paths);
   const shareAt = (ms, p, n) => {
@@ -1047,7 +1065,7 @@ function solveGoalsMonthlyConf(st, points, conf, paths, onProgress) {
     let c = 0;
     for (let i = 0; i < n; i++) {
       const shockFn = makeShock(st, sigA, i);
-      if (runPath(ctx, st, wd, retAge, muM, { clamp0: true, monthlySave: ms, shockFn, stopAt: m }).stopW >= p.value) c++;
+      if (runPath(ctx, st, wd, retAge, muM, { clamp0: true, monthlySave: ms, flatSave: true, shockFn, stopAt: m }).stopW >= p.value) c++;
     }
     return c / n;
   };
@@ -1143,7 +1161,13 @@ function simulate(st, opts = {}) {
     const okAt = conf
       ? (x) => mcSuccess(ctx, st, x, retireAge, muM, sigA, st.monthly, paths) >= conf
       : (x) => runPath(ctx, st, x, retireAge, muM, {}).endW > 0;
-    if (conf && !okAt(0)) {
+    // "Ei toteudu" molemmissa haaroissa: ilman varmuustasoa vain, jos loppusaldo
+    // jää miinukselle ilman nostojakin (esim. lainanhoito syö salkun) — tyhjä
+    // suunnitelma (0 € / 0 €/kk) päättyy nollaan ja saa edelleen ratkaisun 0 €/kk.
+    // Välivaiheen notkahdus (leikkaamaton polku) ei ratkaise, vain loppusaldo.
+    const unreachable = conf ? !okAt(0)
+      : runPath(ctx, st, 0, retireAge, muM, {}).endW < 0;
+    if (unreachable) {
       out.goalUnreachable = true;
       withdrawal = 0;
       out.solvedWithdrawal = 0;
@@ -1186,9 +1210,10 @@ function simulate(st, opts = {}) {
   } else if (retire && goal === 'saving') {
     // Tarvittava kuukausisäästö annetulla eläkeiällä ja nostolla
     const { muM, sigA } = buildMu(ctx, st, retireAge);
+    // Tasainen summa: porrastettu aikataulu ei sido hakua (flatSave)
     const okAt = conf
-      ? (ms) => mcSuccess(ctx, st, withdrawal, retireAge, muM, sigA, ms, paths) >= conf
-      : (ms) => runPath(ctx, st, withdrawal, retireAge, muM, { monthlySave: ms }).endW >= 0;
+      ? (ms) => mcSuccess(ctx, st, withdrawal, retireAge, muM, sigA, ms, paths, true) >= conf
+      : (ms) => runPath(ctx, st, withdrawal, retireAge, muM, { monthlySave: ms, flatSave: true }).endW >= 0;
     if (okAt(0)) {
       out.requiredMonthly = 0;
     } else {
@@ -1370,15 +1395,29 @@ function sustainableByAge(st, step = 2) {
 
 // Tornado-herkkyys (Pro-analyysi): parametrien tönäisyt ja vaikutus
 // loppuvarallisuuteen odotuspolulla. Palauttaa suurimmasta pienimpään.
-function tornado(st) {
+// sim: tavoitetilojen ratkaistut päätösarvot lukitaan pohjaan — kestävän tulon
+// tavoitteessa eläketapahtuman withdrawal on paikkamerkki ja 'age'-tavoitteessa
+// ikä voi olla ratkaisematon kopio; ilman lukitusta kaikki rivit olivat 0.
+function tornado(st0, sim) {
+  const st = JSON.parse(JSON.stringify(st0));
+  const ret0 = st.events.find((e) => e.type === 'retirement');
+  if (ret0 && sim) {
+    if (sim.retireAge != null) ret0.age = sim.retireAge;
+    if (sim.withdrawal != null) ret0.withdrawal = sim.withdrawal;
+  }
   const wEnd0 = baseWEnd(st);
   const bump = (mut, label, opts) => {
     const c = JSON.parse(JSON.stringify(st));
     mut(c);
     return { label, delta: baseWEnd(c, opts) - wEnd0 };
   };
+  // Porrastettu säästö: ±10 % koskee aikataulun summia (monthly on silloin ohitettu)
+  const saveBump = (k) => (c) => {
+    c.monthly *= k;
+    if (Array.isArray(c.savePhases)) c.savePhases = c.savePhases.map((r) => ({ ...r, amount: (r.amount || 0) * k }));
+  };
   const rows = [];
-  const retire = st.events.find((e) => e.type === 'retirement');
+  const retire = ret0;
   // Lainakorko omana muuttujanaan, kun suunnitelmassa on vaihtuvakorkoinen laina
   // (suomalaisen kotitalouden todellisin riski — auditointi 8/2026)
   if (st.events.some((e) => !e.rateFixed && ((e.financing === 'loan' && e.amount < 0) || (e.owned && e.loanLeft > 0)))) {
@@ -1387,8 +1426,8 @@ function tornado(st) {
   }
   rows.push(bump((c) => { proMuBump(c, 1); }, 'Tuotto-odotus +1 %-yks'));
   rows.push(bump((c) => { proMuBump(c, -1); }, 'Tuotto-odotus −1 %-yks'));
-  rows.push(bump((c) => { c.monthly *= 1.1; }, 'Kuukausisäästö +10 %'));
-  rows.push(bump((c) => { c.monthly *= 0.9; }, 'Kuukausisäästö −10 %'));
+  rows.push(bump(saveBump(1.1), 'Kuukausisäästö +10 %'));
+  rows.push(bump(saveBump(0.9), 'Kuukausisäästö −10 %'));
   if (retire) {
     rows.push(bump((c) => { const r = c.events.find((e) => e.type === 'retirement'); r.age = clamp(r.age + 2, c.ageNow + 1, c.ageEnd); }, 'Eläkeikä +2 v'));
     rows.push(bump((c) => { const r = c.events.find((e) => e.type === 'retirement'); r.age = clamp(r.age - 2, c.ageNow + 1, c.ageEnd); }, 'Eläkeikä −2 v'));
@@ -1402,14 +1441,16 @@ function tornado(st) {
   return rows.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
 }
 
-// Odotuspolun loppuvarallisuus ilman MC:tä (tornadon evaluointi)
+// Odotuspolun loppuvarallisuus ilman MC:tä (tornadon evaluointi). Ei nollaan
+// leikkausta: varat loppuun käyttävässä suunnitelmassa (kestävä tulo) haitallinen
+// tönäisy näkyy vajeena — leikattuna kaikki haitat olivat ~0 ja jäivät piiloon.
 function baseWEnd(st, opts) {
   const ctx = prepareSim(st, opts || {});
   const retire = ctx.retire;
   const retAge = retire ? retire.age : null;
   const wd = retire ? retire.withdrawal : 0;
   const { muM } = buildMu(ctx, st, retAge);
-  return runPath(ctx, st, wd, retAge, muM, { clamp0: true }).endW;
+  return runPath(ctx, st, wd, retAge, muM, {}).endW;
 }
 
 // Tuotto-odotuksen tönäisy: Pro-tilassa kaikkiin luokkiin, muuten
@@ -1436,9 +1477,28 @@ function proInflBump(c, d) {
 // sama kalenterikuukausi kaikille (ei uudelleengridausta).
 // Henkilön horisontin jälkeen varallisuus jäädytetään viimeiseen arvoon.
 
-function mcHousehold(states, { paths = MC_LIVE } = {}) {
+// Henkilöiden päätösarvot (nosto, eläkeikä) perhe-MC:lle. Tavoitetiloissa
+// 'withdrawal'/'age' ne RATKAISTAAN kuten henkilön omassa simulaatiossa —
+// eläketapahtuman kentät ovat silloin paikkamerkki tai ratkaisematon ikä, ja
+// niillä laskettu perheen onnistumis-% ei kuvannut samaa suunnitelmaa kuin
+// henkilöiden omat luvut ja yhteiskäyrä (householdExp). null = kentät sellaisinaan.
+function householdDecisions(states) {
+  return states.map((st) => {
+    const r = st.events.find((e) => e.type === 'retirement');
+    if (!r || (r.goal !== 'withdrawal' && r.goal !== 'age')) return null;
+    const s = simulate(JSON.parse(JSON.stringify(st)));
+    return { withdrawal: s.withdrawal, retireAge: s.retireAge };
+  });
+}
+
+function mcHousehold(states, { paths = MC_LIVE, decisions = householdDecisions(states) } = {}) {
   const ctxs = states.map((st) => prepareSim(st));
-  const mus = ctxs.map((c, k) => buildMu(c, states[k], c.retire ? c.retire.age : null));
+  const decOf = (k) => {
+    const d = decisions && decisions[k], r = ctxs[k].retire;
+    return { wd: d ? d.withdrawal : (r ? r.withdrawal : 0), retAge: d ? d.retireAge : (r ? r.age : null) };
+  };
+  const decs = states.map((_, k) => decOf(k));
+  const mus = ctxs.map((c, k) => buildMu(c, states[k], decs[k].retAge));
   const months = Math.max(...ctxs.map((c) => c.months));
   // Yhteinen maailma: shokit henkilön 1 asetuksilla (siemen, jakauma)
   const shockSt = states[0];
@@ -1451,8 +1511,7 @@ function mcHousehold(states, { paths = MC_LIVE } = {}) {
       const shockFn = makeShock(shockSt, mus[k].sigA, i);
       last[k] = states[k].startCapital;
       const record = (m, w) => { buf[m * paths + i] += w; last[k] = w; };
-      const wd = ctxs[k].retire ? ctxs[k].retire.withdrawal : 0;
-      const retAge = ctxs[k].retire ? ctxs[k].retire.age : null;
+      const { wd, retAge } = decs[k];
       const r = runPath(ctxs[k], states[k], wd, retAge, mus[k].muM, { clamp0: true, shockFn, record });
       if (r.depletion != null) allSurvive = false;
       // horisontin jälkeen: jäädytetty loppuarvo mukaan summaan
@@ -1499,7 +1558,7 @@ if (typeof module !== 'undefined' && module.exports) {
     defaultPro, proOf, inflOf, classesOf, weightsAt, portfolioStatsPro,
     corrMatrixOf, ensurePSD, STRESS_DEFS, PRO_BASE_ASSETS,
     sustainableByAge, tornado, baseWEnd,
-    mcHousehold, householdExp,
+    mcHousehold, householdDecisions, householdExp,
     pensionAt, pensionAgeMin, PENSION_REF_YEAR, CAREER_START, ENGINE_VERSION,
   };
 }

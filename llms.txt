@@ -66,7 +66,8 @@ Keskeiset faktat (päivitetty 2026-11-23):
 - Hinta: ilmainen, myös Pro-tila (omat tuotto-oletukset, korrelaatiot,
   nostostrategiat, stressiskenaariot). Ei mainoksia.
 - Tietosuoja: suunnitelma tallentuu vain selaimen localStorageen; ei evästeitä
-  eikä henkilötietojen keräystä. Tulkille lähtee vain suunnitelman anonyymi
+  eikä henkilötietojen keräystä suunnitelmasta (palvelimen tekniset lokit:
+  tietosuojaseloste). Tulkille lähtee vain suunnitelman anonyymi
   muoto ja kysymys; palvelin ei tallenna sisältöä. Käyttäjä voi vapaaehtoisesti
   jakaa anonymisoidun suunnitelman vertailudataan. Jakolinkki kantaa koko
   suunnitelman osoitteessa — sitä ei tallenneta palvelimelle.

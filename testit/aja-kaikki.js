@@ -86,7 +86,8 @@ function run(name, file, env) {
 
   // 1) Yksikkötestit (ei riippuvuuksia)
   console.log('— Yksikkötestit —');
-  for (const f of ['laskenta.test.js', 'mc-validointi.test.js', 'skeema-golden.test.js', 'pakkaus.test.js', 'tulkki-proxy.test.js', 'mcp.test.js', 'palvelin-stats.test.js', 'tilastot-staattinen.test.js']) {
+  // Kaikki testit/*.test.js poimitaan automaattisesti (kuten selaintestit)
+  for (const f of fs.readdirSync(__dirname).filter((n) => /\.test\.js$/.test(n)).sort()) {
     if (filter && !f.includes(filter)) continue;
     results.push(await run(f, path.join(__dirname, f), env));
   }

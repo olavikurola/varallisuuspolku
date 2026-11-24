@@ -6,7 +6,7 @@ eläkeikäviivaan — käänteisratkaisija hakee jokaisen vedon hinnan (sääst�
 
 ![Teema](https://img.shields.io/badge/teema-tumma-0a0e1a) ![Riippuvuudet](https://img.shields.io/badge/riippuvuudet-ei%20yht%C3%A4%C3%A4n-2dd4bf) ![Lisenssi](https://img.shields.io/badge/lisenssi-MIT-8b7cf6) [![Web-testit](https://github.com/olavikurola/varallisuuspolku/actions/workflows/web-testit.yml/badge.svg)](https://github.com/olavikurola/varallisuuspolku/actions/workflows/web-testit.yml)
 
-Kaikki laskenta ja data pysyy selaimessa — ei evästeitä, ei tilejä, ei henkilötietoja. Suunnitelmaa
+Kaikki laskenta ja data pysyy selaimessa — ei evästeitä, ei tilejä, ei henkilötietoja suunnitelmasta (tekniset lokit: tietosuojaseloste). Suunnitelmaa
 ei lähetetä mihinkään ilman erillistä lupaa; poikkeukset ovat vapaaehtoinen anonyymi vertailudata,
 jonka sisällön näkee kokonaisuudessaan ennen jakamista, ja tekoälyapuri Tulkki, jolle välitetään
 suunnitelman luvut nimettöminä. Kävijämäärät mitataan evästeettömällä

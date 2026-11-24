@@ -69,6 +69,20 @@ for (const sivu of SIVUT) {
   // LF: CRLF-työpuussa \n-ankkurit (DOCTYPE, script-tagit, moniriviavaimet) eivät osuneet
   let html = fs.readFileSync(path.join(ROOT, sivu), 'utf8').replace(/\r\n/g, '\n');
 
+  // 0) Staattinen tilastolohko (tyokalut/tilastot-staattinen.js kirjoittaa sen
+  //    fi- ja en-sivulle erikseen) ei kuulu sanastoon: lohko irrotetaan ennen
+  //    korvauksia ja en-sivun OMA lohko palautetaan. Aiemmin sanasto osui lohkon
+  //    sisään ja jätti sekakielisen tekstin, kunnes tilastot-staattinen ajettiin.
+  const LOHKO_RE = /<!-- VP-STAATTISET-TILASTOT alku -->[\s\S]*?<!-- VP-STAATTISET-TILASTOT loppu -->/;
+  const PAIKKA = '<!--VP-TILASTOLOHKO-PAIKKA-->';
+  let enLohko = null;
+  if (LOHKO_RE.test(html)) {
+    const vanhaEn = fs.existsSync(path.join(ROOT, kohde)) ? fs.readFileSync(path.join(ROOT, kohde), 'utf8').replace(/\r\n/g, '\n').match(LOHKO_RE) : null;
+    vaadi(vanhaEn, kohde + ': staattista tilastolohkoa ei löydy — aja node tyokalut/tilastot-staattinen.js buildin jälkeen');
+    enLohko = vanhaEn[0];
+    html = html.replace(LOHKO_RE, PAIKKA);
+  }
+
   // 1) sanastokorvaukset (ennen linkkien uudelleenkirjoitusta — avainten
   //    sisällä voi olla href="validointi.html" -muotoisia sisälinkkejä)
   const r = korvaaSanasto(html);
@@ -147,6 +161,7 @@ for (const sivu of SIVUT) {
     sivu + ' + tyokalut/kieli-en-html.json, buildi: tyokalut/kieli-sivut-buildi.js -->\n' +
     html.slice('<!DOCTYPE html>\n'.length);
 
+  if (enLohko) html = html.replace(PAIKKA, () => enLohko);
   fs.writeFileSync(path.join(ROOT, kohde), html, 'utf8');
   console.log(`${kohde}: ${r.n} sanastokorvausta, ${linkit} sisälinkkiä uudelleenkirjoitettu`);
 }

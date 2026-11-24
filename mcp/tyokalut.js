@@ -274,6 +274,7 @@ const TYOKALUT = [
         r2.withdrawal = retire.withdrawal;
         delete r2.goal; delete r2.conf;
         st2.monthly = sim.requiredMonthly;
+        delete st2.savePhases; // ratkaistu tasainen summa korvaa aikataulun (huomio alla)
         const sim2 = L.simulate(st2, { paths: polut, sustainable: true });
         rakenne.metriikatTarvittavallaSaastolla = metriikat(sim2);
         rakenne.huomiot = huomiot(sim2, st2);
